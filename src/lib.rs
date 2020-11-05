@@ -1,5 +1,7 @@
 #![deny(clippy::pedantic)]
 #![no_std]
+#![cfg_attr(not(feature = "host"), feature(link_llvm_intrinsics))]
+#![cfg_attr(not(feature = "host"), feature(core_intrinsics))]
 
 pub mod common;
 

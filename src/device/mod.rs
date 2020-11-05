@@ -1,5 +1,8 @@
 use crate::common::RustToCuda;
 
+pub mod nvptx;
+pub mod utils;
+
 /// # Safety
 /// This is an internal trait and should NEVER be implemented manually
 pub unsafe trait BorrowFromRust: RustToCuda {

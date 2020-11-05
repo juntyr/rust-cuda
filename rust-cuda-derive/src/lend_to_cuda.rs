@@ -18,14 +18,14 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         {
             fn lend_to_cuda<
                 O,
-                F: FnOnce(
+                LendToCudaInnerFunc: FnOnce(
                     rustacuda_core::DevicePointer<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
             >(
                 &self,
-                inner: F,
+                inner: LendToCudaInnerFunc,
             ) -> rustacuda::error::CudaResult<O> {
                 use rust_cuda::common::RustToCuda;
 
@@ -52,11 +52,11 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         unsafe impl #impl_generics rust_cuda::device::BorrowFromRust for #struct_name #ty_generics
             #where_clause
         {
-            unsafe fn with_borrow_from_rust<O, F: FnOnce(
+            unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
                 &Self
             ) -> O>(
                 this: *const <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
-                inner: F,
+                inner: LendToCudaInnerFunc,
             ) -> O {
                 use rust_cuda::common::CudaAsRust;
 

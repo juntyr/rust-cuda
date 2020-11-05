@@ -58,11 +58,11 @@ pub fn rust_to_cuda_trait(
             type CudaAllocation = #combined_cuda_alloc_type;
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn borrow<A: rust_cuda::host::CudaAlloc>(
-                &self, alloc: A
+            unsafe fn borrow<CudaAllocType: rust_cuda::host::CudaAlloc>(
+                &self, alloc: CudaAllocType
             ) -> rustacuda::error::CudaResult<(
                 Self::CudaRepresentation,
-                rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, A>
+                rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
                 let alloc_front = rust_cuda::host::NullCudaAlloc;
                 let alloc_tail = alloc;
