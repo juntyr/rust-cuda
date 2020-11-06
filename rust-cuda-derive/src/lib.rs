@@ -7,6 +7,7 @@ extern crate proc_macro_error;
 
 use proc_macro::TokenStream;
 
+mod generics;
 mod lend_to_cuda;
 mod rust_to_cuda;
 

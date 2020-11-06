@@ -3,8 +3,9 @@ use quote::{format_ident, quote};
 
 mod field_copy;
 mod field_ty;
-mod generics;
 mod r#impl;
+
+use super::generics;
 
 use field_ty::CudaReprFieldTy;
 

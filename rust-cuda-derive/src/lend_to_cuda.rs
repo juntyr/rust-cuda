@@ -1,6 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
 
+use super::generics;
+
 #[allow(clippy::module_name_repetitions)]
 pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
     if !matches!(ast.data, syn::Data::Struct(_)) {
@@ -9,7 +11,9 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
     let struct_name = &ast.ident;
 
-    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+    let (_r2c_attrs, r2c_generics) =
+        generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
+    let (impl_generics, ty_generics, where_clause) = r2c_generics.split_for_impl();
 
     (quote! {
         #[cfg(not(target_os = "cuda"))]
