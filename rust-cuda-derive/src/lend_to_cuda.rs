@@ -50,33 +50,63 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                 result
             }
+
+            fn lend_to_cuda_mut<
+                O,
+                LendToCudaInnerFunc: FnOnce(
+                    rustacuda_core::DevicePointer<
+                        <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
+                    >
+                ) -> rustacuda::error::CudaResult<O>,
+            >(
+                &mut self,
+                inner: LendToCudaInnerFunc,
+            ) -> rustacuda::error::CudaResult<O> {
+                self.lend_to_cuda(inner)
+            }
         }
 
         #[cfg(target_os = "cuda")]
         unsafe impl #impl_generics rust_cuda::device::BorrowFromRust for #struct_name #ty_generics
             #where_clause
         {
-            unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
-                &Self
+            unsafe fn with_borrow_from_rust_mut<O, LendToCudaInnerFunc: FnOnce(
+                &mut Self
             ) -> O>(
-                this: *const <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
+                cuda_repr_ptr: *mut <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
                 inner: LendToCudaInnerFunc,
             ) -> O {
                 use rust_cuda::common::CudaAsRust;
 
-                let cuda_repr_ref: &<
+                let cuda_repr_ref: &mut <
                     Self as rust_cuda::common::RustToCuda
-                >::CudaRepresentation = &*this;
+                >::CudaRepresentation = &mut *cuda_repr_ptr;
 
-                let rust_repr = cuda_repr_ref.as_rust();
+                let mut rust_repr = cuda_repr_ref.as_rust();
 
-                let result = inner(&rust_repr);
+                let result = inner(&mut rust_repr);
 
                 // MUST forget about rust_repr as we do NOT own any of the heap memory
                 // it might reference
                 core::mem::forget(rust_repr);
 
                 result
+            }
+
+            unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
+                &Self
+            ) -> O>(
+                cuda_repr_ptr: *const <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
+                inner: LendToCudaInnerFunc,
+            ) -> O {
+                // The cast from *const to *mut is only safe because &mut is
+                // restricted to & to the caller
+                Self::with_borrow_from_rust_mut(
+                    cuda_repr_ptr as *mut <
+                        Self as rust_cuda::common::RustToCuda
+                    >::CudaRepresentation,
+                    |mut_ref| inner(&*mut_ref),
+                )
             }
         }
     })

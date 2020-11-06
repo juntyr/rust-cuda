@@ -49,7 +49,7 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
 
             false
         }
-        _ => true,
+        _ => false,
     });
 
     field.ty = field_ty;

@@ -18,6 +18,16 @@ pub unsafe trait LendToCuda: RustToCuda {
         &self,
         inner: F,
     ) -> CudaResult<O>;
+
+    /// # Errors
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    fn lend_to_cuda_mut<
+        O,
+        F: FnOnce(DevicePointer<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+    >(
+        &mut self,
+        inner: F,
+    ) -> CudaResult<O>;
 }
 
 pub(crate) mod private {
