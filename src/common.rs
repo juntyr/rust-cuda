@@ -33,3 +33,8 @@ pub unsafe trait CudaAsRust {
     /// This is an internal function and should NEVER be called manually
     unsafe fn as_rust(&self) -> Self::RustRepresentation;
 }
+
+pub trait FromCudaThreadIdx {
+    #[cfg(not(feature = "host"))]
+    fn from_cuda_thread_idx() -> Self;
+}

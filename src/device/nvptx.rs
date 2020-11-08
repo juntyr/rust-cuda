@@ -58,6 +58,19 @@ pub unsafe fn _log(x: f64) -> f64 {
     f64::from(f) / core::f64::consts::LOG2_E
 }
 
+/// Calculate the base e exponential of the input argument x.
+#[must_use]
+#[inline]
+pub unsafe fn _exp(x: f64) -> f64 {
+    #[allow(clippy::cast_possible_truncation)]
+    let x: f32 = (x * core::f64::consts::LOG2_E) as f32;
+    let f: f32;
+
+    asm!("ex2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+
+    f64::from(f)
+}
+
 /// Synchronizes all threads in the block.
 #[inline]
 pub unsafe fn _syncthreads() {

@@ -12,7 +12,7 @@ mod lend_to_cuda;
 mod rust_to_cuda;
 
 #[proc_macro_error]
-#[proc_macro_derive(RustToCuda, attributes(r2cEmbed, r2cBound))]
+#[proc_macro_derive(RustToCuda, attributes(r2cEmbed, r2cBound, r2cEval))]
 pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
     let ast = match syn::parse(input) {
         Ok(ast) => ast,

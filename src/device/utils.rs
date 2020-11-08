@@ -129,6 +129,7 @@ macro_rules! assert_ne {
 }
 
 /// Dimension specified in kernel launching
+#[derive(Debug)]
 pub struct Dim3 {
     pub x: i32,
     pub y: i32,
@@ -136,6 +137,7 @@ pub struct Dim3 {
 }
 
 /// Indices where the kernel code running on
+#[derive(Debug)]
 pub struct Idx3 {
     pub x: i32,
     pub y: i32,
@@ -205,5 +207,5 @@ pub fn index() -> isize {
     let block_id = block_idx().as_id(&grid_dim());
     let thread_id = thread_idx().as_id(&block_dim());
 
-    (block_id + thread_id) as isize
+    (block_id * block_dim().size() + thread_id) as isize
 }

@@ -96,6 +96,15 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 #optional_field_ident self.#field_accessor.as_rust(),
             });
         }
+        Some(CudaReprFieldTy::Eval(eval_token_stream)) => {
+            r2c_field_initialisations.push(quote! {
+                #optional_field_ident self.#field_accessor.clone(),
+            });
+
+            c2r_field_initialisations.push(quote! {
+                #optional_field_ident #eval_token_stream,
+            });
+        }
         None => {
             r2c_field_initialisations.push(quote! {
                 #optional_field_ident self.#field_accessor.clone(),

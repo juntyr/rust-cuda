@@ -4,6 +4,7 @@ use syn::parse_quote;
 pub enum CudaReprFieldTy {
     BoxedSlice(proc_macro2::TokenStream),
     Embedded(Box<syn::Type>),
+    Eval(proc_macro2::TokenStream),
 }
 
 pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<CudaReprFieldTy> {
@@ -46,6 +47,11 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
 
                 cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(Box::new(field_type)));
             }
+
+            false
+        }
+        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEval" => {
+            cuda_repr_field_ty = Some(CudaReprFieldTy::Eval(attr.tokens.clone()));
 
             false
         }
