@@ -45,6 +45,17 @@ extern "C" {
     fn thread_idx_z() -> u32;
 }
 
+extern "C" {
+    #[no_mangle]
+    static grid_id: u32;
+}
+
+#[must_use]
+#[inline]
+pub unsafe fn _grid_id() -> u32 {
+    grid_id
+}
+
 /// Calculate the base e logarithm of the input argument x.
 #[must_use]
 #[inline]
