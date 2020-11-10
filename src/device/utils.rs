@@ -131,17 +131,17 @@ macro_rules! assert_ne {
 /// Dimension specified in kernel launching
 #[derive(Debug)]
 pub struct Dim3 {
-    pub x: i32,
-    pub y: i32,
-    pub z: i32,
+    pub x: u32,
+    pub y: u32,
+    pub z: u32,
 }
 
 /// Indices where the kernel code running on
 #[derive(Debug)]
 pub struct Idx3 {
-    pub x: i32,
-    pub y: i32,
-    pub z: i32,
+    pub x: u32,
+    pub y: u32,
+    pub z: u32,
 }
 
 #[must_use]
@@ -190,22 +190,22 @@ pub fn thread_idx() -> Idx3 {
 
 impl Dim3 {
     #[must_use]
-    pub fn size(&self) -> i32 {
+    pub fn size(&self) -> u32 {
         self.x * self.y * self.z
     }
 }
 
 impl Idx3 {
     #[must_use]
-    pub fn as_id(&self, dim: &Dim3) -> i32 {
+    pub fn as_id(&self, dim: &Dim3) -> u32 {
         self.x + self.y * dim.x + self.z * dim.x * dim.y
     }
 }
 
 #[must_use]
-pub fn index() -> isize {
+pub fn index() -> usize {
     let block_id = block_idx().as_id(&grid_dim());
     let thread_id = thread_idx().as_id(&block_dim());
 
-    (block_id * block_dim().size() + thread_id) as isize
+    (block_id * block_dim().size() + thread_id) as usize
 }

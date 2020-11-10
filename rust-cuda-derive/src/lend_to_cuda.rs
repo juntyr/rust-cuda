@@ -62,7 +62,28 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 &mut self,
                 inner: LendToCudaInnerFunc,
             ) -> rustacuda::error::CudaResult<O> {
-                self.lend_to_cuda(inner)
+                use rust_cuda::common::RustToCuda;
+
+                let (cuda_repr, tail_alloc) = unsafe {
+                    self.borrow_mut(rust_cuda::host::NullCudaAlloc)
+                }?;
+
+                let mut device_box = rust_cuda::host::CudaDropWrapper::from(
+                    rustacuda::memory::DeviceBox::new(&cuda_repr)?
+                );
+                let cuda_ptr = device_box.as_device_ptr();
+
+                let alloc = rust_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
+
+                let result = inner(cuda_ptr);
+
+                // NOTE: If we ever need the data to be moved back from the GPU after lending
+                //       it mutably, the dual function of borrow_mut would have to be called
+                //       here to consume both the CudaRepresentation and corresponding Allocation
+
+                core::mem::drop(alloc);
+
+                result
             }
         }
 

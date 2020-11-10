@@ -21,6 +21,22 @@ pub unsafe trait RustToCuda {
         Self::CudaRepresentation,
         crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
+
+    #[cfg(feature = "host")]
+    /// # Errors
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// # Safety
+    /// This is an internal function and should NEVER be called manually
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_mut<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: A,
+    ) -> rustacuda::error::CudaResult<(
+        Self::CudaRepresentation,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )> {
+        self.borrow(alloc)
+    }
 }
 
 /// # Safety

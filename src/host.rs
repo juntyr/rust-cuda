@@ -1,7 +1,7 @@
 use core::ops::{Deref, DerefMut};
 
 use rustacuda::error::{CudaError, CudaResult};
-use rustacuda::memory::{DeviceBox, DeviceBuffer};
+use rustacuda::memory::{DeviceBox, DeviceBuffer, LockedBuffer};
 use rustacuda_core::{DeviceCopy, DevicePointer};
 
 use crate::common::RustToCuda;
@@ -92,6 +92,12 @@ impl<C: DeviceCopy> private::drop::Sealed for DeviceBuffer<C> {
 }
 
 impl<C: DeviceCopy> private::drop::Sealed for DeviceBox<C> {
+    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+        Self::drop(val)
+    }
+}
+
+impl<C: DeviceCopy> private::drop::Sealed for LockedBuffer<C> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
         Self::drop(val)
     }
