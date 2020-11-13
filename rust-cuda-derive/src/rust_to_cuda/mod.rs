@@ -54,7 +54,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
                     &mut c2r_field_initialisations,
                 );
             }
-        }
+        },
         syn::Fields::Unit => (),
     }
 

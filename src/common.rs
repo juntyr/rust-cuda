@@ -1,7 +1,8 @@
 use rustacuda_core::DeviceCopy;
 
 /// # Safety
-/// This is an internal trait and should ONLY be derived automatically using `#[derive(RustToCuda)]`
+/// This is an internal trait and should ONLY be derived automatically using
+/// `#[derive(RustToCuda)]`
 pub unsafe trait RustToCuda {
     type CudaRepresentation: DeviceCopy + CudaAsRust<RustRepresentation = Self>;
 

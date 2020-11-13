@@ -184,7 +184,8 @@ extern "C" {
     ///
     /// Syscall arguments:
     /// * `status`: The status value that is returned by `vprintf`.
-    /// * `format`: A pointer to the format specifier input (uses common `printf` format).
+    /// * `format`: A pointer to the format specifier input (uses common
+    ///   `printf` format).
     /// * `valist`: A pointer to the valist input.
     ///
     /// ```
@@ -210,10 +211,10 @@ extern "C" {
     ///
     /// The returned pointer is guaranteed to be aligned to a 16-byte boundary.
     ///
-    /// The memory allocated by a given CUDA thread via `malloc()` remains allocated
-    /// for the lifetime of the CUDA context, or until it is explicitly released
-    /// by a call to `free()`. It can be used by any other CUDA threads
-    /// even from subsequent kernel launches.
+    /// The memory allocated by a given CUDA thread via `malloc()` remains
+    /// allocated for the lifetime of the CUDA context, or until it is
+    /// explicitly released by a call to `free()`. It can be used by any
+    /// other CUDA threads even from subsequent kernel launches.
     ///
     /// Sources:
     /// [Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#dynamic-global-memory-allocation-and-operations),
@@ -223,13 +224,14 @@ extern "C" {
 
     /// Free previously dynamically allocated memory.
     ///
-    /// The CUDA in-kernel `free()` function deallocates the memory pointed to by `ptr`,
-    /// which must have been returned by a previous call to `malloc()`. If `ptr` is NULL,
-    /// the call to `free()` is ignored.
+    /// The CUDA in-kernel `free()` function deallocates the memory pointed to
+    /// by `ptr`, which must have been returned by a previous call to
+    /// `malloc()`. If `ptr` is NULL, the call to `free()` is ignored.
     ///
-    /// Any CUDA thread may free memory allocated by another thread, but care should be taken
-    /// to ensure that the same pointer is not freed more than once. Repeated calls to `free()`
-    /// with the same `ptr` has undefined behavior.
+    /// Any CUDA thread may free memory allocated by another thread, but care
+    /// should be taken to ensure that the same pointer is not freed more
+    /// than once. Repeated calls to `free()` with the same `ptr` has
+    /// undefined behavior.
     ///
     /// Sources:
     /// [Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#dynamic-global-memory-allocation-and-operations),
@@ -248,13 +250,15 @@ extern "C" {
     );
 }
 
-/// Syscall to be used whenever the *assert expression produces a `false` value*.
+/// Syscall to be used whenever the *assert expression produces a `false`
+/// value*.
 ///
 /// Syscall arguments:
 /// * `message`: The pointer to the string that should be output.
 /// * `file`: The pointer to the file name string associated with the assert.
 /// * `line`: The line number associated with the assert.
-/// * `function`: The pointer to the function name string associated with the assert.
+/// * `function`: The pointer to the function name string associated with the
+///   assert.
 ///
 /// Source:
 /// [PTX Interoperability](https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls).

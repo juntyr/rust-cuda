@@ -49,12 +49,12 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
             }
 
             false
-        }
+        },
         Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEval" => {
             cuda_repr_field_ty = Some(CudaReprFieldTy::Eval(attr.tokens.clone()));
 
             false
-        }
+        },
         _ => false,
     });
 

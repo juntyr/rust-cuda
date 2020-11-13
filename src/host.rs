@@ -1,13 +1,16 @@
 use core::ops::{Deref, DerefMut};
 
-use rustacuda::error::{CudaError, CudaResult};
-use rustacuda::memory::{DeviceBox, DeviceBuffer, LockedBuffer};
+use rustacuda::{
+    error::{CudaError, CudaResult},
+    memory::{DeviceBox, DeviceBuffer, LockedBuffer},
+};
 use rustacuda_core::{DeviceCopy, DevicePointer};
 
 use crate::common::RustToCuda;
 
 /// # Safety
-/// This trait should ONLY be derived automatically using `#[derive(LendToCuda)]`
+/// This trait should ONLY be derived automatically using
+/// `#[derive(LendToCuda)]`
 pub unsafe trait LendToCuda: RustToCuda {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA

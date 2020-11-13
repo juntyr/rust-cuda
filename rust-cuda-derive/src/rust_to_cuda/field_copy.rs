@@ -73,7 +73,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                     alloc::boxed::Box::from_raw(raw_slice)
                 },
             });
-        }
+        },
         Some(CudaReprFieldTy::Embedded(field_type)) => {
             combined_cuda_alloc_type = quote! {
                 rust_cuda::host::CombinedCudaAlloc<
@@ -95,7 +95,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident self.#field_accessor.as_rust(),
             });
-        }
+        },
         Some(CudaReprFieldTy::Eval(eval_token_stream)) => {
             r2c_field_initialisations.push(quote! {
                 #optional_field_ident self.#field_accessor.clone(),
@@ -104,7 +104,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident #eval_token_stream,
             });
-        }
+        },
         None => {
             r2c_field_initialisations.push(quote! {
                 #optional_field_ident self.#field_accessor.clone(),
@@ -113,7 +113,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident self.#field_accessor.clone(),
             });
-        }
+        },
     }
 
     combined_cuda_alloc_type

@@ -1,9 +1,10 @@
 //! Support crate for writting GPU kernel in Rust (accel-core)
 //!
 //! - This crate works only for `nvptx64-nvidia-cuda` target
-//! - There is no support of `libstd` for `nvptx64-nvidia-cuda` target,
-//!   i.e. You need to write `#![no_std]` Rust code.
-//! - `alloc` crate is supported by `PTXAllocator` which utilizes CUDA malloc/free system-calls
+//! - There is no support of `libstd` for `nvptx64-nvidia-cuda` target, i.e. You
+//!   need to write `#![no_std]` Rust code.
+//! - `alloc` crate is supported by `PTXAllocator` which utilizes CUDA
+//!   malloc/free system-calls
 //!   - You can use `println!` and `assert_eq!` throught it.
 
 extern crate alloc;
@@ -18,6 +19,7 @@ unsafe impl GlobalAlloc for PTXAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         nvptx::malloc(layout.size()) as *mut u8
     }
+
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
         nvptx::free(ptr as *mut _);
     }
@@ -27,7 +29,8 @@ unsafe impl GlobalAlloc for PTXAllocator {
 #[macro_export]
 macro_rules! function {
     () => {{
-        // Okay, this is ugly, I get it. However, this is the best we can get on a stable rust.
+        // Okay, this is ugly, I get it. However, this is the best we can get on a
+        // stable rust.
         fn f() {}
         fn type_name_of<T>(_: T) -> &'static str {
             core::any::type_name::<T>()
