@@ -1,8 +1,11 @@
 use core::ops::{Deref, DerefMut};
 
 use rustacuda::{
+    context::Context,
     error::{CudaError, CudaResult},
     memory::{DeviceBox, DeviceBuffer, LockedBuffer},
+    module::Module,
+    stream::Stream,
 };
 use rustacuda_core::{DeviceCopy, DevicePointer};
 
@@ -88,20 +91,30 @@ impl<C: private::drop::Sealed> DerefMut for CudaDropWrapper<C> {
     }
 }
 
-impl<C: DeviceCopy> private::drop::Sealed for DeviceBuffer<C> {
-    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
-        Self::drop(val)
-    }
+macro_rules! impl_sealed_drop_collection {
+    ($type:ident) => {
+        impl<C: DeviceCopy> private::drop::Sealed for $type<C> {
+            fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+                Self::drop(val)
+            }
+        }
+    };
 }
 
-impl<C: DeviceCopy> private::drop::Sealed for DeviceBox<C> {
-    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
-        Self::drop(val)
-    }
+impl_sealed_drop_collection!(DeviceBuffer);
+impl_sealed_drop_collection!(DeviceBox);
+impl_sealed_drop_collection!(LockedBuffer);
+
+macro_rules! impl_sealed_drop_value {
+    ($type:ident) => {
+        impl private::drop::Sealed for $type {
+            fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+                Self::drop(val)
+            }
+        }
+    };
 }
 
-impl<C: DeviceCopy> private::drop::Sealed for LockedBuffer<C> {
-    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
-        Self::drop(val)
-    }
-}
+impl_sealed_drop_value!(Module);
+impl_sealed_drop_value!(Stream);
+impl_sealed_drop_value!(Context);
