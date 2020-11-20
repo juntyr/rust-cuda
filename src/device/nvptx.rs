@@ -46,7 +46,6 @@ extern "C" {
 }
 
 extern "C" {
-    #[no_mangle]
     static grid_id: u32;
 }
 
