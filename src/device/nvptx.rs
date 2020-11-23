@@ -81,6 +81,43 @@ pub unsafe fn _exp(x: f64) -> f64 {
     f64::from(f)
 }
 
+/// Take the square root of a value.
+#[must_use]
+#[inline]
+pub unsafe fn _sqrt(x: f64) -> f64 {
+    let f: f64;
+
+    asm!("sqrt.rn.f64 {}, {};", out(reg64) f, in(reg64) x, options(pure, nomem, nostack));
+
+    f
+}
+
+/// Find the sine of a value.
+#[must_use]
+#[inline]
+pub unsafe fn _sin(x: f64) -> f64 {
+    #[allow(clippy::cast_possible_truncation)]
+    let x: f32 = x as f32;
+    let f: f32;
+
+    asm!("sin.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+
+    f64::from(f)
+}
+
+/// Find the cosine of a value.
+#[must_use]
+#[inline]
+pub unsafe fn _cos(x: f64) -> f64 {
+    #[allow(clippy::cast_possible_truncation)]
+    let x: f32 = x as f32;
+    let f: f32;
+
+    asm!("cos.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+
+    f64::from(f)
+}
+
 /// Synchronizes all threads in the block.
 #[inline]
 pub unsafe fn _syncthreads() {
