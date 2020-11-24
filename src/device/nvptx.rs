@@ -81,17 +81,6 @@ pub unsafe fn _exp(x: f64) -> f64 {
     f64::from(f)
 }
 
-/// Take the square root of a value.
-#[must_use]
-#[inline]
-pub unsafe fn _sqrt(x: f64) -> f64 {
-    let f: f64;
-
-    asm!("sqrt.rn.f64 {}, {};", out(reg64) f, in(reg64) x, options(pure, nomem, nostack));
-
-    f
-}
-
 /// Find the sine of a value.
 #[must_use]
 #[inline]
