@@ -206,19 +206,9 @@ impl Idx3 {
 }
 
 #[must_use]
-pub fn grid_id() -> u32 {
-    unsafe { nvptx::_grid_id() }
-}
-
-#[must_use]
-pub fn index_no_offset() -> usize {
+pub fn index() -> usize {
     let block_id = block_idx().as_id(&grid_dim());
     let thread_id = thread_idx().as_id(&block_dim());
 
     (block_id * block_dim().size() + thread_id) as usize
-}
-
-#[must_use]
-pub fn index() -> usize {
-    (grid_id() * grid_dim().size() * block_dim().size()) as usize + index_no_offset()
 }
