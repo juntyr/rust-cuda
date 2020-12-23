@@ -23,6 +23,7 @@ pub fn cuda_struct_declaration(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn rust_to_cuda_trait(
     struct_name: &syn::Ident,
     struct_name_cuda: &syn::Ident,
@@ -31,6 +32,7 @@ pub fn rust_to_cuda_trait(
     combined_cuda_alloc_type: &TokenStream,
     r2c_field_declarations: &[TokenStream],
     r2c_field_initialisations: &[TokenStream],
+    r2c_field_destructors: &[TokenStream],
 ) -> TokenStream {
     let rust_to_cuda_struct_construction = match struct_fields_cuda {
         syn::Fields::Named(_) => quote! {
@@ -58,8 +60,8 @@ pub fn rust_to_cuda_trait(
             type CudaAllocation = #combined_cuda_alloc_type;
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn borrow<CudaAllocType: rust_cuda::host::CudaAlloc>(
-                &self, alloc: CudaAllocType
+            unsafe fn borrow_mut<CudaAllocType: rust_cuda::host::CudaAlloc>(
+                &mut self, alloc: CudaAllocType
             ) -> rustacuda::error::CudaResult<(
                 Self::CudaRepresentation,
                 rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
@@ -72,6 +74,21 @@ pub fn rust_to_cuda_trait(
                 let borrow = #rust_to_cuda_struct_construction;
 
                 Ok((borrow, rust_cuda::host::CombinedCudaAlloc::new(alloc_front, alloc_tail)))
+            }
+
+            #[cfg(not(target_os = "cuda"))]
+            unsafe fn un_borrow_mut<CudaAllocType: rust_cuda::host::CudaAlloc>(
+                &mut self,
+                cuda_repr: Self::CudaRepresentation,
+                alloc: rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>,
+            ) -> rustacuda::error::CudaResult<CudaAllocType> {
+                use rustacuda::memory::CopyDestination;
+
+                let (alloc_front, alloc_tail) = alloc.split();
+
+                #(#r2c_field_destructors)*
+
+                Ok(alloc_tail)
             }
         }
     }
@@ -107,7 +124,7 @@ pub fn cuda_as_rust_trait(
             type RustRepresentation = #struct_name #ty_generics;
 
             #[cfg(target_os = "cuda")]
-            unsafe fn as_rust(&self) -> #struct_name #ty_generics {
+            unsafe fn as_rust(&mut self) -> #struct_name #ty_generics {
                 #cuda_as_rust_struct_construction
             }
         }

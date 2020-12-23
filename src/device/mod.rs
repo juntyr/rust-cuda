@@ -1,4 +1,6 @@
-use crate::common::RustToCuda;
+use rustacuda_core::DeviceCopy;
+
+use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
 pub mod nvptx;
 pub mod utils;
@@ -7,22 +9,42 @@ pub mod utils;
 /// This is an internal trait and should NEVER be implemented manually
 pub unsafe trait BorrowFromRust: RustToCuda {
     /// # Safety
-    /// This function is only safe to call iff `cuda_repr_ptr` is the
-    /// `DevicePointer` borrowed on the CPU using the corresponding
+    /// This function is only safe to call iff `cuda_repr` is the
+    /// `DeviceBoxConst` borrowed on the CPU using the corresponding
     /// `LendToCuda::lend_to_cuda`.
     unsafe fn with_borrow_from_rust<O, F: FnOnce(&Self) -> O>(
-        cuda_repr_ptr: *const <Self as RustToCuda>::CudaRepresentation,
+        cuda_repr: DeviceBoxConst<<Self as RustToCuda>::CudaRepresentation>,
         inner: F,
     ) -> O;
 
     /// # Safety
-    /// This function is only safe to call iff `cuda_repr_ptr` is the
-    /// `DevicePointer` borrowed on the CPU using the corresponding
+    /// This function is only safe to call iff `cuda_repr_mut` is the
+    /// `DeviceBoxMut` borrowed on the CPU using the corresponding
     /// `LendToCuda::lend_to_cuda_mut`. Furthermore, since different GPU
-    /// cores can access heap storage mutably inside the safe `inner` scope,
-    /// there must not be any aliasing between concurrently running cores.
+    /// threads can access heap storage mutably inside the safe `inner` scope,
+    /// there must not be any aliasing between concurrently running threads.
     unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
-        cuda_repr_ptr: *mut <Self as RustToCuda>::CudaRepresentation,
+        cuda_repr_mut: DeviceBoxMut<<Self as RustToCuda>::CudaRepresentation>,
         inner: F,
     ) -> O;
+}
+
+#[repr(transparent)]
+pub struct AnyDeviceBoxConst(*const core::ffi::c_void);
+
+impl AnyDeviceBoxConst {
+    #[must_use]
+    pub unsafe fn into<T: Sized + DeviceCopy>(self) -> DeviceBoxConst<T> {
+        DeviceBoxConst(self.0 as *const T)
+    }
+}
+
+#[repr(transparent)]
+pub struct AnyDeviceBoxMut(*mut core::ffi::c_void);
+
+impl AnyDeviceBoxMut {
+    #[must_use]
+    pub unsafe fn into<T: Sized + DeviceCopy>(self) -> DeviceBoxMut<T> {
+        DeviceBoxMut(self.0 as *mut T)
+    }
 }

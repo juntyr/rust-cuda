@@ -7,29 +7,45 @@ use rustacuda::{
     module::Module,
     stream::Stream,
 };
-use rustacuda_core::{DeviceCopy, DevicePointer};
+use rustacuda_core::DeviceCopy;
 
-use crate::common::RustToCuda;
+use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
 /// # Safety
 /// This trait should ONLY be derived automatically using
 /// `#[derive(LendToCuda)]`
 pub unsafe trait LendToCuda: RustToCuda {
+    /// Lends an immutable copy of `&self` to CUDA:
+    /// - code in the CUDA kernel can only access `&self` through the
+    ///   `DeviceBoxConst` inside the closure
+    /// - after the closure, `&self` will not have changed
+    ///
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
-        F: FnOnce(DevicePointer<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(DeviceBoxConst<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &self,
         inner: F,
     ) -> CudaResult<O>;
 
+    /// Lends a mutable copy of `&mut self` to CUDA:
+    /// - code in the CUDA kernel can only access `&mut self` through the
+    ///   `DeviceBoxMut` inside the closure
+    /// - after the closure, `&mut self` might have changed in the following
+    ///   ways:
+    ///   - to avoid aliasing, each CUDA thread gets its own shallow copy of
+    ///     `&mut self`, i.e. any shallow changes will NOT be reflected after
+    ///     the closure
+    ///   - each CUDA thread can access the same heap allocated storage, i.e.
+    ///     any deep changes will be reflected after the closure
+    ///
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
-        F: FnOnce(DevicePointer<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(DeviceBoxMut<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &mut self,
         inner: F,
@@ -46,19 +62,35 @@ pub(crate) mod private {
             fn drop(val: Self) -> Result<(), (rustacuda::error::CudaError, Self)>;
         }
     }
+
+    pub mod empty {
+        pub trait Sealed {}
+    }
 }
+
+pub trait EmptyCudaAlloc: private::empty::Sealed {}
+impl<T: private::empty::Sealed> EmptyCudaAlloc for T {}
 
 pub trait CudaAlloc: private::alloc::Sealed {}
 impl<T: private::alloc::Sealed> CudaAlloc for T {}
 
 pub struct NullCudaAlloc;
 impl private::alloc::Sealed for NullCudaAlloc {}
+impl private::empty::Sealed for NullCudaAlloc {}
 
 pub struct CombinedCudaAlloc<A: CudaAlloc, B: CudaAlloc>(A, B);
 impl<A: CudaAlloc, B: CudaAlloc> private::alloc::Sealed for CombinedCudaAlloc<A, B> {}
+impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> private::empty::Sealed
+    for CombinedCudaAlloc<A, B>
+{
+}
 impl<A: CudaAlloc, B: CudaAlloc> CombinedCudaAlloc<A, B> {
     pub fn new(front: A, tail: B) -> Self {
         Self(front, tail)
+    }
+
+    pub fn split(self) -> (A, B) {
+        (self.0, self.1)
     }
 }
 

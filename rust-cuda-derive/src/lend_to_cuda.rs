@@ -23,7 +23,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
             fn lend_to_cuda<
                 O,
                 LendToCudaInnerFunc: FnOnce(
-                    rustacuda_core::DevicePointer<
+                    rust_cuda::common::DeviceBoxConst<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
@@ -40,11 +40,11 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 let mut device_box = rust_cuda::host::CudaDropWrapper::from(
                     rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
-                let cuda_ptr = device_box.as_device_ptr();
+                let device_box_const = rust_cuda::common::DeviceBoxConst::from(&device_box);
 
                 let alloc = rust_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
 
-                let result = inner(cuda_ptr);
+                let result = inner(device_box_const);
 
                 core::mem::drop(alloc);
 
@@ -54,7 +54,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
             fn lend_to_cuda_mut<
                 O,
                 LendToCudaInnerFunc: FnOnce(
-                    rustacuda_core::DevicePointer<
+                    rust_cuda::common::DeviceBoxMut<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
@@ -64,24 +64,22 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
             ) -> rustacuda::error::CudaResult<O> {
                 use rust_cuda::common::RustToCuda;
 
-                let (cuda_repr, tail_alloc) = unsafe {
+                let (cuda_repr, alloc) = unsafe {
                     self.borrow_mut(rust_cuda::host::NullCudaAlloc)
                 }?;
 
                 let mut device_box = rust_cuda::host::CudaDropWrapper::from(
                     rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
-                let cuda_ptr = device_box.as_device_ptr();
+                let device_box_mut = rust_cuda::common::DeviceBoxMut::from(&mut device_box);
 
-                let alloc = rust_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
+                let result = inner(device_box_mut);
 
-                let result = inner(cuda_ptr);
+                core::mem::drop(device_box);
 
-                // NOTE: If we ever need the data to be moved back from the GPU after lending
-                //       it mutably, the dual function of borrow_mut would have to be called
-                //       here to consume both the CudaRepresentation and corresponding Allocation
-
-                core::mem::drop(alloc);
+                let _: rust_cuda::host::NullCudaAlloc = unsafe {
+                    self.un_borrow_mut(cuda_repr, alloc)
+                }?;
 
                 result
             }
@@ -91,43 +89,37 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
         unsafe impl #impl_generics rust_cuda::device::BorrowFromRust for #struct_name #ty_generics
             #where_clause
         {
-            unsafe fn with_borrow_from_rust_mut<O, LendToCudaInnerFunc: FnOnce(
-                &mut Self
+            unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
+                &Self
             ) -> O>(
-                cuda_repr_ptr: *mut <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
+                cuda_repr: rust_cuda::common::DeviceBoxConst<<Self as rust_cuda::common::RustToCuda>::CudaRepresentation>,
                 inner: LendToCudaInnerFunc,
             ) -> O {
                 use rust_cuda::common::CudaAsRust;
 
-                let cuda_repr_ref: &mut <
-                    Self as rust_cuda::common::RustToCuda
-                >::CudaRepresentation = &mut *cuda_repr_ptr;
+                // This is only safe because we do not expose mutability of `rust_repr` to the `inner` closure
+                let cuda_repr_mut: &mut <Self as rust_cuda::common::RustToCuda>::CudaRepresentation = &mut *(cuda_repr.as_ref() as *const _ as *mut _);
 
-                let mut rust_repr = cuda_repr_ref.as_rust();
+                // rust_repr must never be dropped as we do NOT own any of the
+                // heap memory it might reference
+                let mut rust_repr = core::mem::ManuallyDrop::new(cuda_repr_mut.as_rust());
 
-                let result = inner(&mut rust_repr);
-
-                // MUST forget about rust_repr as we do NOT own any of the heap memory
-                // it might reference
-                core::mem::forget(rust_repr);
-
-                result
+                inner(&rust_repr)
             }
 
-            unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
-                &Self
+            unsafe fn with_borrow_from_rust_mut<O, LendToCudaInnerFunc: FnOnce(
+                &mut Self
             ) -> O>(
-                cuda_repr_ptr: *const <Self as rust_cuda::common::RustToCuda>::CudaRepresentation,
+                mut cuda_repr_mut: rust_cuda::common::DeviceBoxMut<<Self as rust_cuda::common::RustToCuda>::CudaRepresentation>,
                 inner: LendToCudaInnerFunc,
             ) -> O {
-                // The cast from *const to *mut is only safe because &mut is
-                // restricted to & to the caller
-                Self::with_borrow_from_rust_mut(
-                    cuda_repr_ptr as *mut <
-                        Self as rust_cuda::common::RustToCuda
-                    >::CudaRepresentation,
-                    |mut_ref| inner(&*mut_ref),
-                )
+                use rust_cuda::common::CudaAsRust;
+
+                // rust_repr must never be dropped as we do NOT own any of the
+                // heap memory it might reference
+                let mut rust_repr = core::mem::ManuallyDrop::new(cuda_repr_mut.as_mut().as_rust());
+
+                inner(&mut rust_repr)
             }
         }
     })

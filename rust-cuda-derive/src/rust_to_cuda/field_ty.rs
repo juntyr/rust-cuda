@@ -30,7 +30,7 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
                 let slice_type = slice_type.parse().unwrap();
 
                 field_ty = parse_quote! {
-                    (rustacuda_core::DevicePointer<#slice_type>, usize)
+                    rust_cuda::common::DeviceOwnedSlice<#slice_type>
                 };
 
                 cuda_repr_field_ty = Some(CudaReprFieldTy::BoxedSlice(slice_type));
