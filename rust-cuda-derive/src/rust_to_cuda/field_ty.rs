@@ -5,6 +5,7 @@ pub enum CudaReprFieldTy {
     BoxedSlice(proc_macro2::TokenStream),
     Embedded(Box<syn::Type>),
     Eval(proc_macro2::TokenStream),
+    Phantom(Box<syn::Type>),
 }
 
 pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<CudaReprFieldTy> {
@@ -14,8 +15,8 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
     // Helper attribute `r2c` must be filtered out inside cuda representation
     field.attrs.retain(|attr| match attr.path.get_ident() {
         Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEmbed" => {
-            // Allow the shorthand `#[r2c]` which uses the field type
-            // as well as the explicit `#[r2c(ty)]` which overwrites the type
+            // Allow the shorthand `#[r2cEmbed]` which uses the field type
+            // as well as the explicit `#[r2cEmbed(ty)]` which overwrites the type
             let attribute_str = if attr.tokens.is_empty() {
                 format!("({})", quote! { #field_ty })
             } else {
@@ -52,6 +53,31 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
         },
         Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEval" => {
             cuda_repr_field_ty = Some(CudaReprFieldTy::Eval(attr.tokens.clone()));
+
+            false
+        },
+        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cPhantom" => {
+            // Allow the shorthand `#[r2cPhantom]` which uses the field type
+            // as well as the explicit `#[r2cPhantom(ty)]` which overwrites the type
+            let attribute_str = if attr.tokens.is_empty() {
+                format!("({})", quote! { #field_ty })
+            } else {
+                format!("{}", attr.tokens)
+            };
+
+            if let Some(struct_type) = attribute_str
+                .strip_prefix("(")
+                .and_then(|rest| rest.strip_suffix(")"))
+            {
+                // Check for the case where a type implementing is `RustToCuda` embedded
+                let field_type = syn::parse_str(struct_type).unwrap();
+
+                field_ty = parse_quote! {
+                    ::core::marker::PhantomData<#field_type>
+                };
+
+                cuda_repr_field_ty = Some(CudaReprFieldTy::Phantom(Box::new(field_type)));
+            }
 
             false
         },

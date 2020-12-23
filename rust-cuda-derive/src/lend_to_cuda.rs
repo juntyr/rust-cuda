@@ -46,7 +46,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                 let result = inner(device_box_const);
 
-                core::mem::drop(alloc);
+                ::core::mem::drop(alloc);
 
                 result
             }
@@ -75,7 +75,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                 let result = inner(device_box_mut);
 
-                core::mem::drop(device_box);
+                ::core::mem::drop(device_box);
 
                 let _: rust_cuda::host::NullCudaAlloc = unsafe {
                     self.un_borrow_mut(cuda_repr, alloc)
@@ -102,7 +102,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                 // rust_repr must never be dropped as we do NOT own any of the
                 // heap memory it might reference
-                let mut rust_repr = core::mem::ManuallyDrop::new(cuda_repr_mut.as_rust());
+                let mut rust_repr = ::core::mem::ManuallyDrop::new(cuda_repr_mut.as_rust());
 
                 inner(&rust_repr)
             }
@@ -117,7 +117,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
 
                 // rust_repr must never be dropped as we do NOT own any of the
                 // heap memory it might reference
-                let mut rust_repr = core::mem::ManuallyDrop::new(cuda_repr_mut.as_mut().as_rust());
+                let mut rust_repr = ::core::mem::ManuallyDrop::new(cuda_repr_mut.as_mut().as_rust());
 
                 inner(&mut rust_repr)
             }

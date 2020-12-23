@@ -3,7 +3,7 @@ use quote::{format_ident, quote, ToTokens};
 
 use super::CudaReprFieldTy;
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn impl_field_copy_init_and_expand_alloc_type(
     field: &syn::Field,
     field_index: usize,
@@ -72,7 +72,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
                     alloc_front.copy_to(&mut self.#field_accessor)?;
 
-                    core::mem::drop(alloc_front);
+                    ::core::mem::drop(alloc_front);
 
                     alloc_tail
                 };
@@ -80,7 +80,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident unsafe {
-                    alloc::boxed::Box::from_raw(self.#field_accessor.as_mut())
+                    ::rust_cuda::alloc::boxed::Box::from_raw(self.#field_accessor.as_mut())
                 },
             });
         },
@@ -120,6 +120,15 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident #eval_token_stream,
+            });
+        },
+        Some(CudaReprFieldTy::Phantom(field_type)) => {
+            r2c_field_initialisations.push(quote! {
+                #optional_field_ident ::core::marker::PhantomData::<#field_type>,
+            });
+
+            c2r_field_initialisations.push(quote! {
+                #optional_field_ident ::core::marker::PhantomData::<#field_type>,
             });
         },
         None => {
