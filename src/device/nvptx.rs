@@ -97,6 +97,26 @@ pub unsafe fn _cos(x: f64) -> f64 {
     f64::from(f)
 }
 
+/// Find the nearest integer to a value. Round half-way cases away from 0.0.
+#[must_use]
+#[inline]
+pub unsafe fn _round(x: f64) -> f64 {
+    let x_trunc: f64;
+
+    // x_trunc = x.trunc()
+    asm!("cvt.rzi.f64.f64 {}, {};", out(reg64) x_trunc, in(reg64) x, options(pure, nomem, nostack));
+
+    let x_double = x * 2.0_f64;
+    let x_double_trunc: f64;
+
+    // x_double_trunc = (x * 2.0).trunc()
+    asm!("cvt.rzi.f64.f64 {}, {};", out(reg64) x_double_trunc, in(reg64) x_double, options(pure, nomem, nostack));
+
+    // Iff |x.fract()| >= 0.5, then |x_double_trunc| = |x_trunc| * 2 + 1,
+    //                         else |x_double_trunc| = |x_trunc| * 2
+    x_double_trunc - x_trunc
+}
+
 /// Synchronizes all threads in the block.
 #[inline]
 pub unsafe fn _syncthreads() {
