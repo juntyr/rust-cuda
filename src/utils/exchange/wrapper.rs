@@ -3,8 +3,11 @@ use core::ops::{Deref, DerefMut};
 use rustacuda::{error::CudaResult, memory::DeviceBox};
 
 use crate::{
-    common::{DeviceBoxConst, DeviceBoxMut, RustToCuda},
-    host::{CombinedCudaAlloc, CudaDropWrapper, EmptyCudaAlloc, NullCudaAlloc},
+    common::RustToCuda,
+    host::{
+        CombinedCudaAlloc, CudaDropWrapper, EmptyCudaAlloc, HostDeviceBoxConst, HostDeviceBoxMut,
+        NullCudaAlloc,
+    },
 };
 
 #[allow(clippy::module_name_repetitions)]
@@ -77,11 +80,11 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWithHostWrapper<T> {
         })
     }
 
-    pub fn as_ref(&self) -> DeviceBoxConst<<T as RustToCuda>::CudaRepresentation> {
-        DeviceBoxConst::from(&self.device_box)
+    pub fn as_ref(&self) -> HostDeviceBoxConst<<T as RustToCuda>::CudaRepresentation> {
+        HostDeviceBoxConst::new(&self.device_box, &self.cuda_repr)
     }
 
-    pub fn as_mut(&mut self) -> DeviceBoxMut<<T as RustToCuda>::CudaRepresentation> {
-        DeviceBoxMut::from(&mut self.device_box)
+    pub fn as_mut(&mut self) -> HostDeviceBoxMut<<T as RustToCuda>::CudaRepresentation> {
+        HostDeviceBoxMut::new(&mut self.device_box, &self.cuda_repr)
     }
 }

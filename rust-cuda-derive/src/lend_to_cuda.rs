@@ -23,7 +23,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
             fn lend_to_cuda<
                 O,
                 LendToCudaInnerFunc: FnOnce(
-                    rust_cuda::common::DeviceBoxConst<
+                    rust_cuda::host::HostDeviceBoxConst<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
@@ -40,11 +40,10 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 let mut device_box = rust_cuda::host::CudaDropWrapper::from(
                     rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
-                let device_box_const = rust_cuda::common::DeviceBoxConst::from(&device_box);
+
+                let result = inner(rust_cuda::host::HostDeviceBoxConst::new(&device_box, &cuda_repr));
 
                 let alloc = rust_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
-
-                let result = inner(device_box_const);
 
                 ::core::mem::drop(alloc);
 
@@ -54,7 +53,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
             fn lend_to_cuda_mut<
                 O,
                 LendToCudaInnerFunc: FnOnce(
-                    rust_cuda::common::DeviceBoxMut<
+                    rust_cuda::host::HostDeviceBoxMut<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
                 ) -> rustacuda::error::CudaResult<O>,
@@ -71,9 +70,8 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 let mut device_box = rust_cuda::host::CudaDropWrapper::from(
                     rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
-                let device_box_mut = rust_cuda::common::DeviceBoxMut::from(&mut device_box);
 
-                let result = inner(device_box_mut);
+                let result = inner(rust_cuda::host::HostDeviceBoxMut::new(&mut device_box, &cuda_repr));
 
                 ::core::mem::drop(device_box);
 

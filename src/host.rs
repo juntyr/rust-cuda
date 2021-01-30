@@ -24,7 +24,7 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
-        F: FnOnce(DeviceBoxConst<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(HostDeviceBoxConst<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &self,
         inner: F,
@@ -45,7 +45,7 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
-        F: FnOnce(DeviceBoxMut<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(HostDeviceBoxMut<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &mut self,
         inner: F,
@@ -150,3 +150,49 @@ macro_rules! impl_sealed_drop_value {
 impl_sealed_drop_value!(Module);
 impl_sealed_drop_value!(Stream);
 impl_sealed_drop_value!(Context);
+
+#[allow(clippy::module_name_repetitions)]
+pub struct HostDeviceBoxMut<'a, T: Sized + DeviceCopy> {
+    device_box: &'a mut DeviceBox<T>,
+    host_ref: &'a T,
+}
+
+impl<'a, T: Sized + DeviceCopy> HostDeviceBoxMut<'a, T> {
+    pub fn new(device_box: &'a mut DeviceBox<T>, host_ref: &'a T) -> Self {
+        Self {
+            device_box,
+            host_ref,
+        }
+    }
+
+    pub fn for_device(&mut self) -> DeviceBoxMut<T> {
+        DeviceBoxMut::from(&mut self.device_box)
+    }
+
+    pub fn for_host(&mut self) -> &T {
+        &self.host_ref
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct HostDeviceBoxConst<'a, T: Sized + DeviceCopy> {
+    device_box: &'a DeviceBox<T>,
+    host_ref: &'a T,
+}
+
+impl<'a, T: Sized + DeviceCopy> HostDeviceBoxConst<'a, T> {
+    pub fn new(device_box: &'a DeviceBox<T>, host_ref: &'a T) -> Self {
+        Self {
+            device_box,
+            host_ref,
+        }
+    }
+
+    pub fn for_device(&mut self) -> DeviceBoxConst<T> {
+        DeviceBoxConst::from(&self.device_box)
+    }
+
+    pub fn for_host(&mut self) -> &T {
+        &self.host_ref
+    }
+}
