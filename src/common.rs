@@ -134,14 +134,6 @@ impl<T: Sized + DeviceCopy> AsRef<T> for DeviceBoxConst<T> {
 #[repr(transparent)]
 pub struct DeviceBoxMut<T: Sized + DeviceCopy>(pub(super) *mut T);
 
-// TODO: Ideally, DeviceBoxMut should not be clonable but 'handed back' after
-//       use
-// impl<T: Sized + DeviceCopy> Clone for DeviceBoxMut<T> {
-//    fn clone(&self) -> Self {
-//        Self(self.0)
-//    }
-//}
-// impl<T: Sized + DeviceCopy> Copy for DeviceBoxMut<T> {}
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceBoxMut<T> {}
 
 #[cfg(feature = "host")]
