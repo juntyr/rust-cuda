@@ -58,6 +58,19 @@ pub unsafe fn _log(x: f64) -> f64 {
     f64::from(f) / core::f64::consts::LOG2_E
 }
 
+/// Calculate the base 2 logarithm of the input argument x.
+#[must_use]
+#[inline]
+pub unsafe fn _log2(x: f64) -> f64 {
+    #[allow(clippy::cast_possible_truncation)]
+    let x: f32 = x as f32;
+    let f: f32;
+
+    asm!("lg2.approx.f32 {}, {};", out(reg32) f, in(reg32) x, options(pure, nomem, nostack));
+
+    f64::from(f)
+}
+
 /// Calculate the base e exponential of the input argument x.
 #[must_use]
 #[inline]
