@@ -71,6 +71,7 @@ pub unsafe trait CudaAsRust {
     unsafe fn as_rust(&mut self) -> Self::RustRepresentation;
 }
 
+#[derive(Debug)]
 pub struct DeviceOwnedSlice<T: Sized + DeviceCopy>(*mut T, usize);
 
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceOwnedSlice<T> {}
