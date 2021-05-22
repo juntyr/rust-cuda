@@ -34,8 +34,12 @@ pub struct AnyDeviceBoxConst(*const core::ffi::c_void);
 
 impl AnyDeviceBoxConst {
     #[must_use]
+    /// # Safety
+    ///
+    /// This method is only safe iff this `AnyDeviceBoxConst` contains a `*const
+    /// T`
     pub unsafe fn into<T: Sized + DeviceCopy>(self) -> DeviceBoxConst<T> {
-        DeviceBoxConst(self.0 as *const T)
+        DeviceBoxConst(self.0.cast())
     }
 }
 
@@ -44,7 +48,10 @@ pub struct AnyDeviceBoxMut(*mut core::ffi::c_void);
 
 impl AnyDeviceBoxMut {
     #[must_use]
+    /// # Safety
+    ///
+    /// This method is only safe iff this `AnyDeviceBoxMut` contains a `*mut T`
     pub unsafe fn into<T: Sized + DeviceCopy>(self) -> DeviceBoxMut<T> {
-        DeviceBoxMut(self.0 as *mut T)
+        DeviceBoxMut(self.0.cast())
     }
 }

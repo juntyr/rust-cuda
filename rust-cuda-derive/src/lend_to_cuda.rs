@@ -96,6 +96,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 use rust_cuda::common::CudaAsRust;
 
                 // This is only safe because we do not expose mutability of `rust_repr` to the `inner` closure
+                #[allow(clippy::cast_ref_to_mut)]
                 let cuda_repr_mut: &mut <Self as rust_cuda::common::RustToCuda>::CudaRepresentation = &mut *(cuda_repr.as_ref() as *const _ as *mut _);
 
                 // rust_repr must never be dropped as we do NOT own any of the
