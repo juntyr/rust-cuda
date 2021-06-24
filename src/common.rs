@@ -3,6 +3,9 @@ use core::convert::{AsMut, AsRef};
 
 use rustacuda_core::DeviceCopy;
 
+#[cfg(feature = "derive")]
+pub use rust_cuda_derive::RustToCuda;
+
 /// # Safety
 /// This is an internal trait and should ONLY be derived automatically using
 /// `#[derive(RustToCuda)]`

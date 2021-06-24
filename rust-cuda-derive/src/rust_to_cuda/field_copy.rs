@@ -33,7 +33,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             combined_cuda_alloc_type = quote! {
                 rust_cuda::host::CombinedCudaAlloc<
                     rust_cuda::host::CudaDropWrapper<
-                        rustacuda::memory::DeviceBuffer<
+                        rust_cuda::rustacuda::memory::DeviceBuffer<
                             #slice_type
                         >
                     >,
@@ -44,7 +44,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             r2c_field_declarations.push(quote! {
                 let (#field_repr_ident, alloc_front) = {
                     let mut device_buffer = rust_cuda::host::CudaDropWrapper::from(
-                        rustacuda::memory::DeviceBuffer::from_slice(
+                        rust_cuda::rustacuda::memory::DeviceBuffer::from_slice(
                             &self.#field_accessor
                         )?
                     );
@@ -66,7 +66,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 let alloc_front = {
                     let (alloc_front, alloc_tail): (
                         rust_cuda::host::CudaDropWrapper<
-                            rustacuda::memory::DeviceBuffer<#slice_type>
+                            rust_cuda::rustacuda::memory::DeviceBuffer<#slice_type>
                         >, _
                     ) = alloc_front.split();
 

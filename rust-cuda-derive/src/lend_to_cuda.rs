@@ -26,11 +26,11 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                     rust_cuda::host::HostDeviceBoxConst<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
-                ) -> rustacuda::error::CudaResult<O>,
+                ) -> rust_cuda::rustacuda::error::CudaResult<O>,
             >(
                 &self,
                 inner: LendToCudaInnerFunc,
-            ) -> rustacuda::error::CudaResult<O> {
+            ) -> rust_cuda::rustacuda::error::CudaResult<O> {
                 use rust_cuda::common::RustToCuda;
 
                 let (cuda_repr, tail_alloc) = unsafe {
@@ -38,7 +38,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 }?;
 
                 let mut device_box = rust_cuda::host::CudaDropWrapper::from(
-                    rustacuda::memory::DeviceBox::new(&cuda_repr)?
+                    rust_cuda::rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
 
                 let result = inner(rust_cuda::host::HostDeviceBoxConst::new(&device_box, &cuda_repr));
@@ -56,11 +56,11 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                     rust_cuda::host::HostDeviceBoxMut<
                         <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
-                ) -> rustacuda::error::CudaResult<O>,
+                ) -> rust_cuda::rustacuda::error::CudaResult<O>,
             >(
                 &mut self,
                 inner: LendToCudaInnerFunc,
-            ) -> rustacuda::error::CudaResult<O> {
+            ) -> rust_cuda::rustacuda::error::CudaResult<O> {
                 use rust_cuda::common::RustToCuda;
 
                 let (cuda_repr, alloc) = unsafe {
@@ -68,7 +68,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                 }?;
 
                 let mut device_box = rust_cuda::host::CudaDropWrapper::from(
-                    rustacuda::memory::DeviceBox::new(&cuda_repr)?
+                    rust_cuda::rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
 
                 let result = inner(rust_cuda::host::HostDeviceBoxMut::new(&mut device_box, &cuda_repr));

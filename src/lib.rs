@@ -8,10 +8,20 @@
 #[doc(hidden)]
 pub extern crate alloc;
 
+pub extern crate rustacuda_core;
+
 pub mod common;
 
 #[cfg(feature = "host")]
 pub mod host;
+
+#[cfg(all(not(feature = "host"), feature = "derive"))]
+pub mod host {
+    pub use rust_cuda_derive::LendToCuda;
+}
+
+#[cfg(feature = "host")]
+pub extern crate rustacuda;
 
 #[cfg(not(feature = "host"))]
 pub mod device;

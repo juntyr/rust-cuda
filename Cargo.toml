@@ -10,8 +10,11 @@ edition = "2018"
 [features]
 default = []
 host = ["rustacuda"]
+derive = ["rustacuda_core/derive", "rust-cuda-derive"]
 
 [dependencies]
-rustacuda_core = "0.1.2"
+rustacuda_core = { path = "../third-party/RustaCUDA/rustacuda_core" }
 
-rustacuda = { version = "0.1.2", optional = true }
+rustacuda = { path = "../third-party/RustaCUDA", optional = true }
+
+rust-cuda-derive = { path = "rust-cuda-derive", optional = true }

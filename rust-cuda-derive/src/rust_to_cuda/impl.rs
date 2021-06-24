@@ -16,10 +16,9 @@ pub fn cuda_struct_declaration(
         #(#struct_attrs_cuda)* #struct_vis_cuda struct #struct_name_cuda
             #struct_generics_cuda #struct_fields_cuda #struct_semi_cuda
 
-        // I would prefer #[derive(DeviceCopy)] on #name_cuda but this can interfer with
-        // type parameters
-        unsafe impl #impl_generics rustacuda_core::DeviceCopy for #struct_name_cuda #ty_generics
-            #where_clause {}
+        // #[derive(DeviceCopy)] can interfer with type parameters
+        unsafe impl #impl_generics rust_cuda::rustacuda_core::DeviceCopy
+            for #struct_name_cuda #ty_generics #where_clause {}
     }
 }
 
@@ -62,7 +61,7 @@ pub fn rust_to_cuda_trait(
             #[cfg(not(target_os = "cuda"))]
             unsafe fn borrow_mut<CudaAllocType: rust_cuda::host::CudaAlloc>(
                 &mut self, alloc: CudaAllocType
-            ) -> rustacuda::error::CudaResult<(
+            ) -> rust_cuda::rustacuda::error::CudaResult<(
                 Self::CudaRepresentation,
                 rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
@@ -81,8 +80,8 @@ pub fn rust_to_cuda_trait(
                 &mut self,
                 cuda_repr: Self::CudaRepresentation,
                 alloc: rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>,
-            ) -> rustacuda::error::CudaResult<CudaAllocType> {
-                use rustacuda::memory::CopyDestination;
+            ) -> rust_cuda::rustacuda::error::CudaResult<CudaAllocType> {
+                use rust_cuda::rustacuda::memory::CopyDestination;
 
                 let (alloc_front, alloc_tail) = alloc.split();
 

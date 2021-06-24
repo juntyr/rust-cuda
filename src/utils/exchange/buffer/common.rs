@@ -6,11 +6,10 @@ use super::CudaExchangeBuffer;
 
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
+#[derive(DeviceCopy)]
 pub struct CudaExchangeBufferCudaRepresentation<T: Clone + DeviceCopy>(
     pub(super) DeviceOwnedSlice<T>,
 );
-
-unsafe impl<T: Clone + DeviceCopy> DeviceCopy for CudaExchangeBufferCudaRepresentation<T> {}
 
 unsafe impl<T: Clone + DeviceCopy> CudaAsRust for CudaExchangeBufferCudaRepresentation<T> {
     type RustRepresentation = CudaExchangeBuffer<T>;
