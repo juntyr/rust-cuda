@@ -13,6 +13,7 @@ pub fn cuda_struct_declaration(
 
     quote! {
         #[allow(dead_code)]
+        #[doc(hidden)]
         #(#struct_attrs_cuda)* #struct_vis_cuda struct #struct_name_cuda
             #struct_generics_cuda #struct_fields_cuda #struct_semi_cuda
 
