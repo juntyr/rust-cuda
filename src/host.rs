@@ -108,7 +108,7 @@ impl<C: private::drop::Sealed> Drop for CudaDropWrapper<C> {
     fn drop(&mut self) {
         if let Some(val) = self.0.take() {
             if let Err((_err, val)) = C::drop(val) {
-                core::mem::forget(val)
+                core::mem::forget(val);
             }
         }
     }
@@ -173,7 +173,7 @@ impl<'a, T: Sized + DeviceCopy> HostDeviceBoxMut<'a, T> {
     }
 
     pub fn for_host(&mut self) -> &T {
-        &self.host_ref
+        self.host_ref
     }
 }
 
@@ -192,10 +192,10 @@ impl<'a, T: Sized + DeviceCopy> HostDeviceBoxConst<'a, T> {
     }
 
     pub fn for_device(&mut self) -> DeviceBoxConst<T> {
-        DeviceBoxConst::from(&self.device_box)
+        DeviceBoxConst::from(self.device_box)
     }
 
     pub fn for_host(&mut self) -> &T {
-        &self.host_ref
+        self.host_ref
     }
 }

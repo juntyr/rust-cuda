@@ -78,7 +78,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     );
 
     let rust_to_cuda_trait_impl = r#impl::rust_to_cuda_trait(
-        &struct_name,
+        struct_name,
         &struct_name_cuda,
         &struct_generics_cuda,
         &struct_fields_cuda,
@@ -89,7 +89,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     );
 
     let cuda_as_rust_trait_impl = r#impl::cuda_as_rust_trait(
-        &struct_name,
+        struct_name,
         &struct_name_cuda,
         &struct_generics_cuda,
         &struct_fields_cuda,

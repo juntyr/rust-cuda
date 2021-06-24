@@ -36,8 +36,8 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
 
                 cuda_repr_field_ty = Some(CudaReprFieldTy::BoxedSlice(slice_type));
             } else if let Some(struct_type) = attribute_str
-                .strip_prefix("(")
-                .and_then(|rest| rest.strip_suffix(")"))
+                .strip_prefix('(')
+                .and_then(|rest| rest.strip_suffix(')'))
             {
                 // Check for the case where a type implementing is `RustToCuda` embedded
                 let field_type = syn::parse_str(struct_type).unwrap();
@@ -66,8 +66,8 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
             };
 
             if let Some(struct_type) = attribute_str
-                .strip_prefix("(")
-                .and_then(|rest| rest.strip_suffix(")"))
+                .strip_prefix('(')
+                .and_then(|rest| rest.strip_suffix(')'))
             {
                 // Check for the case where a type implementing is `RustToCuda` embedded
                 let field_type = syn::parse_str(struct_type).unwrap();

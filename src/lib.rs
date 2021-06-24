@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![allow(clippy::useless_attribute)]
 #![no_std]
 #![feature(associated_type_bounds)]
 #![cfg_attr(not(feature = "host"), feature(link_llvm_intrinsics))]

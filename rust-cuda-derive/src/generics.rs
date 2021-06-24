@@ -9,8 +9,8 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             let attribute_str = format!("{}", attr.tokens);
 
             if let Some(type_trait_bound) = attribute_str
-                .strip_prefix("(")
-                .and_then(|rest| rest.strip_suffix(")"))
+                .strip_prefix('(')
+                .and_then(|rest| rest.strip_suffix(')'))
             {
                 let type_param: syn::TypeParam = syn::parse_str(type_trait_bound).unwrap();
 
@@ -22,7 +22,7 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                     .find(|tp| tp.ident == type_param.ident)
                 {
                     for bound in &type_param.bounds {
-                        matching_param.bounds.push(bound.clone())
+                        matching_param.bounds.push(bound.clone());
                     }
 
                     type_param_has_been_inserted = true;
