@@ -1,5 +1,8 @@
 use rustacuda_core::DeviceCopy;
 
+#[cfg(feature = "derive")]
+pub use rust_cuda_derive::specialise_kernel;
+
 use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
 pub mod nvptx;

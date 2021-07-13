@@ -133,7 +133,7 @@ pub unsafe fn _round(x: f64) -> f64 {
 /// Synchronizes all threads in the block.
 #[inline]
 pub unsafe fn _syncthreads() {
-    syncthreads()
+    syncthreads();
 }
 
 /// x-th thread-block dimension.
@@ -312,5 +312,5 @@ extern "C" {
 /// [PTX Interoperability](https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls).
 #[inline]
 pub unsafe fn __assert_fail(message: *const u8, file: *const u8, line: u32, function: *const u8) {
-    __assertfail(message, file, line, function, 1)
+    __assertfail(message, file, line, function, 1);
 }

@@ -12,6 +12,9 @@ use rustacuda_core::DeviceCopy;
 #[cfg(feature = "derive")]
 pub use rust_cuda_derive::LendToCuda;
 
+#[cfg(feature = "derive")]
+pub use rust_cuda_derive::link_kernel;
+
 use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
 /// # Safety
