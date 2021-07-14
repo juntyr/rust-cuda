@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
+#![feature(bindings_after_at)]
 
 extern crate proc_macro;
 
@@ -66,6 +67,90 @@ impl syn::parse::Parse for KernelConfig {
             kernel,
             args,
             launcher,
+        })
+    }
+}
+
+enum InputCudaType {
+    DeviceCopy,
+    RustToCuda,
+}
+
+enum KernelInputAttribute {
+    PassType(proc_macro2::Span, InputCudaType),
+    PtxJit(proc_macro2::Span, bool),
+}
+
+impl syn::parse::Parse for KernelInputAttribute {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let ident: syn::Ident = input.parse()?;
+
+        match &*ident.to_string() {
+            "pass" => {
+                let eq: syn::Token![=] = input.parse()?;
+                let mode: syn::Ident = input.parse()?;
+
+                let cuda_type = match &*mode.to_string() {
+                    "DeviceCopy" => InputCudaType::DeviceCopy,
+                    "RustToCuda" => InputCudaType::RustToCuda,
+                    _ => abort!(
+                        mode.span(),
+                        "Unexpected CUDA transfer mode `{:?}`: Expected `DeviceCopy` or \
+                         `RustToCuda`.",
+                        mode
+                    ),
+                };
+
+                Ok(KernelInputAttribute::PassType(
+                    ident
+                        .span()
+                        .join(eq.span())
+                        .unwrap()
+                        .join(mode.span())
+                        .unwrap(),
+                    cuda_type,
+                ))
+            },
+            "jit" => {
+                let eq: Option<syn::Token![=]> = input.parse()?;
+
+                let (ptx_jit, span) = if eq.is_some() {
+                    let value: syn::LitBool = input.parse()?;
+
+                    (
+                        value.value(),
+                        ident
+                            .span()
+                            .join(eq.span())
+                            .unwrap()
+                            .span()
+                            .join(value.span())
+                            .unwrap(),
+                    )
+                } else {
+                    (true, ident.span())
+                };
+
+                Ok(KernelInputAttribute::PtxJit(span, ptx_jit))
+            },
+            _ => abort!(
+                ident.span(),
+                "Unexpected kernel attribute `{:?}`: Expected `pass` or `jit`.",
+                ident
+            ),
+        }
+    }
+}
+
+struct KernelInputAttributes(Vec<KernelInputAttribute>);
+
+impl syn::parse::Parse for KernelInputAttributes {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let content;
+        let _parens = syn::parenthesized!(content in input);
+
+        syn::punctuated::Punctuated::<KernelInputAttribute, syn::Token![,]>::parse_separated_nonempty(&content).map(|punctuated| {
+            Self(punctuated.into_iter().collect())
         })
     }
 }
@@ -137,9 +222,88 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         ),
     };
 
-    if let Some(receiver) = func.sig.receiver() {
-        abort!(receiver.span(), "Kernel function must not have a receiver.");
-    }
+    let (func_inputs, func_input_cuda_types): (
+        syn::punctuated::Punctuated<syn::FnArg, syn::Token![,]>,
+        Vec<(InputCudaType, bool)>,
+    ) = func
+        .sig
+        .inputs
+        .iter()
+        .map(|arg| match arg {
+            receiver @ syn::FnArg::Receiver(_) => {
+                abort!(receiver.span(), "Kernel function must not have a receiver.")
+            },
+            syn::FnArg::Typed(
+                input
+                @
+                syn::PatType {
+                    attrs,
+                    pat,
+                    colon_token,
+                    ty,
+                },
+            ) => {
+                let mut cuda_type: Option<InputCudaType> = None;
+                let mut ptx_jit: Option<bool> = None;
+
+                let attrs = attrs
+                    .iter()
+                    .filter(|attr| match attr.path.get_ident() {
+                        Some(ident) if ident == "kernel" => {
+                            let attrs: KernelInputAttributes =
+                                match syn::parse_macro_input::parse(attr.tokens.clone().into()) {
+                                    Ok(data) => data,
+                                    Err(err) => abort!(attr.span(), err),
+                                };
+
+                            for attr in attrs.0 {
+                                match attr {
+                                    KernelInputAttribute::PassType(_span, pass_type)
+                                        if cuda_type.is_none() =>
+                                    {
+                                        cuda_type = Some(pass_type);
+                                    }
+                                    KernelInputAttribute::PassType(span, _pass_type) => {
+                                        abort!(span, "Duplicate CUDA transfer mode declaration.");
+                                    },
+                                    KernelInputAttribute::PtxJit(_span, jit)
+                                        if ptx_jit.is_none() =>
+                                    {
+                                        ptx_jit = Some(jit);
+                                    }
+                                    KernelInputAttribute::PtxJit(span, _jit) => {
+                                        abort!(span, "Duplicate PTX JIT declaration.");
+                                    },
+                                }
+                            }
+
+                            false
+                        },
+                        _ => true,
+                    })
+                    .cloned()
+                    .collect();
+
+                let cuda_type = cuda_type.unwrap_or_else(|| {
+                    abort!(
+                        input.span(),
+                        "Kernel function input must specify its CUDA transfer mode using \
+                         #[kernel(pass = ...)]."
+                    );
+                });
+
+                (
+                    syn::FnArg::Typed(syn::PatType {
+                        attrs,
+                        pat: pat.clone(),
+                        colon_token: *colon_token,
+                        ty: ty.clone(),
+                    }),
+                    (cuda_type, ptx_jit.unwrap_or(false)),
+                )
+            },
+        })
+        .unzip();
 
     let generic_lt_token = &func.sig.generics.lt_token;
     let generic_params = &func.sig.generics.params;
@@ -171,7 +335,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         .map(|i| quote::format_ident!("__g_{}", i))
         .collect::<Vec<_>>();
 
-    let func_input_typedefs = (0..func.sig.inputs.len())
+    let func_input_typedefs = (0..func_inputs.len())
         .map(|i| {
             let type_ident = quote::format_ident!("__T_{}", i);
 
@@ -181,9 +345,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect::<Vec<_>>();
 
-    let func_input_types = func
-        .sig
-        .inputs
+    let func_input_types = func_inputs
         .iter()
         .enumerate()
         .map(|(i, arg)| {
@@ -206,48 +368,47 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let (impl_generics, ty_generics, where_clause) = func.sig.generics.split_for_impl();
 
-    let new_func_inputs_decl: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> = func
-        .sig
-        .inputs
-        .iter()
-        .enumerate()
-        .map(|(i, arg)| match arg {
-            syn::FnArg::Receiver(receiver) => syn::FnArg::Receiver(receiver.clone()),
-            syn::FnArg::Typed(syn::PatType {
-                attrs,
-                pat,
-                colon_token,
-                ty,
-            }) => syn::FnArg::Typed(syn::PatType {
-                attrs: attrs.clone(),
-                pat: pat.clone(),
-                colon_token: *colon_token,
-                ty: {
-                    let type_ident = quote::format_ident!("__T_{}", i);
-                    let syn_type = syn::parse_quote!(<() as #args #ty_generics>::#type_ident);
+    let new_func_inputs_decl: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> =
+        func_inputs
+            .iter()
+            .enumerate()
+            .map(|(i, arg)| match arg {
+                syn::FnArg::Receiver(receiver) => syn::FnArg::Receiver(receiver.clone()),
+                syn::FnArg::Typed(syn::PatType {
+                    attrs,
+                    pat,
+                    colon_token,
+                    ty,
+                }) => syn::FnArg::Typed(syn::PatType {
+                    attrs: attrs.clone(),
+                    pat: pat.clone(),
+                    colon_token: *colon_token,
+                    ty: {
+                        let type_ident = quote::format_ident!("__T_{}", i);
+                        let syn_type = syn::parse_quote!(<() as #args #ty_generics>::#type_ident);
 
-                    if let syn::Type::Reference(syn::TypeReference {
-                        and_token,
-                        lifetime,
-                        mutability,
-                        elem: _elem,
-                    }) = &**ty
-                    {
-                        Box::new(syn::Type::Reference(syn::TypeReference {
-                            and_token: *and_token,
-                            lifetime: lifetime.clone(),
-                            mutability: *mutability,
-                            elem: syn_type,
-                        }))
-                    } else {
-                        syn_type
-                    }
-                },
-            }),
-        })
-        .collect();
+                        if let syn::Type::Reference(syn::TypeReference {
+                            and_token,
+                            lifetime,
+                            mutability,
+                            elem: _elem,
+                        }) = &**ty
+                        {
+                            Box::new(syn::Type::Reference(syn::TypeReference {
+                                and_token: *and_token,
+                                lifetime: lifetime.clone(),
+                                mutability: *mutability,
+                                elem: syn_type,
+                            }))
+                        } else {
+                            syn_type
+                        }
+                    },
+                }),
+            })
+            .collect();
 
-    let new_func_inputs = func.sig.inputs.iter().enumerate().map(|(i, arg)| {
+    let new_func_inputs = func_inputs.iter().enumerate().map(|(i, arg)| {
         match arg {
             syn::FnArg::Typed(syn::PatType { attrs, pat, colon_token, ty }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
@@ -265,13 +426,10 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     }).collect::<Vec<_>>();
 
-    let ptx_func_inputs: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> = func
-        .sig
-        .inputs
+    let ptx_func_inputs: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> = func_inputs
         .iter()
         .enumerate()
         .map(|(i, arg)| match arg {
-            syn::FnArg::Receiver(receiver) => syn::FnArg::Receiver(receiver.clone()),
             syn::FnArg::Typed(syn::PatType {
                 attrs,
                 pat,
@@ -305,6 +463,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                     }
                 },
             }),
+            syn::FnArg::Receiver(_) => unreachable!(),
         })
         .collect();
 
@@ -327,7 +486,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         None => abort_call_site!("Failed to read crate path: NotPresent."),
     };
 
-    (quote! {
+    let args_trait = quote! {
         pub unsafe trait #args #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
             #(#func_input_typedefs)*
         }
@@ -335,13 +494,47 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         unsafe impl #impl_generics #args #ty_generics for () #where_clause {
             #(#func_input_types)*
         }
+    };
 
+    let cpu_wrapper = quote! {
         #[cfg(not(target_os = "cuda"))]
         pub unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
             #(#func_attrs)*
             fn #func_ident(&mut self, #new_func_inputs_decl);
         }
+    };
 
+    let cpu_func_types = func_inputs
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| match arg {
+            syn::FnArg::Typed(syn::PatType {
+                ty: _ty, ..
+            }) => {
+                let type_ident = quote::format_ident!("__T_{}", i);
+
+                quote!{
+                    <() as #args #generic_lt_token #($#macro_type_ids),* #generic_gt_token>::#type_ident
+                }
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect::<Vec<_>>();
+
+    let func_type_errors: Vec<syn::Ident> = func_inputs
+        .iter()
+        .map(|arg| match arg {
+            syn::FnArg::Typed(syn::PatType { pat, .. }) => {
+                quote::format_ident!(
+                    "CudaParameter_{}_MustFitInto64BitOrBeAReference",
+                    quote::ToTokens::to_token_stream(pat).to_string()
+                )
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect();
+
+    let cpu_linker_macro = quote! {
         #[cfg(not(target_os = "cuda"))]
         macro_rules! #linker {
             (#(#macro_types),* $(,)?) => {
@@ -349,6 +542,12 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                     #[allow(unused_variables)]
                     #(#func_attrs)*
                     fn #func_ident(&mut self, #(#new_func_inputs),*) {
+                        #(
+                            #[allow(non_camel_case_types)]
+                            struct #func_type_errors;
+                            const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types>() <= 8); ASSERT } as usize] = [];
+                        )*
+
                         const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
 
                         unimplemented!("{:?}", PTX_STR)
@@ -356,12 +555,71 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                 }
             };
         }
+    };
 
+    let cuda_generic_function = quote! {
+        #[cfg(target_os = "cuda")]
+        #(#func_attrs)*
+        fn #func_ident #generic_lt_token #generic_params #generic_gt_token (#func_inputs) #generic_where_clause
+        #func_block
+    };
+
+    let kernel_func_ident = quote::format_ident!("{}_kernel", func_ident);
+
+    let ptx_func_params: syn::punctuated::Punctuated<syn::Pat, syn::token::Comma> = func
+        .sig
+        .inputs
+        .iter()
+        .map(|arg| match arg {
+            syn::FnArg::Typed(syn::PatType { pat, .. }) => (&**pat).clone(),
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect();
+
+    let cuda_func_types: Vec<syn::Type> = func_inputs
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| match arg {
+            syn::FnArg::Typed(syn::PatType { ty: _ty, .. }) => {
+                let type_ident = quote::format_ident!("__T_{}", i);
+
+                syn::parse_quote!(rust_cuda::device::specialise_kernel!(#args :: #type_ident))
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect();
+
+    // TODO:
+    //  - add compile time checks that devicecopy types are device copy
+    //  - add compile time checks that rusttocuda types are rusttocuda
+    //  - include the specialisation hash inside the kernel name
+    let cuda_wrapper = quote! {
         #[cfg(target_os = "cuda")]
         #[no_mangle]
         #(#func_attrs)*
-        pub unsafe extern "ptx-kernel" fn #func_ident(#ptx_func_inputs) #func_block
-    }).into()
+        pub unsafe extern "ptx-kernel" fn #kernel_func_ident(#ptx_func_inputs) {
+            #(
+                #[allow(non_camel_case_types)]
+                struct #func_type_errors;
+                const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cuda_func_types>() <= 8); ASSERT } as usize] = [];
+            )*
+
+            #func_ident(#ptx_func_params)
+        }
+    };
+
+    (quote! {
+        #args_trait
+
+        #cpu_wrapper
+
+        #cpu_linker_macro
+
+        #cuda_wrapper
+
+        #cuda_generic_function
+    })
+    .into()
 }
 
 struct SpecialiseConfig {
@@ -438,7 +696,9 @@ impl syn::parse::Parse for LinkConfig {
                 )?;
             let _gt_token: syn::Token![>] = input.parse()?;
 
-            (quote! { < #specialisation_types > }).to_string()
+            (quote! { <#specialisation_types> })
+                .to_string()
+                .replace(&[' ', '\n', '\t'][..], "")
         } else {
             String::new()
         };
