@@ -428,8 +428,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let ptx_func_inputs: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> = func_inputs
         .iter()
+        .zip(func_input_cuda_types.iter())
         .enumerate()
-        .map(|(i, arg)| match arg {
+        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs,
                 pat,
@@ -437,29 +438,58 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                 ty,
             }) => syn::FnArg::Typed(syn::PatType {
                 attrs: attrs.clone(),
-                pat: pat.clone(),
+                pat: {
+                    if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if matches!(cuda_mode, InputCudaType::DeviceCopy) && mutability.is_some() {
+                            syn::parse_quote!(mut #pat)
+                        } else {
+                            pat.clone()
+                        }
+                    } else {
+                        pat.clone()
+                    }
+                },
                 colon_token: *colon_token,
                 ty: {
                     let type_ident = quote::format_ident!("__T_{}", i);
                     let syn_type = syn::parse_quote!(
-                        rust_cuda::device::specialise_kernel!(#args :: #type_ident)
+                        rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
                     );
 
+                    let cuda_type = match cuda_mode {
+                        InputCudaType::DeviceCopy => syn_type,
+                        InputCudaType::RustToCuda => syn::parse_quote!(
+                            <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        ),
+                    };
+
                     if let syn::Type::Reference(syn::TypeReference {
-                        and_token,
+                        and_token: _and_token,
                         lifetime,
                         mutability,
                         elem: _elem,
                     }) = &**ty
                     {
-                        Box::new(syn::Type::Reference(syn::TypeReference {
-                            and_token: *and_token,
-                            lifetime: lifetime.clone(),
-                            mutability: *mutability,
-                            elem: syn_type,
-                        }))
+                        if lifetime.is_some() {
+                            abort!(lifetime.span(), "Kernel parameters cannot have lifetimes.");
+                        }
+
+                        if mutability.is_some() {
+                            syn::parse_quote!(
+                                rust_cuda::common::DeviceBoxMut<#cuda_type>
+                            )
+                        } else {
+                            syn::parse_quote!(
+                                rust_cuda::common::DeviceBoxConst<#cuda_type>
+                            )
+                        }
+                    } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                        abort!(
+                            ty.span(),
+                            "Kernel parameters transferred using `RustToCuda` must be references."
+                        );
                     } else {
-                        syn_type
+                        cuda_type
                     }
                 },
             }),
@@ -527,7 +557,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             syn::FnArg::Typed(syn::PatType { pat, .. }) => {
                 quote::format_ident!(
                     "CudaParameter_{}_MustFitInto64BitOrBeAReference",
-                    quote::ToTokens::to_token_stream(pat).to_string()
+                    quote::ToTokens::to_token_stream(pat)
+                        .to_string()
+                        .replace(' ', "_")
                 )
             },
             syn::FnArg::Receiver(_) => unreachable!(),
@@ -542,11 +574,11 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                     #[allow(unused_variables)]
                     #(#func_attrs)*
                     fn #func_ident(&mut self, #(#new_func_inputs),*) {
-                        #(
-                            #[allow(non_camel_case_types)]
-                            struct #func_type_errors;
-                            const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types>() <= 8); ASSERT } as usize] = [];
-                        )*
+                        // #(
+                        //     #[allow(non_camel_case_types)]
+                        //     struct #func_type_errors;
+                        //     const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types>() <= 8); ASSERT } as usize] = [];
+                        // )*
 
                         const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
 
@@ -564,8 +596,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #func_block
     };
 
-    let kernel_func_ident = quote::format_ident!("{}_kernel", func_ident);
-
     let ptx_func_params: syn::punctuated::Punctuated<syn::Pat, syn::token::Comma> = func
         .sig
         .inputs
@@ -576,15 +606,48 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let cuda_func_types: Vec<syn::Type> = func_inputs
-        .iter()
-        .enumerate()
-        .map(|(i, arg)| match arg {
-            syn::FnArg::Typed(syn::PatType { ty: _ty, .. }) => {
-                let type_ident = quote::format_ident!("__T_{}", i);
+    let ptx_func_input_unwrap = func_inputs
+        .iter().zip(func_input_cuda_types.iter())
+        .rev()
+        .fold(quote! { #func_ident(#ptx_func_params) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
+            syn::FnArg::Typed(syn::PatType {
+                attrs: _attrs,
+                pat,
+                colon_token: _colon_token,
+                ty,
+            }) => {
+                // TODO: Also emit ptx jit markers here
 
-                syn::parse_quote!(rust_cuda::device::specialise_kernel!(#args :: #type_ident))
+                match cuda_mode {
+                    InputCudaType::DeviceCopy => if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if mutability.is_some() {
+                            quote! { let #pat = #pat.as_mut(); #inner }
+                        } else {
+                            quote! { let #pat = #pat.as_ref(); #inner }
+                        }
+                    } else {
+                        inner
+                    },
+                    InputCudaType::RustToCuda => if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if mutability.is_some() {
+                            quote! { rust_cuda::device::BorrowFromRust::with_borrow_from_rust_mut(#pat, |#pat| {
+                                #inner
+                            }) }
+                        } else {
+                            quote! { rust_cuda::device::BorrowFromRust::with_borrow_from_rust(#pat, |#pat| {
+                                #inner
+                            }) }
+                        }
+                    } else { unreachable!() }
+                }
             },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        });
+
+    let cuda_func_types: Vec<&syn::Type> = ptx_func_inputs
+        .iter()
+        .map(|arg| match arg {
+            syn::FnArg::Typed(syn::PatType { ty, .. }) => &**ty,
             syn::FnArg::Receiver(_) => unreachable!(),
         })
         .collect();
@@ -595,16 +658,17 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     //  - include the specialisation hash inside the kernel name
     let cuda_wrapper = quote! {
         #[cfg(target_os = "cuda")]
+        #[rust_cuda::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
-        pub unsafe extern "ptx-kernel" fn #kernel_func_ident(#ptx_func_inputs) {
+        pub unsafe extern "ptx-kernel" fn #func_ident(#ptx_func_inputs) {
             #(
                 #[allow(non_camel_case_types)]
                 struct #func_type_errors;
                 const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cuda_func_types>() <= 8); ASSERT } as usize] = [];
             )*
 
-            #func_ident(#ptx_func_params)
+            #ptx_func_input_unwrap
         }
     };
 
@@ -622,12 +686,12 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     .into()
 }
 
-struct SpecialiseConfig {
+struct SpecialiseTypeConfig {
     kernel: syn::Ident,
     typedef: syn::Ident,
 }
 
-impl syn::parse::Parse for SpecialiseConfig {
+impl syn::parse::Parse for SpecialiseTypeConfig {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let kernel: syn::Ident = input.parse()?;
         let _dc: syn::Token![::] = input.parse()?;
@@ -639,12 +703,13 @@ impl syn::parse::Parse for SpecialiseConfig {
 
 #[proc_macro_error]
 #[proc_macro]
-pub fn specialise_kernel(tokens: TokenStream) -> TokenStream {
-    let SpecialiseConfig { kernel, typedef } = match syn::parse_macro_input::parse(tokens) {
+pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
+    let SpecialiseTypeConfig { kernel, typedef } = match syn::parse_macro_input::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "specialise_kernel!(KERNEL::TYPEDEF) expects KERNEL and TYPEDEF identifiers: {:?}",
+                "specialise_kernel_type!(KERNEL::TYPEDEF) expects KERNEL and TYPEDEF identifiers: \
+                 {:?}",
                 err
             )
         },
@@ -668,19 +733,129 @@ pub fn specialise_kernel(tokens: TokenStream) -> TokenStream {
                 Err(err) => abort_call_site!("Failed to parse specialisation: {:?}", err),
             }
         },
-        Err(error) => abort_call_site!(
+        Err(err) => abort_call_site!(
             "Failed to read specialisation from {:?}: {:?}",
             &specialisation_var,
-            error
+            err
         ),
     }
+}
+
+struct SpecialiseMangleConfig {
+    kernel: syn::Ident,
+    specialisation: Option<String>,
+}
+
+impl syn::parse::Parse for SpecialiseMangleConfig {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let kernel: syn::Ident = input.parse()?;
+
+        let specialisation = if input.parse::<Option<syn::Token![<]>>()?.is_some() {
+            let specialisation_types =
+                syn::punctuated::Punctuated::<syn::Type, syn::Token![,]>::parse_separated_nonempty(
+                    input,
+                )?;
+            let _gt_token: syn::Token![>] = input.parse()?;
+
+            Some(
+                (quote! { <#specialisation_types> })
+                    .to_string()
+                    .replace(&[' ', '\n', '\t'][..], ""),
+            )
+        } else {
+            None
+        };
+
+        Ok(Self {
+            kernel,
+            specialisation,
+        })
+    }
+}
+
+#[proc_macro_error]
+#[proc_macro]
+pub fn specialise_kernel_call(tokens: TokenStream) -> TokenStream {
+    let SpecialiseMangleConfig {
+        kernel,
+        specialisation,
+    } = match syn::parse_macro_input::parse(tokens) {
+        Ok(config) => config,
+        Err(err) => {
+            abort_call_site!(
+                "specialise_kernel_call!(KERNEL SPECIALISATION) expects KERNEL identifier and \
+                 SPECIALISATION tokens: {:?}",
+                err
+            )
+        },
+    };
+
+    let mangled_kernel_ident = if let Some(specialisation) = specialisation {
+        quote::format_ident!(
+            "{}_kernel_{:016x}",
+            kernel,
+            seahash::hash(specialisation.as_bytes())
+        )
+    } else {
+        quote::format_ident!("{}_kernel", kernel)
+    };
+
+    (quote! { #mangled_kernel_ident }).into()
+}
+
+#[proc_macro_error]
+#[proc_macro_attribute]
+pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStream {
+    let mut func: syn::ItemFn = syn::parse(func).unwrap_or_else(|err| {
+        abort_call_site!(
+            "#[specialise_kernel_entry(...)] must be wrapped around a function: {:?}",
+            err
+        )
+    });
+
+    let kernel: syn::Ident = match syn::parse_macro_input::parse(attr) {
+        Ok(kernel) => kernel,
+        Err(err) => abort_call_site!(
+            "#[specialise_kernel_entry(KERNEL)] expects KERNEL identifier: {:?}",
+            err
+        ),
+    };
+
+    let crate_name = match std::env::var("CARGO_CRATE_NAME") {
+        Ok(crate_name) => crate_name.to_uppercase(),
+        Err(err) => abort_call_site!("Failed to read crate name: {:?}", err),
+    };
+
+    let specialisation_var = format!(
+        "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
+        crate_name,
+        kernel.to_string().to_uppercase()
+    );
+
+    func.sig.ident = match proc_macro::tracked_env::var(&specialisation_var).as_deref() {
+        Ok("") => quote::format_ident!("{}_kernel", func.sig.ident),
+        Ok(specialisation) => {
+            quote::format_ident!(
+                "{}_kernel_{:016x}",
+                func.sig.ident,
+                seahash::hash(specialisation.as_bytes())
+            )
+        },
+        Err(err) => abort_call_site!(
+            "Failed to read specialisation from {:?}: {:?}",
+            &specialisation_var,
+            err
+        ),
+    };
+
+    (quote! { #func }).into()
 }
 
 struct LinkConfig {
     kernel: syn::Ident,
     crate_name: String,
     crate_path: PathBuf,
-    specialisation: String,
+    specialisation: Option<String>,
 }
 
 impl syn::parse::Parse for LinkConfig {
@@ -696,11 +871,13 @@ impl syn::parse::Parse for LinkConfig {
                 )?;
             let _gt_token: syn::Token![>] = input.parse()?;
 
-            (quote! { <#specialisation_types> })
-                .to_string()
-                .replace(&[' ', '\n', '\t'][..], "")
+            Some(
+                (quote! { <#specialisation_types> })
+                    .to_string()
+                    .replace(&[' ', '\n', '\t'][..], ""),
+            )
         } else {
-            String::new()
+            None
         };
 
         Ok(Self {
@@ -727,19 +904,21 @@ use ptx_builder::{
 fn build_kernel_with_specialisation(
     kernel_path: &Path,
     env_var: &str,
-    specialisation: &str,
+    specialisation: Option<&str>,
 ) -> Result<PathBuf> {
-    env::set_var(env_var, specialisation);
+    env::set_var(env_var, specialisation.unwrap_or(""));
 
     match Builder::new(kernel_path)?.build()? {
         BuildStatus::Success(output) => {
             let ptx_path = output.get_assembly_path();
 
             let mut specialised_ptx_path = ptx_path.clone();
-            specialised_ptx_path.set_extension(&format!(
-                "{:016x}.ptx",
-                seahash::hash(specialisation.as_bytes())
-            ));
+            if let Some(specialisation) = specialisation {
+                specialised_ptx_path.set_extension(&format!(
+                    "{:016x}.ptx",
+                    seahash::hash(specialisation.as_bytes())
+                ));
+            }
 
             fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
                 Error::from(BuildErrorKind::BuildFailed(vec![format!(
@@ -751,7 +930,13 @@ fn build_kernel_with_specialisation(
             fs::OpenOptions::new()
                 .append(true)
                 .open(&specialised_ptx_path)
-                .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
+                .and_then(|mut file| {
+                    if let Some(specialisation) = specialisation {
+                        writeln!(file, "\n// {}", specialisation)
+                    } else {
+                        Ok(())
+                    }
+                })
                 .map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(vec![format!(
                         "Failed to write specialisation to {:?}: {}",
@@ -762,7 +947,7 @@ fn build_kernel_with_specialisation(
             Ok(specialised_ptx_path)
         },
         BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
-            "Kernel build for specialisation `{}` was not needed.",
+            "Kernel build for specialisation {:?} was not needed.",
             &specialisation
         )]))),
     }
@@ -793,27 +978,28 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         kernel.to_string().to_uppercase()
     );
 
-    let kernel_ptx =
-        match build_kernel_with_specialisation(&crate_path, &specialisation_var, &specialisation) {
-            Ok(kernel_path) => {
-                let mut file = fs::File::open(&kernel_path).unwrap_or_else(|_| {
-                    panic!("Failed to open kernel file at {:?}.", &kernel_path)
-                });
+    let kernel_ptx = match build_kernel_with_specialisation(
+        &crate_path,
+        &specialisation_var,
+        specialisation.as_deref(),
+    ) {
+        Ok(kernel_path) => {
+            let mut file = fs::File::open(&kernel_path)
+                .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
 
-                let mut kernel_ptx = String::new();
+            let mut kernel_ptx = String::new();
 
-                file.read_to_string(&mut kernel_ptx).unwrap_or_else(|_| {
-                    panic!("Failed to read kernel file at {:?}.", &kernel_path)
-                });
+            file.read_to_string(&mut kernel_ptx)
+                .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
 
-                kernel_ptx.push('\0');
+            kernel_ptx.push('\0');
 
-                kernel_ptx
-            },
-            Err(error) => {
-                abort_call_site!(ErrorLogPrinter::print(error));
-            },
-        };
+            kernel_ptx
+        },
+        Err(err) => {
+            abort_call_site!(ErrorLogPrinter::print(err));
+        },
+    };
 
     (quote! { #kernel_ptx }).into()
 }

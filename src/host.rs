@@ -13,7 +13,7 @@ use rustacuda_core::DeviceCopy;
 pub use rust_cuda_derive::LendToCuda;
 
 #[cfg(feature = "derive")]
-pub use rust_cuda_derive::link_kernel;
+pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
 use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
