@@ -155,6 +155,11 @@ impl syn::parse::Parse for KernelInputAttributes {
     }
 }
 
+// cargo expand --target x86_64-unknown-linux-gnu --ugly \
+//  | rustfmt --config max_width=160 > out.rs
+// cargo expand --target nvptx64-nvidia-cuda --ugly \
+//  | rustfmt --config max_width=160 > out.rs
+
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
@@ -408,11 +413,81 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             })
             .collect();
 
+    let new_func_inputs_raw_decl: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> =
+        func_inputs
+            .iter()
+            .zip(func_input_cuda_types.iter())
+            .enumerate()
+            .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+                syn::FnArg::Typed(syn::PatType {
+                    attrs,
+                    pat,
+                    colon_token,
+                    ty,
+                }) => syn::FnArg::Typed(syn::PatType {
+                    attrs: attrs.clone(),
+                    pat: pat.clone(),
+                    colon_token: *colon_token,
+                    ty: {
+                        let type_ident = quote::format_ident!("__T_{}", i);
+                        let syn_type = syn::parse_quote!(<() as #args #ty_generics>::#type_ident);
+
+                        let cuda_type = match cuda_mode {
+                            InputCudaType::DeviceCopy => syn_type,
+                            InputCudaType::RustToCuda => syn::parse_quote!(
+                                <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                            ),
+                        };
+
+                        if let syn::Type::Reference(syn::TypeReference {
+                            and_token,
+                            lifetime,
+                            mutability,
+                            elem: _elem,
+                        }) = &**ty
+                        {
+                            if lifetime.is_some() {
+                                abort!(lifetime.span(), "Kernel parameters cannot have lifetimes.");
+                            }
+
+                            let wrapped_type = if mutability.is_some() {
+                                syn::parse_quote!(
+                                    rust_cuda::host::HostDeviceBoxMut<#cuda_type>
+                                )
+                            } else {
+                                syn::parse_quote!(
+                                    rust_cuda::host::HostDeviceBoxConst<#cuda_type>
+                                )
+                            };
+
+                            Box::new(syn::Type::Reference(syn::TypeReference {
+                                and_token: *and_token,
+                                lifetime: lifetime.clone(),
+                                mutability: *mutability,
+                                elem: wrapped_type,
+                            }))
+                        } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                            abort!(
+                                ty.span(),
+                                "Kernel parameters transferred using `RustToCuda` must be \
+                                 references."
+                            );
+                        } else {
+                            cuda_type
+                        }
+                    },
+                }),
+                syn::FnArg::Receiver(_) => unreachable!(),
+            })
+            .collect();
+
     let new_func_inputs = func_inputs.iter().enumerate().map(|(i, arg)| {
         match arg {
             syn::FnArg::Typed(syn::PatType { attrs, pat, colon_token, ty }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type = quote! { <() as #args #generic_lt_token #($#macro_type_ids),* #generic_gt_token>::#type_ident };
+                let syn_type = quote! {
+                    <() as #args #generic_lt_token #($#macro_type_ids),* #generic_gt_token>::#type_ident
+                };
 
                 if let syn::Type::Reference(syn::TypeReference {
                     and_token, lifetime, mutability, elem: _elem,
@@ -425,6 +500,64 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             syn::FnArg::Receiver(_) => unreachable!(),
         }
     }).collect::<Vec<_>>();
+
+    let new_func_inputs_raw = func_inputs
+        .iter()
+        .zip(func_input_cuda_types.iter())
+        .enumerate()
+        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+            syn::FnArg::Typed(syn::PatType {
+                attrs,
+                pat,
+                colon_token,
+                ty,
+            }) => {
+                let type_ident = quote::format_ident!("__T_{}", i);
+                let syn_type = quote! {
+                    <() as #args #generic_lt_token #($#macro_type_ids),* #generic_gt_token>::#type_ident
+                };
+
+                let cuda_type = match cuda_mode {
+                    InputCudaType::DeviceCopy => syn_type,
+                    InputCudaType::RustToCuda => quote!(
+                        <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                    ),
+                };
+
+                if let syn::Type::Reference(syn::TypeReference {
+                    and_token,
+                    lifetime,
+                    mutability,
+                    elem: _elem,
+                }) = &**ty
+                {
+                    if lifetime.is_some() {
+                        abort!(lifetime.span(), "Kernel parameters cannot have lifetimes.");
+                    }
+
+                    let wrapped_type = if mutability.is_some() {
+                        quote!(
+                            rust_cuda::host::HostDeviceBoxMut<#cuda_type>
+                        )
+                    } else {
+                        quote!(
+                            rust_cuda::host::HostDeviceBoxConst<#cuda_type>
+                        )
+                    };
+
+                    quote! { #(#attrs)* #pat #colon_token #and_token #lifetime #mutability #wrapped_type }
+                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                    abort!(
+                        ty.span(),
+                        "Kernel parameters transferred using `RustToCuda` must be references."
+                    );
+                } else {
+                    quote! { #(#attrs)* #pat #colon_token #cuda_type }
+                }
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect::<Vec<_>>();
 
     let ptx_func_inputs: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> = func_inputs
         .iter()
@@ -516,6 +649,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         None => abort_call_site!("Failed to read crate path: NotPresent."),
     };
 
+    let func_ident_raw = quote::format_ident!("{}_raw", func_ident);
+
     let args_trait = quote! {
         pub unsafe trait #args #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
             #(#func_input_typedefs)*
@@ -530,21 +665,173 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #[cfg(not(target_os = "cuda"))]
         pub unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
             #(#func_attrs)*
-            fn #func_ident(&mut self, #new_func_inputs_decl);
+            fn #func_ident(&mut self, #new_func_inputs_decl) -> rust_cuda::rustacuda::error::CudaResult<()>;
+
+            #(#func_attrs)*
+            fn #func_ident_raw(&mut self, #new_func_inputs_raw_decl) -> rust_cuda::rustacuda::error::CudaResult<()>;
         }
     };
 
-    let cpu_func_types = func_inputs
+    let func_params: syn::punctuated::Punctuated<syn::Pat, syn::token::Comma> = func
+        .sig
+        .inputs
         .iter()
-        .enumerate()
-        .map(|(i, arg)| match arg {
+        .map(|arg| match arg {
+            syn::FnArg::Typed(syn::PatType { pat, .. }) => (&**pat).clone(),
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect();
+
+    let raw_func_input_wrap = func_inputs
+        .iter().zip(func_input_cuda_types.iter())
+        .rev()
+        .fold(quote! { self.#func_ident_raw(#func_params) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType {
-                ty: _ty, ..
+                attrs: _attrs,
+                pat,
+                colon_token: _colon_token,
+                ty,
+            }) => {
+                match cuda_mode {
+                    InputCudaType::DeviceCopy => if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        let pat_box = match &**pat {
+                            syn::Pat::Ident(syn::PatIdent {
+                                attrs,
+                                by_ref: None,
+                                mutability: None,
+                                ident,
+                                subpat: None,
+                            }) => syn::Pat::Ident(syn::PatIdent {
+                                attrs: attrs.clone(),
+                                by_ref: None,
+                                mutability: None,
+                                ident: quote::format_ident!("__{}_box", ident),
+                                subpat: None,
+                            }),
+                            _ => abort!(pat.span(), "Unexpected kernel input parameter: only identifiers are accepted."),
+                        };
+
+                        let pat_host_box = match &**pat {
+                            syn::Pat::Ident(syn::PatIdent {
+                                attrs,
+                                by_ref: None,
+                                mutability: None,
+                                ident,
+                                subpat: None,
+                            }) => syn::Pat::Ident(syn::PatIdent {
+                                attrs: attrs.clone(),
+                                by_ref: None,
+                                mutability: None,
+                                ident: quote::format_ident!("__{}_host_box", ident),
+                                subpat: None,
+                            }),
+                            _ => unreachable!(),
+                        };
+
+                        if mutability.is_some() {
+                            quote! {
+                                let mut #pat_box = rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?;
+                                let mut #pat_host_box = rust_cuda::host::HostDeviceBoxMut::new(&mut #pat_box, #pat);
+                                let __result = {
+                                    let #pat = &mut #pat_host_box;
+                                    #inner
+                                };
+                                rust_cuda::rustacuda::memory::CopyDestination::copy_to(&#pat_box, #pat)?;
+                                __result
+                            }
+                        } else {
+                            quote! {
+                                let #pat_box = rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?;
+                                let #pat_host_box = rust_cuda::host::HostDeviceBoxConst::new(&#pat_box, #pat);
+                                {
+                                    let #pat = &#pat_host_box;
+                                    #inner
+                                }
+                            }
+                        }
+                    } else {
+                        inner
+                    },
+                    InputCudaType::RustToCuda => if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if mutability.is_some() {
+                            quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(#pat, |mut #pat| {
+                                let #pat = &mut #pat;
+                                #inner
+                            }) }
+                        } else {
+                            quote! { rust_cuda::host::LendToCuda::lend_to_cuda(#pat, |#pat| {
+                                let #pat = &#pat;
+                                #inner
+                            }) }
+                        }
+                    } else { unreachable!() }
+                }
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        });
+
+    let func_input_wrap = func_inputs
+        .iter()
+        .zip(func_input_cuda_types.iter())
+        .map(|(arg, (_cuda_mode, _ptx_jit))| match arg {
+            syn::FnArg::Typed(syn::PatType {
+                attrs: _attrs,
+                pat,
+                colon_token: _colon_token,
+                ty,
+            }) => {
+                // TODO: Emit the PTX JIT cpu code here
+
+                if let syn::Type::Reference(_) = &**ty {
+                    quote! { #pat.for_device() }
+                } else {
+                    quote! { #pat }
+                }
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect::<Vec<_>>();
+
+    let cpu_func_types_launch = func_inputs
+        .iter()
+        .zip(func_input_cuda_types.iter())
+        .enumerate()
+        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+            syn::FnArg::Typed(syn::PatType {
+                ty, ..
             }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
-
-                quote!{
+                let syn_type = quote! {
                     <() as #args #generic_lt_token #($#macro_type_ids),* #generic_gt_token>::#type_ident
+                };
+
+                let cuda_type = match cuda_mode {
+                    InputCudaType::DeviceCopy => syn_type,
+                    InputCudaType::RustToCuda => quote!(
+                        <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                    ),
+                };
+
+                if let syn::Type::Reference(syn::TypeReference {
+                    mutability, ..
+                }) = &**ty
+                {
+                    if mutability.is_some() {
+                        quote!(
+                            rust_cuda::common::DeviceBoxMut<#cuda_type>
+                        )
+                    } else {
+                        quote!(
+                            rust_cuda::common::DeviceBoxConst<#cuda_type>
+                        )
+                    }
+                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                    abort!(
+                        ty.span(),
+                        "Kernel parameters transferred using `RustToCuda` must be references."
+                    );
+                } else {
+                    cuda_type
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),
@@ -573,16 +860,25 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                 unsafe impl #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token for #launcher {
                     #[allow(unused_variables)]
                     #(#func_attrs)*
-                    fn #func_ident(&mut self, #(#new_func_inputs),*) {
-                        // #(
-                        //     #[allow(non_camel_case_types)]
-                        //     struct #func_type_errors;
-                        //     const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types>() <= 8); ASSERT } as usize] = [];
-                        // )*
+                    fn #func_ident(&mut self, #(#new_func_inputs),*) -> rust_cuda::rustacuda::error::CudaResult<()> {
+                        #raw_func_input_wrap
+                    }
 
+                    #[allow(unused_variables)]
+                    #(#func_attrs)*
+                    fn #func_ident_raw(&mut self, #(#new_func_inputs_raw),*) -> rust_cuda::rustacuda::error::CudaResult<()> {
                         const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
 
-                        unimplemented!("{:?}", PTX_STR)
+                        #[allow(clippy::redundant_closure_call)]
+                        (|#func_params| {
+                            #(
+                                #[allow(non_camel_case_types, dead_code)]
+                                struct #func_type_errors;
+                                const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types_launch>() <= 8); ASSERT } as usize] = [];
+                            )*
+
+                            unimplemented!("{:?}", PTX_STR)
+                        })(#(#func_input_wrap),*)
                     }
                 }
             };
@@ -596,20 +892,10 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #func_block
     };
 
-    let ptx_func_params: syn::punctuated::Punctuated<syn::Pat, syn::token::Comma> = func
-        .sig
-        .inputs
-        .iter()
-        .map(|arg| match arg {
-            syn::FnArg::Typed(syn::PatType { pat, .. }) => (&**pat).clone(),
-            syn::FnArg::Receiver(_) => unreachable!(),
-        })
-        .collect();
-
     let ptx_func_input_unwrap = func_inputs
         .iter().zip(func_input_cuda_types.iter())
         .rev()
-        .fold(quote! { #func_ident(#ptx_func_params) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
+        .fold(quote! { #func_ident(#func_params) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs: _attrs,
                 pat,
@@ -663,7 +949,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident(#ptx_func_inputs) {
             #(
-                #[allow(non_camel_case_types)]
+                #[allow(non_camel_case_types, dead_code)]
                 struct #func_type_errors;
                 const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cuda_func_types>() <= 8); ASSERT } as usize] = [];
             )*

@@ -85,6 +85,6 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWithHostWrapper<T> {
     }
 
     pub fn as_mut(&mut self) -> HostDeviceBoxMut<<T as RustToCuda>::CudaRepresentation> {
-        HostDeviceBoxMut::new(&mut self.device_box, &self.cuda_repr)
+        HostDeviceBoxMut::new(&mut self.device_box, &mut self.cuda_repr)
     }
 }

@@ -160,21 +160,23 @@ impl_sealed_drop_value!(Context);
 #[allow(clippy::module_name_repetitions)]
 pub struct HostDeviceBoxMut<'a, T: Sized + DeviceCopy> {
     device_box: &'a mut DeviceBox<T>,
-    host_ref: &'a T,
+    host_ref: &'a mut T,
 }
 
 impl<'a, T: Sized + DeviceCopy> HostDeviceBoxMut<'a, T> {
-    pub fn new(device_box: &'a mut DeviceBox<T>, host_ref: &'a T) -> Self {
+    pub fn new(device_box: &'a mut DeviceBox<T>, host_ref: &'a mut T) -> Self {
         Self {
             device_box,
             host_ref,
         }
     }
 
+    #[must_use]
     pub fn for_device(&mut self) -> DeviceBoxMut<T> {
         DeviceBoxMut::from(&mut self.device_box)
     }
 
+    #[must_use]
     pub fn for_host(&mut self) -> &T {
         self.host_ref
     }
@@ -194,11 +196,13 @@ impl<'a, T: Sized + DeviceCopy> HostDeviceBoxConst<'a, T> {
         }
     }
 
-    pub fn for_device(&mut self) -> DeviceBoxConst<T> {
+    #[must_use]
+    pub fn for_device(&self) -> DeviceBoxConst<T> {
         DeviceBoxConst::from(self.device_box)
     }
 
-    pub fn for_host(&mut self) -> &T {
+    #[must_use]
+    pub fn for_host(&self) -> &T {
         self.host_ref
     }
 }

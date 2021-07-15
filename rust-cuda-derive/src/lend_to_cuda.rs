@@ -63,7 +63,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
             ) -> rust_cuda::rustacuda::error::CudaResult<O> {
                 use rust_cuda::common::RustToCuda;
 
-                let (cuda_repr, alloc) = unsafe {
+                let (mut cuda_repr, alloc) = unsafe {
                     self.borrow_mut(rust_cuda::host::NullCudaAlloc)
                 }?;
 
@@ -71,7 +71,7 @@ pub fn impl_lend_to_cuda(ast: &syn::DeriveInput) -> TokenStream {
                     rust_cuda::rustacuda::memory::DeviceBox::new(&cuda_repr)?
                 );
 
-                let result = inner(rust_cuda::host::HostDeviceBoxMut::new(&mut device_box, &cuda_repr));
+                let result = inner(rust_cuda::host::HostDeviceBoxMut::new(&mut device_box, &mut cuda_repr));
 
                 ::core::mem::drop(device_box);
 
