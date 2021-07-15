@@ -271,9 +271,16 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                                     KernelInputAttribute::PassType(span, _pass_type) => {
                                         abort!(span, "Duplicate CUDA transfer mode declaration.");
                                     },
-                                    KernelInputAttribute::PtxJit(_span, jit)
+                                    KernelInputAttribute::PtxJit(span, jit)
                                         if ptx_jit.is_none() =>
                                     {
+                                        if !matches!(&**ty, syn::Type::Reference(_)) && jit {
+                                            abort!(
+                                                span,
+                                                "Only reference types can be PTX JIT loaded."
+                                            );
+                                        }
+
                                         ptx_jit = Some(jit);
                                     }
                                     KernelInputAttribute::PtxJit(span, _jit) => {
@@ -672,7 +679,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     };
 
-    let func_params: syn::punctuated::Punctuated<syn::Pat, syn::token::Comma> = func
+    let func_params = func
         .sig
         .inputs
         .iter()
@@ -680,12 +687,12 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             syn::FnArg::Typed(syn::PatType { pat, .. }) => (&**pat).clone(),
             syn::FnArg::Receiver(_) => unreachable!(),
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     let raw_func_input_wrap = func_inputs
         .iter().zip(func_input_cuda_types.iter())
         .rev()
-        .fold(quote! { self.#func_ident_raw(#func_params) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
+        .fold(quote! { self.#func_ident_raw(#(#func_params),*) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs: _attrs,
                 pat,
@@ -870,12 +877,18 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                         const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
 
                         #[allow(clippy::redundant_closure_call)]
-                        (|#func_params| {
+                        (|#(#func_params),*| {
                             #(
                                 #[allow(non_camel_case_types, dead_code)]
                                 struct #func_type_errors;
                                 const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types_launch>() <= 8); ASSERT } as usize] = [];
                             )*
+
+                            if false {
+                                fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: T) {}
+
+                                #(assert_impl_devicecopy(#func_params);)*
+                            }
 
                             unimplemented!("{:?}", PTX_STR)
                         })(#(#func_input_wrap),*)
@@ -893,36 +906,54 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     };
 
     let ptx_func_input_unwrap = func_inputs
-        .iter().zip(func_input_cuda_types.iter())
+        .iter().zip(func_input_cuda_types.iter()).enumerate()
         .rev()
-        .fold(quote! { #func_ident(#func_params) }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
+        .fold(quote! { #func_ident(#(#func_params),*) }, |inner, (i, (arg, (cuda_mode, ptx_jit)))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs: _attrs,
                 pat,
                 colon_token: _colon_token,
                 ty,
             }) => {
-                // TODO: Also emit ptx jit markers here
+                // Emit PTX JIT load markers
+                let ptx_jit_load = if *ptx_jit {
+                    let ptx_jit_hint = format!("/* <rust-cuda-ptx-jit-const-load-{{}}-{}> */", i);
+
+                    quote! {
+                        unsafe {
+                            asm!(
+                                #ptx_jit_hint,
+                                in(reg32) *(#pat.as_ref() as *const _ as *const u32)
+                            )
+                        }
+                    }
+                } else { quote! {} };
 
                 match cuda_mode {
                     InputCudaType::DeviceCopy => if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                         if mutability.is_some() {
-                            quote! { let #pat = #pat.as_mut(); #inner }
+                            quote! { #ptx_jit_load; let #pat = #pat.as_mut(); #inner }
                         } else {
-                            quote! { let #pat = #pat.as_ref(); #inner }
+                            quote! { #ptx_jit_load; let #pat = #pat.as_ref(); #inner }
                         }
                     } else {
                         inner
                     },
                     InputCudaType::RustToCuda => if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                         if mutability.is_some() {
-                            quote! { rust_cuda::device::BorrowFromRust::with_borrow_from_rust_mut(#pat, |#pat| {
-                                #inner
-                            }) }
+                            quote! {
+                                #ptx_jit_load;
+                                rust_cuda::device::BorrowFromRust::with_borrow_from_rust_mut(#pat, |#pat| {
+                                    #inner
+                                })
+                            }
                         } else {
-                            quote! { rust_cuda::device::BorrowFromRust::with_borrow_from_rust(#pat, |#pat| {
-                                #inner
-                            }) }
+                            quote! {
+                                #ptx_jit_load;
+                                rust_cuda::device::BorrowFromRust::with_borrow_from_rust(#pat, |#pat| {
+                                    #inner
+                                })
+                            }
                         }
                     } else { unreachable!() }
                 }
@@ -938,10 +969,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
-    // TODO:
-    //  - add compile time checks that devicecopy types are device copy
-    //  - add compile time checks that rusttocuda types are rusttocuda
-    //  - include the specialisation hash inside the kernel name
     let cuda_wrapper = quote! {
         #[cfg(target_os = "cuda")]
         #[rust_cuda::device::specialise_kernel_entry(#args)]
@@ -953,6 +980,12 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                 struct #func_type_errors;
                 const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cuda_func_types>() <= 8); ASSERT } as usize] = [];
             )*
+
+            if false {
+                fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
+
+                #(assert_impl_devicecopy(&#func_params);)*
+            }
 
             #ptx_func_input_unwrap
         }
