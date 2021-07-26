@@ -671,6 +671,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let cpu_wrapper = quote! {
         #[cfg(not(target_os = "cuda"))]
         pub unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
+            // fn get_kernel() -> rust_cuda::host::kernel::TypedKernel<rust_cuda::host::jit::PtxJitCompiler, Self>;
+        
             #(#func_attrs)*
             fn #func_ident(&mut self, #new_func_inputs_decl) -> rust_cuda::rustacuda::error::CudaResult<()>;
 
@@ -864,7 +866,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #[cfg(not(target_os = "cuda"))]
         macro_rules! #linker {
             (#(#macro_types),* $(,)?) => {
-                unsafe impl #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token for #launcher {
+                unsafe impl #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token for #launcher #generic_lt_token #($#macro_type_ids),* #generic_gt_token {
                     #[allow(unused_variables)]
                     #(#func_attrs)*
                     fn #func_ident(&mut self, #(#new_func_inputs),*) -> rust_cuda::rustacuda::error::CudaResult<()> {
