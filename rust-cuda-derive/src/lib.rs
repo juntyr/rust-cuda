@@ -672,7 +672,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #[cfg(not(target_os = "cuda"))]
         pub unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
             // fn get_kernel() -> rust_cuda::host::kernel::TypedKernel<rust_cuda::host::jit::PtxJitCompiler, Self>;
-        
+
             #(#func_attrs)*
             fn #func_ident(&mut self, #new_func_inputs_decl) -> rust_cuda::rustacuda::error::CudaResult<()>;
 
