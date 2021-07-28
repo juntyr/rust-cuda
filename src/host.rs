@@ -15,6 +15,25 @@ pub use rust_cuda_derive::LendToCuda;
 #[cfg(feature = "derive")]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
+// TODO: Use const `TypeId` once https://github.com/rust-lang/rust/issues/87551 is fixed
+pub trait Launcher<const KERNEL: u64> {
+    fn get_launch_params(&mut self) -> LaunchParams<KERNEL>;
+}
+
+pub struct LaunchParams<'l, const KERNEL: u64> {
+    pub stream: &'l mut rustacuda::stream::Stream,
+    pub grid: rustacuda::function::GridSize,
+    pub block: rustacuda::function::BlockSize,
+    pub shared_memory_size: u32,
+    pub kernel: &'l mut TypedKernel<KERNEL>,
+}
+
+// TODO: What should this actually store
+//  (a) more safety: store module and entry point
+//  (b) more flexibility: some composition system which allows unsafe
+//                        modifications of kernel
+pub struct TypedKernel<const KERNEL: u64>;
+
 use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
 /// # Safety
