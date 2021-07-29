@@ -42,6 +42,7 @@ pub fn lend_to_cuda_derive(input: TokenStream) -> TokenStream {
 }
 
 struct KernelConfig {
+    visibility: Option<syn::Token![pub]>,
     linker: syn::Ident,
     kernel: syn::Ident,
     args: syn::Ident,
@@ -50,6 +51,7 @@ struct KernelConfig {
 
 impl syn::parse::Parse for KernelConfig {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let visibility: Option<syn::Token![pub]> = input.parse()?;
         let _use: syn::Token![use] = input.parse()?;
         let linker: syn::Ident = input.parse()?;
         let _bang: syn::Token![!] = input.parse()?;
@@ -63,6 +65,7 @@ impl syn::parse::Parse for KernelConfig {
         let launcher: syn::Path = input.parse()?;
 
         Ok(Self {
+            visibility,
             linker,
             kernel,
             args,
@@ -164,6 +167,7 @@ impl syn::parse::Parse for KernelInputAttributes {
 #[proc_macro_attribute]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let KernelConfig {
+        visibility,
         linker,
         kernel,
         args,
@@ -172,8 +176,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "#[kernel(use LINKER! as impl KERNEL<ARGS> for LAUNCHER)] expects LINKER, KERNEL, \
-                 ARGS and LAUNCHER identifiers: {:?}",
+                "#[kernel(pub? use LINKER! as impl KERNEL<ARGS> for LAUNCHER)] expects LINKER, \
+                 KERNEL, ARGS and LAUNCHER identifiers: {:?}",
                 err
             )
         },
@@ -659,7 +663,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func_ident_raw = quote::format_ident!("{}_raw", func_ident);
 
     let args_trait = quote! {
-        pub unsafe trait #args #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
+        #visibility unsafe trait #args #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
             #(#func_input_typedefs)*
         }
 
@@ -670,17 +674,20 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let cpu_wrapper = quote! {
         #[cfg(not(target_os = "cuda"))]
-        pub unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token:
-            rust_cuda::host::Launcher</*{core::intrinsics::type_id::<dyn #kernel #ty_generics>()}*/13272557170075891848_u64>
-            #generic_where_clause
-        {
-            // fn get_kernel() -> rust_cuda::host::kernel::TypedKernel<rust_cuda::host::jit::PtxJitCompiler, Self>;
+        #visibility unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
+            fn get_ptx() -> &'static str
+                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
+            
+            fn get_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>>
+                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
 
             #(#func_attrs)*
-            fn #func_ident(&mut self, #new_func_inputs_decl) -> rust_cuda::rustacuda::error::CudaResult<()>;
+            fn #func_ident(&mut self, #new_func_inputs_decl) -> rust_cuda::rustacuda::error::CudaResult<()>
+                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
 
             #(#func_attrs)*
-            fn #func_ident_raw(&mut self, #new_func_inputs_raw_decl) -> rust_cuda::rustacuda::error::CudaResult<()>;
+            fn #func_ident_raw(&mut self, #new_func_inputs_raw_decl) -> rust_cuda::rustacuda::error::CudaResult<()>
+                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
         }
     };
 
@@ -865,11 +872,24 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
+    let cpu_linker_macro_visibility = if visibility.is_some() {
+        quote! { #[macro_export] }
+    } else {
+        quote! {}
+    };
+
     let cpu_linker_macro = quote! {
         #[cfg(not(target_os = "cuda"))]
+        #cpu_linker_macro_visibility
         macro_rules! #linker {
             (#(#macro_types),* $(,)?) => {
                 unsafe impl #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token for #launcher #generic_lt_token #($#macro_type_ids),* #generic_gt_token {
+                    fn get_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token>> {
+                        const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
+                        
+                        rust_cuda::host::TypedKernel::try_new(PTX_STR)
+                    }
+
                     #[allow(unused_variables)]
                     #(#func_attrs)*
                     fn #func_ident(&mut self, #(#new_func_inputs),*) -> rust_cuda::rustacuda::error::CudaResult<()> {
@@ -879,8 +899,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                     #[allow(unused_variables)]
                     #(#func_attrs)*
                     fn #func_ident_raw(&mut self, #(#new_func_inputs_raw),*) -> rust_cuda::rustacuda::error::CudaResult<()> {
-                        const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
-
                         #[allow(clippy::redundant_closure_call)]
                         (|#(#func_params),*| {
                             #(
@@ -895,7 +913,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                                 #(assert_impl_devicecopy(#func_params);)*
                             }
 
-                            unimplemented!("{:?}", PTX_STR)
+                            unimplemented!()
                         })(#(#func_input_wrap),*)
                     }
                 }
@@ -922,15 +940,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             }) => {
                 // Emit PTX JIT load markers
                 let ptx_jit_load = if *ptx_jit {
-                    let ptx_jit_hint = format!("/* <rust-cuda-ptx-jit-const-load-{{}}-{}> */", i);
-
                     quote! {
-                        unsafe {
-                            asm!(
-                                #ptx_jit_hint,
-                                in(reg32) *(#pat.as_ref() as *const _ as *const u32)
-                            )
-                        }
+                        rust_cuda::ptx_jit::PtxJITConstLoad!([#i] => #pat.as_ref())
                     }
                 } else { quote! {} };
 
@@ -1315,8 +1326,6 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
             file.read_to_string(&mut kernel_ptx)
                 .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
-
-            kernel_ptx.push('\0');
 
             kernel_ptx
         },

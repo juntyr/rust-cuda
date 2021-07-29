@@ -9,7 +9,7 @@ edition = "2018"
 
 [features]
 default = []
-host = ["rustacuda"]
+host = ["rustacuda", "rust-cuda-ptx-jit/host"]
 derive = ["rustacuda_core/derive", "rust-cuda-derive"]
 
 [dependencies]
@@ -18,3 +18,4 @@ rustacuda_core = { path = "../third-party/RustaCUDA/rustacuda_core" }
 rustacuda = { path = "../third-party/RustaCUDA", optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
+rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }
