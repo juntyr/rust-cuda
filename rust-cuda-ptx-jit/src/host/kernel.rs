@@ -1,6 +1,6 @@
 use std::{ffi::CStr, mem::ManuallyDrop};
 
-use rustacuda::{error::CudaResult, function::Function, memory::DeviceCopy, module::{Module, Symbol}};
+use rustacuda::{error::CudaResult, function::Function, module::Module};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaKernel {
@@ -29,20 +29,13 @@ impl CudaKernel {
                 }
 
                 return Err(err);
-            }
+            },
         };
 
         Ok(Self {
             function: ManuallyDrop::new(function),
             module: ManuallyDrop::new(module),
         })
-    }
-
-    /// # Errors
-    ///
-    /// Returns a `CudaError` if no symbol with `name` exists.
-    pub fn get_module_global<T: DeviceCopy>(&self, name: &CStr) -> CudaResult<Symbol<T>> {
-        self.module.get_global(name)
     }
 
     #[must_use]
@@ -55,7 +48,8 @@ impl Drop for CudaKernel {
     fn drop(&mut self) {
         std::mem::drop(unsafe { ManuallyDrop::take(&mut self.function) });
 
-        if let Err((_err, module)) = Module::drop(*unsafe { ManuallyDrop::take(&mut self.module) }) {
+        if let Err((_err, module)) = Module::drop(*unsafe { ManuallyDrop::take(&mut self.module) })
+        {
             std::mem::forget(module);
         }
     }

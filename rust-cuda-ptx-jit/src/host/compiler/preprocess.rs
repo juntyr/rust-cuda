@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    ffi::{CStr, CString, NulError},
+    ffi::{CStr, CString},
 };
 
 use super::{
@@ -15,13 +15,6 @@ const B64_ASCII_BYTES: &[u8] = &[0x36, 0x34];
 const ZERO_ASCII_BYTES: &[u8] = &[0x30];
 
 impl PtxJITCompiler {
-    /// # Errors
-    ///
-    /// Returns a `NulError` if `ptx` contains any interior nul bytes.
-    pub fn try_from(ptx: &str) -> Result<Self, NulError> {
-        CString::new(ptx).map(|ptx| Self::new(&ptx))
-    }
-
     #[must_use]
     pub fn new(ptx: &CStr) -> Self {
         let ptx = ptx.to_bytes();

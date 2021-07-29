@@ -9,8 +9,8 @@
 #[doc(hidden)]
 pub extern crate alloc;
 
-pub extern crate rustacuda_core;
 pub extern crate rust_cuda_ptx_jit as ptx_jit;
+pub extern crate rustacuda_core;
 
 pub mod common;
 

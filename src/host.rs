@@ -1,9 +1,12 @@
-use core::{marker::PhantomData, ops::{Deref, DerefMut}};
+use core::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
-use ptx_jit::host::kernel::CudaKernel;
 use rustacuda::{
     context::Context,
     error::{CudaError, CudaResult},
+    function::Function,
     memory::{DeviceBox, DeviceBuffer, LockedBuffer},
     module::Module,
     stream::Stream,
@@ -16,55 +19,35 @@ pub use rust_cuda_derive::LendToCuda;
 #[cfg(feature = "derive")]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
-use rust_cuda_ptx_jit::host::compiler::{PtxJITCompiler, PtxJITResult};
-
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
 
-    fn get_launch_params(&mut self) -> LaunchParams<Self::KernelTraitObject>;
+    fn get_config(&mut self) -> LaunchConfig<Self::KernelTraitObject>;
+
+    /// # Errors
+    ///
+    /// Should only return a `CudaError` if some implementation-defined
+    ///  critical kernel function configuration failed.
+    #[allow(unused_variables)]
+    fn on_compile(&mut self, kernel: &Function) -> CudaResult<()> {
+        Ok(())
+    }
 }
 
-pub struct LaunchParams<'l, KernelTraitObject: ?Sized> {
-    pub stream: &'l mut rustacuda::stream::Stream,
+pub struct LaunchConfig<'l, KernelTraitObject: ?Sized> {
+    pub stream: &'l mut Stream,
     pub grid: rustacuda::function::GridSize,
     pub block: rustacuda::function::BlockSize,
     pub shared_memory_size: u32,
     pub kernel: &'l mut TypedKernel<KernelTraitObject>,
 }
 
-// TODO: What should this actually store
-//  (a) more safety: store module and entry point
-//  (b) more flexibility: some composition system which allows unsafe
-//                        modifications of kernel
+#[repr(C)]
 pub struct TypedKernel<KernelTraitObject: ?Sized> {
-    compiler: PtxJITCompiler,
-    kernel: CudaKernel,
+    _compiler: ptx_jit::host::compiler::PtxJITCompiler,
+    _kernel: Option<ptx_jit::host::kernel::CudaKernel>,
+    _entry_point: alloc::boxed::Box<[u8]>,
     _marker: PhantomData<KernelTraitObject>,
-}
-
-impl<KernelTraitObject: ?Sized> TypedKernel<KernelTraitObject> {
-    /// # Errors
-    ///
-    /// Returns a `CudaError` if the `ptx_str` is not a valid PTX source.
-    ///
-    /// # Panics
-    ///
-    /// Panics while unimplemented.
-    pub fn try_new(ptx_str: &str) -> rustacuda::error::CudaResult<Self> {
-        let compiler = PtxJITCompiler::try_from(ptx_str).map_err(|_| rustacuda::error::CudaError::InvalidPtx)?;
-
-        unimplemented!();
-
-        /*let kernel = CudaKernel::new(match compiler.with_arguments(None) {
-            PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr) => ptx_cstr,
-        }, kernel)?;*/
-
-        /*Ok(Self {
-            compiler,
-            kernel,
-            _marker: PhantomData::<KernelTraitObject>,
-        })*/
-    }
 }
 
 use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};

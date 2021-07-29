@@ -675,9 +675,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let cpu_wrapper = quote! {
         #[cfg(not(target_os = "cuda"))]
         #visibility unsafe trait #kernel #generic_lt_token #generic_params #generic_gt_token #generic_where_clause {
-            fn get_ptx() -> &'static str
+            fn get_ptx_str() -> &'static str
                 where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
-            
+
             fn get_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>>
                 where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
 
@@ -884,10 +884,29 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         macro_rules! #linker {
             (#(#macro_types),* $(,)?) => {
                 unsafe impl #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token for #launcher #generic_lt_token #($#macro_type_ids),* #generic_gt_token {
+                    fn get_ptx_str() -> &'static str {
+                        rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token)
+                    }
+
                     fn get_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token>> {
-                        const PTX_STR: &str = rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
-                        
-                        rust_cuda::host::TypedKernel::try_new(PTX_STR)
+                        #[repr(C)]
+                        struct TypedKernel {
+                            compiler: rust_cuda::ptx_jit::host::compiler::PtxJITCompiler,
+                            kernel: Option<rust_cuda::ptx_jit::host::kernel::CudaKernel>,
+                            entry_point: Box<[u8]>,
+                        }
+
+                        let ptx_cstring = std::ffi::CString::new(Self::get_ptx_str()).map_err(|_| rust_cuda::rustacuda::error::CudaError::InvalidPtx)?;
+
+                        let compiler = rust_cuda::ptx_jit::host::compiler::PtxJITCompiler::new(&ptx_cstring);
+
+                        let entry_point_str = rust_cuda::host::specialise_kernel_call!(#func_ident #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
+                        let entry_point_cstring = std::ffi::CString::new(entry_point_str).map_err(|_| rust_cuda::rustacuda::error::CudaError::UnknownError)?;
+                        let entry_point = entry_point_cstring.into_bytes_with_nul().into_boxed_slice();
+
+                        let typed_kernel = TypedKernel { compiler, kernel: None, entry_point };
+
+                        Ok(unsafe { std::mem::transmute(typed_kernel) })
                     }
 
                     #[allow(unused_variables)]
@@ -899,6 +918,13 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                     #[allow(unused_variables)]
                     #(#func_attrs)*
                     fn #func_ident_raw(&mut self, #(#new_func_inputs_raw),*) -> rust_cuda::rustacuda::error::CudaResult<()> {
+                        #[repr(C)]
+                        struct TypedKernel {
+                            compiler: rust_cuda::ptx_jit::host::compiler::PtxJITCompiler,
+                            kernel: Option<rust_cuda::ptx_jit::host::kernel::CudaKernel>,
+                            entry_point: Box<[u8]>,
+                        }
+
                         #[allow(clippy::redundant_closure_call)]
                         (|#(#func_params),*| {
                             #(
@@ -913,7 +939,25 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                                 #(assert_impl_devicecopy(#func_params);)*
                             }
 
-                            unimplemented!()
+                            let rust_cuda::host::LaunchConfig {
+                                stream, grid, block, shared_memory_size, kernel,
+                            } = rust_cuda::host::Launcher::get_config(self);
+
+                            let typed_kernel: &mut TypedKernel = unsafe {
+                                &mut *(kernel as *mut rust_cuda::host::TypedKernel<_> as *mut TypedKernel)
+                            };
+
+                            // TODO: PTX JIT arguments, recompile, call hook
+
+                            // TODO: remove unwrap as kernel guaranteed
+                            let function = typed_kernel.kernel.as_mut().unwrap().get_function();
+
+                            // TODO: Insert correct parameter values
+                            unsafe {
+                                rust_cuda::rustacuda::launch!(function<<<grid, block, shared_memory_size, stream>>>())
+                            }?;
+
+                            stream.synchronize()
                         })(#(#func_input_wrap),*)
                     }
                 }
@@ -1126,13 +1170,13 @@ pub fn specialise_kernel_call(tokens: TokenStream) -> TokenStream {
     };
 
     let mangled_kernel_ident = if let Some(specialisation) = specialisation {
-        quote::format_ident!(
+        format!(
             "{}_kernel_{:016x}",
             kernel,
             seahash::hash(specialisation.as_bytes())
         )
     } else {
-        quote::format_ident!("{}_kernel", kernel)
+        format!("{}_kernel", kernel)
     };
 
     (quote! { #mangled_kernel_ident }).into()
@@ -1186,14 +1230,14 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
     (quote! { #func }).into()
 }
 
-struct LinkConfig {
+struct LinkKernelConfig {
     kernel: syn::Ident,
     crate_name: String,
     crate_path: PathBuf,
     specialisation: Option<String>,
 }
 
-impl syn::parse::Parse for LinkConfig {
+impl syn::parse::Parse for LinkKernelConfig {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let kernel: syn::Ident = input.parse()?;
         let name: syn::LitStr = input.parse()?;
@@ -1291,7 +1335,7 @@ fn build_kernel_with_specialisation(
 #[proc_macro_error]
 #[proc_macro]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
-    let LinkConfig {
+    let LinkKernelConfig {
         kernel,
         crate_name,
         crate_path,
