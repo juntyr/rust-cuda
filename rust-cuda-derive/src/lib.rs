@@ -163,6 +163,22 @@ impl syn::parse::Parse for KernelInputAttributes {
 // cargo expand --target nvptx64-nvidia-cuda --ugly \
 //  | rustfmt --config max_width=160 > out.rs
 
+fn skip_kernel_compilation() -> bool {
+    let mut skip_compilation = false;
+
+    if let Ok(rustc) = std::env::var("RUSTC_WRAPPER") {
+        skip_compilation |= rustc.contains("clippy-driver");
+        skip_compilation |= rustc.contains("rust-analyzer");
+    }
+
+    if let Ok(rustc) = std::env::var("RUSTC_WORKSPACE_WRAPPER") {
+        skip_compilation |= rustc.contains("clippy-driver");
+        skip_compilation |= rustc.contains("rust-analyzer");
+    }
+
+    skip_compilation
+}
+
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
@@ -1228,6 +1244,10 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
         ),
     };
 
+    if skip_kernel_compilation() {
+        return (quote! {}).into();
+    }
+
     let crate_name = match std::env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
         Err(err) => abort_call_site!("Failed to read crate name: {:?}", err),
@@ -1388,7 +1408,11 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     let kernel_ptx = match build_kernel_with_specialisation(
         &crate_path,
         &specialisation_var,
-        specialisation.as_deref(),
+        if skip_kernel_compilation() {
+            None
+        } else {
+            specialisation.as_deref()
+        },
     ) {
         Ok(kernel_path) => {
             let mut file = fs::File::open(&kernel_path)
