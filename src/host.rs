@@ -22,7 +22,10 @@ pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
 
-    fn get_config(&mut self) -> LaunchConfig<Self::KernelTraitObject>;
+    fn get_config(&self) -> LaunchConfig;
+    fn get_stream(&self) -> &Stream;
+
+    fn get_kernel_mut(&mut self) -> &mut TypedKernel<Self::KernelTraitObject>;
 
     /// # Errors
     ///
@@ -34,12 +37,11 @@ pub trait Launcher {
     }
 }
 
-pub struct LaunchConfig<'l, KernelTraitObject: ?Sized> {
-    pub stream: &'l mut Stream,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaunchConfig {
     pub grid: rustacuda::function::GridSize,
     pub block: rustacuda::function::BlockSize,
     pub shared_memory_size: u32,
-    pub kernel: &'l mut TypedKernel<KernelTraitObject>,
 }
 
 #[repr(C)]

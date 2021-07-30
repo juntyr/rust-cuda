@@ -789,27 +789,33 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             syn::FnArg::Receiver(_) => unreachable!(),
         });
 
-    let func_input_wrap = func_inputs
+    let (func_input_wrap, func_cpu_ptx_jit_wrap): (Vec<_>, Vec<_>) = func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
-        .map(|(arg, (_cuda_mode, _ptx_jit))| match arg {
+        .map(|(arg, (_cuda_mode, ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs: _attrs,
                 pat,
                 colon_token: _colon_token,
                 ty,
             }) => {
-                // TODO: Emit the PTX JIT cpu code here
-
-                if let syn::Type::Reference(_) = &**ty {
+                let func_input = if let syn::Type::Reference(_) = &**ty {
                     quote! { #pat.for_device() }
                 } else {
                     quote! { #pat }
-                }
+                };
+
+                let ptx_load = if *ptx_jit {
+                    quote! { ConstLoad[#pat.for_host()] }
+                } else {
+                    quote! { Ignore[#pat] }
+                };
+
+                (func_input, ptx_load)
             },
             syn::FnArg::Receiver(_) => unreachable!(),
         })
-        .collect::<Vec<_>>();
+        .unzip();
 
     let cpu_func_types_launch = func_inputs
         .iter()
@@ -896,17 +902,17 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                             entry_point: Box<[u8]>,
                         }
 
-                        let ptx_cstring = std::ffi::CString::new(Self::get_ptx_str()).map_err(|_| rust_cuda::rustacuda::error::CudaError::InvalidPtx)?;
+                        let ptx_cstring = ::std::ffi::CString::new(Self::get_ptx_str()).map_err(|_| rust_cuda::rustacuda::error::CudaError::InvalidPtx)?;
 
                         let compiler = rust_cuda::ptx_jit::host::compiler::PtxJITCompiler::new(&ptx_cstring);
 
                         let entry_point_str = rust_cuda::host::specialise_kernel_call!(#func_ident #generic_lt_token #($#macro_type_ids),* #generic_gt_token);
-                        let entry_point_cstring = std::ffi::CString::new(entry_point_str).map_err(|_| rust_cuda::rustacuda::error::CudaError::UnknownError)?;
+                        let entry_point_cstring = ::std::ffi::CString::new(entry_point_str).map_err(|_| rust_cuda::rustacuda::error::CudaError::UnknownError)?;
                         let entry_point = entry_point_cstring.into_bytes_with_nul().into_boxed_slice();
 
                         let typed_kernel = TypedKernel { compiler, kernel: None, entry_point };
 
-                        Ok(unsafe { std::mem::transmute(typed_kernel) })
+                        Ok(unsafe { ::std::mem::transmute(typed_kernel) })
                     }
 
                     #[allow(unused_variables)]
@@ -925,37 +931,59 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                             entry_point: Box<[u8]>,
                         }
 
-                        #[allow(clippy::redundant_closure_call)]
-                        (|#(#func_params),*| {
+                        let kernel = rust_cuda::host::Launcher::get_kernel_mut(self);
+                        let typed_kernel: &mut TypedKernel = unsafe {
+                            &mut *(kernel as *mut rust_cuda::host::TypedKernel<_> as *mut TypedKernel)
+                        };
+                        let compiler = &mut typed_kernel.compiler;
+
+                        let function = match (rust_cuda::ptx_jit::compilePtxJITwithArguments! {
+                            compiler(
+                                #(#func_cpu_ptx_jit_wrap),*
+                            )
+                        }, typed_kernel.kernel.as_mut()) {
+                            (rust_cuda::ptx_jit::host::compiler::PtxJITResult::Cached(_), Some(kernel)) => kernel,
+                            (rust_cuda::ptx_jit::host::compiler::PtxJITResult::Cached(ptx_cstr) | rust_cuda::ptx_jit::host::compiler::PtxJITResult::Recomputed(ptx_cstr), _) => {
+                                // Safety: `entry_point` is created using `CString::into_bytes_with_nul`
+                                let entry_point_cstr = unsafe {
+                                    ::std::ffi::CStr::from_bytes_with_nul_unchecked(&typed_kernel.entry_point)
+                                };
+
+                                let kernel = rust_cuda::ptx_jit::host::kernel::CudaKernel::new(ptx_cstr, entry_point_cstr)?;
+
+                                // Call launcher hook on kernel compilation
+                                rust_cuda::host::Launcher::on_compile(self, kernel.get_function())?;
+
+                                // Replace the existing compiled kernel, drop the old one
+                                typed_kernel.kernel.insert(kernel)
+                            },
+                        }.get_function();
+
+                        (|#(#func_params: #cpu_func_types_launch),*| {
                             #(
                                 #[allow(non_camel_case_types, dead_code)]
                                 struct #func_type_errors;
-                                const _: [#func_type_errors; 1 - { const ASSERT: bool = (::core::mem::size_of::<#cpu_func_types_launch>() <= 8); ASSERT } as usize] = [];
+                                const _: [#func_type_errors; 1 - { const ASSERT: bool = (::std::mem::size_of::<#cpu_func_types_launch>() <= 8); ASSERT } as usize] = [];
                             )*
 
                             if false {
-                                fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: T) {}
+                                fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
 
-                                #(assert_impl_devicecopy(#func_params);)*
+                                #(assert_impl_devicecopy(&#func_params);)*
                             }
 
+                            let stream = rust_cuda::host::Launcher::get_stream(self);
                             let rust_cuda::host::LaunchConfig {
-                                stream, grid, block, shared_memory_size, kernel,
+                                grid, block, shared_memory_size
                             } = rust_cuda::host::Launcher::get_config(self);
 
-                            let typed_kernel: &mut TypedKernel = unsafe {
-                                &mut *(kernel as *mut rust_cuda::host::TypedKernel<_> as *mut TypedKernel)
-                            };
-
-                            // TODO: PTX JIT arguments, recompile, call hook
-
-                            // TODO: remove unwrap as kernel guaranteed
-                            let function = typed_kernel.kernel.as_mut().unwrap().get_function();
-
-                            // TODO: Insert correct parameter values
-                            unsafe {
-                                rust_cuda::rustacuda::launch!(function<<<grid, block, shared_memory_size, stream>>>())
-                            }?;
+                            unsafe { stream.launch(function, grid, block, shared_memory_size,
+                                &[
+                                    #(
+                                        &#func_params as *const _ as *mut ::std::ffi::c_void
+                                    ),*
+                                ]
+                            ) }?;
 
                             stream.synchronize()
                         })(#(#func_input_wrap),*)

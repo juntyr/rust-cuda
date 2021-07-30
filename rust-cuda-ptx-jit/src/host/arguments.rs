@@ -6,7 +6,7 @@ macro_rules! compilePtxJITwithArguments {
     };
     // Invocation with arguments is forwarded to incremental muncher
     ($compiler:ident ( $($args:tt)* )) => {
-        compilePtxJITwithArguments!(@munch None $compiler [, $($args)*] =>)
+        $crate::compilePtxJITwithArguments!(@munch None $compiler [, $($args)*] =>)
     };
     // Muncher base case: no `ConstLoad[$expr]` arguments
     (@munch None $compiler:ident [] => $($rubbish:expr),*) => {
@@ -18,20 +18,20 @@ macro_rules! compilePtxJITwithArguments {
     };
     // Muncher helper case: first `ConstLoad[$expr]` argument is recognised (redirect)
     (@munch None $compiler:ident [, ConstLoad [ $head:expr ] $($tail:tt)*] => $($exprs:expr),*) => {
-        compilePtxJITwithArguments!(@munch Some $compiler [, ConstLoad [ $head ] $($tail)*] => $($exprs),*)
+        $crate::compilePtxJITwithArguments!(@munch Some $compiler [, ConstLoad [ $head ] $($tail)*] => $($exprs),*)
     };
     // Muncher recursive case: much one `Ignore[$expr]` argument (no `ConstLoad[$expr]`s so far)
     (@munch None $compiler:ident [, Ignore [ $head:expr ] $($tail:tt)*] => $($exprs:expr),*) => {
-        compilePtxJITwithArguments!(@munch None $compiler [$($tail)*] => $($exprs,)* None)
+        $crate::compilePtxJITwithArguments!(@munch None $compiler [$($tail)*] => $($exprs,)* None)
     };
     // Muncher recursive case: much one `Ignore[$expr]` argument (some `ConstLoad[$expr]`s already)
     (@munch Some $compiler:ident [, Ignore [ $head:expr ] $($tail:tt)*] => $($exprs:expr),*) => {
-        compilePtxJITwithArguments!(@munch Some $compiler [$($tail)*] => $($exprs,)* None)
+        $crate::compilePtxJITwithArguments!(@munch Some $compiler [$($tail)*] => $($exprs,)* None)
     };
     // Muncher recursive case: much one `ConstLoad[$expr]` (some `ConstLoad[$expr]`s already)
     (@munch Some $compiler:ident [, ConstLoad [ $head:expr ] $($tail:tt)*] => $($exprs:expr),*) => {
-        compilePtxJITwithArguments!(@munch Some $compiler [$($tail)*] => $($exprs,)* Some(unsafe {
-            std::slice::from_raw_parts($head as *const _ as *const u8, std::mem::size_of_val($head))
+        $crate::compilePtxJITwithArguments!(@munch Some $compiler [$($tail)*] => $($exprs,)* Some(unsafe {
+            ::std::slice::from_raw_parts($head as *const _ as *const u8, ::std::mem::size_of_val($head))
         }))
     };
 }
