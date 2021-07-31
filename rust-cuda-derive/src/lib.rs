@@ -694,7 +694,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             fn get_ptx_str() -> &'static str
                 where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
 
-            fn get_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>>
+            fn new_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>>
                 where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
 
             #(#func_attrs)*
@@ -910,7 +910,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                         rust_cuda::host::link_kernel!(#args #crate_name #crate_manifest_dir #generic_lt_token #($#macro_type_ids),* #generic_gt_token)
                     }
 
-                    fn get_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token>> {
+                    fn new_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #generic_lt_token #($#macro_type_ids),* #generic_gt_token>> {
                         #[repr(C)]
                         struct TypedKernel {
                             compiler: rust_cuda::ptx_jit::host::compiler::PtxJITCompiler,
