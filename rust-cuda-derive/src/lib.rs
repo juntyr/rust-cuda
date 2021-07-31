@@ -1399,6 +1399,10 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
+    if let Ok(rust_flags) = env::var("RUSTFLAGS") {
+        env::set_var("RUSTFLAGS", rust_flags.replace("-Zinstrument-coverage", ""));
+    }
+
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
         crate_name,
