@@ -1,4 +1,5 @@
 use rustacuda_core::DeviceCopy;
+use rustacuda_derive::DeviceCopy;
 
 use crate::common::{CudaAsRust, DeviceOwnedSlice};
 

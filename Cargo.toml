@@ -10,12 +10,13 @@ edition = "2018"
 [features]
 default = []
 host = ["rustacuda", "rust-cuda-ptx-jit/host"]
-derive = ["rustacuda_core/derive", "rust-cuda-derive"]
+derive = ["rustacuda_derive", "rust-cuda-derive"]
 
 [dependencies]
-rustacuda_core = { path = "../third-party/RustaCUDA/rustacuda_core" }
+rustacuda_core = "0.1.2"
 
-rustacuda = { path = "../third-party/RustaCUDA", optional = true }
+rustacuda = { version = "0.1.3", optional = true }
+rustacuda_derive = { version = "0.1.2", optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }

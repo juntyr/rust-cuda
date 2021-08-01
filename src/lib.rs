@@ -12,6 +12,9 @@ pub extern crate alloc;
 pub extern crate rust_cuda_ptx_jit as ptx_jit;
 pub extern crate rustacuda_core;
 
+#[cfg(feature = "derive")]
+pub extern crate rustacuda_derive;
+
 pub mod common;
 
 #[cfg(feature = "host")]
