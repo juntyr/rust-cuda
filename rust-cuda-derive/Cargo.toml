@@ -17,4 +17,4 @@ proc-macro2 = "1.0"
 proc-macro-error = "1.0"
 
 seahash = "4.1.0"
-ptx-builder = { path = "../../third-party/rust-ptx-builder" }
+ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "c72e0b0" }
