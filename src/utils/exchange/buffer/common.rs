@@ -18,6 +18,7 @@ unsafe impl<T: Clone + DeviceCopy> CudaAsRust for CudaExchangeBufferCudaRepresen
     type RustRepresentation = CudaExchangeBuffer<T>;
 
     #[cfg(any(not(feature = "host"), doc))]
+    #[doc(cfg(not(feature = "host")))]
     unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
         CudaExchangeBuffer(core::mem::ManuallyDrop::new(alloc::boxed::Box::from_raw(
             self.0.as_mut(),

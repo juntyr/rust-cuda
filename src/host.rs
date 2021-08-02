@@ -13,10 +13,8 @@ use rustacuda::{
 };
 use rustacuda_core::DeviceCopy;
 
-#[cfg(any(feature = "derive", doc))]
-pub use rust_cuda_derive::LendToCuda;
-
-#[cfg(any(feature = "derive", doc))]
+#[cfg(feature = "derive")]
+#[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
 pub trait Launcher {

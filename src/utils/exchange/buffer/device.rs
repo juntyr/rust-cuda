@@ -25,6 +25,7 @@ impl<T: Clone + DeviceCopy> DerefMut for CudaExchangeBufferDevice<T> {
     }
 }
 
+#[cfg(not(all(doc, feature = "host")))]
 unsafe impl<T: Clone + DeviceCopy> RustToCuda for CudaExchangeBufferDevice<T> {
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T>;
 }

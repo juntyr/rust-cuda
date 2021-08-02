@@ -1,4 +1,5 @@
 pub mod buffer;
 
-#[cfg(any(feature = "host", doc))]
+#[cfg(feature = "host")]
+#[doc(cfg(feature = "host"))]
 pub mod wrapper;

@@ -236,16 +236,6 @@ extern "C" {
     ///   `printf` format).
     /// * `valist`: A pointer to the valist input.
     ///
-    /// ```
-    /// #[repr(C)]
-    /// struct PrintArgs(f32, f32, f32, i32);
-    ///
-    /// vprintf(
-    ///     "int(%f + %f) = int(%f) = %d\n".as_ptr(),
-    ///     transmute(&PrintArgs(a, b, a + b, (a + b) as i32)),
-    /// );
-    /// ```
-    ///
     /// Sources:
     /// [Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#formatted-output),
     /// [PTX Interoperability](https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls).
