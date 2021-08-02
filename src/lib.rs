@@ -12,23 +12,23 @@ pub extern crate alloc;
 pub extern crate rust_cuda_ptx_jit as ptx_jit;
 pub extern crate rustacuda_core;
 
-#[cfg(feature = "derive")]
+#[cfg(any(feature = "derive", doc))]
 pub extern crate rustacuda_derive;
 
 pub mod common;
 
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 pub mod host;
 
-#[cfg(all(not(feature = "host"), feature = "derive"))]
+#[cfg(any(all(not(feature = "host"), feature = "derive"), doc))]
 pub mod host {
     pub use rust_cuda_derive::LendToCuda;
 }
 
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 pub extern crate rustacuda;
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(all(not(feature = "host"), target_os = "cuda"), doc))]
 pub mod device;
 
 pub mod utils;

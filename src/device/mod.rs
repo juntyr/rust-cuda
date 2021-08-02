@@ -1,6 +1,6 @@
 use rustacuda_core::DeviceCopy;
 
-#[cfg(feature = "derive")]
+#[cfg(any(feature = "derive", doc))]
 pub use rust_cuda_derive::{specialise_kernel_entry, specialise_kernel_type};
 
 use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};

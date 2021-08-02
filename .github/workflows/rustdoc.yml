@@ -20,7 +20,7 @@ jobs:
       - name: Build the Documentation
         run: |
           RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo doc \
-            --workspace --no-deps --all-features
+            --workspace
 
       - name: Deploy the Documentation
         uses: peaceiris/actions-gh-pages@v3

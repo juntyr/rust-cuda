@@ -1,13 +1,13 @@
 mod common;
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 mod device;
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 mod host;
 
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 #[allow(clippy::module_name_repetitions)]
 pub use device::CudaExchangeBufferDevice as CudaExchangeBuffer;
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 #[allow(clippy::module_name_repetitions)]
 pub use host::CudaExchangeBufferHost as CudaExchangeBuffer;
 

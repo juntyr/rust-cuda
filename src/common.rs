@@ -1,12 +1,12 @@
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 use core::convert::{AsMut, AsRef};
 
 use rustacuda_core::DeviceCopy;
 
-#[cfg(feature = "derive")]
+#[cfg(any(feature = "derive", doc))]
 pub use rust_cuda_derive::RustToCuda;
 
-#[cfg(feature = "derive")]
+#[cfg(any(feature = "derive", doc))]
 pub use rust_cuda_derive::kernel;
 
 /// # Safety
@@ -15,10 +15,10 @@ pub use rust_cuda_derive::kernel;
 pub unsafe trait RustToCuda {
     type CudaRepresentation: DeviceCopy + CudaAsRust<RustRepresentation = Self>;
 
-    #[cfg(feature = "host")]
+    #[cfg(any(feature = "host", doc))]
     type CudaAllocation: crate::host::CudaAlloc;
 
-    #[cfg(feature = "host")]
+    #[cfg(any(feature = "host", doc))]
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     /// # Safety
@@ -39,7 +39,7 @@ pub unsafe trait RustToCuda {
         Self::borrow_mut(&mut *(self as *const Self as *mut Self), alloc)
     }
 
-    #[cfg(feature = "host")]
+    #[cfg(any(feature = "host", doc))]
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     /// # Safety
@@ -53,7 +53,7 @@ pub unsafe trait RustToCuda {
         crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
 
-    #[cfg(feature = "host")]
+    #[cfg(any(feature = "host", doc))]
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     /// # Safety
@@ -71,7 +71,7 @@ pub unsafe trait RustToCuda {
 pub unsafe trait CudaAsRust {
     type RustRepresentation: RustToCuda<CudaRepresentation = Self>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(any(not(feature = "host"), doc))]
     /// # Safety
     /// This is an internal function and should NEVER be called manually
     unsafe fn as_rust(&mut self) -> Self::RustRepresentation;
@@ -82,21 +82,21 @@ pub struct DeviceOwnedSlice<T: Sized + DeviceCopy>(*mut T, usize);
 
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceOwnedSlice<T> {}
 
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 impl<T: Sized + DeviceCopy> DeviceOwnedSlice<T> {
     pub fn from(owned_slice: &mut rustacuda::memory::DeviceBuffer<T>) -> Self {
         Self(owned_slice.as_mut_ptr(), owned_slice.len())
     }
 }
 
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 impl<T: Sized + DeviceCopy> AsRef<[T]> for DeviceOwnedSlice<T> {
     fn as_ref(&self) -> &[T] {
         unsafe { core::slice::from_raw_parts(self.0, self.1) }
     }
 }
 
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 impl<T: Sized + DeviceCopy> AsMut<[T]> for DeviceOwnedSlice<T> {
     fn as_mut(&mut self) -> &mut [T] {
         unsafe { core::slice::from_raw_parts_mut(self.0, self.1) }
@@ -114,7 +114,7 @@ impl<T: Sized + DeviceCopy> Clone for DeviceBoxConst<T> {
 impl<T: Sized + DeviceCopy> Copy for DeviceBoxConst<T> {}
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceBoxConst<T> {}
 
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 impl<T: Sized + DeviceCopy> DeviceBoxConst<T> {
     #[must_use]
     pub fn from(device_box: &rustacuda::memory::DeviceBox<T>) -> Self {
@@ -131,7 +131,7 @@ impl<T: Sized + DeviceCopy> DeviceBoxConst<T> {
     }
 }
 
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 impl<T: Sized + DeviceCopy> AsRef<T> for DeviceBoxConst<T> {
     fn as_ref(&self) -> &T {
         unsafe { &*self.0 }
@@ -143,7 +143,7 @@ pub struct DeviceBoxMut<T: Sized + DeviceCopy>(pub(super) *mut T);
 
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceBoxMut<T> {}
 
-#[cfg(feature = "host")]
+#[cfg(any(feature = "host", doc))]
 impl<T: Sized + DeviceCopy> DeviceBoxMut<T> {
     #[must_use]
     pub fn from(device_box_mut: &mut rustacuda::memory::DeviceBox<T>) -> Self {
@@ -151,14 +151,14 @@ impl<T: Sized + DeviceCopy> DeviceBoxMut<T> {
     }
 }
 
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 impl<T: Sized + DeviceCopy> AsRef<T> for DeviceBoxMut<T> {
     fn as_ref(&self) -> &T {
         unsafe { &*self.0 }
     }
 }
 
-#[cfg(not(feature = "host"))]
+#[cfg(any(not(feature = "host"), doc))]
 impl<T: Sized + DeviceCopy> AsMut<T> for DeviceBoxMut<T> {
     fn as_mut(&mut self) -> &mut T {
         unsafe { &mut *self.0 }
