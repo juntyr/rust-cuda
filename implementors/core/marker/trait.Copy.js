@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["rust_cuda"] = [{"text":"impl&lt;T:&nbsp;<a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html\" title=\"trait core::marker::Sized\">Sized</a> + DeviceCopy&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"rust_cuda/common/struct.DeviceBoxConst.html\" title=\"struct rust_cuda::common::DeviceBoxConst\">DeviceBoxConst</a>&lt;T&gt;","synthetic":false,"types":["rust_cuda::common::DeviceBoxConst"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
