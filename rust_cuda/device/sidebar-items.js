@@ -1,0 +1,1 @@
+initSidebarItems({"attr":[["specialise_kernel_entry",""]],"macro":[["specialise_kernel_type",""]],"mod":[["nvptx","NVPTX intrinsics (experimental)"],["utils","Support crate for writting GPU kernel in Rust (accel-core)"]],"struct":[["AnyDeviceBoxConst",""],["AnyDeviceBoxMut",""]],"trait":[["BorrowFromRust","Safety"]]});

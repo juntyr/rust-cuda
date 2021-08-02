@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["arguments",""],["compiler",""],["kernel",""]]});
+initSidebarItems({"mod":[["compiler",""],["kernel",""]]});

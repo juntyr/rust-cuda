@@ -1,1 +1,1 @@
-initSidebarItems({"macro":[["compilePtxJITwithArguments",""]],"mod":[["host",""]]});
+initSidebarItems({"macro":[["PtxJITConstLoad",""],["compilePtxJITwithArguments",""]],"mod":[["host",""]]});

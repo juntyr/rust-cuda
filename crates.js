@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["rust_cuda","rust_cuda_derive","rust_cuda_ptx_jit"];
+window.ALL_CRATES = ["aho_corasick","anyhow","atty","bitflags","colored","cuda_driver_sys","lazy_static","libc","memchr","proc_macro2","proc_macro_error","proc_macro_error_attr","ptx_builder","quote","regex","regex_syntax","rust_cuda","rust_cuda_derive","rust_cuda_ptx_jit","rustacuda","rustacuda_core","rustacuda_derive","seahash","semver","serde","syn","thiserror","thiserror_impl","toml","unicode_xid"];

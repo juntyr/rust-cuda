@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="`build.rs` helper crate for your CUDA experiments."><meta name="keywords" content="rust, rustlang, rust-lang, ptx_builder"><title>ptx_builder - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings"></script><script src="../storage.js"></script><script src="../crates.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../ptx_builder/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><p class="location">Crate ptx_builder</p><div class="block version"><p>Version 0.5.3</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all ptx_builder's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li></ul></div><div id="sidebar-vars" data-name="ptx_builder" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img src="../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img src="../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">ptx_builder</a><button id="copy-path" onclick="copy_path(this)" title="copy path"><img src="../clipboard.svg" width="19" height="18" alt="Copy item import" title="Copy item import to clipboard"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/ptx_builder/lib.rs.html#1-68" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><code>build.rs</code> helper crate for your CUDA experiments.</p>
+<p>It helps to automatically build device crate in both <em>single-source</em> and
+<em>separated-source</em> projects.</p>
+<p>Features the crate provide:</p>
+<ul>
+<li>Automatically notify Cargo about device crate sources, so it can reuild on
+changes,</li>
+<li>Provide output PTX assembly path to Rust via environment variable,</li>
+<li>Rich reporting of device crate errors,</li>
+<li>Hints and troubleshooting for missing tools.</li>
+</ul>
+<h1 id="usage" class="section-header"><a href="#usage">Usage</a></h1>
+<p>Simply add the crate as <code>build-dependency</code>:</p>
+<pre><code class="language-text">[build-dependencies]
+ptx-builder = &quot;0.5&quot;
+</code></pre>
+<p>And start using it in <code>build.rs</code> script:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">ptx_builder::error::Result</span>;
+<span class="kw">use</span> <span class="ident">ptx_builder::prelude</span>::<span class="kw-2">*</span>;
+
+<span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">Builder::new</span>(<span class="string">&quot;.&quot;</span>)<span class="question-mark">?</span>;
+    <span class="ident">CargoAdapter::with_env_var</span>(<span class="string">&quot;KERNEL_PTX_PATH&quot;</span>).<span class="ident">build</span>(<span class="ident">builder</span>);
+}</pre></div>
+<p>Now, on the host-side, the PTX assembly can be loaded and used with your
+favorite CUDA driver crate:</p>
+
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore">
+<span class="kw">use</span> <span class="ident">std::ffi::CString</span>;
+
+<span class="kw">let</span> <span class="ident">ptx</span> <span class="op">=</span> <span class="ident">CString::new</span>(<span class="macro">include_str!</span>(<span class="macro">env!</span>(<span class="string">&quot;KERNEL_PTX_PATH&quot;</span>)))<span class="question-mark">?</span>;
+
+<span class="comment">// use the assembly contents ...</span></pre></div>
+</div></details><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
+<table><tr class="module-item"><td><a class="mod" href="builder/index.html" title="ptx_builder::builder mod">builder</a></td><td class="docblock-short"><p>Build helpers.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="error/index.html" title="ptx_builder::error mod">error</a></td><td class="docblock-short"><p>Error handling.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="executable/index.html" title="ptx_builder::executable mod">executable</a></td><td class="docblock-short"><p>External executables that are needed to build CUDA crates.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="prelude/index.html" title="ptx_builder::prelude mod">prelude</a></td><td class="docblock-short"><p>Convenient re-exports of mostly used types.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="reporter/index.html" title="ptx_builder::reporter mod">reporter</a></td><td class="docblock-short"><p>Build reporting helpers.</p>
+</td></tr></table><h2 id="macros" class="section-header"><a href="#macros">Macros</a></h2>
+<table><tr class="module-item"><td><a class="macro" href="macro.bail.html" title="ptx_builder::bail macro">bail</a></td><td class="docblock-short"></td></tr></table></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="ptx_builder" data-search-index-js="../search-index.js" data-search-js="../search.js"></div><script src="../main.js"></script></body></html>
