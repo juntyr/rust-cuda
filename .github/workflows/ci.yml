@@ -18,12 +18,36 @@ jobs:
 
       - name: Install the Rust toolchain
         run: cargo install ptx-linker -f
+
+      - name: Check without features on CPU
+        run: |
+          cargo check
+
+      - name: Check with derive feature on CPU
+        run: |
+          cargo check \
+            --features derive
+
+      - name: Check with host feature on CPU
+        run: |
+          cargo check \
+            --features host
+
+      - name: Check with host,derive features on CPU
+        run: |
+          cargo check \
+            --features host,derive
+
+      - name: Check without features on CUDA
+        run: |
+          cargo check \
+            --target nvptx64-nvidia-cuda
       
-      - name: Check the default features
-        run: cargo check
-      
-      - name: Check all features
-        run: cargo check --all-features
+      - name: Check with derive feature on CUDA
+        run: |
+          cargo check \
+            --target nvptx64-nvidia-cuda \
+            --features derive
 
   test:
     name: Test Suite
@@ -69,8 +93,38 @@ jobs:
       - name: Install the Rust toolchain
         run: cargo install ptx-linker -f
 
-      - name: Check the code style for the default features
-        run: cargo clippy -- -D warnings
+      - name: Check the code style without features on CPU
+        run: |
+          cargo clippy \
+            -- -D warnings
+
+      - name: Check the code style with derive feature on CPU
+        run: |
+          cargo clippy \
+            --features derive \
+            -- -D warnings
+
+      - name: Check the code style with host feature on CPU
+        run: |
+          cargo clippy \
+            --features host \
+            -- -D warnings
+
+      - name: Check the code style with host,derive features on CPU
+        run: |
+          cargo clippy \
+            --features host,derive \
+            -- -D warnings
+
+      - name: Check the code style without features on CUDA
+        run: |
+          cargo clippy \
+            --target nvptx64-nvidia-cuda \
+            -- -D warnings
       
-      - name: Check the code style for all features
-        run: cargo clippy --all-features -- -D warnings
+      - name: Check the code style with derive feature on CUDA
+        run: |
+          cargo clippy \
+            --target nvptx64-nvidia-cuda \
+            --features derive \
+            -- -D warnings

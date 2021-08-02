@@ -1,4 +1,4 @@
 pub mod buffer;
 
-#[cfg(not(target_os = "cuda"))]
+#[cfg(feature = "host")]
 pub mod wrapper;

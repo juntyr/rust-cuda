@@ -28,7 +28,7 @@ pub mod host {
 #[cfg(feature = "host")]
 pub extern crate rustacuda;
 
-#[cfg(not(feature = "host"))]
+#[cfg(all(not(feature = "host"), target_os = "cuda"))]
 pub mod device;
 
 pub mod utils;
