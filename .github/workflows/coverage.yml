@@ -1,0 +1,48 @@
+name: Code Coverage
+
+on: [push]
+
+jobs:
+  test:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Repository
+        uses: actions/checkout@v2
+
+      - name: Install CUDA
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
+          sudo apt-get update -q
+          sudo apt-get install cuda -y --no-install-recommends
+
+      - name: Install the Rust toolchain
+        run: |
+          cargo install ptx-linker -f
+          cargo install grcov -f
+          rustup component add llvm-tools-preview
+
+      - name: Generate the code coverage
+        run: |
+          RUSTFLAGS="-Zinstrument-coverage" \
+          LLVM_PROFILE_FILE="codecov-%p-%m.profraw" \
+          cargo test \
+            --workspace
+
+          grcov . -s . --binary-path ./target/debug/ \
+            -t cobertura -o cobertura.xml --branch \
+            --keep-only "necsim/*" \
+            --keep-only "rustcoalescence/*" \
+            --ignore-not-existing \
+            --excl-line GRCOV_EXCL_LINE \
+            --excl-start GRCOV_EXCL_START \
+            --excl-stop GRCOV_EXCL_STOP
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
