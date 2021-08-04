@@ -17,7 +17,8 @@ pub(in super::super) fn generate_cuda_generic_function(
     quote! {
         #[cfg(target_os = "cuda")]
         #(#func_attrs)*
-        fn #func_ident #generic_start_token #generic_params #generic_close_token (#func_inputs) #generic_where_clause
+        fn #func_ident #generic_start_token #generic_params #generic_close_token (#func_inputs)
+            #generic_where_clause
         #func_block
     }
 }

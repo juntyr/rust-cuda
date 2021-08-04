@@ -28,20 +28,33 @@ pub(in super::super) fn quote_cpu_wrapper(
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
-        #visibility unsafe trait #kernel #generic_start_token #generic_params #generic_close_token #generic_where_clause {
+        #visibility unsafe trait #kernel #generic_start_token #generic_params #generic_close_token
+            #generic_where_clause
+        {
             fn get_ptx_str() -> &'static str
-                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
+                where Self: Sized + rust_cuda::host::Launcher<
+                    KernelTraitObject = dyn #kernel #ty_generics
+                >;
 
-            fn new_kernel() -> rust_cuda::rustacuda::error::CudaResult<rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>>
-                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
+            fn new_kernel() -> rust_cuda::rustacuda::error::CudaResult<
+                rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>
+            > where Self: Sized + rust_cuda::host::Launcher<
+                KernelTraitObject = dyn #kernel #ty_generics
+            >;
 
             #(#func_attrs)*
-            fn #func_ident(&mut self, #(#new_func_inputs_decl),*) -> rust_cuda::rustacuda::error::CudaResult<()>
-                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
+            fn #func_ident(&mut self, #(#new_func_inputs_decl),*)
+                -> rust_cuda::rustacuda::error::CudaResult<()>
+                where Self: Sized + rust_cuda::host::Launcher<
+                    KernelTraitObject = dyn #kernel #ty_generics
+                >;
 
             #(#func_attrs)*
-            fn #func_ident_raw(&mut self, #(#new_func_inputs_raw_decl),*) -> rust_cuda::rustacuda::error::CudaResult<()>
-                where Self: Sized + rust_cuda::host::Launcher<KernelTraitObject = dyn #kernel #ty_generics>;
+            fn #func_ident_raw(&mut self, #(#new_func_inputs_raw_decl),*)
+                -> rust_cuda::rustacuda::error::CudaResult<()>
+                where Self: Sized + rust_cuda::host::Launcher<
+                    KernelTraitObject = dyn #kernel #ty_generics
+                >;
         }
     }
 }
@@ -114,7 +127,10 @@ fn generate_new_func_inputs_decl(
                         }) = &**ty
                         {
                             if lifetime.is_some() {
-                                abort!(lifetime.span(), "Kernel parameters cannot have lifetimes.");
+                                abort!(
+                                    lifetime.span(),
+                                    "Kernel parameters cannot have lifetimes.",
+                                );
                             }
 
                             let wrapped_type = if mutability.is_some() {

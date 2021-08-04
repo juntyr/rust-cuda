@@ -51,7 +51,9 @@ pub(in super::super) fn quote_args_trait(
         .collect::<Vec<_>>();
 
     quote! {
-        #visibility unsafe trait #args #generic_start_token #generic_params #generic_close_token #generic_where_clause {
+        #visibility unsafe trait #args #generic_start_token #generic_params #generic_close_token
+            #generic_where_clause
+        {
             #(#func_input_typedefs)*
         }
 

@@ -39,10 +39,11 @@ impl syn::parse::Parse for SpecialiseMangleConfig {
         let kernel: syn::Ident = input.parse()?;
 
         let specialisation = if input.parse::<Option<syn::token::Lt>>()?.is_some() {
-            let specialisation_types =
-                syn::punctuated::Punctuated::<syn::Type, syn::token::Comma>::parse_separated_nonempty(
-                    input,
-                )?;
+            let specialisation_types = syn::punctuated::Punctuated::<
+                    syn::Type,
+                    syn::token::Comma,
+                >::parse_separated_nonempty(input)?;
+
             let _gt_token: syn::token::Gt = input.parse()?;
 
             Some(

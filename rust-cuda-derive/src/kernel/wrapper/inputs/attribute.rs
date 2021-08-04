@@ -75,7 +75,9 @@ impl syn::parse::Parse for KernelInputAttributes {
         let content;
         let _parens = syn::parenthesized!(content in input);
 
-        syn::punctuated::Punctuated::<KernelInputAttribute, syn::token::Comma>::parse_separated_nonempty(&content).map(|punctuated| {
+        syn::punctuated::Punctuated::<
+            KernelInputAttribute, syn::token::Comma
+        >::parse_separated_nonempty(&content).map(|punctuated| {
             Self(punctuated.into_iter().collect())
         })
     }
