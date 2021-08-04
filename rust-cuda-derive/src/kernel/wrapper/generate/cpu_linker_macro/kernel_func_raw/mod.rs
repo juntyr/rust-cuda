@@ -33,6 +33,8 @@ pub(super) fn quote_kernel_func_raw(
         fn #func_ident_raw(&mut self, #(#new_func_inputs_raw),*)
             -> rust_cuda::rustacuda::error::CudaResult<()>
         {
+            use rust_cuda::ptx_jit::host::compiler::PtxJITResult;
+
             #[repr(C)]
             struct TypedKernel {
                 compiler: rust_cuda::ptx_jit::host::compiler::PtxJITCompiler,
@@ -51,8 +53,6 @@ pub(super) fn quote_kernel_func_raw(
                     #(#func_cpu_ptx_jit_wrap),*
                 )
             }, typed_kernel.kernel.as_mut()) {
-                use rust_cuda::ptx_jit::host::compiler::PtxJITResult;
-
                 (
                     PtxJITResult::Cached(_),
                     Some(kernel),
