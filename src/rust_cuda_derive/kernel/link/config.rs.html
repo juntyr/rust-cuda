@@ -40,6 +40,7 @@
 <span id="38">38</span>
 <span id="39">39</span>
 <span id="40">40</span>
+<span id="41">41</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std::path::PathBuf</span>;
 
@@ -58,10 +59,11 @@
         <span class="kw">let</span> <span class="ident">path</span>: <span class="ident">syn::LitStr</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">specialisation</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">syn::token::Lt</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
-            <span class="kw">let</span> <span class="ident">specialisation_types</span> <span class="op">=</span>
-                <span class="ident">syn::punctuated::Punctuated</span>::<span class="op">&lt;</span><span class="ident">syn::Type</span>, <span class="ident">syn::token::Comma</span><span class="op">&gt;</span><span class="ident">::parse_separated_nonempty</span>(
-                    <span class="ident">input</span>,
-                )<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">specialisation_types</span> <span class="op">=</span> <span class="ident">syn::punctuated::Punctuated</span>::<span class="op">&lt;</span>
+                    <span class="ident">syn::Type</span>,
+                    <span class="ident">syn::token::Comma</span>,
+                <span class="op">&gt;</span><span class="ident">::parse_separated_nonempty</span>(<span class="ident">input</span>)<span class="question-mark">?</span>;
+
             <span class="kw">let</span> <span class="ident">_gt_token</span>: <span class="ident">syn::token::Gt</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
             <span class="prelude-val">Some</span>(

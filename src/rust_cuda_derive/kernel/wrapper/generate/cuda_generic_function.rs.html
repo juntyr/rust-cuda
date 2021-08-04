@@ -23,6 +23,7 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
@@ -43,7 +44,8 @@
     <span class="macro">quote!</span> {
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)]</span>
         #(#<span class="ident">func_attrs</span>)<span class="op">*</span>
-        <span class="kw">fn</span> #<span class="ident">func_ident</span> #<span class="ident">generic_start_token</span> #<span class="ident">generic_params</span> #<span class="ident">generic_close_token</span> (#<span class="ident">func_inputs</span>) #<span class="ident">generic_where_clause</span>
+        <span class="kw">fn</span> #<span class="ident">func_ident</span> #<span class="ident">generic_start_token</span> #<span class="ident">generic_params</span> #<span class="ident">generic_close_token</span> (#<span class="ident">func_inputs</span>)
+            #<span class="ident">generic_where_clause</span>
         #<span class="ident">func_block</span>
     }
 }
