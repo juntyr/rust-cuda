@@ -17,6 +17,8 @@ use rustacuda_core::DeviceCopy;
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
+use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
+
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
 
@@ -49,8 +51,6 @@ pub struct TypedKernel<KernelTraitObject: ?Sized> {
     _entry_point: alloc::boxed::Box<[u8]>,
     _marker: PhantomData<KernelTraitObject>,
 }
-
-use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
 
 /// # Safety
 /// This trait should ONLY be derived automatically using
