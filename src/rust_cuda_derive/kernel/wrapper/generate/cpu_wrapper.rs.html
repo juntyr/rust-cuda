@@ -260,7 +260,7 @@
                             <span class="ident">and_token</span>,
                             <span class="ident">lifetime</span>,
                             <span class="ident">mutability</span>,
-                            <span class="ident">elem</span>: <span class="ident">_elem</span>,
+                            ..
                         }) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span>
                         {
                             <span class="ident">Box::new</span>(<span class="ident">syn::Type::Reference</span>(<span class="ident">syn::TypeReference</span> {
@@ -293,7 +293,7 @@
                             <span class="ident">and_token</span>,
                             <span class="ident">lifetime</span>,
                             <span class="ident">mutability</span>,
-                            <span class="ident">elem</span>: <span class="ident">_elem</span>,
+                            ..
                         }) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span>
                         {
                             <span class="kw">if</span> <span class="ident">lifetime</span>.<span class="ident">is_some</span>() {

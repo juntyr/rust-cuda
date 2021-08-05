@@ -214,6 +214,9 @@
 <span id="212">212</span>
 <span id="213">213</span>
 <span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Support crate for writting GPU kernel in Rust (accel-core)</span>
 <span class="doccomment">//!</span>
@@ -244,16 +247,19 @@
 
 <span class="comment">// Based on https://github.com/popzxc/stdext-rs/blob/master/src/macros.rs</span>
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="macro">macro_rules!</span> <span class="ident">function</span> {
     () <span class="op">=</span><span class="op">&gt;</span> {{
-        <span class="comment">// Okay, this is ugly, I get it. However, this is the best we can get on a</span>
-        <span class="comment">// stable rust.</span>
+        <span class="comment">// Okay, this is ugly, I get it. However, this is the best we can get on</span>
+        <span class="comment">//  stable rust.</span>
         <span class="kw">fn</span> <span class="ident">f</span>() {}
         <span class="kw">fn</span> <span class="ident">type_name_of</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw">_</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
             <span class="ident">core::any::type_name</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>()
         }
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">type_name_of</span>(<span class="ident">f</span>);
         <span class="comment">// `3` is the length of the `::f`.</span>
+
+        <span class="comment">// TODO: Do we need a String allocation here</span>
         <span class="ident">alloc::string::String::from</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>[..<span class="ident">name</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">3</span>])
     }};
 }
@@ -293,7 +299,7 @@
                     <span class="ident">msg</span>.<span class="ident">as_ptr</span>(),
                     <span class="macro">file!</span>().<span class="ident">as_ptr</span>(),
                     <span class="macro">line!</span>(),
-                    <span class="macro">function!</span>().<span class="ident">as_ptr</span>(),
+                    <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro">::function!</span>().<span class="macro-nonterminal">as_ptr</span>(),
                 )
             };
         }
@@ -317,7 +323,7 @@
                     <span class="ident">msg</span>.<span class="ident">as_ptr</span>(),
                     <span class="macro">file!</span>().<span class="ident">as_ptr</span>(),
                     <span class="macro">line!</span>(),
-                    <span class="macro">function!</span>().<span class="ident">as_ptr</span>(),
+                    <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro">::function!</span>().<span class="macro-nonterminal">as_ptr</span>(),
                 )
             };
         }
@@ -341,7 +347,7 @@
                     <span class="ident">msg</span>.<span class="ident">as_ptr</span>(),
                     <span class="macro">file!</span>().<span class="ident">as_ptr</span>(),
                     <span class="macro">line!</span>(),
-                    <span class="macro">function!</span>().<span class="ident">as_ptr</span>(),
+                    <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro">::function!</span>().<span class="macro-nonterminal">as_ptr</span>(),
                 )
             };
         }

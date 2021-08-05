@@ -157,9 +157,9 @@
 
 <span class="kw">use</span> <span class="ident">config::KernelConfig</span>;
 <span class="kw">use</span> <span class="ident">generate</span>::{
-    <span class="ident">args_trait::quote_args_trait</span>, <span class="ident">cpu_linker_macro::generate_cpu_linker_macro</span>,
-    <span class="ident">cpu_wrapper::quote_cpu_wrapper</span>, <span class="ident">cuda_generic_function::generate_cuda_generic_function</span>,
-    <span class="ident">cuda_wrapper::generate_cuda_wrapper</span>,
+    <span class="ident">args_trait::quote_args_trait</span>, <span class="ident">cpu_linker_macro::quote_cpu_linker_macro</span>,
+    <span class="ident">cpu_wrapper::quote_cpu_wrapper</span>, <span class="ident">cuda_generic_function::quote_cuda_generic_function</span>,
+    <span class="ident">cuda_wrapper::quote_cuda_wrapper</span>,
 };
 <span class="kw">use</span> <span class="ident">inputs</span>::{<span class="ident">parse_function_inputs</span>, <span class="ident">FunctionInputs</span>};
 <span class="kw">use</span> <span class="ident">parse::parse_kernel_fn</span>;
@@ -215,7 +215,7 @@
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">arg</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">arg</span> {
             <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> { <span class="ident">pat</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">quote::format_ident!</span>(
-                    <span class="string">&quot;CudaParameter_{}_MustFitInto64BitsOrBeAReference&quot;</span>,
+                    <span class="string">&quot;Kernel_parameter_{}_must_fit_into_64b_or_be_a_reference&quot;</span>,
                     <span class="ident">quote::ToTokens::to_token_stream</span>(<span class="ident">pat</span>)
                         .<span class="ident">to_string</span>()
                         .<span class="ident">replace</span>(<span class="string">&#39; &#39;</span>, <span class="string">&quot;_&quot;</span>)
@@ -234,7 +234,7 @@
         <span class="kw-2">&amp;</span><span class="ident">func_ident</span>,
         <span class="kw-2">&amp;</span><span class="ident">func</span>.<span class="ident">attrs</span>,
     );
-    <span class="kw">let</span> <span class="ident">cpu_linker_macro</span> <span class="op">=</span> <span class="ident">generate_cpu_linker_macro</span>(
+    <span class="kw">let</span> <span class="ident">cpu_linker_macro</span> <span class="op">=</span> <span class="ident">quote_cpu_linker_macro</span>(
         <span class="kw-2">&amp;</span><span class="ident">config</span>,
         <span class="kw-2">&amp;</span><span class="ident">decl_generics</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_inputs</span>,
@@ -243,7 +243,7 @@
         <span class="kw-2">&amp;</span><span class="ident">func</span>.<span class="ident">attrs</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_type_errors</span>,
     );
-    <span class="kw">let</span> <span class="ident">cuda_wrapper</span> <span class="op">=</span> <span class="ident">generate_cuda_wrapper</span>(
+    <span class="kw">let</span> <span class="ident">cuda_wrapper</span> <span class="op">=</span> <span class="ident">quote_cuda_wrapper</span>(
         <span class="kw-2">&amp;</span><span class="ident">config</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_inputs</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_ident</span>,
@@ -251,7 +251,7 @@
         <span class="kw-2">&amp;</span><span class="ident">func_params</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_type_errors</span>,
     );
-    <span class="kw">let</span> <span class="ident">cuda_generic_function</span> <span class="op">=</span> <span class="ident">generate_cuda_generic_function</span>(
+    <span class="kw">let</span> <span class="ident">cuda_generic_function</span> <span class="op">=</span> <span class="ident">quote_cuda_generic_function</span>(
         <span class="kw-2">&amp;</span><span class="ident">decl_generics</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_inputs</span>,
         <span class="kw-2">&amp;</span><span class="ident">func_ident</span>,

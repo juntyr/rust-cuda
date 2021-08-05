@@ -33,11 +33,6 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
@@ -53,12 +48,7 @@
         .<span class="ident">iter</span>()
         .<span class="ident">zip</span>(<span class="ident">func_input_cuda_types</span>.<span class="ident">iter</span>())
         .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">arg</span>, (<span class="ident">_cuda_mode</span>, <span class="ident">ptx_jit</span>))<span class="op">|</span> <span class="kw">match</span> <span class="ident">arg</span> {
-            <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> {
-                <span class="ident">attrs</span>: <span class="ident">_attrs</span>,
-                <span class="ident">pat</span>,
-                <span class="ident">colon_token</span>: <span class="ident">_colon_token</span>,
-                <span class="ident">ty</span>,
-            }) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> { <span class="ident">pat</span>, <span class="ident">ty</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">func_input</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Reference</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span> {
                     <span class="macro">quote!</span> { #<span class="ident">pat</span>.<span class="ident">for_device</span>() }
                 } <span class="kw">else</span> {

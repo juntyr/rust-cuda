@@ -88,7 +88,7 @@
         .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, (<span class="ident">arg</span>, (<span class="ident">cuda_mode</span>, <span class="ident">_ptx_jit</span>)))<span class="op">|</span> <span class="kw">match</span> <span class="ident">arg</span> {
             <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> { <span class="ident">ty</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">type_ident</span> <span class="op">=</span> <span class="macro">quote::format_ident!</span>(<span class="string">&quot;__T_{}&quot;</span>, <span class="ident">i</span>);
-                <span class="kw">let</span> <span class="ident">syn_type</span> <span class="op">=</span> <span class="macro">quote!</span> {
+                <span class="kw">let</span> <span class="ident">syn_type</span> <span class="op">=</span> <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()<span class="op">=</span><span class="op">&gt;</span>
                     <span class="op">&lt;</span>() <span class="kw">as</span> #<span class="ident">args</span> #<span class="ident">generic_start_token</span>
                         #($#<span class="ident">macro_type_ids</span>),<span class="op">*</span>
                     #<span class="ident">generic_close_token</span><span class="op">&gt;</span>::#<span class="ident">type_ident</span>
@@ -96,20 +96,20 @@
 
                 <span class="kw">let</span> <span class="ident">cuda_type</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cuda_mode</span> {
                     <span class="ident">InputCudaType::DeviceCopy</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">syn_type</span>,
-                    <span class="ident">InputCudaType::LendRustBorrowToCuda</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote!</span>(
+                    <span class="ident">InputCudaType::LendRustBorrowToCuda</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()<span class="op">=</span><span class="op">&gt;</span>
                         <span class="op">&lt;</span>#<span class="ident">syn_type</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span>
-                    ),
+                    },
                 };
 
                 <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Reference</span>(<span class="ident">syn::TypeReference</span> { <span class="ident">mutability</span>, .. }) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span> {
                     <span class="kw">if</span> <span class="ident">mutability</span>.<span class="ident">is_some</span>() {
-                        <span class="macro">quote!</span>(
+                        <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()<span class="op">=</span><span class="op">&gt;</span>
                             <span class="ident">rust_cuda::common::DeviceBoxMut</span><span class="op">&lt;</span>#<span class="ident">cuda_type</span><span class="op">&gt;</span>
-                        )
+                        }
                     } <span class="kw">else</span> {
-                        <span class="macro">quote!</span>(
+                        <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()<span class="op">=</span><span class="op">&gt;</span>
                             <span class="ident">rust_cuda::common::DeviceBoxConst</span><span class="op">&lt;</span>#<span class="ident">cuda_type</span><span class="op">&gt;</span>
-                        )
+                        }
                     }
                 } <span class="kw">else</span> <span class="kw">if</span> <span class="macro">matches!</span>(<span class="ident">cuda_mode</span>, <span class="ident">InputCudaType::LendRustBorrowToCuda</span>) {
                     <span class="macro">abort!</span>(
