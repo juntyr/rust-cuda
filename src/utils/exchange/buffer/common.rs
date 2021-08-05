@@ -6,6 +6,7 @@ use super::CudaExchangeBuffer;
 
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
+#[repr(transparent)]
 pub struct CudaExchangeBufferCudaRepresentation<T: Clone + DeviceCopy>(
     pub(super) DeviceOwnedSlice<T>,
 );

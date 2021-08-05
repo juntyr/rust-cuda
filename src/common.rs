@@ -85,6 +85,7 @@ pub unsafe trait CudaAsRust {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct DeviceOwnedSlice<T: Sized + DeviceCopy>(*mut T, usize);
 
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceOwnedSlice<T> {}
