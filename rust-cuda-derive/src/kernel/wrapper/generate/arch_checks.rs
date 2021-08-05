@@ -41,6 +41,18 @@ pub(in super::super) fn quote_arch_checks() -> TokenStream {
         // } as usize] = [];
 
         #[allow(dead_code, non_camel_case_types)]
+        enum Both_the_CPU_and_NVIDIA_GPU_must_have_32b_aligned_f32 {}
+        const _: [Both_the_CPU_and_NVIDIA_GPU_must_have_32b_aligned_f32; 1 - {
+            const ASSERT: bool = (::core::mem::align_of::<f32>() == 4); ASSERT
+        } as usize] = [];
+
+        #[allow(dead_code, non_camel_case_types)]
+        enum Both_the_CPU_and_NVIDIA_GPU_must_have_64b_aligned_f64 {}
+        const _: [Both_the_CPU_and_NVIDIA_GPU_must_have_64b_aligned_f64; 1 - {
+            const ASSERT: bool = (::core::mem::align_of::<f64>() == 8); ASSERT
+        } as usize] = [];
+
+        #[allow(dead_code, non_camel_case_types)]
         enum Both_the_CPU_and_NVIDIA_GPU_must_have_8b_aligned_u8_vectors {}
         const _: [Both_the_CPU_and_NVIDIA_GPU_must_have_8b_aligned_u8_vectors; 1 - {
             const ASSERT: bool = (::core::mem::align_of::<(u8, u8)>() == 1); ASSERT
@@ -62,6 +74,18 @@ pub(in super::super) fn quote_arch_checks() -> TokenStream {
         enum Both_the_CPU_and_NVIDIA_GPU_must_have_64b_aligned_u64_vectors {}
         const _: [Both_the_CPU_and_NVIDIA_GPU_must_have_64b_aligned_u64_vectors; 1 - {
             const ASSERT: bool = (::core::mem::align_of::<(u64, u64)>() == 8); ASSERT
+        } as usize] = [];
+
+        #[allow(dead_code, non_camel_case_types)]
+        enum Both_the_CPU_and_NVIDIA_GPU_must_have_32b_aligned_f32_vectors {}
+        const _: [Both_the_CPU_and_NVIDIA_GPU_must_have_32b_aligned_f32_vectors; 1 - {
+            const ASSERT: bool = (::core::mem::align_of::<(f32, f32)>() == 4); ASSERT
+        } as usize] = [];
+
+        #[allow(dead_code, non_camel_case_types)]
+        enum Both_the_CPU_and_NVIDIA_GPU_must_have_64b_aligned_f64_vectors {}
+        const _: [Both_the_CPU_and_NVIDIA_GPU_must_have_64b_aligned_f64_vectors; 1 - {
+            const ASSERT: bool = (::core::mem::align_of::<(f64, f64)>() == 8); ASSERT
         } as usize] = [];
     }
 }
