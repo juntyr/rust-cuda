@@ -27,6 +27,7 @@
 <span id="25">25</span>
 <span id="26">26</span>
 <span id="27">27</span>
+<span id="28">28</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">rustacuda_core::DeviceCopy</span>;
 
@@ -36,6 +37,7 @@
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">transparent</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CudaExchangeBufferCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">DeviceCopy</span><span class="op">&gt;</span>(
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">DeviceOwnedSlice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 );
