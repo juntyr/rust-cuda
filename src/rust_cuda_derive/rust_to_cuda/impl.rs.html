@@ -143,8 +143,6 @@
 <span id="141">141</span>
 <span id="142">142</span>
 <span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 <span class="kw">use</span> <span class="ident">quote::quote</span>;
@@ -164,8 +162,6 @@
         .<span class="ident">any</span>(<span class="op">|</span><span class="ident">attr</span><span class="op">|</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">is_ident</span>(<span class="string">&quot;repr&quot;</span>))
     {
         <span class="macro">quote!</span> {}
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">struct_fields_cuda</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span> {
-        <span class="macro">quote!</span> { <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">transparent</span>)]</span> }
     } <span class="kw">else</span> {
         <span class="macro">quote!</span> { <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>)]</span> }
     };
