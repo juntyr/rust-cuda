@@ -16,8 +16,6 @@ pub fn cuda_struct_declaration(
         .any(|attr| attr.path.is_ident("repr"))
     {
         quote! {}
-    } else if struct_fields_cuda.len() == 1 {
-        quote! { #[repr(transparent)] }
     } else {
         quote! { #[repr(C)] }
     };
