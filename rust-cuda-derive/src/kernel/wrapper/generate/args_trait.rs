@@ -51,7 +51,17 @@ pub(in super::super) fn quote_args_trait(
         .collect::<Vec<_>>();
 
     quote! {
+        #[cfg(not(target_os = "cuda"))]
         #visibility unsafe trait #args #generic_start_token #generic_params #generic_close_token
+            #generic_where_clause
+        {
+            #(#func_input_typedefs)*
+        }
+
+        // #args must always be pub in CUDA kernel as it is used to define the
+        //  public kernel entry point signature
+        #[cfg(target_os = "cuda")]
+        pub unsafe trait #args #generic_start_token #generic_params #generic_close_token
             #generic_where_clause
         {
             #(#func_input_typedefs)*

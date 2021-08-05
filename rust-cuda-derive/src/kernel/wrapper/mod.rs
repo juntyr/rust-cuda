@@ -7,9 +7,9 @@ mod parse;
 
 use config::KernelConfig;
 use generate::{
-    args_trait::quote_args_trait, cpu_linker_macro::generate_cpu_linker_macro,
-    cpu_wrapper::quote_cpu_wrapper, cuda_generic_function::generate_cuda_generic_function,
-    cuda_wrapper::generate_cuda_wrapper,
+    args_trait::quote_args_trait, cpu_linker_macro::quote_cpu_linker_macro,
+    cpu_wrapper::quote_cpu_wrapper, cuda_generic_function::quote_cuda_generic_function,
+    cuda_wrapper::quote_cuda_wrapper,
 };
 use inputs::{parse_function_inputs, FunctionInputs};
 use parse::parse_kernel_fn;
@@ -65,7 +65,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         .map(|arg| match arg {
             syn::FnArg::Typed(syn::PatType { pat, .. }) => {
                 quote::format_ident!(
-                    "CudaParameter_{}_MustFitInto64BitsOrBeAReference",
+                    "Kernel_parameter_{}_must_fit_into_64b_or_be_a_reference",
                     quote::ToTokens::to_token_stream(pat)
                         .to_string()
                         .replace(' ', "_")
@@ -84,7 +84,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_ident,
         &func.attrs,
     );
-    let cpu_linker_macro = generate_cpu_linker_macro(
+    let cpu_linker_macro = quote_cpu_linker_macro(
         &config,
         &decl_generics,
         &func_inputs,
@@ -93,7 +93,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func.attrs,
         &func_type_errors,
     );
-    let cuda_wrapper = generate_cuda_wrapper(
+    let cuda_wrapper = quote_cuda_wrapper(
         &config,
         &func_inputs,
         &func_ident,
@@ -101,7 +101,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_params,
         &func_type_errors,
     );
-    let cuda_generic_function = generate_cuda_generic_function(
+    let cuda_generic_function = quote_cuda_generic_function(
         &decl_generics,
         &func_inputs,
         &func_ident,

@@ -37,7 +37,7 @@ pub(super) fn quote_kernel_func(
                     and_token,
                     lifetime,
                     mutability,
-                    elem: _elem,
+                    ..
                 }) = &**ty
                 {
                     quote! {
@@ -79,10 +79,9 @@ fn generate_raw_func_input_wrap(
             self.#func_ident_raw(#(#func_params),*)
         }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType {
-                attrs: _attrs,
                 pat,
-                colon_token: _colon_token,
                 ty,
+                ..
             }) => {
                 match cuda_mode {
                     InputCudaType::DeviceCopy => if let syn::Type::Reference(
@@ -133,10 +132,8 @@ fn generate_raw_func_input_wrap(
                                 let mut #pat_host_box = rust_cuda::host::HostDeviceBoxMut::new(
                                     &mut #pat_box, #pat
                                 );
-                                let __result = {
-                                    let #pat = &mut #pat_host_box;
-                                    #inner
-                                };
+                                #[allow(clippy::redundant_closure_call)]
+                                let __result = (|#pat| { #inner })(&mut #pat_host_box);
                                 rust_cuda::rustacuda::memory::CopyDestination::copy_to(
                                     &#pat_box, #pat
                                 )?;
@@ -148,10 +145,8 @@ fn generate_raw_func_input_wrap(
                                 let #pat_host_box = rust_cuda::host::HostDeviceBoxConst::new(
                                     &#pat_box, #pat
                                 );
-                                {
-                                    let #pat = &#pat_host_box;
-                                    #inner
-                                }
+                                #[allow(clippy::redundant_closure_call)]
+                                (|#pat| { #inner })(&#pat_host_box)
                             }
                         }
                     } else {

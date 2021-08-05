@@ -12,7 +12,7 @@ use kernel_func::quote_kernel_func;
 use kernel_func_raw::quote_kernel_func_raw;
 use new_kernel::quote_new_kernel;
 
-pub(in super::super) fn generate_cpu_linker_macro(
+pub(in super::super) fn quote_cpu_linker_macro(
     config
     @
     KernelConfig {

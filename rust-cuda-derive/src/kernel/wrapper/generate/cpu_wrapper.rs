@@ -90,7 +90,7 @@ fn generate_new_func_inputs_decl(
                             and_token,
                             lifetime,
                             mutability,
-                            elem: _elem,
+                            ..
                         }) = &**ty
                         {
                             Box::new(syn::Type::Reference(syn::TypeReference {
@@ -123,7 +123,7 @@ fn generate_new_func_inputs_decl(
                             and_token,
                             lifetime,
                             mutability,
-                            elem: _elem,
+                            ..
                         }) = &**ty
                         {
                             if lifetime.is_some() {

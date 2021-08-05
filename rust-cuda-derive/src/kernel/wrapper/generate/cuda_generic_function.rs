@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 
 use super::super::{DeclGenerics, FuncIdent, FunctionInputs};
 
-pub(in super::super) fn generate_cuda_generic_function(
+pub(in super::super) fn quote_cuda_generic_function(
     DeclGenerics {
         generic_start_token,
         generic_params,

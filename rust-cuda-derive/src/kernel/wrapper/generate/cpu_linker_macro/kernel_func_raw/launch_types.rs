@@ -23,7 +23,7 @@ pub(super) fn generate_launch_types(
         .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type = quote! {
+                let syn_type = quote::quote_spanned! { ty.span()=>
                     <() as #args #generic_start_token
                         #($#macro_type_ids),*
                     #generic_close_token>::#type_ident
@@ -31,20 +31,20 @@ pub(super) fn generate_launch_types(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::LendRustBorrowToCuda => quote!(
+                    InputCudaType::LendRustBorrowToCuda => quote::quote_spanned! { ty.span()=>
                         <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
-                    ),
+                    },
                 };
 
                 if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                     if mutability.is_some() {
-                        quote!(
+                        quote::quote_spanned! { ty.span()=>
                             rust_cuda::common::DeviceBoxMut<#cuda_type>
-                        )
+                        }
                     } else {
-                        quote!(
+                        quote::quote_spanned! { ty.span()=>
                             rust_cuda::common::DeviceBoxConst<#cuda_type>
-                        )
+                        }
                     }
                 } else if matches!(cuda_mode, InputCudaType::LendRustBorrowToCuda) {
                     abort!(

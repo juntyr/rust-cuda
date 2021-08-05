@@ -12,12 +12,7 @@ pub(super) fn generate_func_input_and_ptx_jit_wraps(
         .iter()
         .zip(func_input_cuda_types.iter())
         .map(|(arg, (_cuda_mode, ptx_jit))| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                attrs: _attrs,
-                pat,
-                colon_token: _colon_token,
-                ty,
-            }) => {
+            syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => {
                 let func_input = if let syn::Type::Reference(_) = &**ty {
                     quote! { #pat.for_device() }
                 } else {

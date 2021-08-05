@@ -45,7 +45,7 @@ pub(super) fn generate_raw_func_types(
                     and_token,
                     lifetime,
                     mutability,
-                    elem: _elem,
+                    ..
                 }) = &**ty
                 {
                     if lifetime.is_some() {

@@ -27,16 +27,19 @@ unsafe impl GlobalAlloc for PTXAllocator {
 
 // Based on https://github.com/popzxc/stdext-rs/blob/master/src/macros.rs
 #[macro_export]
+#[doc(hidden)]
 macro_rules! function {
     () => {{
-        // Okay, this is ugly, I get it. However, this is the best we can get on a
-        // stable rust.
+        // Okay, this is ugly, I get it. However, this is the best we can get on
+        //  stable rust.
         fn f() {}
         fn type_name_of<T>(_: T) -> &'static str {
             core::any::type_name::<T>()
         }
         let name = type_name_of(f);
         // `3` is the length of the `::f`.
+
+        // TODO: Do we need a String allocation here
         alloc::string::String::from(&name[..name.len() - 3])
     }};
 }
@@ -76,7 +79,7 @@ macro_rules! assert {
                     msg.as_ptr(),
                     file!().as_ptr(),
                     line!(),
-                    function!().as_ptr(),
+                    $crate::function!().as_ptr(),
                 )
             };
         }
@@ -100,7 +103,7 @@ macro_rules! assert_eq {
                     msg.as_ptr(),
                     file!().as_ptr(),
                     line!(),
-                    function!().as_ptr(),
+                    $crate::function!().as_ptr(),
                 )
             };
         }
@@ -124,7 +127,7 @@ macro_rules! assert_ne {
                     msg.as_ptr(),
                     file!().as_ptr(),
                     line!(),
-                    function!().as_ptr(),
+                    $crate::function!().as_ptr(),
                 )
             };
         }

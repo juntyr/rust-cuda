@@ -11,11 +11,24 @@ pub fn cuda_struct_declaration(
 ) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
+    let struct_repr = if struct_attrs_cuda
+        .iter()
+        .any(|attr| attr.path.is_ident("repr"))
+    {
+        quote! {}
+    } else if struct_fields_cuda.len() == 1 {
+        quote! { #[repr(transparent)] }
+    } else {
+        quote! { #[repr(C)] }
+    };
+
     quote! {
         #[allow(dead_code)]
         #[doc(hidden)]
-        #(#struct_attrs_cuda)* #struct_vis_cuda struct #struct_name_cuda
-            #struct_generics_cuda #struct_fields_cuda #struct_semi_cuda
+        #(#struct_attrs_cuda)*
+        #struct_repr
+        #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda
+            #struct_fields_cuda #struct_semi_cuda
 
         // #[derive(DeviceCopy)] can interfer with type parameters
         unsafe impl #impl_generics rust_cuda::rustacuda_core::DeviceCopy

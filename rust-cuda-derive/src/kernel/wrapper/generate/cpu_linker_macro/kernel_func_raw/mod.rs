@@ -12,7 +12,7 @@ use type_wrap::generate_func_input_and_ptx_jit_wraps;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_raw(
-    config: &KernelConfig,
+    config @ KernelConfig { args, .. }: &KernelConfig,
     decl_generics: &DeclGenerics,
     func_inputs: &FunctionInputs,
     FuncIdent { func_ident_raw, .. }: &FuncIdent,
@@ -21,6 +21,7 @@ pub(super) fn quote_kernel_func_raw(
     func_type_errors: &[syn::Ident],
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
+    let arch_checks = super::super::arch_checks::quote_arch_checks();
     let new_func_inputs_raw =
         generate_raw_func_types(config, decl_generics, func_inputs, macro_type_ids);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
@@ -34,6 +35,8 @@ pub(super) fn quote_kernel_func_raw(
             -> rust_cuda::rustacuda::error::CudaResult<()>
         {
             use rust_cuda::ptx_jit::host::compiler::PtxJITResult;
+
+            #arch_checks
 
             #[repr(C)]
             struct TypedKernel {
@@ -84,10 +87,11 @@ pub(super) fn quote_kernel_func_raw(
                 },
             }.get_function();
 
+            #[allow(clippy::redundant_closure_call)]
             (|#(#func_params: #cpu_func_types_launch),*| {
                 #(
-                    #[allow(non_camel_case_types, dead_code)]
-                    struct #func_type_errors;
+                    #[allow(dead_code, non_camel_case_types)]
+                    enum #func_type_errors {}
                     const _: [#func_type_errors; 1 - {
                         const ASSERT: bool = (
                             ::std::mem::size_of::<#cpu_func_types_launch>() <= 8
@@ -95,7 +99,18 @@ pub(super) fn quote_kernel_func_raw(
                     } as usize] = [];
                 )*
 
+                #[deny(improper_ctypes)]
+                mod __rust_cuda_ffi_safe_assert {
+                    use super::#args;
+
+                    extern "C" { #(
+                        #[allow(dead_code)]
+                        static #func_params: #cpu_func_types_launch;
+                    )* }
+                }
+
                 if false {
+                    #[allow(dead_code)]
                     fn assert_impl_devicecopy<
                         T: rust_cuda::rustacuda_core::DeviceCopy
                     >(_val: &T) {}
