@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["exchange",""]]});
+initSidebarItems({"mod":[["exchange",""],["stack",""]]});

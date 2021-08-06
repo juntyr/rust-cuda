@@ -32,11 +32,15 @@
 <span id="32">32</span>
 <span id="33">33</span>
 <span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
 </pre><pre class="rust">
 <span class="attribute">#![<span class="ident">deny</span>(<span class="ident">clippy::pedantic</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::useless_attribute</span>)]</span>
 <span class="attribute">#![<span class="ident">no_std</span>]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">associated_type_bounds</span>)]</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">auto_traits</span>)]</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">negative_impls</span>)]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>), <span class="ident">feature</span>(<span class="ident">link_llvm_intrinsics</span>))]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>), <span class="ident">feature</span>(<span class="ident">core_intrinsics</span>))]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>), <span class="ident">feature</span>(<span class="ident">asm</span>))]</span>
