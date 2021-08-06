@@ -2,6 +2,8 @@
 #![allow(clippy::useless_attribute)]
 #![no_std]
 #![feature(associated_type_bounds)]
+#![feature(auto_traits)]
+#![feature(negative_impls)]
 #![cfg_attr(any(not(feature = "host"), doc), feature(link_llvm_intrinsics))]
 #![cfg_attr(any(not(feature = "host"), doc), feature(core_intrinsics))]
 #![cfg_attr(any(not(feature = "host"), doc), feature(asm))]
