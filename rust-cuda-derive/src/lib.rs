@@ -1,7 +1,8 @@
 #![deny(clippy::pedantic)]
+#![feature(cfg_version)]
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
-#![feature(bindings_after_at)]
+#![cfg_attr(not(version("1.54.0")), feature(bindings_after_at))]
 
 extern crate proc_macro;
 
