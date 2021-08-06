@@ -115,14 +115,9 @@ impl<T: Sized + DeviceCopy> AsMut<[T]> for DeviceOwnedSlice<T> {
 }
 
 #[repr(transparent)]
+#[derive(Clone, Copy)]
 pub struct DeviceBoxConst<T: Sized + DeviceCopy>(pub(super) *const T);
 
-impl<T: Sized + DeviceCopy> Clone for DeviceBoxConst<T> {
-    fn clone(&self) -> Self {
-        Self(self.0)
-    }
-}
-impl<T: Sized + DeviceCopy> Copy for DeviceBoxConst<T> {}
 unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DeviceBoxConst<T> {}
 
 #[cfg(feature = "host")]

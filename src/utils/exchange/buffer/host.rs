@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 
 use rustacuda::{
@@ -15,7 +16,7 @@ use crate::{
 use super::CudaExchangeBufferCudaRepresentation;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct CudaExchangeBufferHost<T: Clone + DeviceCopy> {
+pub struct CudaExchangeBufferHost<T: DeviceCopy> {
     host_buffer: CudaDropWrapper<LockedBuffer<T>>,
     device_buffer: CudaDropWrapper<DeviceBuffer<T>>,
 }
@@ -35,7 +36,30 @@ impl<T: Clone + DeviceCopy> CudaExchangeBufferHost<T> {
     }
 }
 
-impl<T: Clone + DeviceCopy> Deref for CudaExchangeBufferHost<T> {
+impl<T: DeviceCopy> CudaExchangeBufferHost<T> {
+    /// # Errors
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    pub fn from_vec(vec: Vec<T>) -> CudaResult<Self> {
+        let mut host_buffer_uninit =
+            CudaDropWrapper::from(unsafe { LockedBuffer::uninitialized(vec.len())? });
+
+        for (src, dst) in vec.into_iter().zip(host_buffer_uninit.iter_mut()) {
+            *dst = src;
+        }
+
+        let host_buffer = host_buffer_uninit;
+
+        let device_buffer =
+            CudaDropWrapper::from(DeviceBuffer::from_slice(host_buffer.as_slice())?);
+
+        Ok(Self {
+            host_buffer,
+            device_buffer,
+        })
+    }
+}
+
+impl<T: DeviceCopy> Deref for CudaExchangeBufferHost<T> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
@@ -43,13 +67,13 @@ impl<T: Clone + DeviceCopy> Deref for CudaExchangeBufferHost<T> {
     }
 }
 
-impl<T: Clone + DeviceCopy> DerefMut for CudaExchangeBufferHost<T> {
+impl<T: DeviceCopy> DerefMut for CudaExchangeBufferHost<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.host_buffer.as_mut_slice()
     }
 }
 
-unsafe impl<T: Clone + DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
+unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
     type CudaAllocation = NullCudaAlloc;
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T>;
 

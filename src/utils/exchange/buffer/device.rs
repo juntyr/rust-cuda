@@ -7,11 +7,11 @@ use crate::common::RustToCuda;
 use super::CudaExchangeBufferCudaRepresentation;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct CudaExchangeBufferDevice<T: Clone + DeviceCopy>(
+pub struct CudaExchangeBufferDevice<T: DeviceCopy>(
     pub(super) core::mem::ManuallyDrop<alloc::boxed::Box<[T]>>,
 );
 
-impl<T: Clone + DeviceCopy> Deref for CudaExchangeBufferDevice<T> {
+impl<T: DeviceCopy> Deref for CudaExchangeBufferDevice<T> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
@@ -19,13 +19,13 @@ impl<T: Clone + DeviceCopy> Deref for CudaExchangeBufferDevice<T> {
     }
 }
 
-impl<T: Clone + DeviceCopy> DerefMut for CudaExchangeBufferDevice<T> {
+impl<T: DeviceCopy> DerefMut for CudaExchangeBufferDevice<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 #[cfg(not(all(doc, feature = "host")))]
-unsafe impl<T: Clone + DeviceCopy> RustToCuda for CudaExchangeBufferDevice<T> {
+unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferDevice<T> {
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T>;
 }
