@@ -11,6 +11,8 @@ pub use rust_cuda_derive::{LendRustBorrowToCuda, RustToCudaAsRust};
 #[doc(cfg(feature = "host"))]
 pub use rust_cuda_derive::kernel;
 
+use crate::utils::stack::StackOnly;
+
 /// # Safety
 /// This is an internal trait and should ONLY be derived automatically using
 /// `#[derive(RustToCuda)]`
@@ -113,6 +115,14 @@ impl<T: Sized + DeviceCopy> AsMut<[T]> for DeviceOwnedSlice<T> {
         unsafe { core::slice::from_raw_parts_mut(self.0, self.1) }
     }
 }
+
+#[repr(C, u8)]
+pub enum FFIsafeOption<T: StackOnly> {
+    None,
+    Some(T),
+}
+
+unsafe impl<T: StackOnly> DeviceCopy for FFIsafeOption<T> {}
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]

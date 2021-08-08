@@ -2,7 +2,8 @@ use syn::parse_quote;
 
 #[allow(clippy::module_name_repetitions)]
 pub enum CudaReprFieldTy {
-    BoxedSlice(proc_macro2::TokenStream),
+    BoxedSlice(Box<syn::Type>),
+    Optional(Box<syn::Type>),
     Embedded(Box<syn::Type>),
     Eval(proc_macro2::TokenStream),
     Phantom(Box<syn::Type>),
@@ -28,13 +29,25 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
                 .and_then(|rest| rest.strip_suffix("] >)"))
             {
                 // Check for the special case of a boxed slice: `Box<ty>`
-                let slice_type = slice_type.parse().unwrap();
+                let slice_type = syn::parse_str(slice_type).unwrap();
 
                 field_ty = parse_quote! {
                     rust_cuda::common::DeviceOwnedSlice<#slice_type>
                 };
 
                 cuda_repr_field_ty = Some(CudaReprFieldTy::BoxedSlice(slice_type));
+            } else if let Some(option_type) = attribute_str
+                .strip_prefix("(Option <")
+                .and_then(|rest| rest.strip_suffix(">)"))
+            {
+                // Check for the special case of a optional value: `Option<ty>`
+                let option_type = syn::parse_str(option_type).unwrap();
+
+                field_ty = parse_quote! {
+                    rust_cuda::common::FFIsafeOption<#option_type>
+                };
+
+                cuda_repr_field_ty = Some(CudaReprFieldTy::Optional(option_type));
             } else if let Some(struct_type) = attribute_str
                 .strip_prefix('(')
                 .and_then(|rest| rest.strip_suffix(')'))
