@@ -218,8 +218,8 @@
             <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow_mut</span><span class="op">&lt;</span><span class="ident">CudaAllocType</span>: <span class="ident">rust_cuda::host::CudaAlloc</span><span class="op">&gt;</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">alloc</span>: <span class="ident">CudaAllocType</span>
             ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">rust_cuda::rustacuda::error::CudaResult</span><span class="op">&lt;</span>(
-                <span class="self">Self</span><span class="ident">::CudaRepresentation</span>,
-                <span class="ident">rust_cuda::host::CombinedCudaAlloc</span><span class="op">&lt;</span><span class="self">Self</span><span class="ident">::CudaAllocation</span>, <span class="ident">CudaAllocType</span><span class="op">&gt;</span>
+                <span class="ident"><span class="self">Self</span>::CudaRepresentation</span>,
+                <span class="ident">rust_cuda::host::CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">CudaAllocType</span><span class="op">&gt;</span>
             )<span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">alloc_front</span> <span class="op">=</span> <span class="ident">rust_cuda::host::NullCudaAlloc</span>;
                 <span class="kw">let</span> <span class="ident">alloc_tail</span> <span class="op">=</span> <span class="ident">alloc</span>;
@@ -234,8 +234,8 @@
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
             <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">un_borrow_mut</span><span class="op">&lt;</span><span class="ident">CudaAllocType</span>: <span class="ident">rust_cuda::host::CudaAlloc</span><span class="op">&gt;</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-                <span class="ident">cuda_repr</span>: <span class="self">Self</span><span class="ident">::CudaRepresentation</span>,
-                <span class="ident">alloc</span>: <span class="ident">rust_cuda::host::CombinedCudaAlloc</span><span class="op">&lt;</span><span class="self">Self</span><span class="ident">::CudaAllocation</span>, <span class="ident">CudaAllocType</span><span class="op">&gt;</span>,
+                <span class="ident">cuda_repr</span>: <span class="ident"><span class="self">Self</span>::CudaRepresentation</span>,
+                <span class="ident">alloc</span>: <span class="ident">rust_cuda::host::CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">CudaAllocType</span><span class="op">&gt;</span>,
             ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">rust_cuda::rustacuda::error::CudaResult</span><span class="op">&lt;</span><span class="ident">CudaAllocType</span><span class="op">&gt;</span> {
                 <span class="kw">use</span> <span class="ident">rust_cuda::rustacuda::memory::CopyDestination</span>;
 

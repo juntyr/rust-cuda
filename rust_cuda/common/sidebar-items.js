@@ -1,1 +1,1 @@
-initSidebarItems({"attr":[["kernel",""]],"derive":[["LendRustBorrowToCuda",""],["RustToCudaAsRust",""]],"struct":[["DeviceBoxConst",""],["DeviceBoxMut",""],["DeviceOwnedSlice",""]],"trait":[["CudaAsRust","Safety"],["RustToCuda","Safety"]]});
+initSidebarItems({"attr":[["kernel",""]],"derive":[["LendRustBorrowToCuda",""],["RustToCudaAsRust",""]],"enum":[["FFIsafeOption",""]],"struct":[["DeviceBoxConst",""],["DeviceBoxMut",""],["DeviceOwnedSlice",""]],"trait":[["CudaAsRust","Safety"],["RustToCuda","Safety"]]});

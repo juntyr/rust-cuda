@@ -105,7 +105,7 @@
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="kw">super</span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">KernelConfig</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">KernelConfig</span>};
 
 <span class="kw">mod</span> <span class="ident">get_ptx_str</span>;
 <span class="kw">mod</span> <span class="ident">kernel_func</span>;
@@ -117,7 +117,7 @@
 <span class="kw">use</span> <span class="ident">kernel_func_raw::quote_kernel_func_raw</span>;
 <span class="kw">use</span> <span class="ident">new_kernel::quote_new_kernel</span>;
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">super</span>::<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">quote_cpu_linker_macro</span>(
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>) <span class="kw">fn</span> <span class="ident">quote_cpu_linker_macro</span>(
     <span class="ident">config</span>
     @
     <span class="ident">KernelConfig</span> {

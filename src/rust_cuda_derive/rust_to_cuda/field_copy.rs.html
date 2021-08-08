@@ -144,11 +144,30 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 <span class="kw">use</span> <span class="ident">quote</span>::{<span class="ident">format_ident</span>, <span class="ident">quote</span>, <span class="ident">ToTokens</span>};
 
-<span class="kw">use</span> <span class="kw">super</span><span class="ident">::CudaReprFieldTy</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::CudaReprFieldTy</span>;
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>, <span class="ident">clippy::too_many_lines</span>)]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">impl_field_copy_init_and_expand_alloc_type</span>(
@@ -228,6 +247,25 @@
             <span class="ident">c2r_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
                 #<span class="ident">optional_field_ident</span> <span class="kw">unsafe</span> {
                     <span class="ident">::rust_cuda::alloc::boxed::Box::from_raw</span>(<span class="self">self</span>.#<span class="ident">field_accessor</span>.<span class="ident">as_mut</span>())
+                },
+            });
+        },
+        <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::Optional</span>(<span class="ident">_option_type</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">r2c_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
+                #<span class="ident">optional_field_ident</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">field_accessor</span> {
+                    <span class="ident">::core::option::Option::None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">rust_cuda::common::FFIsafeOption::None</span>,
+                    <span class="ident">::core::option::Option::Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="ident">rust_cuda::common::FFIsafeOption::Some</span>(<span class="ident">value</span>.<span class="ident">clone</span>())
+                    },
+                },
+            });
+
+            <span class="ident">c2r_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
+                #<span class="ident">optional_field_ident</span> <span class="kw">match</span> <span class="self">self</span>.#<span class="ident">field_accessor</span> {
+                    <span class="ident">rust_cuda::common::FFIsafeOption::None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">::core::option::Option::None</span>,
+                    <span class="ident">rust_cuda::common::FFIsafeOption::Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="ident">::core::option::Option::Some</span>(<span class="ident">value</span>)
+                    },
                 },
             });
         },

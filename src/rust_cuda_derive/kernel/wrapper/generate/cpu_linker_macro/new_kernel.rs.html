@@ -52,7 +52,7 @@
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">KernelConfig</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">KernelConfig</span>};
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">quote_new_kernel</span>(
     <span class="ident">KernelConfig</span> { <span class="ident">kernel</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">KernelConfig</span>,
@@ -77,7 +77,7 @@
                 <span class="ident">entry_point</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>,
             }
 
-            <span class="kw">let</span> <span class="ident">ptx_cstring</span> <span class="op">=</span> <span class="ident">::std::ffi::CString::new</span>(<span class="self">Self</span><span class="ident">::get_ptx_str</span>())
+            <span class="kw">let</span> <span class="ident">ptx_cstring</span> <span class="op">=</span> <span class="ident">::std::ffi::CString::new</span>(<span class="ident"><span class="self">Self</span>::get_ptx_str</span>())
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">rust_cuda::rustacuda::error::CudaError::InvalidPtx</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">compiler</span> <span class="op">=</span> <span class="ident">rust_cuda::ptx_jit::host::compiler::PtxJITCompiler::new</span>(

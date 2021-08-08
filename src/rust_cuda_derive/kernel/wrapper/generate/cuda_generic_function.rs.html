@@ -25,9 +25,9 @@
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="kw">super</span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>};
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">super</span>::<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">quote_cuda_generic_function</span>(
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>) <span class="kw">fn</span> <span class="ident">quote_cuda_generic_function</span>(
     <span class="ident">DeclGenerics</span> {
         <span class="ident">generic_start_token</span>,
         <span class="ident">generic_params</span>,

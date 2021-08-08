@@ -200,9 +200,9 @@
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 <span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="kw">super</span>::{<span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">InputCudaType</span>, <span class="ident">KernelConfig</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">InputCudaType</span>, <span class="ident">KernelConfig</span>};
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">super</span>::<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">quote_cuda_wrapper</span>(
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>) <span class="kw">fn</span> <span class="ident">quote_cuda_wrapper</span>(
     <span class="ident">config</span> @ <span class="ident">KernelConfig</span> { <span class="ident">args</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">KernelConfig</span>,
     <span class="ident">inputs</span> @ <span class="ident">FunctionInputs</span> {
         <span class="ident">func_inputs</span>,
@@ -213,7 +213,7 @@
     <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Pat</span>],
     <span class="ident">func_type_errors</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">arch_checks</span> <span class="op">=</span> <span class="kw">super</span><span class="ident">::arch_checks::quote_arch_checks</span>();
+    <span class="kw">let</span> <span class="ident">arch_checks</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::arch_checks::quote_arch_checks</span>();
 
     <span class="kw">let</span> (<span class="ident">ptx_func_inputs</span>, <span class="ident">ptx_func_types</span>) <span class="op">=</span> <span class="ident">specialise_ptx_func_inputs</span>(<span class="ident">config</span>, <span class="ident">inputs</span>);
 

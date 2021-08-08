@@ -55,7 +55,7 @@
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro::TokenStream</span>;
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="kw">super</span><span class="ident">::utils::skip_kernel_compilation</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::utils::skip_kernel_compilation</span>;
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_entry</span>(<span class="ident">attr</span>: <span class="ident">TokenStream</span>, <span class="ident">func</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
