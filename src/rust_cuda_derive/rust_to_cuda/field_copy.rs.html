@@ -264,7 +264,7 @@
                 #<span class="ident">optional_field_ident</span> <span class="kw">match</span> <span class="self">self</span>.#<span class="ident">field_accessor</span> {
                     <span class="ident">rust_cuda::common::FFIsafeOption::None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">::core::option::Option::None</span>,
                     <span class="ident">rust_cuda::common::FFIsafeOption::Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="ident">::core::option::Option::Some</span>(<span class="ident">value</span>)
+                        <span class="ident">::core::option::Option::Some</span>(<span class="ident">value</span>.<span class="ident">clone</span>())
                     },
                 },
             });
