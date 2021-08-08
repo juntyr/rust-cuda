@@ -116,6 +116,7 @@ impl<T: Sized + DeviceCopy> AsMut<[T]> for DeviceOwnedSlice<T> {
     }
 }
 
+#[derive(Debug)]
 #[repr(C, u8)]
 pub enum FFIsafeOption<T: StackOnly> {
     None,
