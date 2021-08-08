@@ -95,10 +95,10 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             });
 
             c2r_field_initialisations.push(quote! {
-                #optional_field_ident match self.#field_accessor {
+                #optional_field_ident match &self.#field_accessor {
                     rust_cuda::common::FFIsafeOption::None => ::core::option::Option::None,
                     rust_cuda::common::FFIsafeOption::Some(value) => {
-                        ::core::option::Option::Some(value)
+                        ::core::option::Option::Some(value.clone())
                     },
                 },
             });
