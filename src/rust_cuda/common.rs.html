@@ -185,6 +185,7 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
+<span id="188">188</span>
 </pre><pre class="rust">
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
 <span class="kw">use</span> <span class="ident">core::convert</span>::{<span class="ident">AsMut</span>, <span class="ident">AsRef</span>};
@@ -304,6 +305,7 @@
     }
 }
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>, <span class="ident">u8</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FFIsafeOption</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">StackOnly</span><span class="op">&gt;</span> {
     <span class="prelude-val">None</span>,
