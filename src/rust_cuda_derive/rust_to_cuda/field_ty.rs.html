@@ -35,10 +35,6 @@
 <span id="35">35</span>
 <span id="36">36</span>
 <span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">parse_quote</span>, <span class="ident">spanned::Spanned</span>};
 
@@ -51,8 +47,8 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cuda_repr_field_ty</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">CudaReprFieldTy</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_ty</span> <span class="op">=</span> <span class="ident">field</span>.<span class="ident">ty</span>.<span class="ident">clone</span>();
 
-    <span class="comment">// Helper attribute `r2c` must be filtered out inside cuda representation</span>
-    <span class="ident">field</span>.<span class="ident">attrs</span>.<span class="ident">retain</span>(<span class="op">|</span><span class="ident">attr</span><span class="op">|</span> {
+    <span class="comment">// Remove all attributes from the fields in the Cuda representation</span>
+    <span class="ident">field</span>.<span class="ident">attrs</span>.<span class="ident">drain</span>(..).<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">attr</span><span class="op">|</span> {
         <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">is_ident</span>(<span class="string">&quot;r2cEmbed&quot;</span>) {
             <span class="kw">if</span> <span class="ident">cuda_repr_field_ty</span>.<span class="ident">is_none</span>() {
                 <span class="kw">if</span> <span class="op">!</span><span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">is_empty</span>() {
@@ -70,10 +66,6 @@
             } <span class="kw">else</span> {
                 <span class="macro">emit_error!</span>(<span class="ident">attr</span>.<span class="ident">span</span>(), <span class="string">&quot;Duplicate #[r2cEmbed] attribute definition.&quot;</span>);
             }
-
-            <span class="bool-val">false</span>
-        } <span class="kw">else</span> {
-            <span class="bool-val">true</span>
         }
     });
 
