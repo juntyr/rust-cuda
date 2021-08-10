@@ -9,8 +9,8 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
     let mut cuda_repr_field_ty: Option<CudaReprFieldTy> = None;
     let mut field_ty = field.ty.clone();
 
-    // Helper attribute `r2c` must be filtered out inside cuda representation
-    field.attrs.retain(|attr| {
+    // Remove all attributes from the fields in the Cuda representation
+    field.attrs.drain(..).for_each(|attr| {
         if attr.path.is_ident("r2cEmbed") {
             if cuda_repr_field_ty.is_none() {
                 if !attr.tokens.is_empty() {
@@ -28,10 +28,6 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
             } else {
                 emit_error!(attr.span(), "Duplicate #[r2cEmbed] attribute definition.");
             }
-
-            false
-        } else {
-            true
         }
     });
 
