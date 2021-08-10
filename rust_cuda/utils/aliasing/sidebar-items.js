@@ -1,1 +1,1 @@
-initSidebarItems({"externcrate":[["final",""]],"mod":[["const",""],["dynamic",""]],"trait":[["NoAliasing",""]]});
+initSidebarItems({"mod":[["const",""],["dynamic",""],["final",""]],"trait":[["NoAliasing",""]]});

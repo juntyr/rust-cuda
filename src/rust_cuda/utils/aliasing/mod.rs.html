@@ -23,10 +23,12 @@
 <span id="23">23</span>
 <span id="24">24</span>
 <span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
 </pre><pre class="rust">
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#const</span>;
-<span class="kw">pub</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">r#final</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">dynamic</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#final</span>;
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NoAliasing</span>: <span class="ident">private::NoAliasing</span> {}
@@ -49,6 +51,8 @@
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span> {}
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
 }
+
+<span class="comment">// TODO: conditionally impl RustToCuda etc for the three wrappers</span>
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-search-index-js="../../../../search-index.js" data-search-js="../../../../search.js"></div>
     <script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script>
