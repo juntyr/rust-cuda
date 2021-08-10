@@ -7,9 +7,12 @@ pub trait NoAliasing: private::NoAliasing {}
 impl<T: private::NoAliasing> NoAliasing for T {}
 
 mod private {
+    use crate::common::CudaAsRust;
+
     use super::{
         dynamic::SplitSliceOverCudaThreadsDynamicStride,
-        r#const::SplitSliceOverCudaThreadsConstStride, r#final::Final,
+        r#const::SplitSliceOverCudaThreadsConstStride,
+        r#final::{Final, FinalCudaRepresentation},
     };
 
     pub auto trait NoAliasing {}
@@ -22,6 +25,8 @@ mod private {
     impl<T> NoAliasing for core::marker::PhantomData<T> {}
 
     impl<T> NoAliasing for Final<T> {}
+    impl<T: CudaAsRust> NoAliasing for FinalCudaRepresentation<T> {}
+
     impl<T, const STRIDE: usize> NoAliasing for SplitSliceOverCudaThreadsConstStride<T, STRIDE> {}
     impl<T> NoAliasing for SplitSliceOverCudaThreadsDynamicStride<T> {}
 }
