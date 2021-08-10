@@ -136,6 +136,12 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
@@ -165,7 +171,7 @@
         <span class="ident">generate_raw_func_types</span>(<span class="ident">config</span>, <span class="ident">decl_generics</span>, <span class="ident">func_inputs</span>, <span class="ident">macro_type_ids</span>);
     <span class="kw">let</span> (<span class="ident">func_input_wrap</span>, <span class="ident">func_cpu_ptx_jit_wrap</span>) <span class="op">=</span>
         <span class="ident">generate_func_input_and_ptx_jit_wraps</span>(<span class="ident">func_inputs</span>);
-    <span class="kw">let</span> <span class="ident">cpu_func_types_launch</span> <span class="op">=</span>
+    <span class="kw">let</span> (<span class="ident">cpu_func_types_launch</span>, <span class="ident">cpu_func_unboxed_types</span>) <span class="op">=</span>
         <span class="ident">generate_launch_types</span>(<span class="ident">config</span>, <span class="ident">decl_generics</span>, <span class="ident">func_inputs</span>, <span class="ident">macro_type_ids</span>);
 
     <span class="macro">quote!</span> {
@@ -254,7 +260,13 @@
                         <span class="ident">T</span>: <span class="ident">rust_cuda::rustacuda_core::DeviceCopy</span>
                     <span class="op">&gt;</span>(<span class="ident">_val</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) {}
 
+                    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+                    <span class="kw">fn</span> <span class="ident">assert_impl_no_aliasing</span><span class="op">&lt;</span>
+                        <span class="ident">T</span>: <span class="ident">rust_cuda::utils::aliasing::NoAliasing</span>
+                    <span class="op">&gt;</span>() {}
+
                     #(<span class="ident">assert_impl_devicecopy</span>(<span class="kw-2">&amp;</span>#<span class="ident">func_params</span>);)<span class="op">*</span>
+                    #(<span class="ident">assert_impl_no_aliasing</span>::<span class="op">&lt;</span>#<span class="ident">cpu_func_unboxed_types</span><span class="op">&gt;</span>();)<span class="op">*</span>
                 }
 
                 <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">rust_cuda::host::Launcher::get_stream</span>(<span class="self">self</span>);

@@ -196,6 +196,43 @@
 <span id="196">196</span>
 <span id="197">197</span>
 <span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 <span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
@@ -216,6 +253,7 @@
     <span class="kw">let</span> <span class="ident">arch_checks</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::arch_checks::quote_arch_checks</span>();
 
     <span class="kw">let</span> (<span class="ident">ptx_func_inputs</span>, <span class="ident">ptx_func_types</span>) <span class="op">=</span> <span class="ident">specialise_ptx_func_inputs</span>(<span class="ident">config</span>, <span class="ident">inputs</span>);
+    <span class="kw">let</span> <span class="ident">ptx_func_unboxed_types</span> <span class="op">=</span> <span class="ident">specialise_ptx_unboxed_types</span>(<span class="ident">config</span>, <span class="ident">inputs</span>);
 
     <span class="kw">let</span> <span class="ident">ptx_func_input_unwrap</span> <span class="op">=</span> <span class="ident">func_inputs</span>
         .<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">func_input_cuda_types</span>.<span class="ident">iter</span>()).<span class="ident">enumerate</span>()
@@ -303,7 +341,13 @@
                 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
                 <span class="kw">fn</span> <span class="ident">assert_impl_devicecopy</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">rust_cuda::rustacuda_core::DeviceCopy</span><span class="op">&gt;</span>(<span class="ident">_val</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) {}
 
+                <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+                <span class="kw">fn</span> <span class="ident">assert_impl_no_aliasing</span><span class="op">&lt;</span>
+                    <span class="ident">T</span>: <span class="ident">rust_cuda::utils::aliasing::NoAliasing</span>
+                <span class="op">&gt;</span>() {}
+
                 #(<span class="ident">assert_impl_devicecopy</span>(<span class="kw-2">&amp;</span>#<span class="ident">func_params</span>);)<span class="op">*</span>
+                #(<span class="ident">assert_impl_no_aliasing</span>::<span class="op">&lt;</span>#<span class="ident">ptx_func_unboxed_types</span><span class="op">&gt;</span>();)<span class="op">*</span>
             }
 
             #<span class="ident">ptx_func_input_unwrap</span>
@@ -394,6 +438,36 @@
             <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(),
         })
         .<span class="ident">unzip</span>()
+}
+
+<span class="kw">fn</span> <span class="ident">specialise_ptx_unboxed_types</span>(
+    <span class="ident">KernelConfig</span> { <span class="ident">args</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">KernelConfig</span>,
+    <span class="ident">FunctionInputs</span> {
+        <span class="ident">func_inputs</span>,
+        <span class="ident">func_input_cuda_types</span>,
+    }: <span class="kw-2">&amp;</span><span class="ident">FunctionInputs</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TokenStream</span><span class="op">&gt;</span> {
+    <span class="ident">func_inputs</span>
+        .<span class="ident">iter</span>()
+        .<span class="ident">zip</span>(<span class="ident">func_input_cuda_types</span>.<span class="ident">iter</span>())
+        .<span class="ident">enumerate</span>()
+        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, (<span class="ident">arg</span>, (<span class="ident">cuda_mode</span>, <span class="ident">_ptx_jit</span>)))<span class="op">|</span> <span class="kw">match</span> <span class="ident">arg</span> {
+            <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> { <span class="ident">ty</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">type_ident</span> <span class="op">=</span> <span class="macro">quote::format_ident!</span>(<span class="string">&quot;__T_{}&quot;</span>, <span class="ident">i</span>);
+                <span class="kw">let</span> <span class="ident">syn_type</span> <span class="op">=</span> <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()<span class="op">=</span><span class="op">&gt;</span>
+                    <span class="macro">rust_cuda::device::specialise_kernel_type!</span>(#<span class="ident">args</span> :: #<span class="ident">type_ident</span>)
+                };
+
+                <span class="kw">match</span> <span class="ident">cuda_mode</span> {
+                    <span class="ident">InputCudaType::DeviceCopy</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">syn_type</span>,
+                    <span class="ident">InputCudaType::LendRustBorrowToCuda</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()<span class="op">=</span><span class="op">&gt;</span>
+                        <span class="op">&lt;</span>#<span class="ident">syn_type</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span>
+                    },
+                }
+            },
+            <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(),
+        })
+        .<span class="ident">collect</span>()
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="rust_cuda_derive" data-search-index-js="../../../../../search-index.js" data-search-js="../../../../../search.js"></div>

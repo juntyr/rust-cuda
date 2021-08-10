@@ -139,7 +139,7 @@
     <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() <span class="op">*</span> <span class="ident">stride</span>;
     <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">stride</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
 
-    <span class="kw">unsafe</span> { <span class="ident">core::slice::from_raw_parts_mut</span>(<span class="ident">slice</span>.<span class="ident">as_mut_ptr</span>().<span class="ident">add</span>(<span class="ident">offset</span>), <span class="ident">stride</span>) }
+    <span class="kw">unsafe</span> { <span class="ident">core::slice::from_raw_parts_mut</span>(<span class="ident">slice</span>.<span class="ident">as_mut_ptr</span>().<span class="ident">add</span>(<span class="ident">offset</span>), <span class="ident">len</span>) }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
