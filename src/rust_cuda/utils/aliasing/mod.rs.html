@@ -27,6 +27,11 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
 </pre><pre class="rust">
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#const</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">dynamic</span>;
@@ -37,9 +42,12 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">private::NoAliasing</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
 <span class="kw">mod</span> <span class="ident">private</span> {
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::common::CudaAsRust</span>;
+
     <span class="kw">use</span> <span class="kw">super</span>::{
         <span class="ident">dynamic::SplitSliceOverCudaThreadsDynamicStride</span>,
-        <span class="ident">r#const</span><span class="ident">::SplitSliceOverCudaThreadsConstStride</span>, <span class="ident">r#final</span><span class="ident">::Final</span>,
+        <span class="ident">r#const</span><span class="ident">::SplitSliceOverCudaThreadsConstStride</span>,
+        <span class="ident">r#final</span>::{<span class="ident">Final</span>, <span class="ident">FinalCudaRepresentation</span>},
     };
 
     <span class="kw">pub</span> <span class="ident">auto</span> <span class="kw">trait</span> <span class="ident">NoAliasing</span> {}
@@ -52,6 +60,8 @@
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
 
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">Final</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">CudaAsRust</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">FinalCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span> {}
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
 }
