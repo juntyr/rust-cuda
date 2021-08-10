@@ -19,6 +19,8 @@ mod private {
     impl<T> !NoAliasing for &T {}
     impl<T> !NoAliasing for &mut T {}
 
+    impl<T> NoAliasing for core::marker::PhantomData<T> {}
+
     impl<T> NoAliasing for Final<T> {}
     impl<T, const STRIDE: usize> NoAliasing for SplitSliceOverCudaThreadsConstStride<T, STRIDE> {}
     impl<T> NoAliasing for SplitSliceOverCudaThreadsDynamicStride<T> {}

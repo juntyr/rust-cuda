@@ -73,4 +73,6 @@ mod private {
     impl<T> !StackOnly for *mut T {}
     impl<T> !StackOnly for &T {}
     impl<T> !StackOnly for &mut T {}
+
+    impl<T> StackOnly for core::marker::PhantomData<T> {}
 }
