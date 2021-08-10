@@ -4,8 +4,8 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     let mut struct_attrs_cuda = ast.attrs.clone();
     let mut struct_generics_cuda = ast.generics.clone();
 
-    struct_attrs_cuda.retain(|attr| match attr.path.get_ident() {
-        Some(ident) if format!("{}", ident) == "r2cBound" => {
+    struct_attrs_cuda.retain(|attr| {
+        if attr.path.is_ident("r2cBound") {
             let attribute_str = format!("{}", attr.tokens);
 
             if let Some(type_trait_bound) = attribute_str
@@ -36,8 +36,9 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             }
 
             false
-        },
-        _ => true,
+        } else {
+            true
+        }
     });
 
     (struct_attrs_cuda, struct_generics_cuda)
