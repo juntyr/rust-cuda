@@ -1,12 +1,8 @@
-use syn::parse_quote;
+use syn::{parse_quote, spanned::Spanned};
 
 #[allow(clippy::module_name_repetitions)]
 pub enum CudaReprFieldTy {
-    BoxedSlice(Box<syn::Type>),
-    Optional(Box<syn::Type>),
     Embedded(Box<syn::Type>),
-    Eval(proc_macro2::TokenStream),
-    Phantom(Box<syn::Type>),
 }
 
 pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<CudaReprFieldTy> {
@@ -14,87 +10,29 @@ pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<Cu
     let mut field_ty = field.ty.clone();
 
     // Helper attribute `r2c` must be filtered out inside cuda representation
-    field.attrs.retain(|attr| match attr.path.get_ident() {
-        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEmbed" => {
-            // Allow the shorthand `#[r2cEmbed]` which uses the field type
-            // as well as the explicit `#[r2cEmbed(ty)]` which overwrites the type
-            let attribute_str = if attr.tokens.is_empty() {
-                format!("({})", quote! { #field_ty })
+    field.attrs.retain(|attr| {
+        if attr.path.is_ident("r2cEmbed") {
+            if cuda_repr_field_ty.is_none() {
+                if !attr.tokens.is_empty() {
+                    emit_error!(
+                        attr.tokens.span(),
+                        "#[r2cEmbed] does not take any arguments."
+                    );
+                }
+
+                cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(Box::new(field_ty.clone())));
+
+                field_ty = parse_quote! {
+                    <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                };
             } else {
-                format!("{}", attr.tokens)
-            };
-
-            if let Some(slice_type) = attribute_str
-                .strip_prefix("(Box < [")
-                .and_then(|rest| rest.strip_suffix("] >)"))
-            {
-                // Check for the special case of a boxed slice: `Box<ty>`
-                let slice_type = syn::parse_str(slice_type).unwrap();
-
-                field_ty = parse_quote! {
-                    rust_cuda::common::DeviceOwnedSlice<#slice_type>
-                };
-
-                cuda_repr_field_ty = Some(CudaReprFieldTy::BoxedSlice(slice_type));
-            } else if let Some(option_type) = attribute_str
-                .strip_prefix("(Option <")
-                .and_then(|rest| rest.strip_suffix(">)"))
-            {
-                // Check for the special case of a optional value: `Option<ty>`
-                let option_type = syn::parse_str(option_type).unwrap();
-
-                field_ty = parse_quote! {
-                    rust_cuda::common::FFIsafeOption<#option_type>
-                };
-
-                cuda_repr_field_ty = Some(CudaReprFieldTy::Optional(option_type));
-            } else if let Some(struct_type) = attribute_str
-                .strip_prefix('(')
-                .and_then(|rest| rest.strip_suffix(')'))
-            {
-                // Check for the case where a type implementing is `RustToCuda` embedded
-                let field_type = syn::parse_str(struct_type).unwrap();
-
-                field_ty = parse_quote! {
-                    <#field_type as rust_cuda::common::RustToCuda>::CudaRepresentation
-                };
-
-                cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(Box::new(field_type)));
+                emit_error!(attr.span(), "Duplicate #[r2cEmbed] attribute definition.");
             }
 
             false
-        },
-        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cEval" => {
-            cuda_repr_field_ty = Some(CudaReprFieldTy::Eval(attr.tokens.clone()));
-
-            false
-        },
-        Some(ident) if cuda_repr_field_ty.is_none() && format!("{}", ident) == "r2cPhantom" => {
-            // Allow the shorthand `#[r2cPhantom]` which uses the field type
-            // as well as the explicit `#[r2cPhantom(ty)]` which overwrites the type
-            let attribute_str = if attr.tokens.is_empty() {
-                format!("({})", quote! { #field_ty })
-            } else {
-                format!("{}", attr.tokens)
-            };
-
-            if let Some(struct_type) = attribute_str
-                .strip_prefix('(')
-                .and_then(|rest| rest.strip_suffix(')'))
-            {
-                // Check for the case where a type implementing is `RustToCuda` embedded
-                let field_type = syn::parse_str(struct_type).unwrap();
-
-                field_ty = parse_quote! {
-                    ::core::marker::PhantomData<#field_type>
-                };
-
-                cuda_repr_field_ty = Some(CudaReprFieldTy::Phantom(Box::new(field_type)));
-            }
-
-            false
-        },
-        _ => false,
+        } else {
+            true
+        }
     });
 
     field.ty = field_ty;

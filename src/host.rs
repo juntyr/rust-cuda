@@ -115,6 +115,8 @@ impl<T: private::empty::Sealed> EmptyCudaAlloc for T {}
 pub trait CudaAlloc: private::alloc::Sealed {}
 impl<T: private::alloc::Sealed> CudaAlloc for T {}
 
+impl<T: CudaAlloc> private::alloc::Sealed for Option<T> {}
+
 pub struct NullCudaAlloc;
 impl private::alloc::Sealed for NullCudaAlloc {}
 impl private::empty::Sealed for NullCudaAlloc {}
