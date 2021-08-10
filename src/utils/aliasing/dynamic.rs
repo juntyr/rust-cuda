@@ -4,11 +4,26 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
+use rustacuda_core::DeviceCopy;
+
+use crate::common::{CudaAsRust, RustToCuda};
+
 #[repr(C)]
+#[derive(Clone)]
 pub struct SplitSliceOverCudaThreadsDynamicStride<T> {
     stride: usize,
     inner: T,
 }
+
+impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
+    #[must_use]
+    pub fn new(inner: T, stride: usize) -> Self {
+        Self { stride, inner }
+    }
+}
+
+// Safety: If T is DeviceCopy, then the entire struct can be DeviceCopy as well
+unsafe impl<T: DeviceCopy> DeviceCopy for SplitSliceOverCudaThreadsDynamicStride<T> {}
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
 fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {
@@ -111,5 +126,50 @@ impl<E, T: Borrow<[E]>> Borrow<[E]> for SplitSliceOverCudaThreadsDynamicStride<T
 impl<E, T: BorrowMut<[E]>> BorrowMut<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn borrow_mut(&mut self) -> &mut [E] {
         self.inner.borrow_mut()
+    }
+}
+
+unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride<T> {
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    type CudaAllocation = T::CudaAllocation;
+    type CudaRepresentation = SplitSliceOverCudaThreadsDynamicStride<T::CudaRepresentation>;
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_mut<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: A,
+    ) -> rustacuda::error::CudaResult<(
+        Self::CudaRepresentation,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )> {
+        let (cuda_repr, alloc) = self.inner.borrow_mut(alloc)?;
+
+        Ok((
+            SplitSliceOverCudaThreadsDynamicStride::new(cuda_repr, self.stride),
+            alloc,
+        ))
+    }
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    unsafe fn un_borrow_mut<A: crate::host::CudaAlloc>(
+        &mut self,
+        cuda_repr: Self::CudaRepresentation,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    ) -> rustacuda::error::CudaResult<A> {
+        self.inner.un_borrow_mut(cuda_repr.inner, alloc)
+    }
+}
+
+unsafe impl<T: CudaAsRust> CudaAsRust for SplitSliceOverCudaThreadsDynamicStride<T> {
+    type RustRepresentation = SplitSliceOverCudaThreadsDynamicStride<T::RustRepresentation>;
+
+    #[cfg(any(not(feature = "host"), doc))]
+    #[doc(cfg(not(feature = "host")))]
+    unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
+        SplitSliceOverCudaThreadsDynamicStride::new(self.inner.as_rust(), self.stride)
     }
 }

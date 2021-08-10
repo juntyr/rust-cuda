@@ -1,6 +1,6 @@
 pub mod r#const;
-pub extern crate r#final;
 pub mod dynamic;
+pub mod r#final;
 
 #[allow(clippy::module_name_repetitions)]
 pub trait NoAliasing: private::NoAliasing {}
@@ -23,3 +23,5 @@ mod private {
     impl<T, const STRIDE: usize> NoAliasing for SplitSliceOverCudaThreadsConstStride<T, STRIDE> {}
     impl<T> NoAliasing for SplitSliceOverCudaThreadsDynamicStride<T> {}
 }
+
+// TODO: conditionally impl RustToCuda etc for the three wrappers
