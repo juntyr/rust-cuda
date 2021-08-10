@@ -30,7 +30,7 @@ impl<E, T: Deref<Target = [E]>, const STRIDE: usize> Deref
     type Target = [E];
 
     fn deref(&self) -> &Self::Target {
-        self.innerice_const_stride::<STRIDE>(&*self.0)
+        split_slice_const_stride::<E, STRIDE>(&*self.0)
     }
 }
 
@@ -39,7 +39,7 @@ impl<E, T: DerefMut<Target = [E]>, const STRIDE: usize> DerefMut
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.innerice_const_stride_mut::<STRIDE>(&mut *self.0)
+        split_slice_const_stride_mut::<E, STRIDE>(&mut *self.0)
     }
 }
 
@@ -48,7 +48,7 @@ impl<E, T: AsRef<[E]>, const STRIDE: usize> AsRef<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     fn as_ref(&self) -> &[E] {
-        self.innerice_const_stride::<STRIDE>(self.0.as_ref())
+        split_slice_const_stride::<E, STRIDE>(self.0.as_ref())
     }
 }
 
@@ -57,7 +57,7 @@ impl<E, T: AsMut<[E]>, const STRIDE: usize> AsMut<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     fn as_mut(&mut self) -> &mut [E] {
-        self.innerice_const_stride_mut::<STRIDE>(self.0.as_mut())
+        split_slice_const_stride_mut::<E, STRIDE>(self.0.as_mut())
     }
 }
 
@@ -66,7 +66,7 @@ impl<E, T: Borrow<[E]>, const STRIDE: usize> Borrow<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     fn borrow(&self) -> &[E] {
-        self.innerice_const_stride::<STRIDE>(self.0.borrow())
+        split_slice_const_stride::<E, STRIDE>(self.0.borrow())
     }
 }
 
@@ -75,7 +75,7 @@ impl<E, T: BorrowMut<[E]>, const STRIDE: usize> BorrowMut<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     fn borrow_mut(&mut self) -> &mut [E] {
-        self.innerice_const_stride_mut::<STRIDE>(self.0.borrow_mut())
+        split_slice_const_stride_mut::<E, STRIDE>(self.0.borrow_mut())
     }
 }
 

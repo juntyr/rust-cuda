@@ -15,7 +15,7 @@ pub(super) fn generate_launch_types(
         func_input_cuda_types,
     }: &FunctionInputs,
     macro_type_ids: &[syn::Ident],
-) -> Vec<TokenStream> {
+) -> (Vec<TokenStream>, Vec<TokenStream>) {
     func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
@@ -36,7 +36,10 @@ pub(super) fn generate_launch_types(
                     },
                 };
 
-                if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                let unboxed_ty = cuda_type.clone();
+
+                let ty = if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty
+                {
                     if mutability.is_some() {
                         quote::quote_spanned! { ty.span()=>
                             rust_cuda::common::DeviceBoxMut<#cuda_type>
@@ -54,9 +57,11 @@ pub(super) fn generate_launch_types(
                     );
                 } else {
                     cuda_type
-                }
+                };
+
+                (ty, unboxed_ty)
             },
             syn::FnArg::Receiver(_) => unreachable!(),
         })
-        .collect()
+        .unzip()
 }

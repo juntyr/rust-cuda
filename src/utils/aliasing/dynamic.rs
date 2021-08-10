@@ -23,7 +23,7 @@ fn split_slice_dynamic_stride_mut<E>(slice: &mut [E], stride: usize) -> &mut [E]
     let offset: usize = crate::device::utils::index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), stride) }
+    unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
 }
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]

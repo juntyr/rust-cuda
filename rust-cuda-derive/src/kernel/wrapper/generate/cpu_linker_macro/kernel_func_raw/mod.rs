@@ -26,7 +26,7 @@ pub(super) fn quote_kernel_func_raw(
         generate_raw_func_types(config, decl_generics, func_inputs, macro_type_ids);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
         generate_func_input_and_ptx_jit_wraps(func_inputs);
-    let cpu_func_types_launch =
+    let (cpu_func_types_launch, cpu_func_unboxed_types) =
         generate_launch_types(config, decl_generics, func_inputs, macro_type_ids);
 
     quote! {
@@ -115,7 +115,13 @@ pub(super) fn quote_kernel_func_raw(
                         T: rust_cuda::rustacuda_core::DeviceCopy
                     >(_val: &T) {}
 
+                    #[allow(dead_code)]
+                    fn assert_impl_no_aliasing<
+                        T: rust_cuda::utils::aliasing::NoAliasing
+                    >() {}
+
                     #(assert_impl_devicecopy(&#func_params);)*
+                    #(assert_impl_no_aliasing::<#cpu_func_unboxed_types>();)*
                 }
 
                 let stream = rust_cuda::host::Launcher::get_stream(self);

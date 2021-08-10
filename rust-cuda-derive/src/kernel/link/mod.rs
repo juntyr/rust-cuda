@@ -18,6 +18,8 @@ use config::LinkKernelConfig;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
+    proc_macro_error::set_dummy(quote! {"ERROR in PTX compilation"});
+
     let LinkKernelConfig {
         kernel,
         crate_name,
