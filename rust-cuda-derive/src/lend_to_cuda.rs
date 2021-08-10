@@ -108,6 +108,7 @@ fn quote_lend_to_cuda() -> proc_macro2::TokenStream {
 
 fn quote_borrow_from_rust() -> proc_macro2::TokenStream {
     quote! {
+        #[inline]
         unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
             &Self
         ) -> O>(
@@ -132,6 +133,7 @@ fn quote_borrow_from_rust() -> proc_macro2::TokenStream {
             inner(&rust_repr)
         }
 
+        #[inline]
         unsafe fn with_borrow_from_rust_mut<O, LendToCudaInnerFunc: FnOnce(
             &mut Self
         ) -> O>(
