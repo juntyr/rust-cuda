@@ -101,7 +101,7 @@
 <span class="comment">//  | rustfmt --config max_width=160 &gt; out.rs</span>
 
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
-<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">RustToCudaAsRust</span>, <span class="ident">attributes</span>(<span class="ident">r2cEmbed</span>))]</span>
+<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">RustToCudaAsRust</span>, <span class="ident">attributes</span>(<span class="ident">r2cEmbed</span>, <span class="ident">r2cBound</span>))]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rust_to_cuda_derive</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">ast</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse</span>(<span class="ident">input</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">ast</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ast</span>,
