@@ -26,7 +26,7 @@ unsafe impl KernelArgs for () {
 #[cfg(target_os = "cuda")]
 #[no_mangle]
 pub unsafe extern "ptx-kernel" fn kernel_kernel(
-    x: rust_cuda::common::DeviceBoxConst<<() as KernelArgs>::__T_0>,
+    x: rust_cuda::common::DevicePointerConst<<() as KernelArgs>::__T_0>,
 ) {
     #[allow(dead_code, non_camel_case_types)]
     enum Both_the_CPU_and_NVIDIA_GPU_must_have_8b_aligned_u8 {}
@@ -80,7 +80,7 @@ pub unsafe extern "ptx-kernel" fn kernel_kernel(
     enum Kernel_parameter_x_must_fit_into_64b_or_be_a_reference {}
     const _: [Kernel_parameter_x_must_fit_into_64b_or_be_a_reference; 1 - {
         const ASSERT: bool = (::core::mem::size_of::<
-            rust_cuda::common::DeviceBoxConst<<() as KernelArgs>::__T_0>,
+            rust_cuda::common::DevicePointerConst<<() as KernelArgs>::__T_0>,
         >() <= 8);
         ASSERT
     } as usize] = [];
@@ -89,7 +89,7 @@ pub unsafe extern "ptx-kernel" fn kernel_kernel(
         use super::KernelArgs;
         extern "C" {
             #[allow(dead_code)]
-            static x: rust_cuda::common::DeviceBoxConst<<() as KernelArgs>::__T_0>;
+            static x: rust_cuda::common::DevicePointerConst<<() as KernelArgs>::__T_0>;
         }
     }
     if false {

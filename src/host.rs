@@ -11,13 +11,13 @@ use rustacuda::{
     module::Module,
     stream::Stream,
 };
-use rustacuda_core::DeviceCopy;
+use rustacuda_core::{DeviceCopy, DevicePointer};
 
 #[cfg(feature = "derive")]
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
-use crate::common::{DeviceBoxConst, DeviceBoxMut, RustToCuda};
+use crate::common::{DevicePointerConst, DevicePointerMut, RustToCuda, RustToCudaCore};
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
@@ -58,14 +58,14 @@ pub struct TypedKernel<KernelTraitObject: ?Sized> {
 pub unsafe trait LendToCuda: RustToCuda {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
-    ///   `DeviceBoxConst` inside the closure
+    ///   `DevicePointerConst` inside the closure
     /// - after the closure, `&self` will not have changed
     ///
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
-        F: FnOnce(HostDeviceBoxConst<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(HostDevicePointerConst<<Self as RustToCudaCore>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &self,
         inner: F,
@@ -73,7 +73,7 @@ pub unsafe trait LendToCuda: RustToCuda {
 
     /// Lends a mutable copy of `&mut self` to CUDA:
     /// - code in the CUDA kernel can only access `&mut self` through the
-    ///   `DeviceBoxMut` inside the closure
+    ///   `DevicePointerMut` inside the closure
     /// - after the closure, `&mut self` might have changed in the following
     ///   ways:
     ///   - to avoid aliasing, each CUDA thread gets its own shallow copy of
@@ -86,7 +86,7 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
-        F: FnOnce(HostDeviceBoxMut<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(HostDevicePointerMut<<Self as RustToCudaCore>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &mut self,
         inner: F,
@@ -195,22 +195,22 @@ impl_sealed_drop_value!(Stream);
 impl_sealed_drop_value!(Context);
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostDeviceBoxMut<'a, T: Sized + DeviceCopy> {
-    device_box: &'a mut DeviceBox<T>,
+pub struct HostDevicePointerMut<'a, T: Sized + DeviceCopy> {
+    device_ptr: &'a mut DevicePointer<T>,
     host_ref: &'a mut T,
 }
 
-impl<'a, T: Sized + DeviceCopy> HostDeviceBoxMut<'a, T> {
-    pub fn new(device_box: &'a mut DeviceBox<T>, host_ref: &'a mut T) -> Self {
+impl<'a, T: Sized + DeviceCopy> HostDevicePointerMut<'a, T> {
+    pub fn new(device_ptr: &'a mut DevicePointer<T>, host_ref: &'a mut T) -> Self {
         Self {
-            device_box,
+            device_ptr,
             host_ref,
         }
     }
 
     #[must_use]
-    pub fn for_device(&mut self) -> DeviceBoxMut<T> {
-        DeviceBoxMut::from(&mut self.device_box)
+    pub fn for_device(&mut self) -> DevicePointerMut<T> {
+        DevicePointerMut::from(&mut self.device_ptr)
     }
 
     #[must_use]
@@ -220,22 +220,22 @@ impl<'a, T: Sized + DeviceCopy> HostDeviceBoxMut<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostDeviceBoxConst<'a, T: Sized + DeviceCopy> {
-    device_box: &'a DeviceBox<T>,
+pub struct HostDevicePointerConst<'a, T: Sized + DeviceCopy> {
+    device_ptr: &'a DevicePointer<T>,
     host_ref: &'a T,
 }
 
-impl<'a, T: Sized + DeviceCopy> HostDeviceBoxConst<'a, T> {
-    pub fn new(device_box: &'a DeviceBox<T>, host_ref: &'a T) -> Self {
+impl<'a, T: Sized + DeviceCopy> HostDevicePointerConst<'a, T> {
+    pub fn new(device_ptr: &'a DevicePointer<T>, host_ref: &'a T) -> Self {
         Self {
-            device_box,
+            device_ptr,
             host_ref,
         }
     }
 
     #[must_use]
-    pub fn for_device(&self) -> DeviceBoxConst<T> {
-        DeviceBoxConst::from(self.device_box)
+    pub fn for_device(&self) -> DevicePointerConst<T> {
+        DevicePointerConst::from(self.device_ptr)
     }
 
     #[must_use]

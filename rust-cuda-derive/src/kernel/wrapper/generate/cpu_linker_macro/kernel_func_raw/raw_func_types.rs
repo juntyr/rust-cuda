@@ -54,11 +54,11 @@ pub(super) fn generate_raw_func_types(
 
                     let wrapped_type = if mutability.is_some() {
                         quote!(
-                            rust_cuda::host::HostDeviceBoxMut<#cuda_type>
+                            rust_cuda::host::HostDevicePointerMut<#cuda_type>
                         )
                     } else {
                         quote!(
-                            rust_cuda::host::HostDeviceBoxConst<#cuda_type>
+                            rust_cuda::host::HostDevicePointerConst<#cuda_type>
                         )
                     };
 

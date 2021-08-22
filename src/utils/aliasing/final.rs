@@ -2,12 +2,12 @@ pub use r#final::Final;
 
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, RustToCuda};
+use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
 #[repr(transparent)]
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
-pub struct FinalCudaRepresentation<T: CudaAsRust>(T);
+pub struct FinalCudaRepresentation<T: CudaAsRust>(DeviceAccessible<T>);
 
 // Safety: If T is DeviceCopy, then the newtype struct can be DeviceCopy as well
 unsafe impl<T: CudaAsRust + DeviceCopy> DeviceCopy for FinalCudaRepresentation<T> {}
@@ -21,40 +21,31 @@ unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_mut<A: crate::host::CudaAlloc>(
-        &mut self,
+    unsafe fn borrow<A: crate::host::CudaAlloc>(
+        &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        Self::CudaRepresentation,
+        DeviceAccessible<Self::CudaRepresentation>,
         crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let inner: &T = &*self;
+        let (cuda_repr, alloc) = (**self).borrow(alloc)?;
 
-        // This change in mutability is only safe iff the mutability is not
-        //  exposed in `Self::CudaRepresentation`
-        #[allow(clippy::cast_ref_to_mut)]
-        let inner_mut: &mut T = &mut *(inner as *const T as *mut T);
-
-        let (cuda_repr, alloc) = inner_mut.borrow_mut(alloc)?;
-
-        Ok((FinalCudaRepresentation(cuda_repr), alloc))
+        Ok((
+            DeviceAccessible::from(FinalCudaRepresentation(cuda_repr)),
+            alloc,
+        ))
     }
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn un_borrow_mut<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
-        cuda_repr: Self::CudaRepresentation,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
-        let inner: &T = &*self;
+        // Safety: Final is a repr(transparent) newtype wrapper around T
+        let inner: &mut T = &mut *(self as *mut Self).cast();
 
-        // This change in mutability is only safe iff the mutability is not
-        //  exposed in `Self::CudaRepresentation`
-        #[allow(clippy::cast_ref_to_mut)]
-        let inner_mut: &mut T = &mut *(inner as *const T as *mut T);
-
-        inner_mut.un_borrow_mut(cuda_repr.0, alloc)
+        inner.restore(alloc)
     }
 }
 
@@ -63,7 +54,7 @@ unsafe impl<T: CudaAsRust> CudaAsRust for FinalCudaRepresentation<T> {
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
-        Final::new(self.0.as_rust())
+    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
+        Final::new(CudaAsRust::as_rust(&this.0))
     }
 }

@@ -1,13 +1,13 @@
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, DeviceOwnedSlice};
+use crate::common::CudaAsRust;
 
 use super::CudaExchangeBuffer;
 
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
-#[repr(transparent)]
-pub struct CudaExchangeBufferCudaRepresentation<T: DeviceCopy>(pub(super) DeviceOwnedSlice<T>);
+#[repr(C)]
+pub struct CudaExchangeBufferCudaRepresentation<T: DeviceCopy>(pub(super) *mut T, pub(super) usize);
 
 // Safety: `CudaExchangeBufferCudaRepresentation<T>` is also `DeviceCopy`
 //         iff `T` is `DeviceCopy`
@@ -18,9 +18,9 @@ unsafe impl<T: DeviceCopy> CudaAsRust for CudaExchangeBufferCudaRepresentation<T
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
+    unsafe fn as_rust(this: &crate::common::DeviceAccessible<Self>) -> Self::RustRepresentation {
         CudaExchangeBuffer(core::mem::ManuallyDrop::new(alloc::boxed::Box::from_raw(
-            self.0.as_mut(),
+            core::slice::from_raw_parts_mut(this.0, this.1),
         )))
     }
 }

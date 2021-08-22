@@ -41,7 +41,7 @@ fn quote_lend_to_cuda() -> proc_macro2::TokenStream {
         fn lend_to_cuda<
             O,
             LendToCudaInnerFunc: FnOnce(
-                rust_cuda::host::HostDeviceBoxConst<
+                rust_cuda::host::HostDevicePointerConst<
                     <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                 >
             ) -> rust_cuda::rustacuda::error::CudaResult<O>,
@@ -60,7 +60,7 @@ fn quote_lend_to_cuda() -> proc_macro2::TokenStream {
             );
 
             let result = inner(
-                rust_cuda::host::HostDeviceBoxConst::new(&device_box, &cuda_repr)
+                rust_cuda::host::HostDevicePointerConst::new(&device_box, &cuda_repr)
             );
 
             let alloc = rust_cuda::host::CombinedCudaAlloc::new(device_box, tail_alloc);
@@ -73,7 +73,7 @@ fn quote_lend_to_cuda() -> proc_macro2::TokenStream {
         fn lend_to_cuda_mut<
             O,
             LendToCudaInnerFunc: FnOnce(
-                rust_cuda::host::HostDeviceBoxMut<
+                rust_cuda::host::HostDevicePointerMut<
                     <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
                 >
             ) -> rust_cuda::rustacuda::error::CudaResult<O>,
@@ -92,7 +92,7 @@ fn quote_lend_to_cuda() -> proc_macro2::TokenStream {
             );
 
             let result = inner(
-                rust_cuda::host::HostDeviceBoxMut::new(&mut device_box, &mut cuda_repr)
+                rust_cuda::host::HostDevicePointerMut::new(&mut device_box, &mut cuda_repr)
             );
 
             ::core::mem::drop(device_box);
@@ -112,7 +112,7 @@ fn quote_borrow_from_rust() -> proc_macro2::TokenStream {
         unsafe fn with_borrow_from_rust<O, LendToCudaInnerFunc: FnOnce(
             &Self
         ) -> O>(
-            cuda_repr: rust_cuda::common::DeviceBoxConst<
+            cuda_repr: rust_cuda::common::DevicePointerConst<
                 <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
             >,
             inner: LendToCudaInnerFunc,
@@ -137,7 +137,7 @@ fn quote_borrow_from_rust() -> proc_macro2::TokenStream {
         unsafe fn with_borrow_from_rust_mut<O, LendToCudaInnerFunc: FnOnce(
             &mut Self
         ) -> O>(
-            mut cuda_repr_mut: rust_cuda::common::DeviceBoxMut<
+            mut cuda_repr_mut: rust_cuda::common::DevicePointerMut<
                 <Self as rust_cuda::common::RustToCuda>::CudaRepresentation
             >,
             inner: LendToCudaInnerFunc,

@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, RustToCuda};
+use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
@@ -22,27 +22,29 @@ unsafe impl<T: DeviceCopy> RustToCuda for Box<[T]> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_mut<A: crate::host::CudaAlloc>(
-        &mut self,
+    unsafe fn borrow<A: crate::host::CudaAlloc>(
+        &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        Self::CudaRepresentation,
+        DeviceAccessible<Self::CudaRepresentation>,
         crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let mut device_buffer =
             crate::host::CudaDropWrapper::from(rustacuda::memory::DeviceBuffer::from_slice(self)?);
 
         Ok((
-            BoxedSliceCudaRepresentation(device_buffer.as_mut_ptr(), device_buffer.len()),
+            DeviceAccessible::from(BoxedSliceCudaRepresentation(
+                device_buffer.as_mut_ptr(),
+                device_buffer.len(),
+            )),
             crate::host::CombinedCudaAlloc::new(device_buffer, alloc),
         ))
     }
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn un_borrow_mut<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
-        _cuda_repr: Self::CudaRepresentation,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         use rustacuda::prelude::CopyDestination;
@@ -62,7 +64,7 @@ unsafe impl<T: DeviceCopy> CudaAsRust for BoxedSliceCudaRepresentation<T> {
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
-        alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(self.0, self.1))
+    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
+        alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(this.0, this.1))
     }
 }
