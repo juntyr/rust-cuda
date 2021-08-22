@@ -2,46 +2,59 @@ use alloc::boxed::Box;
 
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, RustToCuda};
+use crate::common::{CudaAsRust, CudaAsRustCore, DeviceAccessible, RustToCuda, RustToCudaAlloc, RustToCudaCore};
+
+use super::stack::DeviceCopy2;
 
 #[repr(transparent)]
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
-pub struct BoxCudaRepresentation<T: DeviceCopy + Sized>(*mut T);
+pub struct BoxCudaRepresentation<T: DeviceCopy>(*mut T);
 
 // Safety: This repr(C) struct only contains a device-owned pointer
-unsafe impl<T: DeviceCopy + Sized> DeviceCopy for BoxCudaRepresentation<T> {}
+unsafe impl<T: DeviceCopy> DeviceCopy for BoxCudaRepresentation<T> {}
 
-unsafe impl<T: DeviceCopy + Sized> RustToCuda for Box<T> {
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
-    type CudaAllocation = crate::host::CudaDropWrapper<crate::rustacuda::memory::DeviceBox<T>>;
+impl<T: DeviceCopy> RustToCudaCore for Box<T> {
     type CudaRepresentation = BoxCudaRepresentation<T>;
+}
+
+#[cfg(feature = "host")]
+#[doc(cfg(feature = "host"))]
+impl<T: DeviceCopy> RustToCudaAlloc for Box<T> {
+    type CudaAllocation = crate::host::CudaDropWrapper<crate::rustacuda::memory::DeviceBox<T>>;
+}
+
+unsafe impl<T: DeviceCopy> RustToCuda for Box<T> {
+    //#[cfg(feature = "host")]
+    //#[doc(cfg(feature = "host"))]
+    //type CudaAllocation = crate::host::CudaDropWrapper<crate::rustacuda::memory::DeviceBox<T>>;
+    //type CudaRepresentation = BoxCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_mut<A: crate::host::CudaAlloc>(
-        &mut self,
+    unsafe fn borrow<A: crate::host::CudaAlloc>(
+        &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        Self::CudaRepresentation,
+        DeviceAccessible<Self::CudaRepresentation>,
         crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let mut device_box =
             crate::host::CudaDropWrapper::from(rustacuda::memory::DeviceBox::new(&**self)?);
 
         Ok((
-            BoxCudaRepresentation(device_box.as_device_ptr().as_raw_mut()),
+            DeviceAccessible::from(BoxCudaRepresentation(
+                device_box.as_device_ptr().as_raw_mut(),
+            )),
             crate::host::CombinedCudaAlloc::new(device_box, alloc),
         ))
     }
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn un_borrow_mut<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
-        _cuda_repr: Self::CudaRepresentation,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         use rustacuda::prelude::CopyDestination;
@@ -56,12 +69,16 @@ unsafe impl<T: DeviceCopy + Sized> RustToCuda for Box<T> {
     }
 }
 
-unsafe impl<T: DeviceCopy + Sized> CudaAsRust for BoxCudaRepresentation<T> {
+impl<T: DeviceCopy> CudaAsRustCore for BoxCudaRepresentation<T> {
     type RustRepresentation = Box<T>;
+}
+
+unsafe impl<T: DeviceCopy> CudaAsRust for BoxCudaRepresentation<T> {
+    //type RustRepresentation = Box<T>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
-        alloc::boxed::Box::from_raw(self.0)
+    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
+        alloc::boxed::Box::from_raw(this.0)
     }
 }

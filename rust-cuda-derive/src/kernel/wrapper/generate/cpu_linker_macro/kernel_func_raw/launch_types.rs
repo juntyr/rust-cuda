@@ -42,11 +42,11 @@ pub(super) fn generate_launch_types(
                 {
                     if mutability.is_some() {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceBoxMut<#cuda_type>
+                            rust_cuda::common::DevicePointerMut<#cuda_type>
                         }
                     } else {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceBoxConst<#cuda_type>
+                            rust_cuda::common::DevicePointerConst<#cuda_type>
                         }
                     }
                 } else if matches!(cuda_mode, InputCudaType::LendRustBorrowToCuda) {

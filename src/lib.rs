@@ -8,6 +8,9 @@
 #![cfg_attr(any(not(feature = "host"), doc), feature(core_intrinsics))]
 #![cfg_attr(any(not(feature = "host"), doc), feature(asm))]
 #![feature(doc_cfg)]
+#![feature(marker_trait_attr)]
+#![allow(incomplete_features)]
+#![feature(specialization)]
 
 #[doc(hidden)]
 pub extern crate alloc;

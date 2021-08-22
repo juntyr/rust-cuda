@@ -1,69 +1,81 @@
 use rustacuda_core::DeviceCopy;
 
-use crate::{
-    common::{CudaAsRust, RustToCuda},
-    utils::stack::StackOnly,
-};
+use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone)]
 #[repr(C, u8)]
-pub enum OptionCudaRepresentation<T: StackOnly + Clone> {
+pub enum OptionCudaRepresentation<T: RustToCuda> {
     None,
-    Some(T),
+    Some(DeviceAccessible<<T as RustToCuda>::CudaRepresentation>),
 }
 
-// Safety: Any type that is fully on the stack without any references
-//         to the heap can be safely copied to the GPU
-unsafe impl<T: StackOnly + Clone> DeviceCopy for OptionCudaRepresentation<T> {}
+// Safety: Since the CUDA representation of T is DeviceCopy,
+//         the full enum is also DeviceCopy
+unsafe impl<T: RustToCuda> DeviceCopy for OptionCudaRepresentation<T> {}
 
-unsafe impl<T: StackOnly + Clone> RustToCuda for Option<T> {
+unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    type CudaAllocation = crate::host::NullCudaAlloc;
+    type CudaAllocation = Option<<T as RustToCuda>::CudaAllocation>;
     type CudaRepresentation = OptionCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_mut<A: crate::host::CudaAlloc>(
-        &mut self,
+    unsafe fn borrow<A: crate::host::CudaAlloc>(
+        &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        Self::CudaRepresentation,
+        DeviceAccessible<Self::CudaRepresentation>,
         crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let alloc = crate::host::CombinedCudaAlloc::new(crate::host::NullCudaAlloc, alloc);
+        let (cuda_repr, alloc) = match self {
+            None => (
+                OptionCudaRepresentation::None,
+                crate::host::CombinedCudaAlloc::new(None, alloc),
+            ),
+            Some(value) => {
+                let (cuda_repr, alloc) = value.borrow(alloc)?;
 
-        match self {
-            None => Ok((OptionCudaRepresentation::None, alloc)),
-            Some(value) => Ok((OptionCudaRepresentation::Some(value.clone()), alloc)),
-        }
+                let (alloc_front, alloc_tail) = alloc.split();
+
+                (
+                    OptionCudaRepresentation::Some(cuda_repr),
+                    crate::host::CombinedCudaAlloc::new(Some(alloc_front), alloc_tail),
+                )
+            },
+        };
+
+        Ok((DeviceAccessible::from(cuda_repr), alloc))
     }
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn un_borrow_mut<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
-        _cuda_repr: Self::CudaRepresentation,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
-        let (_alloc_front, alloc_tail) = alloc.split();
+        let (alloc_front, alloc_tail) = alloc.split();
 
-        Ok(alloc_tail)
+        match (self, alloc_front) {
+            (Some(value), Some(alloc_front)) => {
+                value.restore(crate::host::CombinedCudaAlloc::new(alloc_front, alloc_tail))
+            },
+            _ => Ok(alloc_tail),
+        }
     }
 }
 
-unsafe impl<T: StackOnly + Clone> CudaAsRust for OptionCudaRepresentation<T> {
+unsafe impl<T: RustToCuda> CudaAsRust for OptionCudaRepresentation<T> {
     type RustRepresentation = Option<T>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(&mut self) -> Self::RustRepresentation {
-        match self {
+    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
+        match &**this {
             OptionCudaRepresentation::None => None,
-            OptionCudaRepresentation::Some(value) => Some(value.clone()),
+            OptionCudaRepresentation::Some(value) => Some(CudaAsRust::as_rust(value)),
         }
     }
 }
