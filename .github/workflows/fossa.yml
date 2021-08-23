@@ -6,7 +6,9 @@ on:
       - main
   pull_request:
     branches:
-      - '*'
+      - "*"
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   scan:
@@ -14,6 +16,9 @@ jobs:
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
+
+      - name: Generate the Cargo.lock file
+        run: cargo update
 
       - name: Run FOSSA scan and upload build data
         uses: fossa-contrib/fossa-action@v1
