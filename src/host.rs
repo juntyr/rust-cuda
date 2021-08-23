@@ -17,7 +17,7 @@ use rustacuda_core::{DeviceCopy, DevicePointer};
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
-use crate::common::{DevicePointerConst, DevicePointerMut, RustToCuda, RustToCudaCore};
+use crate::common::{DevicePointerConst, DevicePointerMut, RustToCuda};
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
@@ -65,7 +65,7 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
-        F: FnOnce(HostDevicePointerConst<<Self as RustToCudaCore>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(HostDevicePointerConst<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &self,
         inner: F,
@@ -86,7 +86,7 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
-        F: FnOnce(HostDevicePointerMut<<Self as RustToCudaCore>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(HostDevicePointerMut<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
     >(
         &mut self,
         inner: F,

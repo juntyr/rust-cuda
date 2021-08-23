@@ -1,6 +1,12 @@
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
+use crate::common::{
+    r#impl::{CudaAsRustImpl, RustToCudaImpl},
+    DeviceAccessible, RustToCuda,
+};
+
+#[cfg(not(feature = "host"))]
+use crate::common::CudaAsRust;
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
@@ -14,21 +20,21 @@ pub enum OptionCudaRepresentation<T: RustToCuda> {
 //         the full enum is also DeviceCopy
 unsafe impl<T: RustToCuda> DeviceCopy for OptionCudaRepresentation<T> {}
 
-unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
+unsafe impl<T: RustToCuda> RustToCudaImpl for Option<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    type CudaAllocation = Option<<T as RustToCuda>::CudaAllocation>;
-    type CudaRepresentation = OptionCudaRepresentation<T>;
+    type CudaAllocationImpl = Option<<T as RustToCuda>::CudaAllocation>;
+    type CudaRepresentationImpl = OptionCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: crate::host::CudaAlloc>(
+    unsafe fn borrow_impl<A: crate::host::CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        DeviceAccessible<Self::CudaRepresentationImpl>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     )> {
         let (cuda_repr, alloc) = match self {
             None => (
@@ -52,9 +58,9 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore<A: crate::host::CudaAlloc>(
+    unsafe fn restore_impl<A: crate::host::CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     ) -> rustacuda::error::CudaResult<A> {
         let (alloc_front, alloc_tail) = alloc.split();
 
@@ -67,12 +73,12 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     }
 }
 
-unsafe impl<T: RustToCuda> CudaAsRust for OptionCudaRepresentation<T> {
-    type RustRepresentation = Option<T>;
+unsafe impl<T: RustToCuda> CudaAsRustImpl for OptionCudaRepresentation<T> {
+    type RustRepresentationImpl = Option<T>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
+    unsafe fn as_rust_impl(this: &DeviceAccessible<Self>) -> Self::RustRepresentationImpl {
         match &**this {
             OptionCudaRepresentation::None => None,
             OptionCudaRepresentation::Some(value) => Some(CudaAsRust::as_rust(value)),
