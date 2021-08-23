@@ -12,7 +12,7 @@ use rustacuda::{
 use rustacuda_core::DeviceCopy;
 
 use crate::{
-    common::{DeviceAccessible, RustToCuda},
+    common::{r#impl::RustToCudaImpl, DeviceAccessible},
     host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
 };
 
@@ -78,17 +78,17 @@ impl<T: DeviceCopy> DerefMut for CudaExchangeBufferHost<T> {
     }
 }
 
-unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
-    type CudaAllocation = NullCudaAlloc;
-    type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T>;
+unsafe impl<T: DeviceCopy> RustToCudaImpl for CudaExchangeBufferHost<T> {
+    type CudaAllocationImpl = NullCudaAlloc;
+    type CudaRepresentationImpl = CudaExchangeBufferCudaRepresentation<T>;
 
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: CudaAlloc>(
+    unsafe fn borrow_impl<A: CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        DeviceAccessible<Self::CudaRepresentationImpl>,
+        CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     )> {
         use rustacuda::memory::CopyDestination;
 
@@ -108,9 +108,9 @@ unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
     }
 
     #[allow(clippy::type_complexity)]
-    unsafe fn restore<A: CudaAlloc>(
+    unsafe fn restore_impl<A: CudaAlloc>(
         &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     ) -> rustacuda::error::CudaResult<A> {
         use rustacuda::memory::CopyDestination;
 
