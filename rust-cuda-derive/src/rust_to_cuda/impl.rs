@@ -137,7 +137,9 @@ pub fn cuda_as_rust_trait(
             type RustRepresentationImpl = #struct_name #ty_generics;
 
             #[cfg(target_os = "cuda")]
-            unsafe fn as_rust_impl(this: &DeviceAccessible<Self>) -> #struct_name #ty_generics {
+            unsafe fn as_rust_impl(
+                this: &rust_cuda::common::DeviceAccessible<Self>,
+            ) -> #struct_name #ty_generics {
                 #cuda_as_rust_struct_construction
             }
         }
