@@ -19,7 +19,7 @@ pub use rust_cuda_derive::RustToCudaAsRust;
 pub use rust_cuda_derive::kernel;
 
 #[cfg(feature = "host")]
-use crate::utils::stack::{StackOnly, StackOnlyDeviceCopy};
+use crate::utils::stack::{StackOnly, StackOnlyWrapper};
 
 #[doc(hidden)]
 pub mod r#impl;
@@ -44,7 +44,7 @@ impl<T: DeviceCopy> From<T> for DeviceAccessible<T> {
 }
 
 #[cfg(feature = "host")]
-impl<T: StackOnly> From<&T> for DeviceAccessible<StackOnlyDeviceCopy<T>> {
+impl<T: StackOnly> From<&T> for DeviceAccessible<StackOnlyWrapper<T>> {
     fn from(value: &T) -> Self {
         let value = unsafe {
             let mut uninit = MaybeUninit::uninit();
@@ -52,7 +52,7 @@ impl<T: StackOnly> From<&T> for DeviceAccessible<StackOnlyDeviceCopy<T>> {
             uninit.assume_init()
         };
 
-        Self(StackOnlyDeviceCopy::from(value))
+        Self(StackOnlyWrapper::from(value))
     }
 }
 
