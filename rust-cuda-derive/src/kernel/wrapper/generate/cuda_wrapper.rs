@@ -37,33 +37,38 @@ pub(in super::super) fn quote_cuda_wrapper(
                     }
                 } else { quote! {} };
 
+                let type_ident = quote::format_ident!("__T_{}", i);
+                let syn_type = quote::quote_spanned! { ty.span()=>
+                    rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
+                };
+
                 match cuda_mode {
                     InputCudaType::DeviceCopy => if let syn::Type::Reference(
-                        syn::TypeReference { mutability, .. }
+                        syn::TypeReference { and_token, mutability, .. }
                     ) = &**ty {
                         if mutability.is_some() {
-                            quote! { #ptx_jit_load; { let #pat = #pat.as_mut(); #inner } }
+                            quote! { #ptx_jit_load; { let #pat: #and_token #mutability #syn_type = #pat.as_mut(); #inner } }
                         } else {
-                            quote! { #ptx_jit_load; { let #pat = #pat.as_ref(); #inner } }
+                            quote! { #ptx_jit_load; { let #pat: #and_token #syn_type = #pat.as_ref(); #inner } }
                         }
                     } else {
                         inner
                     },
                     InputCudaType::LendRustBorrowToCuda => if let syn::Type::Reference(
-                        syn::TypeReference { mutability, .. }
+                        syn::TypeReference { and_token, mutability, ..}
                     ) = &**ty {
                         if mutability.is_some() {
                             quote! {
                                 #ptx_jit_load;
                                 rust_cuda::device::BorrowFromRust::with_borrow_from_rust_mut(
-                                    #pat, |#pat| { #inner },
+                                    #pat, |#pat: #and_token #mutability #syn_type| { #inner },
                                 )
                             }
                         } else {
                             quote! {
                                 #ptx_jit_load;
                                 rust_cuda::device::BorrowFromRust::with_borrow_from_rust(
-                                    #pat, |#pat| { #inner },
+                                    #pat, |#pat: #and_token #syn_type| { #inner },
                                 )
                             }
                         }
