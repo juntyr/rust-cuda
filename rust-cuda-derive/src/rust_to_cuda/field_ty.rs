@@ -4,7 +4,9 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> syn::Type {
     let cuda_repr_field_ty = field.ty.clone();
 
     field.ty = parse_quote! {
-        <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+        rust_cuda::common::DeviceAccessible<
+            <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+        >
     };
 
     // Remove all field attributes after #[r2cIgnore]
