@@ -12,9 +12,7 @@ extern crate proc_macro_error;
 
 use proc_macro::TokenStream;
 
-mod generics;
 mod kernel;
-mod lend_to_cuda;
 mod rust_to_cuda;
 
 // cargo expand --target x86_64-unknown-linux-gnu --ugly \
@@ -32,18 +30,6 @@ pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
 
     // Build the implementation of the `RustToCuda` and `CudaAsRust` traits
     rust_to_cuda::impl_rust_to_cuda(&ast)
-}
-
-#[proc_macro_error]
-#[proc_macro_derive(LendRustBorrowToCuda)]
-pub fn lend_to_cuda_derive(input: TokenStream) -> TokenStream {
-    let ast = match syn::parse(input) {
-        Ok(ast) => ast,
-        Err(err) => abort!(err),
-    };
-
-    // Build the implementation of the `LendToCuda` and `BorrowFromRust` traits
-    lend_to_cuda::impl_lend_to_cuda(&ast)
 }
 
 #[proc_macro_error]

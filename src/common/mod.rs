@@ -12,7 +12,7 @@ use rustacuda_core::DeviceCopy;
 
 #[cfg(feature = "derive")]
 #[doc(cfg(feature = "derive"))]
-pub use rust_cuda_derive::{LendRustBorrowToCuda, RustToCudaAsRust};
+pub use rust_cuda_derive::RustToCudaAsRust;
 
 #[cfg(feature = "derive")]
 #[doc(cfg(feature = "derive"))]
