@@ -1,12 +1,14 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 
+use super::field_ty::CudaReprFieldTy;
+
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn impl_field_copy_init_and_expand_alloc_type(
     field: &syn::Field,
     field_index: usize,
 
-    cuda_repr_field_ty: &syn::Type,
+    cuda_repr_field_ty: &CudaReprFieldTy,
 
     mut combined_cuda_alloc_type: TokenStream,
 
@@ -26,29 +28,40 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     };
     let optional_field_ident = field.ident.as_ref().map(|ident| quote! { #ident: });
 
-    combined_cuda_alloc_type = quote! {
-        rust_cuda::host::CombinedCudaAlloc<
-            <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
-            #combined_cuda_alloc_type
-        >
-    };
+    match cuda_repr_field_ty {
+        CudaReprFieldTy::StackOnly => {
+            r2c_field_declarations.push(quote! {
+                let #field_repr_ident = rust_cuda::common::DeviceAccessible::from(
+                    &self.#field_accessor,
+                );
+            });
+        },
+        CudaReprFieldTy::RustToCuda(cuda_repr_field_ty) => {
+            combined_cuda_alloc_type = quote! {
+                rust_cuda::host::CombinedCudaAlloc<
+                    <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+                    #combined_cuda_alloc_type
+                >
+            };
 
-    r2c_field_declarations.push(quote! {
-        let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
-            &self.#field_accessor,
-            alloc_front,
-        )?;
-    });
+            r2c_field_declarations.push(quote! {
+                let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                    &self.#field_accessor,
+                    alloc_front,
+                )?;
+            });
+
+            r2c_field_destructors.push(quote! {
+                let alloc_front = rust_cuda::common::RustToCuda::restore(
+                    &mut self.#field_accessor,
+                    alloc_front,
+                )?;
+            });
+        },
+    }
 
     r2c_field_initialisations.push(quote! {
         #optional_field_ident #field_repr_ident,
-    });
-
-    r2c_field_destructors.push(quote! {
-        let alloc_front = rust_cuda::common::RustToCuda::restore(
-            &mut self.#field_accessor,
-            alloc_front,
-        )?;
     });
 
     c2r_field_initialisations.push(quote! {
