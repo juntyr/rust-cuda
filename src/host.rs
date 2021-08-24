@@ -17,7 +17,7 @@ use rustacuda_core::{DeviceCopy, DevicePointer};
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
-use crate::common::{DevicePointerConst, DevicePointerMut, RustToCuda};
+use crate::common::{DeviceAccessible, DevicePointerConst, DevicePointerMut, RustToCuda};
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
@@ -52,10 +52,7 @@ pub struct TypedKernel<KernelTraitObject: ?Sized> {
     _marker: PhantomData<KernelTraitObject>,
 }
 
-/// # Safety
-/// This trait should ONLY be derived automatically using
-/// `#[derive(LendToCuda)]`
-pub unsafe trait LendToCuda: RustToCuda {
+pub trait LendToCuda: RustToCuda {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
     ///   `DevicePointerConst` inside the closure
@@ -65,7 +62,9 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
-        F: FnOnce(HostDevicePointerConst<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(
+            HostDevicePointerConst<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> CudaResult<O>,
     >(
         &self,
         inner: F,
@@ -86,11 +85,67 @@ pub unsafe trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
-        F: FnOnce(HostDevicePointerMut<<Self as RustToCuda>::CudaRepresentation>) -> CudaResult<O>,
+        F: FnOnce(
+            HostDevicePointerMut<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> CudaResult<O>,
     >(
         &mut self,
         inner: F,
     ) -> CudaResult<O>;
+}
+
+impl<T: RustToCuda> LendToCuda for T {
+    fn lend_to_cuda<
+        O,
+        F: FnOnce(
+            HostDevicePointerConst<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> CudaResult<O>,
+    >(
+        &self,
+        inner: F,
+    ) -> CudaResult<O> {
+        let (cuda_repr, tail_alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+
+        let mut device_box = CudaDropWrapper::from(DeviceBox::new(&cuda_repr)?);
+
+        let result = inner(HostDevicePointerConst::new(
+            &device_box.as_device_ptr(),
+            &cuda_repr,
+        ));
+
+        let alloc = CombinedCudaAlloc::new(device_box, tail_alloc);
+
+        core::mem::drop(cuda_repr);
+        core::mem::drop(alloc);
+
+        result
+    }
+
+    fn lend_to_cuda_mut<
+        O,
+        F: FnOnce(
+            HostDevicePointerMut<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> CudaResult<O>,
+    >(
+        &mut self,
+        inner: F,
+    ) -> CudaResult<O> {
+        let (mut cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+
+        let mut device_box = CudaDropWrapper::from(DeviceBox::new(&cuda_repr)?);
+
+        let result = inner(HostDevicePointerMut::new(
+            &mut device_box.as_device_ptr(),
+            &mut cuda_repr,
+        ));
+
+        core::mem::drop(device_box);
+        core::mem::drop(cuda_repr);
+
+        let _: NullCudaAlloc = unsafe { self.restore(alloc) }?;
+
+        result
+    }
 }
 
 pub(crate) mod private {
