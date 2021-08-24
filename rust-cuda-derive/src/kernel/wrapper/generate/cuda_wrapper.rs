@@ -208,27 +208,17 @@ fn specialise_ptx_func_inputs(
 
 fn specialise_ptx_unboxed_types(
     KernelConfig { args, .. }: &KernelConfig,
-    FunctionInputs {
-        func_inputs,
-        func_input_cuda_types,
-    }: &FunctionInputs,
+    FunctionInputs { func_inputs, .. }: &FunctionInputs,
 ) -> Vec<TokenStream> {
     func_inputs
         .iter()
-        .zip(func_input_cuda_types.iter())
         .enumerate()
-        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+        .map(|(i, arg)| match arg {
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type = quote::quote_spanned! { ty.span()=>
-                    rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
-                };
 
-                match cuda_mode {
-                    InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::LendRustBorrowToCuda => quote::quote_spanned! { ty.span()=>
-                        <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
-                    },
+                quote::quote_spanned! { ty.span()=>
+                    rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),
