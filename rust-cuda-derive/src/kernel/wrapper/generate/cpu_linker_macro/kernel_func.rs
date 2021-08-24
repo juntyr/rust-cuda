@@ -137,7 +137,7 @@ fn generate_raw_func_input_wrap(
                                 #[allow(clippy::redundant_closure_call)]
                                 let __result = (|#pat| { #inner })(&mut #pat_host_box);
                                 rust_cuda::rustacuda::memory::CopyDestination::copy_to(
-                                    &#pat_box, #pat
+                                    &**#pat_box, #pat
                                 )?;
                                 ::core::mem::drop(#pat_box);
                                 __result
