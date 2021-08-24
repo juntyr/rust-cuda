@@ -29,6 +29,8 @@ pub(super) fn generate_launch_types(
                     #generic_close_token>::#type_ident
                 };
 
+                let unboxed_ty = syn_type.clone();
+
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
                     InputCudaType::LendRustBorrowToCuda => quote::quote_spanned! { ty.span()=>
@@ -37,8 +39,6 @@ pub(super) fn generate_launch_types(
                         >
                     },
                 };
-
-                let unboxed_ty = cuda_type.clone();
 
                 let ty = if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty
                 {
