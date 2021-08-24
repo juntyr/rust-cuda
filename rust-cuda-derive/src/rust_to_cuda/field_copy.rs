@@ -1,14 +1,12 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 
-use super::CudaReprFieldTy;
-
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn impl_field_copy_init_and_expand_alloc_type(
     field: &syn::Field,
     field_index: usize,
 
-    cuda_repr_field_ty: Option<CudaReprFieldTy>,
+    cuda_repr_field_ty: &syn::Type,
 
     mut combined_cuda_alloc_type: TokenStream,
 
@@ -28,43 +26,32 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     };
     let optional_field_ident = field.ident.as_ref().map(|ident| quote! { #ident: });
 
-    if let Some(CudaReprFieldTy::Embedded(field_type)) = cuda_repr_field_ty {
-        combined_cuda_alloc_type = quote! {
-            rust_cuda::host::CombinedCudaAlloc<
-                <#field_type as rust_cuda::common::RustToCuda>::CudaAllocation,
-                #combined_cuda_alloc_type
-            >
-        };
+    combined_cuda_alloc_type = quote! {
+        rust_cuda::host::CombinedCudaAlloc<
+            <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+            #combined_cuda_alloc_type
+        >
+    };
 
-        r2c_field_declarations.push(quote! {
-            let (#field_repr_ident, alloc_front) = self.#field_accessor.borrow_mut(
-                alloc_front
-            )?;
-        });
+    r2c_field_declarations.push(quote! {
+        let (#field_repr_ident, alloc_front) = self.#field_accessor.borrow(
+            alloc_front
+        )?;
+    });
 
-        r2c_field_initialisations.push(quote! {
-            #optional_field_ident #field_repr_ident,
-        });
+    r2c_field_initialisations.push(quote! {
+        #optional_field_ident #field_repr_ident,
+    });
 
-        r2c_field_destructors.push(quote! {
-            let alloc_front = self.#field_accessor.un_borrow_mut(
-                cuda_repr.#field_accessor,
-                alloc_front,
-            )?;
-        });
+    r2c_field_destructors.push(quote! {
+        let alloc_front = self.#field_accessor.restore(alloc_front)?;
+    });
 
-        c2r_field_initialisations.push(quote! {
-            #optional_field_ident self.#field_accessor.as_rust(),
-        });
-    } else {
-        r2c_field_initialisations.push(quote! {
-            #optional_field_ident self.#field_accessor.clone(),
-        });
-
-        c2r_field_initialisations.push(quote! {
-            #optional_field_ident self.#field_accessor.clone(),
-        });
-    }
+    c2r_field_initialisations.push(quote! {
+        #optional_field_ident {
+            rust_cuda::common::CudaAsRust::as_rust(this.#field_accessor)
+        },
+    });
 
     combined_cuda_alloc_type
 }
