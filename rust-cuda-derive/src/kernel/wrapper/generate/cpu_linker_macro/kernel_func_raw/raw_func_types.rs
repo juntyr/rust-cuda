@@ -37,7 +37,9 @@ pub(super) fn generate_raw_func_types(
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
                     InputCudaType::LendRustBorrowToCuda => quote!(
-                        <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        rust_cuda::common::DeviceAccessible<
+                            <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        >
                     ),
                 };
 

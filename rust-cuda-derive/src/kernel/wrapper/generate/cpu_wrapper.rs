@@ -115,7 +115,9 @@ fn generate_new_func_inputs_decl(
                         let cuda_type = match cuda_mode {
                             InputCudaType::DeviceCopy => syn_type,
                             InputCudaType::LendRustBorrowToCuda => syn::parse_quote!(
-                                <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                rust_cuda::common::DeviceAccessible<
+                                    <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                >
                             ),
                         };
 
