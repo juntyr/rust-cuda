@@ -32,7 +32,9 @@ pub(super) fn generate_launch_types(
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
                     InputCudaType::LendRustBorrowToCuda => quote::quote_spanned! { ty.span()=>
-                        <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        rust_cuda::common::DeviceAccessible<
+                            <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        >
                     },
                 };
 
