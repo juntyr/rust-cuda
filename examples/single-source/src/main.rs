@@ -15,20 +15,33 @@ pub struct Dummy(i32);
 
 unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Dummy {}
 
+#[derive(rust_cuda::common::RustToCudaAsRust)]
+pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
+    #[r2cEmbed]
+    inner: T,
+}
+
+#[derive(rust_cuda::common::RustToCudaAsRust)]
+pub struct Empty([u8; 0]);
+
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
-pub fn kernel(#[kernel(pass = DeviceCopy)] x: &Dummy) {}
+pub fn kernel<T: rust_cuda::common::RustToCuda>(
+    #[kernel(pass = DeviceCopy)] x: &Dummy,
+    #[kernel(pass = LendRustBorrowToCuda)] y: &mut Wrapper<T>,
+) {
+}
 
 #[cfg(not(target_os = "cuda"))]
 mod host {
     use super::{Kernel, KernelArgs};
 
     #[allow(dead_code)]
-    struct Launcher;
+    struct Launcher<T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>);
 
-    link_kernel!();
+    link_kernel!(crate::Empty);
 
-    impl rust_cuda::host::Launcher for Launcher {
-        type KernelTraitObject = dyn Kernel;
+    impl<T: rust_cuda::common::RustToCuda> rust_cuda::host::Launcher for Launcher<T> {
+        type KernelTraitObject = dyn Kernel<T>;
 
         fn get_config(&self) -> rust_cuda::host::LaunchConfig {
             unimplemented!()
