@@ -35,6 +35,16 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                     &self.#field_accessor,
                 );
             });
+
+            r2c_field_initialisations.push(quote! {
+                #optional_field_ident #field_repr_ident,
+            });
+
+            c2r_field_initialisations.push(quote! {
+                #optional_field_ident {
+                    rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor).into_inner()
+                },
+            });
         },
         CudaReprFieldTy::RustToCuda(cuda_repr_field_ty) => {
             combined_cuda_alloc_type = quote! {
@@ -51,24 +61,24 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 )?;
             });
 
+            r2c_field_initialisations.push(quote! {
+                #optional_field_ident #field_repr_ident,
+            });
+
             r2c_field_destructors.push(quote! {
                 let alloc_front = rust_cuda::common::RustToCuda::restore(
                     &mut self.#field_accessor,
                     alloc_front,
                 )?;
             });
+
+            c2r_field_initialisations.push(quote! {
+                #optional_field_ident {
+                    rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor)
+                },
+            });
         },
     }
-
-    r2c_field_initialisations.push(quote! {
-        #optional_field_ident #field_repr_ident,
-    });
-
-    c2r_field_initialisations.push(quote! {
-        #optional_field_ident {
-            rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor)
-        },
-    });
 
     combined_cuda_alloc_type
 }
