@@ -1,37 +1,29 @@
 use syn::{parse_quote, spanned::Spanned};
 
-#[allow(clippy::module_name_repetitions)]
-pub enum CudaReprFieldTy {
-    Embedded(Box<syn::Type>),
-}
+pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> syn::Type {
+    let cuda_repr_field_ty = field.ty.clone();
 
-pub fn swap_field_type_and_get_cuda_repr_ty(field: &mut syn::Field) -> Option<CudaReprFieldTy> {
-    let mut cuda_repr_field_ty: Option<CudaReprFieldTy> = None;
-    let mut field_ty = field.ty.clone();
+    field.ty = parse_quote! {
+        <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+    };
 
-    // Remove all attributes from the fields in the Cuda representation
-    field.attrs.drain(..).for_each(|attr| {
-        if attr.path.is_ident("r2cEmbed") {
-            if cuda_repr_field_ty.is_none() {
-                if !attr.tokens.is_empty() {
-                    emit_error!(
-                        attr.tokens.span(),
-                        "#[r2cEmbed] does not take any arguments."
-                    );
-                }
-
-                cuda_repr_field_ty = Some(CudaReprFieldTy::Embedded(Box::new(field_ty.clone())));
-
-                field_ty = parse_quote! {
-                    <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
-                };
-            } else {
-                emit_error!(attr.span(), "Duplicate #[r2cEmbed] attribute definition.");
+    // Remove all field attributes after #[r2cIgnore]
+    if let Some(ignore_from) = field.attrs.iter().position(|attr| {
+        if attr.path.is_ident("r2cIgnore") {
+            if !attr.tokens.is_empty() {
+                emit_error!(
+                    attr.tokens.span(),
+                    "#[r2cIgnore] does not take any arguments."
+                );
             }
-        }
-    });
 
-    field.ty = field_ty;
+            true
+        } else {
+            false
+        }
+    }) {
+        field.attrs.truncate(ignore_from);
+    }
 
     cuda_repr_field_ty
 }

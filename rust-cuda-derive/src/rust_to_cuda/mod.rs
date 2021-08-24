@@ -6,8 +6,6 @@ mod field_ty;
 mod generics;
 mod r#impl;
 
-use field_ty::CudaReprFieldTy;
-
 fn get_cuda_repr_ident(rust_repr_ident: &proc_macro2::Ident) -> proc_macro2::Ident {
     format_ident!("{}CudaRepresentation", rust_repr_ident)
 }
@@ -44,12 +42,12 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
             let mut r2c_field_destructors_reverse: Vec<TokenStream> = Vec::new();
 
             for (field_index, field) in fields.iter_mut().enumerate() {
-                let cuda_repr_field_ty = field_ty::swap_field_type_and_get_cuda_repr_ty(field);
+                let cuda_repr_field_ty = field_ty::swap_field_type_and_filter_attrs(field);
 
                 combined_cuda_alloc_type = field_copy::impl_field_copy_init_and_expand_alloc_type(
                     field,
                     field_index,
-                    cuda_repr_field_ty,
+                    &cuda_repr_field_ty,
                     combined_cuda_alloc_type,
                     &mut r2c_field_declarations,
                     &mut r2c_field_initialisations,
