@@ -46,7 +46,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
     r2c_field_destructors.push(quote! {
         let alloc_front = rust_cuda::common::RustToCuda::restore(
-            &self.#field_accessor,
+            &mut self.#field_accessor,
             alloc_front,
         )?;
     });
