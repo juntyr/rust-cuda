@@ -48,7 +48,7 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> syn::Type {
     } else {
         parse_quote! {
             rust_cuda::common::DeviceAccessible<
-                rust_cuda::utils::stack::StackOnlyWrapper<#old_field_ty>
+                <rust_cuda::utils::stack::StackOnlyWrapper<#old_field_ty> as rust_cuda::common::RustToCuda>::CudaRepresentation
             >
         }
     };
