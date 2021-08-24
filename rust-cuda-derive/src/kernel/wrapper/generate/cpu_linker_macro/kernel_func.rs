@@ -130,7 +130,7 @@ fn generate_raw_func_input_wrap(
                                     #pat
                                 )?;
                                 let mut #pat_host_box = rust_cuda::host::HostDevicePointerMut::new(
-                                    &mut #pat_box, #pat
+                                    &mut #pat_box.as_device_ptr(), #pat
                                 );
                                 #[allow(clippy::redundant_closure_call)]
                                 let __result = (|#pat| { #inner })(&mut #pat_host_box);
@@ -143,7 +143,7 @@ fn generate_raw_func_input_wrap(
                             quote! {
                                 let #pat_box = rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?;
                                 let #pat_host_box = rust_cuda::host::HostDevicePointerConst::new(
-                                    &#pat_box, #pat
+                                    &#pat_box.as_device_ptr(), #pat
                                 );
                                 #[allow(clippy::redundant_closure_call)]
                                 (|#pat| { #inner })(&#pat_host_box)
