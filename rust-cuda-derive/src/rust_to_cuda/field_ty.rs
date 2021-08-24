@@ -1,8 +1,14 @@
 use syn::{parse_quote, spanned::Spanned};
 
-pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> syn::Type {
-    let mut cuda_repr_field_ty: Option<syn::Type> = None;
-    let old_field_ty = field.ty.clone();
+#[allow(clippy::module_name_repetitions)]
+pub enum CudaReprFieldTy {
+    StackOnly,
+    RustToCuda(Box<syn::Type>),
+}
+
+pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprFieldTy {
+    let mut cuda_repr_field_ty: Option<CudaReprFieldTy> = None;
+    let mut field_ty = field.ty.clone();
 
     let mut r2c_ignore = false;
 
@@ -17,11 +23,12 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> syn::Type {
                     );
                 }
 
-                cuda_repr_field_ty = Some(parse_quote! {
+                cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCuda(Box::new(field_ty.clone())));
+                field_ty = parse_quote! {
                     rust_cuda::common::DeviceAccessible<
-                        <#old_field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
                     >
-                });
+                };
             } else {
                 emit_error!(attr.span(), "Duplicate #[r2cEmbed] attribute definition.");
             }
@@ -43,15 +50,19 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> syn::Type {
         }
     });
 
-    field.ty = if let Some(cuda_repr_field_ty) = cuda_repr_field_ty {
+    let cuda_repr_field_ty = if let Some(cuda_repr_field_ty) = cuda_repr_field_ty {
         cuda_repr_field_ty
     } else {
-        parse_quote! {
+        field_ty = parse_quote! {
             rust_cuda::common::DeviceAccessible<
-                <rust_cuda::utils::stack::StackOnlyWrapper<#old_field_ty> as rust_cuda::common::RustToCuda>::CudaRepresentation
+                rust_cuda::utils::stack::StackOnlyWrapper<#field_ty>
             >
-        }
+        };
+
+        CudaReprFieldTy::StackOnly
     };
 
-    old_field_ty
+    field.ty = field_ty;
+
+    cuda_repr_field_ty
 }
