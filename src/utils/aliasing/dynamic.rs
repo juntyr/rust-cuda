@@ -8,7 +8,7 @@ use rustacuda_core::DeviceCopy;
 
 use crate::common::{
     r#impl::{CudaAsRustImpl, RustToCudaImpl},
-    CudaAsRust, DeviceAccessible, RustToCuda,
+    DeviceAccessible,
 };
 
 #[repr(C)]
@@ -132,12 +132,12 @@ impl<E, T: BorrowMut<[E]>> BorrowMut<[E]> for SplitSliceOverCudaThreadsDynamicSt
     }
 }
 
-unsafe impl<T: RustToCuda> RustToCudaImpl for SplitSliceOverCudaThreadsDynamicStride<T> {
+unsafe impl<T: RustToCudaImpl> RustToCudaImpl for SplitSliceOverCudaThreadsDynamicStride<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    type CudaAllocationImpl = T::CudaAllocation;
+    type CudaAllocationImpl = T::CudaAllocationImpl;
     type CudaRepresentationImpl =
-        SplitSliceOverCudaThreadsDynamicStride<DeviceAccessible<T::CudaRepresentation>>;
+        SplitSliceOverCudaThreadsDynamicStride<DeviceAccessible<T::CudaRepresentationImpl>>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
@@ -149,7 +149,7 @@ unsafe impl<T: RustToCuda> RustToCudaImpl for SplitSliceOverCudaThreadsDynamicSt
         DeviceAccessible<Self::CudaRepresentationImpl>,
         crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     )> {
-        let (cuda_repr, alloc) = self.inner.borrow(alloc)?;
+        let (cuda_repr, alloc) = self.inner.borrow_impl(alloc)?;
 
         Ok((
             DeviceAccessible::from(SplitSliceOverCudaThreadsDynamicStride::new(
@@ -166,18 +166,21 @@ unsafe impl<T: RustToCuda> RustToCudaImpl for SplitSliceOverCudaThreadsDynamicSt
         &mut self,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     ) -> rustacuda::error::CudaResult<A> {
-        self.inner.restore(alloc)
+        self.inner.restore_impl(alloc)
     }
 }
 
-unsafe impl<T: CudaAsRust> CudaAsRustImpl
+unsafe impl<T: CudaAsRustImpl> CudaAsRustImpl
     for SplitSliceOverCudaThreadsDynamicStride<DeviceAccessible<T>>
 {
-    type RustRepresentationImpl = SplitSliceOverCudaThreadsDynamicStride<T::RustRepresentation>;
+    type RustRepresentationImpl = SplitSliceOverCudaThreadsDynamicStride<T::RustRepresentationImpl>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
     unsafe fn as_rust_impl(this: &DeviceAccessible<Self>) -> Self::RustRepresentationImpl {
-        SplitSliceOverCudaThreadsDynamicStride::new(CudaAsRust::as_rust(&this.inner), this.stride)
+        SplitSliceOverCudaThreadsDynamicStride::new(
+            CudaAsRustImpl::as_rust_impl(&this.inner),
+            this.stride,
+        )
     }
 }
