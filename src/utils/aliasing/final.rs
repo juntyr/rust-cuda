@@ -4,22 +4,22 @@ use rustacuda_core::DeviceCopy;
 
 use crate::common::{
     r#impl::{CudaAsRustImpl, RustToCudaImpl},
-    CudaAsRust, DeviceAccessible, RustToCuda,
+    DeviceAccessible,
 };
 
 #[repr(transparent)]
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
-pub struct FinalCudaRepresentation<T: CudaAsRust>(DeviceAccessible<T>);
+pub struct FinalCudaRepresentation<T: CudaAsRustImpl>(DeviceAccessible<T>);
 
 // Safety: If T is DeviceCopy, then the newtype struct can be DeviceCopy as well
-unsafe impl<T: CudaAsRust + DeviceCopy> DeviceCopy for FinalCudaRepresentation<T> {}
+unsafe impl<T: CudaAsRustImpl> DeviceCopy for FinalCudaRepresentation<T> {}
 
-unsafe impl<T: RustToCuda> RustToCudaImpl for Final<T> {
+unsafe impl<T: RustToCudaImpl> RustToCudaImpl for Final<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    type CudaAllocationImpl = T::CudaAllocation;
-    type CudaRepresentationImpl = FinalCudaRepresentation<T::CudaRepresentation>;
+    type CudaAllocationImpl = T::CudaAllocationImpl;
+    type CudaRepresentationImpl = FinalCudaRepresentation<T::CudaRepresentationImpl>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
@@ -31,7 +31,7 @@ unsafe impl<T: RustToCuda> RustToCudaImpl for Final<T> {
         DeviceAccessible<Self::CudaRepresentationImpl>,
         crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
     )> {
-        let (cuda_repr, alloc) = (**self).borrow(alloc)?;
+        let (cuda_repr, alloc) = (**self).borrow_impl(alloc)?;
 
         Ok((
             DeviceAccessible::from(FinalCudaRepresentation(cuda_repr)),
@@ -48,16 +48,16 @@ unsafe impl<T: RustToCuda> RustToCudaImpl for Final<T> {
         // Safety: Final is a repr(transparent) newtype wrapper around T
         let inner: &mut T = &mut *(self as *mut Self).cast();
 
-        inner.restore(alloc)
+        inner.restore_impl(alloc)
     }
 }
 
-unsafe impl<T: CudaAsRust> CudaAsRustImpl for FinalCudaRepresentation<T> {
-    type RustRepresentationImpl = Final<T::RustRepresentation>;
+unsafe impl<T: CudaAsRustImpl> CudaAsRustImpl for FinalCudaRepresentation<T> {
+    type RustRepresentationImpl = Final<T::RustRepresentationImpl>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
     unsafe fn as_rust_impl(this: &DeviceAccessible<Self>) -> Self::RustRepresentationImpl {
-        Final::new(CudaAsRust::as_rust(&this.0))
+        Final::new(CudaAsRustImpl::as_rust_impl(&this.0))
     }
 }

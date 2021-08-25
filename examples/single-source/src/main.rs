@@ -39,6 +39,7 @@ mod host {
     struct Launcher<T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>);
 
     link_kernel!(crate::Empty);
+    link_kernel!(rust_cuda::utils::stack::StackOnlyWrapper<u64>);
 
     impl<T: rust_cuda::common::RustToCuda> rust_cuda::host::Launcher for Launcher<T> {
         type KernelTraitObject = dyn Kernel<T>;

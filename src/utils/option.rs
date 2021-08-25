@@ -2,29 +2,29 @@ use rustacuda_core::DeviceCopy;
 
 use crate::common::{
     r#impl::{CudaAsRustImpl, RustToCudaImpl},
-    DeviceAccessible, RustToCuda,
+    DeviceAccessible, RustToCudaProxy,
 };
 
-#[cfg(not(feature = "host"))]
-use crate::common::CudaAsRust;
+use super::stack::{StackOnly, StackOnlyWrapper};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
 #[repr(C, u8)]
-pub enum OptionCudaRepresentation<T: RustToCuda> {
+pub enum OptionCudaRepresentation<T: CudaAsRustImpl> {
     None,
-    Some(DeviceAccessible<<T as RustToCuda>::CudaRepresentation>),
+    Some(DeviceAccessible<T>),
 }
 
 // Safety: Since the CUDA representation of T is DeviceCopy,
 //         the full enum is also DeviceCopy
-unsafe impl<T: RustToCuda> DeviceCopy for OptionCudaRepresentation<T> {}
+unsafe impl<T: CudaAsRustImpl> DeviceCopy for OptionCudaRepresentation<T> {}
 
-unsafe impl<T: RustToCuda> RustToCudaImpl for Option<T> {
+unsafe impl<T: RustToCudaImpl> RustToCudaImpl for Option<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    type CudaAllocationImpl = Option<<T as RustToCuda>::CudaAllocation>;
-    type CudaRepresentationImpl = OptionCudaRepresentation<T>;
+    type CudaAllocationImpl = Option<<T as RustToCudaImpl>::CudaAllocationImpl>;
+    type CudaRepresentationImpl =
+        OptionCudaRepresentation<<T as RustToCudaImpl>::CudaRepresentationImpl>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
@@ -42,7 +42,7 @@ unsafe impl<T: RustToCuda> RustToCudaImpl for Option<T> {
                 crate::host::CombinedCudaAlloc::new(None, alloc),
             ),
             Some(value) => {
-                let (cuda_repr, alloc) = value.borrow(alloc)?;
+                let (cuda_repr, alloc) = value.borrow_impl(alloc)?;
 
                 let (alloc_front, alloc_tail) = alloc.split();
 
@@ -66,22 +66,38 @@ unsafe impl<T: RustToCuda> RustToCudaImpl for Option<T> {
 
         match (self, alloc_front) {
             (Some(value), Some(alloc_front)) => {
-                value.restore(crate::host::CombinedCudaAlloc::new(alloc_front, alloc_tail))
+                value.restore_impl(crate::host::CombinedCudaAlloc::new(alloc_front, alloc_tail))
             },
             _ => Ok(alloc_tail),
         }
     }
 }
 
-unsafe impl<T: RustToCuda> CudaAsRustImpl for OptionCudaRepresentation<T> {
-    type RustRepresentationImpl = Option<T>;
+unsafe impl<T: CudaAsRustImpl> CudaAsRustImpl for OptionCudaRepresentation<T> {
+    type RustRepresentationImpl = Option<<T as CudaAsRustImpl>::RustRepresentationImpl>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
     unsafe fn as_rust_impl(this: &DeviceAccessible<Self>) -> Self::RustRepresentationImpl {
         match &**this {
             OptionCudaRepresentation::None => None,
-            OptionCudaRepresentation::Some(value) => Some(CudaAsRust::as_rust(value)),
+            OptionCudaRepresentation::Some(value) => Some(CudaAsRustImpl::as_rust_impl(value)),
         }
+    }
+}
+
+impl<T: StackOnly> RustToCudaProxy<Option<T>> for Option<StackOnlyWrapper<T>> {
+    fn from_ref(val: &Option<T>) -> &Self {
+        // Safety: StackOnlyWrapper is a transparent newtype
+        unsafe { &*(val as *const Option<T>).cast() }
+    }
+
+    fn from_mut(val: &mut Option<T>) -> &mut Self {
+        // Safety: StackOnlyWrapper is a transparent newtype
+        unsafe { &mut *(val as *mut Option<T>).cast() }
+    }
+
+    fn into(self) -> Option<T> {
+        self.map(StackOnlyWrapper::into_inner)
     }
 }

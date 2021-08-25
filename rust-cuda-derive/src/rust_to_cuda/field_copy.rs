@@ -78,6 +78,40 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 },
             });
         },
+        CudaReprFieldTy::RustToCudaProxy(cuda_repr_field_proxy_ty) => {
+            combined_cuda_alloc_type = quote! {
+                rust_cuda::host::CombinedCudaAlloc<
+                    <#cuda_repr_field_proxy_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+                    #combined_cuda_alloc_type
+                >
+            };
+
+            r2c_field_declarations.push(quote! {
+                let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                    rust_cuda::common::RustToCudaProxy::from(&self.#field_accessor),
+                    alloc_front,
+                )?;
+            });
+
+            r2c_field_initialisations.push(quote! {
+                #optional_field_ident #field_repr_ident,
+            });
+
+            r2c_field_destructors.push(quote! {
+                let alloc_front = rust_cuda::common::RustToCuda::restore(
+                    rust_cuda::common::RustToCudaProxy::from_mut(&mut self.#field_accessor),
+                    alloc_front,
+                )?;
+            });
+
+            c2r_field_initialisations.push(quote! {
+                #optional_field_ident {
+                    rust_cuda::common::RustToCudaProxy::into(
+                        rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor)
+                    )
+                },
+            });
+        },
     }
 
     combined_cuda_alloc_type

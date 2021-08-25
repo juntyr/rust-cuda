@@ -80,6 +80,13 @@ impl<T: ?Sized + DeviceCopy> DerefMut for DeviceAccessible<T> {
     }
 }
 
+pub trait RustToCudaProxy<T>: r#impl::RustToCudaImpl {
+    fn from_ref(val: &T) -> &Self;
+    fn from_mut(val: &mut T) -> &mut Self;
+
+    fn into(self) -> T;
+}
+
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct DevicePointerConst<T: Sized + DeviceCopy>(pub(super) *const T);

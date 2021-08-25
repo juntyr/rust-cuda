@@ -3,25 +3,13 @@ use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 
 use rustacuda_core::DeviceCopy;
 
-use crate::{
-    common::{
-        r#impl::CudaAsRustImpl,
-        sealed::{CudaAsRustSealed, RustToCudaSealed},
-    },
-    utils::stack::StackOnly,
+use crate::common::{
+    r#impl::CudaAsRustImpl,
+    sealed::{CudaAsRustSealed, RustToCudaSealed},
 };
 
 #[cfg(not(feature = "host"))]
 use crate::common::DeviceAccessible;
-
-#[marker]
-pub trait StackOnlyBottom {}
-impl<T: StackOnly> StackOnlyBottom for T {}
-
-#[allow(clippy::module_name_repetitions)]
-pub trait CudaAsRustTop: StackOnlyBottom {}
-impl<T: CudaAsRustImpl> StackOnlyBottom for T {}
-impl<T: CudaAsRustImpl> CudaAsRustTop for T {}
 
 #[repr(transparent)]
 pub struct UnsafeStackOnlyDeviceCopy<T>(T);
@@ -57,7 +45,7 @@ impl<T: RustToCudaSealed<CudaRepresentationSealed = UnsafeStackOnlyDeviceCopy<T>
         impl<T: ?Sized> DoesNotImpl for T {}
         struct Wrapper<T: ?Sized>(core::marker::PhantomData<T>);
         #[allow(dead_code)]
-        impl<T: StackOnly> Wrapper<UnsafeStackOnlyDeviceCopy<T>> {
+        impl<T: crate::utils::stack::StackOnly> Wrapper<UnsafeStackOnlyDeviceCopy<T>> {
             const IMPLS: bool = true;
         }
 
@@ -76,7 +64,7 @@ impl<T: RustToCudaSealed<CudaRepresentationSealed = UnsafeStackOnlyDeviceCopy<T>
     }
 }
 
-impl<T: CudaAsRustTop + CudaAsRustImpl> CudaAsRustSealed for T {
+impl<T: CudaAsRustImpl> CudaAsRustSealed for T {
     type RustRepresentationSealed = <Self as CudaAsRustImpl>::RustRepresentationImpl;
 
     #[cfg(not(feature = "host"))]
