@@ -88,7 +88,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             r2c_field_declarations.push(quote! {
                 let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
-                    rust_cuda::common::RustToCudaProxy::from(&self.#field_accessor),
+                    rust_cuda::common::RustToCudaProxy::from_ref(&self.#field_accessor),
                     alloc_front,
                 )?;
             });
