@@ -46,10 +46,10 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 },
             });
         },
-        CudaReprFieldTy::RustToCuda(cuda_repr_field_ty) => {
+        CudaReprFieldTy::RustToCuda { field_ty } => {
             combined_cuda_alloc_type = quote! {
                 rust_cuda::host::CombinedCudaAlloc<
-                    <#cuda_repr_field_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+                    <#field_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >
             };
@@ -78,10 +78,10 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 },
             });
         },
-        CudaReprFieldTy::RustToCudaProxy(cuda_repr_field_proxy_ty) => {
+        CudaReprFieldTy::RustToCudaProxy { proxy_ty, field_ty } => {
             combined_cuda_alloc_type = quote! {
                 rust_cuda::host::CombinedCudaAlloc<
-                    <#cuda_repr_field_proxy_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+                    <#proxy_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >
             };
@@ -89,7 +89,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             r2c_field_declarations.push(quote! {
                 let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
                     <
-                        #cuda_repr_field_proxy_ty as rust_cuda::common::RustToCudaProxy
+                        #proxy_ty as rust_cuda::common::RustToCudaProxy<#field_ty>
                     >::from_ref(&self.#field_accessor),
                     alloc_front,
                 )?;
@@ -102,7 +102,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             r2c_field_destructors.push(quote! {
                 let alloc_front = rust_cuda::common::RustToCuda::restore(
                     <
-                        #cuda_repr_field_proxy_ty as rust_cuda::common::RustToCudaProxy
+                        #proxy_ty as rust_cuda::common::RustToCudaProxy<#field_ty>
                     >::from_mut(&mut self.#field_accessor),
                     alloc_front,
                 )?;
