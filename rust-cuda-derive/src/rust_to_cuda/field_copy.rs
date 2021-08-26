@@ -110,7 +110,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident {
-                    rust_cuda::common::RustToCudaProxy::into(
+                    rust_cuda::common::RustToCudaProxy::<#field_ty>::into(
                         rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor)
                     )
                 },
