@@ -1,40 +1,36 @@
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{
-    r#impl::{CudaAsRustImpl, RustToCudaImpl},
-    DeviceAccessible, RustToCudaProxy,
-};
+use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy};
 
 use super::stack::{StackOnly, StackOnlyWrapper};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
 #[repr(C, u8)]
-pub enum OptionCudaRepresentation<T: CudaAsRustImpl> {
+pub enum OptionCudaRepresentation<T: CudaAsRust> {
     None,
     Some(DeviceAccessible<T>),
 }
 
 // Safety: Since the CUDA representation of T is DeviceCopy,
 //         the full enum is also DeviceCopy
-unsafe impl<T: CudaAsRustImpl> DeviceCopy for OptionCudaRepresentation<T> {}
+unsafe impl<T: CudaAsRust> DeviceCopy for OptionCudaRepresentation<T> {}
 
-unsafe impl<T: RustToCudaImpl> RustToCudaImpl for Option<T> {
+unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    type CudaAllocationImpl = Option<<T as RustToCudaImpl>::CudaAllocationImpl>;
-    type CudaRepresentationImpl =
-        OptionCudaRepresentation<<T as RustToCudaImpl>::CudaRepresentationImpl>;
+    type CudaAllocation = Option<<T as RustToCuda>::CudaAllocation>;
+    type CudaRepresentation = OptionCudaRepresentation<<T as RustToCuda>::CudaRepresentation>;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_impl<A: crate::host::CudaAlloc>(
+    unsafe fn borrow<A: crate::host::CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentationImpl>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
+        DeviceAccessible<Self::CudaRepresentation>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let (cuda_repr, alloc) = match self {
             None => (
@@ -42,7 +38,7 @@ unsafe impl<T: RustToCudaImpl> RustToCudaImpl for Option<T> {
                 crate::host::CombinedCudaAlloc::new(None, alloc),
             ),
             Some(value) => {
-                let (cuda_repr, alloc) = value.borrow_impl(alloc)?;
+                let (cuda_repr, alloc) = value.borrow(alloc)?;
 
                 let (alloc_front, alloc_tail) = alloc.split();
 
@@ -58,30 +54,30 @@ unsafe impl<T: RustToCudaImpl> RustToCudaImpl for Option<T> {
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore_impl<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocationImpl, A>,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         let (alloc_front, alloc_tail) = alloc.split();
 
         match (self, alloc_front) {
             (Some(value), Some(alloc_front)) => {
-                value.restore_impl(crate::host::CombinedCudaAlloc::new(alloc_front, alloc_tail))
+                value.restore(crate::host::CombinedCudaAlloc::new(alloc_front, alloc_tail))
             },
             _ => Ok(alloc_tail),
         }
     }
 }
 
-unsafe impl<T: CudaAsRustImpl> CudaAsRustImpl for OptionCudaRepresentation<T> {
-    type RustRepresentationImpl = Option<<T as CudaAsRustImpl>::RustRepresentationImpl>;
+unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
+    type RustRepresentation = Option<<T as CudaAsRust>::RustRepresentation>;
 
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust_impl(this: &DeviceAccessible<Self>) -> Self::RustRepresentationImpl {
+    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         match &**this {
             OptionCudaRepresentation::None => None,
-            OptionCudaRepresentation::Some(value) => Some(CudaAsRustImpl::as_rust_impl(value)),
+            OptionCudaRepresentation::Some(value) => Some(CudaAsRust::as_rust(value)),
         }
     }
 }

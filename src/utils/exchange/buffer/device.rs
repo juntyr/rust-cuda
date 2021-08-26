@@ -2,7 +2,7 @@ use core::ops::{Deref, DerefMut};
 
 use rustacuda_core::DeviceCopy;
 
-use crate::common::r#impl::RustToCudaImpl;
+use crate::common::RustToCuda;
 
 use super::CudaExchangeBufferCudaRepresentation;
 
@@ -26,6 +26,6 @@ impl<T: DeviceCopy> DerefMut for CudaExchangeBufferDevice<T> {
 }
 
 #[cfg(not(all(doc, feature = "host")))]
-unsafe impl<T: DeviceCopy> RustToCudaImpl for CudaExchangeBufferDevice<T> {
-    type CudaRepresentationImpl = CudaExchangeBufferCudaRepresentation<T>;
+unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferDevice<T> {
+    type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T>;
 }

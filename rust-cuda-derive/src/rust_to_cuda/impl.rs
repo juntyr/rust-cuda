@@ -62,20 +62,20 @@ pub fn rust_to_cuda_trait(
     let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics rust_cuda::common::r#impl::RustToCudaImpl for #struct_name #ty_generics
+        unsafe impl #impl_generics rust_cuda::common::RustToCuda for #struct_name #ty_generics
             #where_clause
         {
-            type CudaRepresentationImpl = #struct_name_cuda #ty_generics;
+            type CudaRepresentation = #struct_name_cuda #ty_generics;
 
             #[cfg(not(target_os = "cuda"))]
-            type CudaAllocationImpl = #combined_cuda_alloc_type;
+            type CudaAllocation = #combined_cuda_alloc_type;
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn borrow_impl<CudaAllocType: rust_cuda::host::CudaAlloc>(
+            unsafe fn borrow<CudaAllocType: rust_cuda::host::CudaAlloc>(
                 &self, alloc: CudaAllocType
             ) -> rust_cuda::rustacuda::error::CudaResult<(
-                rust_cuda::common::DeviceAccessible<Self::CudaRepresentationImpl>,
-                rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocationImpl, CudaAllocType>
+                rust_cuda::common::DeviceAccessible<Self::CudaRepresentation>,
+                rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
                 let alloc_front = rust_cuda::host::NullCudaAlloc;
                 let alloc_tail = alloc;
@@ -91,10 +91,10 @@ pub fn rust_to_cuda_trait(
             }
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn restore_impl<CudaAllocType: rust_cuda::host::CudaAlloc>(
+            unsafe fn restore<CudaAllocType: rust_cuda::host::CudaAlloc>(
                 &mut self,
                 alloc: rust_cuda::host::CombinedCudaAlloc<
-                    Self::CudaAllocationImpl, CudaAllocType
+                    Self::CudaAllocation, CudaAllocType
                 >,
             ) -> rust_cuda::rustacuda::error::CudaResult<CudaAllocType> {
                 let (alloc_front, alloc_tail) = alloc.split();
@@ -131,13 +131,13 @@ pub fn cuda_as_rust_trait(
     let (impl_generics, ty_generics, where_clause) = &struct_generics_cuda.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics rust_cuda::common::r#impl::CudaAsRustImpl
+        unsafe impl #impl_generics rust_cuda::common::CudaAsRust
             for #struct_name_cuda #ty_generics #where_clause
         {
-            type RustRepresentationImpl = #struct_name #ty_generics;
+            type RustRepresentation = #struct_name #ty_generics;
 
             #[cfg(target_os = "cuda")]
-            unsafe fn as_rust_impl(
+            unsafe fn as_rust(
                 this: &rust_cuda::common::DeviceAccessible<Self>,
             ) -> #struct_name #ty_generics {
                 #cuda_as_rust_struct_construction

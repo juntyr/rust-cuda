@@ -21,15 +21,6 @@ pub use rust_cuda_derive::kernel;
 #[cfg(feature = "host")]
 use crate::utils::stack::{StackOnly, StackOnlyWrapper};
 
-#[doc(hidden)]
-pub mod r#impl;
-
-mod sealed;
-mod specs;
-mod wrapper;
-
-pub use wrapper::{CudaAsRust, RustToCuda};
-
 #[repr(transparent)]
 #[cfg_attr(not(feature = "host"), derive(Debug))]
 pub struct DeviceAccessible<T: ?Sized + DeviceCopy>(T);
@@ -80,7 +71,67 @@ impl<T: ?Sized + DeviceCopy> DerefMut for DeviceAccessible<T> {
     }
 }
 
-pub trait RustToCudaProxy<T>: r#impl::RustToCudaImpl {
+/// # Safety
+///
+/// This is an internal trait and should ONLY be derived automatically using
+/// `#[derive(RustToCudaAsRust)]`
+pub unsafe trait RustToCuda {
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    type CudaAllocation: crate::host::CudaAlloc;
+    type CudaRepresentation: CudaAsRust<RustRepresentation = Self>;
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    ///
+    /// # Safety
+    ///
+    /// This is an internal function and should NEVER be called manually
+    /// The returned `Self::CudaRepresentation` must NEVER be accessed on the
+    ///  CPU  as it contains a GPU-resident copy of `self`.
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow<A: crate::host::CudaAlloc>(
+        &self,
+        alloc: A,
+    ) -> rustacuda::error::CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )>;
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    ///
+    /// # Safety
+    ///
+    /// This is an internal function and should NEVER be called manually
+    #[allow(clippy::type_complexity)]
+    unsafe fn restore<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    ) -> rustacuda::error::CudaResult<A>;
+}
+
+/// # Safety
+///
+/// This is an internal trait and should NEVER be implemented manually
+pub unsafe trait CudaAsRust: DeviceCopy {
+    type RustRepresentation: RustToCuda<CudaRepresentation = Self>;
+
+    #[cfg(any(not(feature = "host"), doc))]
+    #[doc(cfg(not(feature = "host")))]
+    /// # Safety
+    ///
+    /// This is an internal function and should NEVER be called manually
+    unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation;
+}
+
+pub trait RustToCudaProxy<T>: RustToCuda {
     fn from_ref(val: &T) -> &Self;
     fn from_mut(val: &mut T) -> &mut Self;
 
