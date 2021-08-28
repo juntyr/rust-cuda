@@ -87,7 +87,7 @@ fn generate_raw_func_input_wrap(
                     InputCudaType::DeviceCopy => if let syn::Type::Reference(
                         syn::TypeReference { mutability, .. }
                     ) = &**ty {
-                        let (pat_box, pat_box_ptr, pat_host_box) = match &**pat {
+                        let (pat_box, pat_host_ref) = match &**pat {
                             syn::Pat::Ident(syn::PatIdent {
                                 attrs,
                                 by_ref: None,
@@ -106,14 +106,7 @@ fn generate_raw_func_input_wrap(
                                     attrs: attrs.clone(),
                                     by_ref: None,
                                     mutability: None,
-                                    ident: quote::format_ident!("__{}_box_ptr", ident),
-                                    subpat: None,
-                                }),
-                                syn::Pat::Ident(syn::PatIdent {
-                                    attrs: attrs.clone(),
-                                    by_ref: None,
-                                    mutability: None,
-                                    ident: quote::format_ident!("__{}_host_box", ident),
+                                    ident: quote::format_ident!("__{}_host_ref", ident),
                                     subpat: None,
                                 }),
                             ),
@@ -125,34 +118,34 @@ fn generate_raw_func_input_wrap(
 
                         if mutability.is_some() {
                             quote! {
-                                let mut #pat_box = rust_cuda::host::CudaDropWrapper::from(
+                                let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
                                     rust_cuda::rustacuda::memory::DeviceBox::new(
                                         #pat
                                     )?
                                 );
-                                let mut #pat_box_ptr = #pat_box.as_device_ptr();
-                                let mut #pat_host_box = rust_cuda::host::HostDevicePointerMut::new(
-                                    &mut #pat_box_ptr, #pat
+                                let mut #pat_host_ref = rust_cuda::host::HostAndDeviceMutRef::new(
+                                    &mut #pat_box, #pat
                                 );
                                 #[allow(clippy::redundant_closure_call)]
-                                let __result = (|#pat| { #inner })(&mut #pat_host_box);
-                                rust_cuda::rustacuda::memory::CopyDestination::copy_to(
-                                    &*#pat_box, #pat
-                                )?;
+                                let __result = (|#pat| { #inner })(&mut #pat_host_ref);
+                                #pat_box.with_box(|#pat_box| {
+                                    rust_cuda::rustacuda::memory::CopyDestination::copy_to(
+                                        &*#pat_box, #pat
+                                    )
+                                })?;
                                 ::core::mem::drop(#pat_box);
                                 __result
                             }
                         } else {
                             quote! {
-                                let mut #pat_box = rust_cuda::host::CudaDropWrapper::from(
+                                let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
                                     rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?
                                 );
-                                let #pat_box_ptr = #pat_box.as_device_ptr();
-                                let #pat_host_box = rust_cuda::host::HostDevicePointerConst::new(
-                                    &#pat_box_ptr, #pat
+                                let #pat_host_ref = rust_cuda::host::HostAndDeviceConstRef::new(
+                                    &#pat_box, #pat
                                 );
                                 #[allow(clippy::redundant_closure_call)]
-                                let __result = (|#pat| { #inner })(&#pat_host_box);
+                                let __result = (|#pat| { #inner })(&#pat_host_ref);
                                 ::core::mem::drop(#pat_box);
                                 __result
                             }

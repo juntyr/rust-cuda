@@ -1,26 +1,25 @@
 use core::ops::{Deref, DerefMut};
 
 use rustacuda::{error::CudaResult, memory::DeviceBox};
-use rustacuda_core::{DeviceCopy, DevicePointer};
 
 use crate::{
     common::{DeviceAccessible, RustToCuda},
     host::{
-        CombinedCudaAlloc, CudaDropWrapper, EmptyCudaAlloc, HostDevicePointerConst,
-        HostDevicePointerMut, NullCudaAlloc,
+        CombinedCudaAlloc, EmptyCudaAlloc, HostAndDeviceConstRef, HostAndDeviceMutRef,
+        HostDeviceBox, NullCudaAlloc,
     },
 };
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWithCudaWrapper<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: T,
-    device_box: DevicePointerBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWithHostWrapper<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: T,
-    device_box: DevicePointerBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
     cuda_repr: DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
     null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NullCudaAlloc>,
 }
@@ -31,7 +30,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWithCudaWrapper<T> {
     pub fn new(value: T) -> CudaResult<Self> {
         let (cuda_repr, _null_alloc) = unsafe { value.borrow(NullCudaAlloc) }?;
 
-        let device_box = DevicePointerBox::new(DeviceBox::new(&cuda_repr)?);
+        let device_box = DeviceBox::new(&cuda_repr)?.into();
 
         Ok(Self { value, device_box })
     }
@@ -82,52 +81,15 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWithHostWrapper<T> {
 
     pub fn as_ref(
         &self,
-    ) -> HostDevicePointerConst<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
-        HostDevicePointerConst::new(self.device_box.as_ref(), &self.cuda_repr)
+    ) -> HostAndDeviceConstRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
+        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
+        unsafe { HostAndDeviceConstRef::new(&self.device_box, &self.cuda_repr) }
     }
 
     pub fn as_mut(
         &mut self,
-    ) -> HostDevicePointerMut<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
-        HostDevicePointerMut::new(self.device_box.as_mut(), &mut self.cuda_repr)
-    }
-}
-
-#[repr(transparent)]
-struct DevicePointerBox<T: DeviceCopy>(DevicePointer<T>);
-
-impl<T: DeviceCopy> DevicePointerBox<T> {
-    pub fn new(device_box: DeviceBox<T>) -> Self {
-        Self(DeviceBox::into_device(device_box))
-    }
-
-    pub fn with_box<Q, F: FnOnce(&mut DeviceBox<T>) -> Q>(&mut self, inner: F) -> Q {
-        // Safety: The `DeviceBox` is recrated from the pointer coming from
-        //         `DeviceBox::into_device`
-        let mut device_box = unsafe { DeviceBox::from_device(self.0) };
-
-        let result = inner(&mut device_box);
-
-        core::mem::forget(device_box);
-
-        result
-    }
-
-    pub fn as_ref(&self) -> &DevicePointer<T> {
-        &self.0
-    }
-
-    pub fn as_mut(&mut self) -> &mut DevicePointer<T> {
-        &mut self.0
-    }
-}
-
-impl<T: DeviceCopy> Drop for DevicePointerBox<T> {
-    fn drop(&mut self) {
-        // Safety: The `DeviceBox` is recrated from the pointer coming from
-        //         `DeviceBox::into_device`
-        let device_box = unsafe { DeviceBox::from_device(self.0) };
-
-        core::mem::drop(CudaDropWrapper::from(device_box));
+    ) -> HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
+        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
+        unsafe { HostAndDeviceMutRef::new(&mut self.device_box, &mut self.cuda_repr) }
     }
 }

@@ -1,5 +1,6 @@
 #[cfg(any(not(feature = "host"), doc))]
 use core::convert::{AsMut, AsRef};
+use core::marker::PhantomData;
 
 #[cfg(feature = "host")]
 use alloc::fmt;
@@ -140,53 +141,42 @@ pub trait RustToCudaProxy<T>: RustToCuda {
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct DevicePointerConst<T: Sized + DeviceCopy>(pub(super) *const T);
-
-unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DevicePointerConst<T> {}
-
-#[cfg(feature = "host")]
-#[doc(cfg(feature = "host"))]
-impl<T: Sized + DeviceCopy> DevicePointerConst<T> {
-    #[must_use]
-    pub fn from(device_pointer: &rustacuda::memory::DevicePointer<T>) -> Self {
-        Self(device_pointer.as_raw())
-    }
+pub struct DeviceConstRef<'r, T: DeviceCopy> {
+    pub(super) pointer: *const T,
+    pub(super) reference: PhantomData<&'r T>,
 }
+
+unsafe impl<'r, T: DeviceCopy> DeviceCopy for DeviceConstRef<'r, T> {}
 
 #[cfg(any(not(feature = "host"), doc))]
 #[doc(cfg(not(feature = "host")))]
-impl<T: Sized + DeviceCopy> AsRef<T> for DevicePointerConst<T> {
+impl<'r, T: DeviceCopy> AsRef<T> for DeviceConstRef<'r, T> {
     fn as_ref(&self) -> &T {
-        unsafe { &*self.0 }
+        unsafe { &*self.pointer }
     }
 }
 
 #[repr(transparent)]
-pub struct DevicePointerMut<T: Sized + DeviceCopy>(pub(super) *mut T);
-
-unsafe impl<T: Sized + DeviceCopy> DeviceCopy for DevicePointerMut<T> {}
-
-#[cfg(feature = "host")]
-#[doc(cfg(feature = "host"))]
-impl<T: Sized + DeviceCopy> DevicePointerMut<T> {
-    #[must_use]
-    pub fn from(device_pointer: &mut rustacuda::memory::DevicePointer<T>) -> Self {
-        Self(device_pointer.as_raw_mut())
-    }
+pub struct DeviceMutRef<'r, T: DeviceCopy> {
+    #[cfg_attr(feature = "host", allow(dead_code))]
+    pub(super) pointer: *mut T,
+    pub(super) reference: PhantomData<&'r mut T>,
 }
+
+unsafe impl<'r, T: DeviceCopy> DeviceCopy for DeviceMutRef<'r, T> {}
 
 #[cfg(any(not(feature = "host"), doc))]
 #[doc(cfg(not(feature = "host")))]
-impl<T: Sized + DeviceCopy> AsRef<T> for DevicePointerMut<T> {
+impl<'r, T: DeviceCopy> AsRef<T> for DeviceMutRef<'r, T> {
     fn as_ref(&self) -> &T {
-        unsafe { &*self.0 }
+        unsafe { &*self.pointer }
     }
 }
 
 #[cfg(any(not(feature = "host"), doc))]
 #[doc(cfg(not(feature = "host")))]
-impl<T: Sized + DeviceCopy> AsMut<T> for DevicePointerMut<T> {
+impl<'r, T: DeviceCopy> AsMut<T> for DeviceMutRef<'r, T> {
     fn as_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.0 }
+        unsafe { &mut *self.pointer }
     }
 }
