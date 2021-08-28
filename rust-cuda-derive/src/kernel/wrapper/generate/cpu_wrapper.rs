@@ -137,11 +137,11 @@ fn generate_new_func_inputs_decl(
 
                             let wrapped_type = if mutability.is_some() {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostDevicePointerMut<#cuda_type>
+                                    rust_cuda::host::HostAndDeviceMutRef<#cuda_type>
                                 )
                             } else {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostDevicePointerConst<#cuda_type>
+                                    rust_cuda::host::HostAndDeviceConstRef<#cuda_type>
                                 )
                             };
 

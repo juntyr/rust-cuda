@@ -25,9 +25,9 @@ pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
 pub struct Empty([u8; 0]);
 
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
-pub fn kernel<T: rust_cuda::common::RustToCuda>(
-    #[kernel(pass = DeviceCopy)] x: &Dummy,
-    #[kernel(pass = LendRustBorrowToCuda)] y: &mut Wrapper<T>,
+pub fn kernel<'a, 'b, T: rust_cuda::common::RustToCuda>(
+    #[kernel(pass = DeviceCopy)] x: &'a Dummy,
+    #[kernel(pass = LendRustBorrowToCuda)] y: &'b mut Wrapper<T>,
 ) {
 }
 

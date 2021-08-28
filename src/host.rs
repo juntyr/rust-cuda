@@ -17,7 +17,7 @@ use rustacuda_core::{DeviceCopy, DevicePointer};
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
-use crate::common::{DeviceAccessible, DevicePointerConst, DevicePointerMut, RustToCuda};
+use crate::common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda};
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
@@ -55,7 +55,7 @@ pub struct TypedKernel<KernelTraitObject: ?Sized> {
 pub trait LendToCuda: RustToCuda {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
-    ///   `DevicePointerConst` inside the closure
+    ///   `DeviceConstRef` inside the closure
     /// - after the closure, `&self` will not have changed
     ///
     /// # Errors
@@ -63,7 +63,7 @@ pub trait LendToCuda: RustToCuda {
     fn lend_to_cuda<
         O,
         F: FnOnce(
-            HostDevicePointerConst<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         ) -> CudaResult<O>,
     >(
         &self,
@@ -72,7 +72,7 @@ pub trait LendToCuda: RustToCuda {
 
     /// Lends a mutable copy of `&mut self` to CUDA:
     /// - code in the CUDA kernel can only access `&mut self` through the
-    ///   `DevicePointerMut` inside the closure
+    ///   `DeviceMutRef` inside the closure
     /// - after the closure, `&mut self` might have changed in the following
     ///   ways:
     ///   - to avoid aliasing, each CUDA thread gets its own shallow copy of
@@ -86,7 +86,7 @@ pub trait LendToCuda: RustToCuda {
     fn lend_to_cuda_mut<
         O,
         F: FnOnce(
-            HostDevicePointerMut<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         ) -> CudaResult<O>,
     >(
         &mut self,
@@ -98,7 +98,7 @@ impl<T: RustToCuda> LendToCuda for T {
     fn lend_to_cuda<
         O,
         F: FnOnce(
-            HostDevicePointerConst<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         ) -> CudaResult<O>,
     >(
         &self,
@@ -106,12 +106,10 @@ impl<T: RustToCuda> LendToCuda for T {
     ) -> CudaResult<O> {
         let (cuda_repr, tail_alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
-        let mut device_box = CudaDropWrapper::from(DeviceBox::new(&cuda_repr)?);
+        let device_box: HostDeviceBox<_> = DeviceBox::new(&cuda_repr)?.into();
 
-        let result = inner(HostDevicePointerConst::new(
-            &device_box.as_device_ptr(),
-            &cuda_repr,
-        ));
+        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
+        let result = inner(unsafe { HostAndDeviceConstRef::new(&device_box, &cuda_repr) });
 
         let alloc = CombinedCudaAlloc::new(device_box, tail_alloc);
 
@@ -124,7 +122,7 @@ impl<T: RustToCuda> LendToCuda for T {
     fn lend_to_cuda_mut<
         O,
         F: FnOnce(
-            HostDevicePointerMut<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         ) -> CudaResult<O>,
     >(
         &mut self,
@@ -132,12 +130,10 @@ impl<T: RustToCuda> LendToCuda for T {
     ) -> CudaResult<O> {
         let (mut cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
-        let mut device_box = CudaDropWrapper::from(DeviceBox::new(&cuda_repr)?);
+        let mut device_box: HostDeviceBox<_> = DeviceBox::new(&cuda_repr)?.into();
 
-        let result = inner(HostDevicePointerMut::new(
-            &mut device_box.as_device_ptr(),
-            &mut cuda_repr,
-        ));
+        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
+        let result = inner(unsafe { HostAndDeviceMutRef::new(&mut device_box, &mut cuda_repr) });
 
         core::mem::drop(device_box);
         core::mem::drop(cuda_repr);
@@ -249,23 +245,73 @@ impl_sealed_drop_value!(Module);
 impl_sealed_drop_value!(Stream);
 impl_sealed_drop_value!(Context);
 
+#[repr(transparent)]
 #[allow(clippy::module_name_repetitions)]
-pub struct HostDevicePointerMut<'a, T: Sized + DeviceCopy> {
-    device_ptr: &'a mut DevicePointer<T>,
+pub struct HostDeviceBox<T: DeviceCopy>(DevicePointer<T>);
+
+impl<T: DeviceCopy> private::alloc::Sealed for HostDeviceBox<T> {}
+
+impl<T: DeviceCopy> HostDeviceBox<T> {
+    pub fn with_box<Q, F: FnOnce(&mut DeviceBox<T>) -> Q>(&mut self, inner: F) -> Q {
+        // Safety: pointer comes from `DeviceBox::into_device`
+        //         i.e. this function completes the roundtrip
+        let mut device_box = unsafe { DeviceBox::from_device(self.0) };
+
+        let result = inner(&mut device_box);
+
+        self.0 = DeviceBox::into_device(device_box);
+
+        result
+    }
+}
+
+impl<T: DeviceCopy> From<DeviceBox<T>> for HostDeviceBox<T> {
+    fn from(device_box: DeviceBox<T>) -> Self {
+        Self(DeviceBox::into_device(device_box))
+    }
+}
+
+impl<T: DeviceCopy> From<HostDeviceBox<T>> for DeviceBox<T> {
+    fn from(host_device_box: HostDeviceBox<T>) -> Self {
+        // Safety: pointer comes from `DeviceBox::into_device`
+        //         i.e. this function completes the roundtrip
+        unsafe { DeviceBox::from_device(host_device_box.0) }
+    }
+}
+
+impl<T: DeviceCopy> Drop for HostDeviceBox<T> {
+    fn drop(&mut self) {
+        // Safety: pointer comes from `DeviceBox::into_device`
+        //         i.e. this function completes the roundtrip
+        let device_box = unsafe { DeviceBox::from_device(self.0) };
+
+        core::mem::drop(CudaDropWrapper::from(device_box));
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct HostAndDeviceMutRef<'a, T: DeviceCopy> {
+    device_box: &'a mut HostDeviceBox<T>,
     host_ref: &'a mut T,
 }
 
-impl<'a, T: Sized + DeviceCopy> HostDevicePointerMut<'a, T> {
-    pub fn new(device_ptr: &'a mut DevicePointer<T>, host_ref: &'a mut T) -> Self {
+impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
+    /// # Safety
+    ///
+    /// `device_box` must contain EXACTLY the device copy of `host_ref`
+    pub unsafe fn new(device_box: &'a mut HostDeviceBox<T>, host_ref: &'a mut T) -> Self {
         Self {
-            device_ptr,
+            device_box,
             host_ref,
         }
     }
 
     #[must_use]
-    pub fn for_device(&mut self) -> DevicePointerMut<T> {
-        DevicePointerMut::from(&mut self.device_ptr)
+    pub fn for_device(&mut self) -> DeviceMutRef<T> {
+        DeviceMutRef {
+            pointer: self.device_box.0.as_raw_mut(),
+            reference: PhantomData,
+        }
     }
 
     #[must_use]
@@ -275,22 +321,28 @@ impl<'a, T: Sized + DeviceCopy> HostDevicePointerMut<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostDevicePointerConst<'a, T: Sized + DeviceCopy> {
-    device_ptr: &'a DevicePointer<T>,
+pub struct HostAndDeviceConstRef<'a, T: DeviceCopy> {
+    device_box: &'a HostDeviceBox<T>,
     host_ref: &'a T,
 }
 
-impl<'a, T: Sized + DeviceCopy> HostDevicePointerConst<'a, T> {
-    pub fn new(device_ptr: &'a DevicePointer<T>, host_ref: &'a T) -> Self {
+impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
+    /// # Safety
+    ///
+    /// `device_box` must contain EXACTLY the device copy of `host_ref`
+    pub unsafe fn new(device_box: &'a HostDeviceBox<T>, host_ref: &'a T) -> Self {
         Self {
-            device_ptr,
+            device_box,
             host_ref,
         }
     }
 
     #[must_use]
-    pub fn for_device(&self) -> DevicePointerConst<T> {
-        DevicePointerConst::from(self.device_ptr)
+    pub fn for_device(&self) -> DeviceConstRef<T> {
+        DeviceConstRef {
+            pointer: self.device_box.0.as_raw(),
+            reference: PhantomData,
+        }
     }
 
     #[must_use]
