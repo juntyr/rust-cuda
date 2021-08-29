@@ -5,9 +5,10 @@ use super::super::{DeclGenerics, FuncIdent, FunctionInputs};
 pub(in super::super) fn quote_cuda_generic_function(
     DeclGenerics {
         generic_start_token,
-        generic_params,
+        generic_kernel_params: generic_params,
         generic_close_token,
-        generic_where_clause,
+        generic_kernel_where_clause: generic_where_clause,
+        ..
     }: &DeclGenerics,
     FunctionInputs { func_inputs, .. }: &FunctionInputs,
     FuncIdent { func_ident, .. }: &FuncIdent,

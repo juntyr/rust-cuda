@@ -307,7 +307,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_device(&mut self) -> DeviceMutRef<T> {
+    pub fn for_device(&mut self) -> DeviceMutRef<'a, T> {
         DeviceMutRef {
             pointer: self.device_box.0.as_raw_mut(),
             reference: PhantomData,
@@ -315,12 +315,13 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&mut self) -> &T {
+    pub fn for_host<'s: 'a>(&'s mut self) -> &'a mut T {
         self.host_ref
     }
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone, Copy)]
 pub struct HostAndDeviceConstRef<'a, T: DeviceCopy> {
     device_box: &'a HostDeviceBox<T>,
     host_ref: &'a T,
@@ -338,7 +339,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_device(&self) -> DeviceConstRef<T> {
+    pub fn for_device(&self) -> DeviceConstRef<'a, T> {
         DeviceConstRef {
             pointer: self.device_box.0.as_raw(),
             reference: PhantomData,
@@ -346,7 +347,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&self) -> &T {
+    pub fn for_host(&self) -> &'a T {
         self.host_ref
     }
 }

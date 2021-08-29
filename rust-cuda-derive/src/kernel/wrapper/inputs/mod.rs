@@ -10,7 +10,12 @@ pub(super) struct FunctionInputs {
     pub(super) func_input_cuda_types: Vec<(InputCudaType, InputPtxJit)>,
 }
 
-pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
+pub(super) fn parse_function_inputs(
+    func: &syn::ItemFn,
+    generic_params: &mut syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
+) -> FunctionInputs {
+    let mut implicit_lifetime_id: usize = 0;
+
     let (func_inputs, func_input_cuda_types): (
         syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>,
         Vec<(InputCudaType, InputPtxJit)>,
@@ -88,12 +93,18 @@ pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
                     );
                 });
 
+                let ty = ensure_reference_type_lifetime(
+                    &**ty,
+                    &mut implicit_lifetime_id,
+                    generic_params,
+                );
+
                 (
                     syn::FnArg::Typed(syn::PatType {
                         attrs,
                         pat: pat.clone(),
                         colon_token: *colon_token,
-                        ty: ty.clone(),
+                        ty,
                     }),
                     (cuda_type, ptx_jit.unwrap_or(InputPtxJit(false))),
                 )
@@ -104,5 +115,49 @@ pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
+    }
+}
+
+fn ensure_reference_type_lifetime(
+    ty: &syn::Type,
+    implicit_lifetime_id: &mut usize,
+    generic_params: &mut syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
+) -> Box<syn::Type> {
+    match ty {
+        syn::Type::Reference(syn::TypeReference {
+            and_token,
+            lifetime,
+            mutability,
+            elem,
+        }) => {
+            let lifetime = lifetime.clone().unwrap_or_else(|| {
+                let lifetime = syn::Lifetime::new(
+                    &format!("'__r2c_lt_{}", implicit_lifetime_id),
+                    lifetime.span(),
+                );
+
+                generic_params.insert(
+                    *implicit_lifetime_id,
+                    syn::GenericParam::Lifetime(syn::LifetimeDef {
+                        attrs: Vec::new(),
+                        lifetime: lifetime.clone(),
+                        colon_token: None,
+                        bounds: syn::punctuated::Punctuated::new(),
+                    }),
+                );
+
+                *implicit_lifetime_id += 1;
+
+                lifetime
+            });
+
+            Box::new(syn::Type::Reference(syn::TypeReference {
+                and_token: *and_token,
+                lifetime: Some(lifetime),
+                mutability: *mutability,
+                elem: elem.clone(),
+            }))
+        },
+        ty => Box::new(ty.clone()),
     }
 }

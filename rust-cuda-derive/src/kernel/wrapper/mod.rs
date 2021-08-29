@@ -14,6 +14,7 @@ use generate::{
 use inputs::{parse_function_inputs, FunctionInputs};
 use parse::parse_kernel_fn;
 
+#[allow(clippy::too_many_lines)]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let config: KernelConfig = match syn::parse_macro_input::parse(attr) {
         Ok(config) => config,
@@ -28,14 +29,74 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let func = parse_kernel_fn(func);
 
+    let mut generic_kernel_params = func.sig.generics.params.clone();
+    let func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
+
+    let generic_trait_params = generic_kernel_params
+        .iter()
+        .filter(|generic_param| !matches!(generic_param, syn::GenericParam::Lifetime(_)))
+        .cloned()
+        .collect();
+    let generic_wrapper_params = generic_kernel_params
+        .iter()
+        .filter(|generic_param| matches!(generic_param, syn::GenericParam::Lifetime(_)))
+        .cloned()
+        .collect();
+
+    let generic_kernel_where_clause = &func.sig.generics.where_clause;
+    let generic_trait_where_clause = generic_kernel_where_clause.as_ref().map(
+        |syn::WhereClause {
+             where_token,
+             predicates,
+         }: &syn::WhereClause| {
+            let predicates = predicates
+                .iter()
+                .filter(|predicate| !matches!(predicate, syn::WherePredicate::Lifetime(_)))
+                .cloned()
+                .collect();
+
+            syn::WhereClause {
+                where_token: *where_token,
+                predicates,
+            }
+        },
+    );
+    let generic_wrapper_where_clause = generic_kernel_where_clause.as_ref().map(
+        |syn::WhereClause {
+             where_token,
+             predicates,
+         }: &syn::WhereClause| {
+            let predicates = predicates
+                .iter()
+                .filter(|predicate| matches!(predicate, syn::WherePredicate::Lifetime(_)))
+                .cloned()
+                .collect();
+
+            syn::WhereClause {
+                where_token: *where_token,
+                predicates,
+            }
+        },
+    );
+
     let decl_generics = DeclGenerics {
         generic_start_token: &func.sig.generics.lt_token,
-        generic_params: &func.sig.generics.params,
+        generic_trait_params: &generic_trait_params,
         generic_close_token: &func.sig.generics.gt_token,
-        generic_where_clause: &func.sig.generics.where_clause,
+        generic_trait_where_clause: &generic_trait_where_clause,
+        generic_wrapper_params: &generic_wrapper_params,
+        generic_wrapper_where_clause: &generic_wrapper_where_clause,
+        generic_kernel_params: &generic_kernel_params,
+        generic_kernel_where_clause,
+    };
+    let trait_generics = syn::Generics {
+        lt_token: func.sig.generics.lt_token,
+        params: generic_trait_params.clone(),
+        gt_token: func.sig.generics.gt_token,
+        where_clause: generic_trait_where_clause.clone(),
     };
     let impl_generics = {
-        let (impl_generics, ty_generics, where_clause) = func.sig.generics.split_for_impl();
+        let (impl_generics, ty_generics, where_clause) = trait_generics.split_for_impl();
 
         ImplGenerics {
             impl_generics,
@@ -49,7 +110,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         func_ident_raw: quote::format_ident!("{}_raw", &func.sig.ident),
     };
 
-    let func_inputs = parse_function_inputs(&func);
     let func_params = func_inputs
         .func_inputs
         .iter()
@@ -123,16 +183,20 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
 enum InputCudaType {
     DeviceCopy,
-    LendRustBorrowToCuda,
+    RustToCuda,
 }
 
 struct InputPtxJit(bool);
 
 struct DeclGenerics<'f> {
     generic_start_token: &'f Option<syn::token::Lt>,
-    generic_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
+    generic_trait_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
     generic_close_token: &'f Option<syn::token::Gt>,
-    generic_where_clause: &'f Option<syn::WhereClause>,
+    generic_trait_where_clause: &'f Option<syn::WhereClause>,
+    generic_wrapper_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
+    generic_wrapper_where_clause: &'f Option<syn::WhereClause>,
+    generic_kernel_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
+    generic_kernel_where_clause: &'f Option<syn::WhereClause>,
 }
 
 struct ImplGenerics<'f> {

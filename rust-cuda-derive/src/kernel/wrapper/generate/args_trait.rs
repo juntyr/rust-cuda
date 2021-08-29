@@ -8,9 +8,10 @@ pub(in super::super) fn quote_args_trait(
     }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
-        generic_params,
+        generic_trait_params: generic_params,
         generic_close_token,
-        generic_where_clause,
+        generic_trait_where_clause: generic_where_clause,
+        ..
     }: &DeclGenerics,
     ImplGenerics {
         impl_generics,

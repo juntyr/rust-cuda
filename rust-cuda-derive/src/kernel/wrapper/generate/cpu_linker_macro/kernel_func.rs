@@ -7,7 +7,9 @@ pub(super) fn quote_kernel_func(
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
+        generic_wrapper_params,
         generic_close_token,
+        generic_wrapper_where_clause,
         ..
     }: &DeclGenerics,
     inputs @ FunctionInputs { func_inputs, .. }: &FunctionInputs,
@@ -55,8 +57,10 @@ pub(super) fn quote_kernel_func(
 
     quote! {
         #(#func_attrs)*
-        fn #func_ident(&mut self, #(#new_func_inputs),*)
-            -> rust_cuda::rustacuda::error::CudaResult<()>
+        fn #func_ident #generic_start_token #generic_wrapper_params #generic_close_token (
+            &mut self, #(#new_func_inputs),*
+        ) -> rust_cuda::rustacuda::error::CudaResult<()>
+            #generic_wrapper_where_clause
         {
             #raw_func_input_wrap
         }
@@ -73,105 +77,97 @@ fn generate_raw_func_input_wrap(
     func_params: &[syn::Pat],
 ) -> TokenStream {
     func_inputs
-        .iter().zip(func_input_cuda_types.iter())
+        .iter()
+        .zip(func_input_cuda_types.iter())
         .rev()
-        .fold(quote! {
-            self.#func_ident_raw(#(#func_params),*)
-        }, |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                pat,
-                ty,
-                ..
-            }) => {
-                match cuda_mode {
-                    InputCudaType::DeviceCopy => if let syn::Type::Reference(
-                        syn::TypeReference { mutability, .. }
-                    ) = &**ty {
-                        let (pat_box, pat_host_ref) = match &**pat {
-                            syn::Pat::Ident(syn::PatIdent {
-                                attrs,
-                                by_ref: None,
-                                mutability: None,
-                                ident,
-                                subpat: None,
-                            }) => (
+        .fold(
+            quote! {
+                self.#func_ident_raw(#(#func_params),*)
+            },
+            |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
+                syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => match cuda_mode {
+                    InputCudaType::DeviceCopy => {
+                        if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                            let pat_box = match &**pat {
                                 syn::Pat::Ident(syn::PatIdent {
+                                    attrs,
+                                    by_ref: None,
+                                    mutability: None,
+                                    ident,
+                                    subpat: None,
+                                }) => syn::Pat::Ident(syn::PatIdent {
                                     attrs: attrs.clone(),
                                     by_ref: None,
                                     mutability: None,
                                     ident: quote::format_ident!("__{}_box", ident),
                                     subpat: None,
                                 }),
-                                syn::Pat::Ident(syn::PatIdent {
-                                    attrs: attrs.clone(),
-                                    by_ref: None,
-                                    mutability: None,
-                                    ident: quote::format_ident!("__{}_host_ref", ident),
-                                    subpat: None,
-                                }),
-                            ),
-                            _ => abort!(
-                                pat.span(),
-                                "Unexpected kernel input parameter: only identifiers are accepted."
-                            ),
-                        };
+                                _ => abort!(
+                                    pat.span(),
+                                    "Unexpected kernel input parameter: only identifiers are \
+                                     accepted."
+                                ),
+                            };
 
-                        if mutability.is_some() {
-                            quote! {
-                                let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
-                                    rust_cuda::rustacuda::memory::DeviceBox::new(
-                                        #pat
-                                    )?
-                                );
-                                let mut #pat_host_ref = rust_cuda::host::HostAndDeviceMutRef::new(
-                                    &mut #pat_box, #pat
-                                );
-                                #[allow(clippy::redundant_closure_call)]
-                                let __result = (|#pat| { #inner })(&mut #pat_host_ref);
-                                #pat_box.with_box(|#pat_box| {
-                                    rust_cuda::rustacuda::memory::CopyDestination::copy_to(
-                                        &*#pat_box, #pat
-                                    )
-                                })?;
-                                ::core::mem::drop(#pat_box);
-                                __result
-                            }
-                        } else {
-                            quote! {
-                                let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
-                                    rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?
-                                );
-                                let #pat_host_ref = rust_cuda::host::HostAndDeviceConstRef::new(
-                                    &#pat_box, #pat
-                                );
-                                #[allow(clippy::redundant_closure_call)]
-                                let __result = (|#pat| { #inner })(&#pat_host_ref);
-                                ::core::mem::drop(#pat_box);
-                                __result
-                            }
-                        }
-                    } else {
-                        inner
-                    },
-                    InputCudaType::LendRustBorrowToCuda => if let syn::Type::Reference(
-                        syn::TypeReference { mutability, .. }
-                    ) = &**ty {
-                        if mutability.is_some() {
-                            quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(
-                                #pat, |mut #pat| {
-                                    let #pat = &mut #pat;
-                                    #inner
+                            if mutability.is_some() {
+                                quote! {
+                                    let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
+                                        rust_cuda::rustacuda::memory::DeviceBox::new(
+                                            #pat
+                                        )?
+                                    );
+                                    #[allow(clippy::redundant_closure_call)]
+                                    // Safety: `#pat_box` contains exactly the device copy of `#pat`
+                                    let __result = (|#pat| { #inner })(unsafe {
+                                        rust_cuda::host::HostAndDeviceMutRef::new(
+                                            &mut #pat_box, #pat
+                                        )
+                                    });
+                                    #pat_box.with_box(|#pat_box| {
+                                        rust_cuda::rustacuda::memory::CopyDestination::copy_to(
+                                            &*#pat_box, #pat
+                                        )
+                                    })?;
+                                    ::core::mem::drop(#pat_box);
+                                    __result
                                 }
-                            ) }
+                            } else {
+                                quote! {
+                                    let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
+                                        rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?
+                                    );
+                                    #[allow(clippy::redundant_closure_call)]
+                                    // Safety: `#pat_box` contains exactly the device copy of `#pat`
+                                    let __result = (|#pat| { #inner })(unsafe {
+                                        rust_cuda::host::HostAndDeviceConstRef::new(
+                                            &#pat_box, #pat
+                                        )
+                                    });
+                                    ::core::mem::drop(#pat_box);
+                                    __result
+                                }
+                            }
                         } else {
-                            quote! { rust_cuda::host::LendToCuda::lend_to_cuda(#pat, |#pat| {
-                                let #pat = &#pat;
-                                #inner
-                            }) }
+                            inner
                         }
-                    } else { unreachable!() }
-                }
+                    },
+                    InputCudaType::RustToCuda => {
+                        if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                            if mutability.is_some() {
+                                quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(
+                                    #pat, |#pat| { #inner }
+                                ) }
+                            } else {
+                                quote! { rust_cuda::host::LendToCuda::lend_to_cuda(
+                                    #pat, |#pat| { #inner }
+                                ) }
+                            }
+                        } else {
+                            unreachable!()
+                        }
+                    },
+                },
+                syn::FnArg::Receiver(_) => unreachable!(),
             },
-            syn::FnArg::Receiver(_) => unreachable!(),
-        })
+        )
 }

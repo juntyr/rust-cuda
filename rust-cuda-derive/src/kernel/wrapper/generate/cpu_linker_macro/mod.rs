@@ -26,7 +26,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
     @
     DeclGenerics {
         generic_start_token,
-        generic_params,
+        generic_trait_params: generic_params,
         generic_close_token,
         ..
     }: &DeclGenerics,
@@ -44,8 +44,8 @@ pub(in super::super) fn quote_cpu_linker_macro(
 
             match generic {
                 syn::GenericParam::Type(_) => quote!($#generic_ident:ty),
-                syn::GenericParam::Lifetime(_) => quote!($#generic_ident:lifetime),
                 syn::GenericParam::Const(_) => quote!($#generic_ident:expr),
+                syn::GenericParam::Lifetime(_) => unreachable!(),
             }
         })
         .collect::<Vec<_>>();

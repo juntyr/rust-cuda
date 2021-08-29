@@ -13,7 +13,15 @@ use type_wrap::generate_func_input_and_ptx_jit_wraps;
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_raw(
     config @ KernelConfig { args, .. }: &KernelConfig,
-    decl_generics: &DeclGenerics,
+    decl_generics
+    @
+    DeclGenerics {
+        generic_start_token,
+        generic_wrapper_params,
+        generic_close_token,
+        generic_wrapper_where_clause,
+        ..
+    }: &DeclGenerics,
     func_inputs: &FunctionInputs,
     FuncIdent { func_ident_raw, .. }: &FuncIdent,
     func_params: &[syn::Pat],
@@ -26,13 +34,15 @@ pub(super) fn quote_kernel_func_raw(
         generate_raw_func_types(config, decl_generics, func_inputs, macro_type_ids);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
         generate_func_input_and_ptx_jit_wraps(func_inputs);
-    let (cpu_func_types_launch, cpu_func_unboxed_types) =
+    let (cpu_func_types_launch, cpu_func_lifetime_erased_types, cpu_func_unboxed_types) =
         generate_launch_types(config, decl_generics, func_inputs, macro_type_ids);
 
     quote! {
         #(#func_attrs)*
-        fn #func_ident_raw(&mut self, #(#new_func_inputs_raw),*)
-            -> rust_cuda::rustacuda::error::CudaResult<()>
+        fn #func_ident_raw #generic_start_token #generic_wrapper_params #generic_close_token (
+            &mut self, #(#new_func_inputs_raw),*
+        ) -> rust_cuda::rustacuda::error::CudaResult<()>
+            #generic_wrapper_where_clause
         {
             use rust_cuda::ptx_jit::host::compiler::PtxJITResult;
 
@@ -52,9 +62,7 @@ pub(super) fn quote_kernel_func_raw(
             let compiler = &mut typed_kernel.compiler;
 
             let function = match (rust_cuda::ptx_jit::compilePtxJITwithArguments! {
-                compiler(
-                    #(#func_cpu_ptx_jit_wrap),*
-                )
+                compiler(#(#func_cpu_ptx_jit_wrap),*)
             }, typed_kernel.kernel.as_mut()) {
                 (
                     PtxJITResult::Cached(_),
@@ -94,7 +102,7 @@ pub(super) fn quote_kernel_func_raw(
                     enum #func_type_errors {}
                     const _: [#func_type_errors; 1 - {
                         const ASSERT: bool = (
-                            ::std::mem::size_of::<#cpu_func_types_launch>() <= 8
+                            ::std::mem::size_of::<#cpu_func_lifetime_erased_types>() <= 8
                         ); ASSERT
                     } as usize] = [];
                 )*
@@ -105,7 +113,7 @@ pub(super) fn quote_kernel_func_raw(
 
                     extern "C" { #(
                         #[allow(dead_code)]
-                        static #func_params: #cpu_func_types_launch;
+                        static #func_params: #cpu_func_lifetime_erased_types;
                     )* }
                 }
 

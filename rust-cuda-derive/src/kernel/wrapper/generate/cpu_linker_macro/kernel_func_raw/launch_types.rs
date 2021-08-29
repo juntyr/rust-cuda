@@ -15,12 +15,16 @@ pub(super) fn generate_launch_types(
         func_input_cuda_types,
     }: &FunctionInputs,
     macro_type_ids: &[syn::Ident],
-) -> (Vec<TokenStream>, Vec<TokenStream>) {
+) -> (Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>) {
+    let mut cpu_func_types_launch = Vec::with_capacity(func_inputs.len());
+    let mut cpu_func_lifetime_erased_types = Vec::with_capacity(func_inputs.len());
+    let mut cpu_func_unboxed_types = Vec::with_capacity(func_inputs.len());
+
     func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
         .enumerate()
-        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+        .for_each(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
@@ -29,41 +33,67 @@ pub(super) fn generate_launch_types(
                     #generic_close_token>::#type_ident
                 };
 
-                let unboxed_ty = syn_type.clone();
+                cpu_func_unboxed_types.push(syn_type.clone());
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::LendRustBorrowToCuda => quote::quote_spanned! { ty.span()=>
+                    InputCudaType::RustToCuda => quote::quote_spanned! { ty.span()=>
                         rust_cuda::common::DeviceAccessible<
                             <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                         >
                     },
                 };
 
-                let ty = if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty
-                {
-                    if mutability.is_some() {
-                        quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceMutRef<#cuda_type>
+                cpu_func_types_launch.push(
+                    if let syn::Type::Reference(syn::TypeReference {
+                        mutability,
+                        lifetime,
+                        ..
+                    }) = &**ty
+                    {
+                        if mutability.is_some() {
+                            quote::quote_spanned! { ty.span()=>
+                                rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                            }
+                        } else {
+                            quote::quote_spanned! { ty.span()=>
+                                rust_cuda::common::DeviceConstRef<#lifetime, #cuda_type>
+                            }
                         }
+                    } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                        abort!(
+                            ty.span(),
+                            "Kernel parameters transferred using `RustToCuda` must be references."
+                        );
                     } else {
-                        quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceConstRef<#cuda_type>
-                        }
-                    }
-                } else if matches!(cuda_mode, InputCudaType::LendRustBorrowToCuda) {
-                    abort!(
-                        ty.span(),
-                        "Kernel parameters transferred using `LendRustBorrowToCuda` must be \
-                         references."
-                    );
-                } else {
-                    cuda_type
-                };
+                        quote! { #cuda_type }
+                    },
+                );
 
-                (ty, unboxed_ty)
+                cpu_func_lifetime_erased_types.push(
+                    if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if mutability.is_some() {
+                            quote::quote_spanned! { ty.span()=>
+                                rust_cuda::common::DeviceMutRef<'static, #cuda_type>
+                            }
+                        } else {
+                            quote::quote_spanned! { ty.span()=>
+                                rust_cuda::common::DeviceConstRef<'static, #cuda_type>
+                            }
+                        }
+                    } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                        unreachable!()
+                    } else {
+                        cuda_type
+                    },
+                );
             },
             syn::FnArg::Receiver(_) => unreachable!(),
-        })
-        .unzip()
+        });
+
+    (
+        cpu_func_types_launch,
+        cpu_func_lifetime_erased_types,
+        cpu_func_unboxed_types,
+    )
 }
