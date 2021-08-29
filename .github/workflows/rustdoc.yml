@@ -27,7 +27,6 @@ jobs:
             --extern-html-root-url final=https://docs.rs/final/0.1.0/ \
             -Zunstable-options\
           " cargo doc \
-            --workspace \
             --all-features \
             --no-deps
 

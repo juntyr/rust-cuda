@@ -1,4 +1,5 @@
 use proc_macro2::TokenStream;
+use quote::quote_spanned;
 use syn::spanned::Spanned;
 
 use super::super::{FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
@@ -54,7 +55,7 @@ pub(in super::super) fn quote_cuda_wrapper(
                     } else {
                         inner
                     },
-                    InputCudaType::LendRustBorrowToCuda => if let syn::Type::Reference(
+                    InputCudaType::RustToCuda => if let syn::Type::Reference(
                         syn::TypeReference { and_token, mutability, ..}
                     ) = &**ty {
                         if mutability.is_some() {
@@ -164,7 +165,7 @@ fn specialise_ptx_func_inputs(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::LendRustBorrowToCuda => quote::quote_spanned! { ty.span()=>
+                    InputCudaType::RustToCuda => quote::quote_spanned! { ty.span()=>
                         rust_cuda::common::DeviceAccessible<
                             <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                         >
@@ -177,24 +178,23 @@ fn specialise_ptx_func_inputs(
                     ..
                 }) = &**ty
                 {
-                    if lifetime.is_some() {
-                        abort!(lifetime.span(), "Kernel parameters cannot have lifetimes.");
-                    }
+                    let lifetime = quote_spanned! { lifetime.span()=>
+                        'static
+                    };
 
                     if mutability.is_some() {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceMutRef<#cuda_type>
+                            rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
                         }
                     } else {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceConstRef<#cuda_type>
+                            rust_cuda::common::DeviceConstRef<#lifetime, #cuda_type>
                         }
                     }
-                } else if matches!(cuda_mode, InputCudaType::LendRustBorrowToCuda) {
+                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
                     abort!(
                         ty.span(),
-                        "Kernel parameters transferred using `LendRustBorrowToCuda` must be \
-                         references."
+                        "Kernel parameters transferred using `RustToCuda` must be references."
                     );
                 } else {
                     cuda_type

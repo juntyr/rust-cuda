@@ -36,7 +36,7 @@ pub(super) fn generate_raw_func_types(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::LendRustBorrowToCuda => quote!(
+                    InputCudaType::RustToCuda => quote!(
                         rust_cuda::common::DeviceAccessible<
                             <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                         >
@@ -44,34 +44,28 @@ pub(super) fn generate_raw_func_types(
                 };
 
                 if let syn::Type::Reference(syn::TypeReference {
-                    and_token,
                     lifetime,
                     mutability,
                     ..
                 }) = &**ty
                 {
-                    if lifetime.is_some() {
-                        abort!(lifetime.span(), "Kernel parameters cannot have lifetimes.");
-                    }
-
                     let wrapped_type = if mutability.is_some() {
                         quote!(
-                            rust_cuda::host::HostAndDeviceMutRef<#cuda_type>
+                            rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
                         )
                     } else {
                         quote!(
-                            rust_cuda::host::HostAndDeviceConstRef<#cuda_type>
+                            rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
                         )
                     };
 
                     quote! {
-                        #(#attrs)* #pat #colon_token #and_token #lifetime #mutability #wrapped_type
+                        #(#attrs)* #mutability #pat #colon_token #wrapped_type
                     }
-                } else if matches!(cuda_mode, InputCudaType::LendRustBorrowToCuda) {
+                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
                     abort!(
                         ty.span(),
-                        "Kernel parameters transferred using `LendRustBorrowToCuda` must be \
-                         references."
+                        "Kernel parameters transferred using `RustToCuda` must be references."
                     );
                 } else {
                     quote! { #(#attrs)* #pat #colon_token #cuda_type }

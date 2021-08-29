@@ -44,7 +44,7 @@ macro_rules! function {
     }};
 }
 
-/// Alternative of [std::print!](https://doc.rust-lang.org/std/macro.print.html) using CUDA `vprintf` system-call
+/// Alternative of [`std::print!`](https://doc.rust-lang.org/std/macro.print.html) using CUDA `vprintf` system-call
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
@@ -56,7 +56,7 @@ macro_rules! print {
     }
 }
 
-/// Alternative of [std::println!](https://doc.rust-lang.org/std/macro.println.html) using CUDA `vprintf` system-call
+/// Alternative of [`std::println!`](https://doc.rust-lang.org/std/macro.println.html) using CUDA `vprintf` system-call
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));

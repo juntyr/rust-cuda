@@ -1,6 +1,11 @@
 [workspace]
-members = [".", "rust-cuda-derive", "rust-cuda-ptx-jit"]
-default-members = [".", "rust-cuda-derive", "rust-cuda-ptx-jit"]
+members = [
+    ".", "rust-cuda-derive", "rust-cuda-ptx-jit",
+    "examples/single-source"
+]
+default-members = [
+    ".", "rust-cuda-derive", "rust-cuda-ptx-jit"
+]
 
 [package]
 name = "rust-cuda"
