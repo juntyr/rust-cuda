@@ -18,7 +18,20 @@ use config::LinkKernelConfig;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
-    proc_macro_error::set_dummy(quote! {"ERROR in PTX compilation"});
+    static mut EARLY_ABORT: bool = false;
+
+    // Check if another invocation of the kernel compilation
+    //  has already failed, if so abort early
+    if unsafe { EARLY_ABORT } {
+        return (quote! {
+            "ABORT in earlier PTX compilation"
+        })
+        .into();
+    }
+
+    proc_macro_error::set_dummy(quote! {
+        "ERROR in this PTX compilation"
+    });
 
     let LinkKernelConfig {
         kernel,
@@ -36,7 +49,13 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
-    if let Ok(rust_flags) = env::var("RUSTFLAGS") {
+    let colourful = match std::env::var_os("TERM") {
+        None => false,
+        Some(term) if term == "dumb" => false,
+        Some(_) => std::env::var_os("NO_COLOR").is_none(),
+    };
+
+    if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
         env::set_var("RUSTFLAGS", rust_flags.replace("-Zinstrument-coverage", ""));
     }
 
@@ -54,6 +73,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         } else {
             specialisation.as_deref()
         },
+        colourful,
     ) {
         Ok(kernel_path) => {
             let mut file = fs::File::open(&kernel_path)
@@ -67,7 +87,18 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
             kernel_ptx
         },
         Err(err) => {
-            abort_call_site!(ErrorLogPrinter::print(err));
+            // Reduce duplicate errors by setting the shared failure flag
+            unsafe {
+                EARLY_ABORT = true;
+            }
+
+            let mut error_printer = ErrorLogPrinter::print(err);
+
+            if !colourful {
+                error_printer.disable_colors();
+            }
+
+            abort_call_site!(error_printer);
         },
     };
 
@@ -78,10 +109,17 @@ fn build_kernel_with_specialisation(
     kernel_path: &Path,
     env_var: &str,
     specialisation: Option<&str>,
+    colourful: bool,
 ) -> Result<PathBuf> {
     env::set_var(env_var, specialisation.unwrap_or(""));
 
-    match Builder::new(kernel_path)?.build()? {
+    let mut builder = Builder::new(kernel_path)?;
+
+    if !colourful {
+        builder = builder.disable_colors();
+    }
+
+    match builder.build()? {
         BuildStatus::Success(output) => {
             let ptx_path = output.get_assembly_path();
 

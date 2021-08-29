@@ -141,5 +141,5 @@ jobs:
         run: |
           cargo clippy \
             --workspace \
-            --all-targets
+            --all-targets \
             -- -D warnings
