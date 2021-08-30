@@ -50,6 +50,13 @@ pub(super) fn generate_raw_func_types(
                 }) = &**ty
                 {
                     let wrapped_type = if mutability.is_some() {
+                        if matches!(cuda_mode, InputCudaType::DeviceCopy) {
+                            abort!(
+                                mutability.span(),
+                                "Cannot mutably alias a `DeviceCopy` kernel parameter."
+                            );
+                        }
+
                         quote!(
                             rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
                         )

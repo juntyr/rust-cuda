@@ -61,10 +61,7 @@ pub(super) fn generate_launch_types(
                             }
                         }
                     } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                        abort!(
-                            ty.span(),
-                            "Kernel parameters transferred using `RustToCuda` must be references."
-                        );
+                        unreachable!()
                     } else {
                         quote! { #cuda_type }
                     },

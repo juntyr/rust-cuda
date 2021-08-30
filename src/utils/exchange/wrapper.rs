@@ -40,9 +40,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWithCudaWrapper<T> {
     pub fn move_to_cuda(mut self) -> CudaResult<ExchangeWithHostWrapper<T>> {
         let (cuda_repr, null_alloc) = unsafe { self.value.borrow(NullCudaAlloc) }?;
 
-        self.device_box.with_box(|device_box| {
-            rustacuda::memory::CopyDestination::copy_from(device_box, &cuda_repr)
-        })?;
+        self.device_box.copy_from(&cuda_repr)?;
 
         Ok(ExchangeWithHostWrapper {
             value: self.value,
