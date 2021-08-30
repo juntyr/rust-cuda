@@ -16,6 +16,7 @@ pub struct Dummy(i32);
 unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Dummy {}
 
 #[derive(rust_cuda::common::RustToCudaAsRust)]
+#[allow(dead_code)]
 pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
     #[r2cEmbed]
     inner: T,
@@ -26,8 +27,8 @@ pub struct Empty([u8; 0]);
 
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
 pub fn kernel<T: rust_cuda::common::RustToCuda>(
-    #[kernel(pass = DeviceCopy)] x: &Dummy,
-    #[kernel(pass = RustToCuda)] y: &mut Wrapper<T>,
+    #[kernel(pass = DeviceCopy)] _x: &Dummy,
+    #[kernel(pass = RustToCuda)] _y: &mut ShallowCopy<Wrapper<T>>,
 ) {
 }
 

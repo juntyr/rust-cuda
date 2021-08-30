@@ -23,7 +23,7 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
         return (quote! {}).into();
     }
 
-    let crate_name = match std::env::var("CARGO_CRATE_NAME") {
+    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
         Err(err) => abort_call_site!("Failed to read crate name: {:?}", err),
     };

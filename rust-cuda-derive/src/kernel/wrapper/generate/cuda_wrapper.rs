@@ -62,14 +62,14 @@ pub(in super::super) fn quote_cuda_wrapper(
                             quote! {
                                 #ptx_jit_load;
                                 rust_cuda::device::BorrowFromRust::with_borrow_from_rust_mut(
-                                    #pat, |#pat: #and_token #mutability #syn_type| { #inner },
+                                    #pat, |#pat: #and_token #mutability rust_cuda::device::ShallowCopy<#syn_type>| { #inner },
                                 )
                             }
                         } else {
                             quote! {
                                 #ptx_jit_load;
                                 rust_cuda::device::BorrowFromRust::with_borrow_from_rust(
-                                    #pat, |#pat: #and_token #syn_type| { #inner },
+                                    #pat, |#pat: #and_token rust_cuda::device::ShallowCopy<#syn_type>| { #inner },
                                 )
                             }
                         }
