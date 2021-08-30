@@ -95,6 +95,7 @@ pub(super) fn parse_function_inputs(
 
                 let ty = ensure_reference_type_lifetime(
                     &**ty,
+                    &cuda_type,
                     &mut implicit_lifetime_id,
                     generic_params,
                 );
@@ -120,6 +121,7 @@ pub(super) fn parse_function_inputs(
 
 fn ensure_reference_type_lifetime(
     ty: &syn::Type,
+    cuda_type: &InputCudaType,
     implicit_lifetime_id: &mut usize,
     generic_params: &mut syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
 ) -> Box<syn::Type> {
@@ -151,11 +153,55 @@ fn ensure_reference_type_lifetime(
                 lifetime
             });
 
+            let elem = if matches!(cuda_type, InputCudaType::RustToCuda) {
+                (|| {
+                    if let syn::Type::Path(syn::TypePath {
+                        path: syn::Path { segments, .. },
+                        qself: None,
+                    }) = &**elem
+                    {
+                        if let Some(syn::PathSegment {
+                            ident,
+                            arguments:
+                                syn::PathArguments::AngleBracketed(
+                                    syn::AngleBracketedGenericArguments { args, .. },
+                                ),
+                        }) = segments.last()
+                        {
+                            if ident == "ShallowCopy" && segments.len() == 1 {
+                                match args.last() {
+                                    Some(syn::GenericArgument::Type(elem)) if args.len() == 1 => {
+                                        return Box::new(elem.clone());
+                                    },
+                                    _ => {
+                                        abort!(
+                                            args.span(),
+                                            "`ShallowCopy<T>` takes exactly one generic type \
+                                             argument."
+                                        );
+                                    },
+                                }
+                            }
+                        }
+                    }
+
+                    emit_warning!(
+                        elem.span(),
+                        "RustToCuda kernel parameters should be explicitly wrapped with the \
+                         `ShallowCopy<T>` marker to communicate their aliasing behaviour."
+                    );
+
+                    elem.clone()
+                })()
+            } else {
+                elem.clone()
+            };
+
             Box::new(syn::Type::Reference(syn::TypeReference {
                 and_token: *and_token,
                 lifetime: Some(lifetime),
                 mutability: *mutability,
-                elem: elem.clone(),
+                elem,
             }))
         },
         ty => Box::new(ty.clone()),
