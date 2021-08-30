@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
+use crate::kernel::utils::r2c_move_lifetime;
+
 use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
 
 pub(super) fn generate_raw_func_types(
@@ -70,10 +72,15 @@ pub(super) fn generate_raw_func_types(
                         #(#attrs)* #mutability #pat #colon_token #wrapped_type
                     }
                 } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                    abort!(
-                        ty.span(),
-                        "Kernel parameters transferred using `RustToCuda` must be references."
-                    );
+                    let lifetime = r2c_move_lifetime(i, ty);
+
+                    let wrapped_type = quote! {
+                        rust_cuda::host::HostAndDeviceOwned<#lifetime, #cuda_type>
+                    };
+
+                    quote! {
+                        #(#attrs)* #pat #colon_token #wrapped_type
+                    }
                 } else {
                     quote! { #(#attrs)* #pat #colon_token #cuda_type }
                 }

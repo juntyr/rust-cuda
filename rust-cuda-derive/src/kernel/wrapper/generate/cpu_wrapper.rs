@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
+
+use crate::kernel::utils::r2c_move_lifetime;
 
 use super::super::{
     DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
@@ -32,22 +33,25 @@ pub(in super::super) fn quote_cpu_wrapper(
         >
     };
 
-    let generic_wrapper_where_clause =
-        if let Some(generic_wrapper_where_clause) = generic_wrapper_where_clause {
-            let comma = if generic_wrapper_where_clause.predicates.empty_or_trailing() {
+    let generic_wrapper_where_clause = match generic_wrapper_where_clause {
+        Some(syn::WhereClause {
+            where_token,
+            predicates,
+        }) if !predicates.is_empty() => {
+            let comma = if predicates.empty_or_trailing() {
                 quote!()
             } else {
                 quote!(,)
             };
 
             quote! {
-                #generic_wrapper_where_clause #comma #launcher_predicate
+                #where_token #predicates #comma #launcher_predicate
             }
-        } else {
-            quote! {
-                where #launcher_predicate
-            }
-        };
+        },
+        _ => quote! {
+            where #launcher_predicate
+        },
+    };
 
     let (new_func_inputs_decl, new_func_inputs_raw_decl) =
         generate_new_func_inputs_decl(config, impl_generics, func_inputs);
@@ -158,11 +162,13 @@ fn generate_new_func_inputs_decl(
 
                             Box::new(wrapped_type)
                         } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                            abort!(
-                                ty.span(),
-                                "Kernel parameters transferred using `RustToCuda` must be \
-                                 references."
+                            let lifetime = r2c_move_lifetime(i, ty);
+
+                            let wrapped_type = syn::parse_quote!(
+                                rust_cuda::host::HostAndDeviceOwned<#lifetime, #cuda_type>
                             );
+
+                            Box::new(wrapped_type)
                         } else {
                             cuda_type
                         }

@@ -49,7 +49,8 @@ pub trait BorrowFromRust: RustToCuda {
         inner: F,
     ) -> O
     where
-        Self: Sized + StackOnly;
+        Self: Sized + StackOnly,
+        <Self as RustToCuda>::CudaRepresentation: StackOnly;
 }
 
 impl<T: RustToCuda> BorrowFromRust for T {
@@ -84,6 +85,7 @@ impl<T: RustToCuda> BorrowFromRust for T {
     ) -> O
     where
         Self: Sized + StackOnly,
+        <Self as RustToCuda>::CudaRepresentation: StackOnly,
     {
         inner(CudaAsRust::as_rust(cuda_repr_mut.as_mut()))
     }

@@ -1,5 +1,7 @@
 use syn::spanned::Spanned;
 
+use crate::kernel::utils::r2c_move_lifetime;
+
 use super::{InputCudaType, InputPtxJit};
 
 mod attribute;
@@ -23,7 +25,8 @@ pub(super) fn parse_function_inputs(
         .sig
         .inputs
         .iter()
-        .map(|arg| match arg {
+        .enumerate()
+        .map(|(i, arg)| match arg {
             receiver @ syn::FnArg::Receiver(_) => {
                 abort!(receiver.span(), "Kernel function must not have a receiver.")
             },
@@ -94,6 +97,7 @@ pub(super) fn parse_function_inputs(
                 });
 
                 let ty = ensure_reference_type_lifetime(
+                    i,
                     &**ty,
                     &cuda_type,
                     &mut implicit_lifetime_id,
@@ -120,6 +124,7 @@ pub(super) fn parse_function_inputs(
 }
 
 fn ensure_reference_type_lifetime(
+    i: usize,
     ty: &syn::Type,
     cuda_type: &InputCudaType,
     implicit_lifetime_id: &mut usize,
@@ -204,6 +209,22 @@ fn ensure_reference_type_lifetime(
                 elem,
             }))
         },
-        ty => Box::new(ty.clone()),
+        ty => {
+            if matches!(cuda_type, InputCudaType::RustToCuda) {
+                generic_params.insert(
+                    *implicit_lifetime_id,
+                    syn::GenericParam::Lifetime(syn::LifetimeDef {
+                        attrs: Vec::new(),
+                        lifetime: r2c_move_lifetime(i, ty),
+                        colon_token: None,
+                        bounds: syn::punctuated::Punctuated::new(),
+                    }),
+                );
+
+                *implicit_lifetime_id += 1;
+            }
+
+            Box::new(ty.clone())
+        },
     }
 }

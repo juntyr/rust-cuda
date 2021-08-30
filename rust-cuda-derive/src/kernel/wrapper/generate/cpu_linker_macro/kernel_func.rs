@@ -169,7 +169,9 @@ fn generate_raw_func_input_wrap(
                                 ) }
                             }
                         } else {
-                            unreachable!()
+                            quote! { rust_cuda::host::LendToCuda::move_to_cuda(
+                                #pat, |#pat| { #inner }
+                            ) }
                         }
                     },
                 },

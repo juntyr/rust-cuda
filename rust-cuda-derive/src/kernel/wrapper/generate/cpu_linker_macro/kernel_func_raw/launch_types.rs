@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
+use crate::kernel::utils::r2c_move_lifetime;
+
 use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
 
 pub(super) fn generate_launch_types(
@@ -61,7 +63,11 @@ pub(super) fn generate_launch_types(
                             }
                         }
                     } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                        unreachable!()
+                        let lifetime = r2c_move_lifetime(i, ty);
+
+                        quote::quote_spanned! { ty.span()=>
+                            rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                        }
                     } else {
                         quote! { #cuda_type }
                     },
@@ -79,7 +85,9 @@ pub(super) fn generate_launch_types(
                             }
                         }
                     } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                        unreachable!()
+                        quote::quote_spanned! { ty.span()=>
+                            rust_cuda::common::DeviceMutRef<'static, #cuda_type>
+                        }
                     } else {
                         cuda_type
                     },
