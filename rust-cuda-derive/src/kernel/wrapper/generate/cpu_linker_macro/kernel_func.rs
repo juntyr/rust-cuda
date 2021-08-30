@@ -62,6 +62,22 @@ pub(super) fn quote_kernel_func(
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
+            // impls check adapted from Nikolai Vazquez's `impls` crate:
+            //  https://docs.rs/impls/1.0.3/src/impls/lib.rs.html#584-602
+            const fn __check_is_sync<T: ?Sized>(_x: &T) -> bool {
+                trait IsSyncMarker {
+                    const SYNC: bool = false;
+                }
+                impl<T: ?Sized> IsSyncMarker for T {}
+                struct CheckIs<T: ?Sized>(::core::marker::PhantomData<T>);
+                #[allow(dead_code)]
+                impl<T: ?Sized + Sync> CheckIs<T> {
+                    const SYNC: bool = true;
+                }
+
+                <CheckIs<T>>::SYNC
+            }
+
             #raw_func_input_wrap
         }
     }
@@ -87,7 +103,7 @@ fn generate_raw_func_input_wrap(
             |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
                 syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => match cuda_mode {
                     InputCudaType::DeviceCopy => {
-                        if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if let syn::Type::Reference(..) = &**ty {
                             let pat_box = match &**pat {
                                 syn::Pat::Ident(syn::PatIdent {
                                     attrs,
@@ -109,43 +125,33 @@ fn generate_raw_func_input_wrap(
                                 ),
                             };
 
-                            if mutability.is_some() {
-                                quote! {
-                                    let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
-                                        rust_cuda::rustacuda::memory::DeviceBox::new(
-                                            #pat
-                                        )?
-                                    );
-                                    #[allow(clippy::redundant_closure_call)]
-                                    // Safety: `#pat_box` contains exactly the device copy of `#pat`
-                                    let __result = (|#pat| { #inner })(unsafe {
-                                        rust_cuda::host::HostAndDeviceMutRef::new(
-                                            &mut #pat_box, #pat
-                                        )
-                                    });
-                                    #pat_box.with_box(|#pat_box| {
-                                        rust_cuda::rustacuda::memory::CopyDestination::copy_to(
-                                            &*#pat_box, #pat
-                                        )
-                                    })?;
-                                    ::core::mem::drop(#pat_box);
-                                    __result
+                            // DeviceCopy only supports immutable references
+                            quote! {
+                                let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
+                                    rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?
+                                );
+                                #[allow(clippy::redundant_closure_call)]
+                                // Safety: `#pat_box` contains exactly the device copy of `#pat`
+                                let __result = (|#pat| { #inner })(unsafe {
+                                    rust_cuda::host::HostAndDeviceConstRef::new(
+                                        &#pat_box, #pat
+                                    )
+                                });
+
+                                if !__check_is_sync(#pat) {
+                                    // Safety:
+                                    // * Since `#ty` is `!Sync`, it contains interior mutability
+                                    // * Therefore, part of the 'immutable' device copy may have
+                                    //    been mutated
+                                    // * If all mutation was confined to interior mutability,
+                                    //    then passing these changes on is safe (and expected)
+                                    // * If any mutations occured outside interior mutability,
+                                    //    then UB occurred, in the kernel (we're not the cause)
+                                    #pat_box.copy_to(unsafe { &mut *(#pat as *const _ as *mut _) })?;
                                 }
-                            } else {
-                                quote! {
-                                    let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
-                                        rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?
-                                    );
-                                    #[allow(clippy::redundant_closure_call)]
-                                    // Safety: `#pat_box` contains exactly the device copy of `#pat`
-                                    let __result = (|#pat| { #inner })(unsafe {
-                                        rust_cuda::host::HostAndDeviceConstRef::new(
-                                            &#pat_box, #pat
-                                        )
-                                    });
-                                    ::core::mem::drop(#pat_box);
-                                    __result
-                                }
+
+                                ::core::mem::drop(#pat_box);
+                                __result
                             }
                         } else {
                             inner

@@ -1,5 +1,6 @@
 use core::{
     marker::PhantomData,
+    mem::ManuallyDrop,
     ops::{Deref, DerefMut},
 };
 
@@ -252,16 +253,26 @@ pub struct HostDeviceBox<T: DeviceCopy>(DevicePointer<T>);
 impl<T: DeviceCopy> private::alloc::Sealed for HostDeviceBox<T> {}
 
 impl<T: DeviceCopy> HostDeviceBox<T> {
-    pub fn with_box<Q, F: FnOnce(&mut DeviceBox<T>) -> Q>(&mut self, inner: F) -> Q {
+    /// # Errors
+    ///
+    /// Returns a `CudaError` iff copying from `value` into `self` failed.
+    pub fn copy_from(&mut self, value: &T) -> CudaResult<()> {
         // Safety: pointer comes from `DeviceBox::into_device`
         //         i.e. this function completes the roundtrip
-        let mut device_box = unsafe { DeviceBox::from_device(self.0) };
+        let mut device_box = unsafe { ManuallyDrop::new(DeviceBox::from_device(self.0)) };
 
-        let result = inner(&mut device_box);
+        rustacuda::memory::CopyDestination::copy_from(&mut *device_box, value)
+    }
 
-        self.0 = DeviceBox::into_device(device_box);
+    /// # Errors
+    ///
+    /// Returns a `CudaError` iff copying from `self` into `value` failed.
+    pub fn copy_to(&self, value: &mut T) -> CudaResult<()> {
+        // Safety: pointer comes from `DeviceBox::into_device`
+        //         i.e. this function completes the roundtrip
+        let device_box = unsafe { ManuallyDrop::new(DeviceBox::from_device(self.0)) };
 
-        result
+        rustacuda::memory::CopyDestination::copy_to(&*device_box, value)
     }
 }
 

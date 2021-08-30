@@ -29,6 +29,9 @@ pub struct Empty([u8; 0]);
 pub fn kernel<T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = DeviceCopy)] _x: &Dummy,
     #[kernel(pass = RustToCuda)] _y: &mut ShallowCopy<Wrapper<T>>,
+    #[kernel(pass = DeviceCopy)] _z: &rust_cuda::utils::stack::StackOnlyWrapper<
+        core::sync::atomic::AtomicU64,
+    >,
 ) {
 }
 

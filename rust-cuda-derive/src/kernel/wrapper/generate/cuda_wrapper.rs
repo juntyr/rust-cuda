@@ -45,13 +45,10 @@ pub(in super::super) fn quote_cuda_wrapper(
 
                 match cuda_mode {
                     InputCudaType::DeviceCopy => if let syn::Type::Reference(
-                        syn::TypeReference { and_token, mutability, .. }
+                        syn::TypeReference { and_token, .. }
                     ) = &**ty {
-                        if mutability.is_some() {
-                            quote! { #ptx_jit_load; { let #pat: #and_token #mutability #syn_type = #pat.as_mut(); #inner } }
-                        } else {
-                            quote! { #ptx_jit_load; { let #pat: #and_token #syn_type = #pat.as_ref(); #inner } }
-                        }
+                        // DeviceCopy only supports immutable references
+                        quote! { #ptx_jit_load; { let #pat: #and_token #syn_type = #pat.as_ref(); #inner } }
                     } else {
                         inner
                     },
@@ -147,17 +144,6 @@ fn specialise_ptx_func_inputs(
                     ty,
                 },
             ) => {
-                let pat = if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty
-                {
-                    if matches!(cuda_mode, InputCudaType::DeviceCopy) && mutability.is_some() {
-                        quote::quote_spanned! { pat.span()=> mut #pat }
-                    } else {
-                        quote::quote_spanned! { pat.span()=> #pat }
-                    }
-                } else {
-                    quote::quote_spanned! { pat.span()=> #pat }
-                };
-
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
                     rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
@@ -192,10 +178,7 @@ fn specialise_ptx_func_inputs(
                         }
                     }
                 } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                    abort!(
-                        ty.span(),
-                        "Kernel parameters transferred using `RustToCuda` must be references."
-                    );
+                    unreachable!()
                 } else {
                     cuda_type
                 };
