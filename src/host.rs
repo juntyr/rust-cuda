@@ -18,7 +18,10 @@ use rustacuda_core::{DeviceCopy, DevicePointer};
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{link_kernel, specialise_kernel_call};
 
-use crate::common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda};
+use crate::{
+    common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
+    utils::stack::StackOnly,
+};
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
@@ -60,6 +63,7 @@ pub trait LendToCuda: RustToCuda {
     /// - after the closure, `&self` will not have changed
     ///
     /// # Errors
+    ///
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
@@ -83,6 +87,7 @@ pub trait LendToCuda: RustToCuda {
     ///     any deep changes will be reflected after the closure
     ///
     /// # Errors
+    ///
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
@@ -93,6 +98,24 @@ pub trait LendToCuda: RustToCuda {
         &mut self,
         inner: F,
     ) -> CudaResult<O>;
+
+    /// Moves `self` to CUDA iff `self` is `StackOnly`
+    ///
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    fn move_to_cuda<
+        O,
+        F: FnOnce(
+            HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> CudaResult<O>,
+    >(
+        self,
+        inner: F,
+    ) -> CudaResult<O>
+    where
+        Self: Sized + StackOnly,
+        <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc;
 }
 
 impl<T: RustToCuda> LendToCuda for T {
@@ -142,6 +165,24 @@ impl<T: RustToCuda> LendToCuda for T {
         let _: NullCudaAlloc = unsafe { self.restore(alloc) }?;
 
         result
+    }
+
+    fn move_to_cuda<
+        O,
+        F: FnOnce(
+            HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> CudaResult<O>,
+    >(
+        self,
+        inner: F,
+    ) -> CudaResult<O>
+    where
+        Self: Sized + StackOnly,
+        <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
+    {
+        let (cuda_repr, _alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+
+        HostAndDeviceOwned::with_new(cuda_repr, inner)
     }
 }
 
@@ -326,7 +367,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host<'s: 'a>(&'s mut self) -> &'a mut T {
+    pub fn for_host<'s: 'a>(&'s mut self) -> &'a T {
         self.host_ref
     }
 }
@@ -360,5 +401,47 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     #[must_use]
     pub fn for_host(&self) -> &'a T {
         self.host_ref
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub struct HostAndDeviceOwned<'a, T: DeviceCopy> {
+    device_box: &'a mut HostDeviceBox<T>,
+    host_val: &'a mut T,
+}
+
+impl<'a, T: DeviceCopy> HostAndDeviceOwned<'a, T> {
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
+    ///  to CUDA or an error occurs inside `inner`.
+    pub fn with_new<Q, F: for<'b> FnOnce(HostAndDeviceOwned<'b, T>) -> CudaResult<Q>>(
+        mut value: T,
+        inner: F,
+    ) -> CudaResult<Q> {
+        let mut device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
+
+        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
+        let result = inner(HostAndDeviceOwned {
+            device_box: &mut device_box,
+            host_val: &mut value,
+        });
+
+        core::mem::drop(device_box);
+
+        result
+    }
+
+    #[must_use]
+    pub fn for_device(self) -> DeviceMutRef<'a, T> {
+        DeviceMutRef {
+            pointer: self.device_box.0.as_raw_mut(),
+            reference: PhantomData,
+        }
+    }
+
+    #[must_use]
+    pub fn for_host<'s: 'a>(&'s mut self) -> &'a T {
+        self.host_val
     }
 }

@@ -7,7 +7,10 @@ use core::{
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{specialise_kernel_entry, specialise_kernel_type};
 
-use crate::common::{CudaAsRust, DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda};
+use crate::{
+    common::{CudaAsRust, DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
+    utils::stack::StackOnly,
+};
 
 pub mod nvptx;
 pub mod utils;
@@ -35,6 +38,18 @@ pub trait BorrowFromRust: RustToCuda {
         cuda_repr_mut: DeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         inner: F,
     ) -> O;
+
+    /// # Safety
+    ///
+    /// This function is only safe to call iff `cuda_repr` is the
+    ///  `DeviceMutRef` borrowed on the CPU using the corresponding
+    ///  `LendToCuda::move_to_cuda`.
+    unsafe fn with_moved_from_rust<O, F: FnOnce(Self) -> O>(
+        cuda_repr_mut: DeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        inner: F,
+    ) -> O
+    where
+        Self: Sized + StackOnly;
 }
 
 impl<T: RustToCuda> BorrowFromRust for T {
@@ -60,6 +75,17 @@ impl<T: RustToCuda> BorrowFromRust for T {
         let mut rust_repr_mut = ShallowCopy::new(CudaAsRust::as_rust(cuda_repr_mut.as_mut()));
 
         inner(&mut rust_repr_mut)
+    }
+
+    #[inline]
+    unsafe fn with_moved_from_rust<O, F: FnOnce(Self) -> O>(
+        mut cuda_repr_mut: DeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        inner: F,
+    ) -> O
+    where
+        Self: Sized + StackOnly,
+    {
+        inner(CudaAsRust::as_rust(cuda_repr_mut.as_mut()))
     }
 }
 

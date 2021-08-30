@@ -19,7 +19,6 @@ mod private {
 
     impl<T> !NoAliasing for *const T {}
     impl<T> !NoAliasing for *mut T {}
-    impl<T> !NoAliasing for &T {}
     impl<T> !NoAliasing for &mut T {}
 
     impl<T> NoAliasing for core::marker::PhantomData<T> {}
