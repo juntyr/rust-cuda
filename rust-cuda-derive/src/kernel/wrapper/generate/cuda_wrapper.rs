@@ -70,7 +70,14 @@ pub(in super::super) fn quote_cuda_wrapper(
                                 )
                             }
                         }
-                    } else { unreachable!() }
+                    } else {
+                        quote! {
+                            #ptx_jit_load;
+                            rust_cuda::device::BorrowFromRust::with_moved_from_rust(
+                                #pat, |#pat: #syn_type| { #inner },
+                            )
+                        }
+                    }
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),
@@ -178,7 +185,13 @@ fn specialise_ptx_func_inputs(
                         }
                     }
                 } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
-                    unreachable!()
+                    let lifetime = quote_spanned! { ty.span()=>
+                        'static
+                    };
+
+                    quote::quote_spanned! { ty.span()=>
+                        rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                    }
                 } else {
                     cuda_type
                 };

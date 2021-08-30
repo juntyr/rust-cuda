@@ -26,13 +26,16 @@ pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
 pub struct Empty([u8; 0]);
 
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
-pub fn kernel<T: rust_cuda::common::RustToCuda>(
+pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = DeviceCopy)] _x: &Dummy,
     #[kernel(pass = RustToCuda)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = DeviceCopy)] _z: &rust_cuda::utils::stack::StackOnlyWrapper<
+    #[kernel(pass = DeviceCopy)] _z: &'a rust_cuda::utils::stack::StackOnlyWrapper<
         core::sync::atomic::AtomicU64,
     >,
-) {
+    #[kernel(pass = RustToCuda)] _q: Wrapper<T>,
+) where
+    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::utils::stack::StackOnly,
+{
 }
 
 #[cfg(not(target_os = "cuda"))]

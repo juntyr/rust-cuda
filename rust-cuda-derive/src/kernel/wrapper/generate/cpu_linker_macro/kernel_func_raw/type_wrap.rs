@@ -1,5 +1,7 @@
 use proc_macro2::TokenStream;
 
+use crate::kernel::wrapper::InputCudaType;
+
 use super::super::super::super::FunctionInputs;
 
 pub(super) fn generate_func_input_and_ptx_jit_wraps(
@@ -11,9 +13,12 @@ pub(super) fn generate_func_input_and_ptx_jit_wraps(
     func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
-        .map(|(arg, (_cuda_mode, ptx_jit))| match arg {
+        .map(|(arg, (cuda_mode, ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => {
+                #[allow(clippy::if_same_then_else)]
                 let func_input = if let syn::Type::Reference(_) = &**ty {
+                    quote! { #pat.for_device() }
+                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
                     quote! { #pat.for_device() }
                 } else {
                     quote! { #pat }

@@ -115,6 +115,7 @@ pub trait LendToCuda: RustToCuda {
     ) -> CudaResult<O>
     where
         Self: Sized + StackOnly,
+        <Self as RustToCuda>::CudaRepresentation: StackOnly,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc;
 }
 
@@ -178,6 +179,7 @@ impl<T: RustToCuda> LendToCuda for T {
     ) -> CudaResult<O>
     where
         Self: Sized + StackOnly,
+        <Self as RustToCuda>::CudaRepresentation: StackOnly,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
     {
         let (cuda_repr, _alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
@@ -405,12 +407,12 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwned<'a, T: DeviceCopy> {
+pub struct HostAndDeviceOwned<'a, T: StackOnly + DeviceCopy> {
     device_box: &'a mut HostDeviceBox<T>,
     host_val: &'a mut T,
 }
 
-impl<'a, T: DeviceCopy> HostAndDeviceOwned<'a, T> {
+impl<'a, T: StackOnly + DeviceCopy> HostAndDeviceOwned<'a, T> {
     /// # Errors
     ///
     /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
