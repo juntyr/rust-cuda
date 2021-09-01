@@ -24,7 +24,7 @@ pub(super) fn quote_kernel_func_raw(
     }: &DeclGenerics,
     func_inputs: &FunctionInputs,
     FuncIdent { func_ident_raw, .. }: &FuncIdent,
-    func_params: &[syn::Pat],
+    func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
     func_type_errors: &[syn::Ident],
     macro_type_ids: &[syn::Ident],

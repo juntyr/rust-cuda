@@ -13,6 +13,8 @@ use generate::{
 };
 use inputs::{parse_function_inputs, FunctionInputs};
 use parse::parse_kernel_fn;
+use proc_macro2::Span;
+use syn::spanned::Spanned;
 
 #[allow(clippy::too_many_lines)]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
@@ -30,7 +32,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func = parse_kernel_fn(func);
 
     let mut generic_kernel_params = func.sig.generics.params.clone();
-    let func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
+    let mut func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
 
     let generic_trait_params = generic_kernel_params
         .iter()
@@ -113,25 +115,55 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func_params = func_inputs
         .func_inputs
         .iter()
-        .map(|arg| match arg {
-            syn::FnArg::Typed(syn::PatType { pat, .. }) => (&**pat).clone(),
+        .enumerate()
+        .map(|(i, arg)| match arg {
+            syn::FnArg::Typed(syn::PatType { pat, .. }) => match ident_from_pat(pat) {
+                Some(ident) => ident,
+                None => {
+                    syn::Ident::new(&format!("{}_arg_{}", func_ident.func_ident, i), pat.span())
+                },
+            },
             syn::FnArg::Receiver(_) => unreachable!(),
         })
         .collect::<Vec<_>>();
 
-    let func_type_errors: Vec<syn::Ident> = func_inputs
+    let pat_func_inputs = func_inputs
         .func_inputs
-        .iter()
-        .map(|arg| match arg {
-            syn::FnArg::Typed(syn::PatType { pat, .. }) => {
-                quote::format_ident!(
-                    "Kernel_parameter_{}_must_fit_into_64b_or_be_a_reference",
-                    quote::ToTokens::to_token_stream(pat)
-                        .to_string()
-                        .replace(' ', "_")
-                )
+        .iter_mut()
+        .zip(&func_params)
+        .map(|(arg, ident)| match arg {
+            syn::FnArg::Typed(syn::PatType {
+                attrs,
+                colon_token,
+                ty,
+                ..
+            }) => {
+                let ident_fn_arg = syn::FnArg::Typed(syn::PatType {
+                    attrs: attrs.clone(),
+                    pat: Box::new(syn::Pat::Ident(syn::PatIdent {
+                        attrs: Vec::new(),
+                        by_ref: None,
+                        mutability: None,
+                        ident: ident.clone(),
+                        subpat: None,
+                    })),
+                    colon_token: *colon_token,
+                    ty: ty.clone(),
+                });
+
+                std::mem::replace(arg, ident_fn_arg)
             },
             syn::FnArg::Receiver(_) => unreachable!(),
+        })
+        .collect();
+
+    let func_type_errors: Vec<syn::Ident> = func_params
+        .iter()
+        .map(|arg| {
+            quote::format_ident!(
+                "Kernel_parameter_{}_must_fit_into_64b_or_be_a_reference",
+                arg,
+            )
         })
         .collect();
 
@@ -163,7 +195,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     );
     let cuda_generic_function = quote_cuda_generic_function(
         &decl_generics,
-        &func_inputs,
+        &pat_func_inputs,
         &func_ident,
         &func.attrs,
         &func.block,
@@ -208,4 +240,49 @@ struct ImplGenerics<'f> {
 struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
     func_ident_raw: syn::Ident,
+}
+
+fn ident_from_pat(pat: &syn::Pat) -> Option<syn::Ident> {
+    match pat {
+        syn::Pat::Lit(_)
+        | syn::Pat::Macro(_)
+        | syn::Pat::Path(_)
+        | syn::Pat::Range(_)
+        | syn::Pat::Rest(_)
+        | syn::Pat::Verbatim(_)
+        | syn::Pat::Wild(_) => None,
+        syn::Pat::Ident(syn::PatIdent { ident, .. }) => Some(ident.clone()),
+        syn::Pat::Box(syn::PatBox { pat, .. })
+        | syn::Pat::Reference(syn::PatReference { pat, .. })
+        | syn::Pat::Type(syn::PatType { pat, .. }) => ident_from_pat(pat),
+        syn::Pat::Or(syn::PatOr { cases, .. }) => ident_from_pat_iter(cases.iter()),
+        syn::Pat::Slice(syn::PatSlice { elems, .. })
+        | syn::Pat::TupleStruct(syn::PatTupleStruct {
+            pat: syn::PatTuple { elems, .. },
+            ..
+        })
+        | syn::Pat::Tuple(syn::PatTuple { elems, .. }) => ident_from_pat_iter(elems.iter()),
+        syn::Pat::Struct(syn::PatStruct { fields, .. }) => {
+            ident_from_pat_iter(fields.iter().map(|field| &*field.pat))
+        },
+        #[cfg(test)]
+        syn::Pat::__TestExhaustive(_) => unimplemented!(),
+        #[cfg(not(test))]
+        _ => Err(()).ok(),
+    }
+}
+
+fn ident_from_pat_iter<'p, I: Iterator<Item = &'p syn::Pat>>(iter: I) -> Option<syn::Ident> {
+    iter.filter_map(ident_from_pat)
+        .fold(None, |acc: Option<(String, Span)>, ident| {
+            if let Some((mut str_acc, span_acc)) = acc {
+                str_acc.push('_');
+                str_acc.push_str(ident.to_string().trim_matches('_'));
+
+                Some((str_acc, span_acc.join(ident.span()).unwrap()))
+            } else {
+                Some((ident.to_string(), ident.span()))
+            }
+        })
+        .map(|(string, span)| syn::Ident::new(&string, span))
 }

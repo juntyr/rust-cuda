@@ -25,14 +25,20 @@ pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
 #[derive(rust_cuda::common::RustToCudaAsRust)]
 pub struct Empty([u8; 0]);
 
+#[repr(C)]
+pub struct Tuple(u32, i32);
+
+unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Tuple {}
+
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
 pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = DeviceCopy)] _x: &Dummy,
     #[kernel(pass = RustToCuda)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = DeviceCopy)] _z: &'a rust_cuda::utils::stack::StackOnlyWrapper<
+    #[kernel(pass = DeviceCopy)] _w @ _z: &'a rust_cuda::utils::stack::StackOnlyWrapper<
         core::sync::atomic::AtomicU64,
     >,
-    #[kernel(pass = RustToCuda)] _q: Wrapper<T>,
+    #[kernel(pass = RustToCuda)] _: Wrapper<T>,
+    #[kernel(pass = DeviceCopy)] Tuple(_s, mut __t): Tuple,
 ) where
     <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::utils::stack::StackOnly,
 {

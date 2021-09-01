@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use super::super::{DeclGenerics, FuncIdent, FunctionInputs};
+use super::super::{DeclGenerics, FuncIdent};
 
 pub(in super::super) fn quote_cuda_generic_function(
     DeclGenerics {
@@ -10,7 +10,7 @@ pub(in super::super) fn quote_cuda_generic_function(
         generic_kernel_where_clause: generic_where_clause,
         ..
     }: &DeclGenerics,
-    FunctionInputs { func_inputs, .. }: &FunctionInputs,
+    func_inputs: &syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>,
     FuncIdent { func_ident, .. }: &FuncIdent,
     func_attrs: &[syn::Attribute],
     func_block: &syn::Block,

@@ -32,7 +32,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
     }: &DeclGenerics,
     func_inputs: &FunctionInputs,
     func_ident: &FuncIdent,
-    func_params: &[syn::Pat],
+    func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
     func_type_errors: &[syn::Ident],
 ) -> TokenStream {
