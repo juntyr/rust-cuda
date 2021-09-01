@@ -12,7 +12,7 @@ pub(in super::super) fn quote_cuda_wrapper(
     }: &FunctionInputs,
     FuncIdent { func_ident, .. }: &FuncIdent,
     func_attrs: &[syn::Attribute],
-    func_params: &[syn::Pat],
+    func_params: &[syn::Ident],
     func_type_errors: &[syn::Ident],
 ) -> TokenStream {
     let arch_checks = super::arch_checks::quote_arch_checks();

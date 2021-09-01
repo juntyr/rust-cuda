@@ -1,5 +1,4 @@
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
@@ -14,7 +13,7 @@ pub(super) fn quote_kernel_func(
     }: &DeclGenerics,
     inputs @ FunctionInputs { func_inputs, .. }: &FunctionInputs,
     fn_ident @ FuncIdent { func_ident, .. }: &FuncIdent,
-    func_params: &[syn::Pat],
+    func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
@@ -90,40 +89,22 @@ fn generate_raw_func_input_wrap(
         func_input_cuda_types,
     }: &FunctionInputs,
     FuncIdent { func_ident_raw, .. }: &FuncIdent,
-    func_params: &[syn::Pat],
+    func_params: &[syn::Ident],
 ) -> TokenStream {
     func_inputs
         .iter()
+        .zip(func_params)
         .zip(func_input_cuda_types.iter())
         .rev()
         .fold(
             quote! {
                 self.#func_ident_raw(#(#func_params),*)
             },
-            |inner, (arg, (cuda_mode, _ptx_jit))| match arg {
+            |inner, ((arg, param), (cuda_mode, _ptx_jit))| match arg {
                 syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => match cuda_mode {
                     InputCudaType::DeviceCopy => {
                         if let syn::Type::Reference(..) = &**ty {
-                            let pat_box = match &**pat {
-                                syn::Pat::Ident(syn::PatIdent {
-                                    attrs,
-                                    by_ref: None,
-                                    mutability: None,
-                                    ident,
-                                    subpat: None,
-                                }) => syn::Pat::Ident(syn::PatIdent {
-                                    attrs: attrs.clone(),
-                                    by_ref: None,
-                                    mutability: None,
-                                    ident: quote::format_ident!("__{}_box", ident),
-                                    subpat: None,
-                                }),
-                                _ => abort!(
-                                    pat.span(),
-                                    "Unexpected kernel input parameter: only identifiers are \
-                                     accepted."
-                                ),
-                            };
+                            let pat_box = quote::format_ident!("__{}_box", param);
 
                             // DeviceCopy only supports immutable references
                             quote! {
