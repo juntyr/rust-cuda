@@ -18,6 +18,7 @@ edition = "2018"
 
 [features]
 default = []
+alloc = []
 host = ["rustacuda", "rust-cuda-ptx-jit/host"]
 derive = ["rustacuda_derive", "rust-cuda-derive"]
 
