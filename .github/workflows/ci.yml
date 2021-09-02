@@ -25,6 +25,11 @@ jobs:
         run: |
           cargo check
 
+      - name: Check with alloc feature on CPU
+        run: |
+          cargo check \
+            --features alloc
+
       - name: Check with derive feature on CPU
         run: |
           cargo check \
@@ -35,16 +40,22 @@ jobs:
           cargo check \
             --features host
 
-      - name: Check with host,derive features on CPU
+      - name: Check with host,derive,alloc features on CPU
         run: |
           cargo check \
-            --features host,derive
+            --features host,derive,alloc
 
       - name: Check without features on CUDA
         run: |
           cargo check \
             --target nvptx64-nvidia-cuda
-      
+
+      - name: Check with alloc feature on CUDA
+        run: |
+          cargo check \
+            --target nvptx64-nvidia-cuda \
+            --features alloc
+
       - name: Check with derive feature on CUDA
         run: |
           cargo check \
@@ -106,6 +117,12 @@ jobs:
           cargo clippy \
             -- -D warnings
 
+      - name: Check the code style with alloc feature on CPU
+        run: |
+          cargo clippy \
+            --features alloc \
+            -- -D warnings
+
       - name: Check the code style with derive feature on CPU
         run: |
           cargo clippy \
@@ -118,10 +135,10 @@ jobs:
             --features host \
             -- -D warnings
 
-      - name: Check the code style with host,derive features on CPU
+      - name: Check the code style with host,derive,alloc features on CPU
         run: |
           cargo clippy \
-            --features host,derive \
+            --features host,derive,alloc \
             -- -D warnings
 
       - name: Check the code style without features on CUDA
@@ -130,6 +147,13 @@ jobs:
             --target nvptx64-nvidia-cuda \
             -- -D warnings
       
+      - name: Check the code style with alloc feature on CUDA
+        run: |
+          cargo clippy \
+            --target nvptx64-nvidia-cuda \
+            --features alloc \
+            -- -D warnings
+
       - name: Check the code style with derive feature on CUDA
         run: |
           cargo clippy \
