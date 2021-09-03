@@ -46,6 +46,7 @@ pub(super) fn generate_raw_func_types(
                 };
 
                 if let syn::Type::Reference(syn::TypeReference {
+                    and_token,
                     lifetime,
                     mutability,
                     ..
@@ -60,16 +61,16 @@ pub(super) fn generate_raw_func_types(
                         }
 
                         quote!(
-                            rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
+                            #and_token #mutability rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
                         )
                     } else {
                         quote!(
-                            rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
+                            #and_token #mutability rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
                         )
                     };
 
                     quote! {
-                        #(#attrs)* #mutability #pat #colon_token #wrapped_type
+                        #(#attrs)* #pat #colon_token #wrapped_type
                     }
                 } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
                     let lifetime = r2c_move_lifetime(i, ty);

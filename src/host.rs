@@ -67,13 +67,14 @@ pub trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda<
         O,
+        E: From<CudaError>,
         F: FnOnce(
             HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> CudaResult<O>,
+        ) -> Result<O, E>,
     >(
         &self,
         inner: F,
-    ) -> CudaResult<O>;
+    ) -> Result<O, E>;
 
     /// Lends a mutable copy of `&mut self` to CUDA:
     /// - code in the CUDA kernel can only access `&mut self` through the
@@ -91,13 +92,14 @@ pub trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
+        E: From<CudaError>,
         F: FnOnce(
             HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> CudaResult<O>,
+        ) -> Result<O, E>,
     >(
         &mut self,
         inner: F,
-    ) -> CudaResult<O>;
+    ) -> Result<O, E>;
 
     /// Moves `self` to CUDA iff `self` is `StackOnly`
     ///
@@ -106,13 +108,14 @@ pub trait LendToCuda: RustToCuda {
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     fn move_to_cuda<
         O,
+        E: From<CudaError>,
         F: FnOnce(
             HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> CudaResult<O>,
+        ) -> Result<O, E>,
     >(
         self,
         inner: F,
-    ) -> CudaResult<O>
+    ) -> Result<O, E>
     where
         Self: Sized + StackOnly,
         <Self as RustToCuda>::CudaRepresentation: StackOnly,
@@ -122,13 +125,14 @@ pub trait LendToCuda: RustToCuda {
 impl<T: RustToCuda> LendToCuda for T {
     fn lend_to_cuda<
         O,
+        E: From<CudaError>,
         F: FnOnce(
             HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> CudaResult<O>,
+        ) -> Result<O, E>,
     >(
         &self,
         inner: F,
-    ) -> CudaResult<O> {
+    ) -> Result<O, E> {
         let (cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, inner);
@@ -141,13 +145,14 @@ impl<T: RustToCuda> LendToCuda for T {
 
     fn lend_to_cuda_mut<
         O,
+        E: From<CudaError>,
         F: FnOnce(
             HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> CudaResult<O>,
+        ) -> Result<O, E>,
     >(
         &mut self,
         inner: F,
-    ) -> CudaResult<O> {
+    ) -> Result<O, E> {
         let (mut cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
         let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, inner);
@@ -161,13 +166,14 @@ impl<T: RustToCuda> LendToCuda for T {
 
     fn move_to_cuda<
         O,
+        E: From<CudaError>,
         F: FnOnce(
             HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> CudaResult<O>,
+        ) -> Result<O, E>,
     >(
         self,
         inner: F,
-    ) -> CudaResult<O>
+    ) -> Result<O, E>
     where
         Self: Sized + StackOnly,
         <Self as RustToCuda>::CudaRepresentation: StackOnly,
@@ -359,10 +365,14 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     ///
     /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
     ///  to CUDA or an error occurs inside `inner`.
-    pub fn with_new<Q, F: for<'b> FnOnce(HostAndDeviceMutRef<'b, T>) -> CudaResult<Q>>(
+    pub fn with_new<
+        O,
+        E: From<CudaError>,
+        F: for<'b> FnOnce(HostAndDeviceMutRef<'b, T>) -> Result<O, E>,
+    >(
         host_ref: &mut T,
         inner: F,
-    ) -> CudaResult<Q> {
+    ) -> Result<O, E> {
         let mut device_box: HostDeviceBox<_> = DeviceBox::new(host_ref)?.into();
 
         // Safety: `device_box` contains exactly the device copy of `host_ref`
@@ -422,10 +432,14 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     ///
     /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
     ///  to CUDA or an error occurs inside `inner`.
-    pub fn with_new<Q, F: for<'b> FnOnce(HostAndDeviceConstRef<'b, T>) -> CudaResult<Q>>(
+    pub fn with_new<
+        O,
+        E: From<CudaError>,
+        F: for<'b> FnOnce(HostAndDeviceConstRef<'b, T>) -> Result<O, E>,
+    >(
         host_ref: &T,
         inner: F,
-    ) -> CudaResult<Q> {
+    ) -> Result<O, E> {
         let device_box: HostDeviceBox<_> = DeviceBox::new(host_ref)?.into();
 
         // Safety: `device_box` contains exactly the device copy of `host_ref`
@@ -464,10 +478,14 @@ impl<'a, T: StackOnly + DeviceCopy> HostAndDeviceOwned<'a, T> {
     ///
     /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
     ///  to CUDA or an error occurs inside `inner`.
-    pub fn with_new<Q, F: for<'b> FnOnce(HostAndDeviceOwned<'b, T>) -> CudaResult<Q>>(
+    pub fn with_new<
+        O,
+        E: From<CudaError>,
+        F: for<'b> FnOnce(HostAndDeviceOwned<'b, T>) -> Result<O, E>,
+    >(
         mut value: T,
         inner: F,
-    ) -> CudaResult<Q> {
+    ) -> Result<O, E> {
         let mut device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
 
         // Safety: `device_box` contains exactly the device copy of `value`

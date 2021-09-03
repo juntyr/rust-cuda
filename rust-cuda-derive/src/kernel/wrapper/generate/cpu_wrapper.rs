@@ -145,6 +145,7 @@ fn generate_new_func_inputs_decl(
                         };
 
                         if let syn::Type::Reference(syn::TypeReference {
+                            and_token,
                             lifetime,
                             mutability,
                             ..
@@ -152,11 +153,11 @@ fn generate_new_func_inputs_decl(
                         {
                             let wrapped_type = if mutability.is_some() {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
+                                    #and_token #mutability rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
                                 )
                             } else {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
+                                    #and_token #mutability rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
                                 )
                             };
 

@@ -113,7 +113,7 @@ fn generate_raw_func_input_wrap(
                                 );
                                 #[allow(clippy::redundant_closure_call)]
                                 // Safety: `#pat_box` contains exactly the device copy of `#pat`
-                                let __result = (|#pat| { #inner })(unsafe {
+                                let __result = (|ref #pat| { #inner })(unsafe {
                                     rust_cuda::host::HostAndDeviceConstRef::new(
                                         &#pat_box, #pat
                                     )
@@ -142,11 +142,11 @@ fn generate_raw_func_input_wrap(
                         if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                             if mutability.is_some() {
                                 quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(
-                                    #pat, |#pat| { #inner }
+                                    #pat, |ref mut #pat| { #inner }
                                 ) }
                             } else {
                                 quote! { rust_cuda::host::LendToCuda::lend_to_cuda(
-                                    #pat, |#pat| { #inner }
+                                    #pat, |ref #pat| { #inner }
                                 ) }
                             }
                         } else {
