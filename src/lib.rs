@@ -4,9 +4,10 @@
 #![feature(associated_type_bounds)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
-#![cfg_attr(any(not(feature = "host"), doc), feature(link_llvm_intrinsics))]
-#![cfg_attr(any(not(feature = "host"), doc), feature(core_intrinsics))]
-#![cfg_attr(any(not(feature = "host"), doc), feature(asm))]
+#![cfg_attr(
+    any(all(not(feature = "host"), target_os = "cuda"), doc),
+    feature(stdsimd)
+)]
 #![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]

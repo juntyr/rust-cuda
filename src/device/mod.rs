@@ -12,7 +12,6 @@ use crate::{
     utils::stack::StackOnly,
 };
 
-pub mod nvptx;
 pub mod utils;
 
 pub trait BorrowFromRust: RustToCuda {
