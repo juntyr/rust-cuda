@@ -35,7 +35,8 @@ unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Tuple {}
 pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = DeviceCopy)] _x: &Dummy,
     #[kernel(pass = RustToCuda)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = DeviceCopy)] _w @ _z: &'a rust_cuda::utils::stack::StackOnlyWrapper<
+    #[kernel(pass = RustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
+    #[kernel(pass = DeviceCopy)] _v @ _w: &'a rust_cuda::utils::stack::StackOnlyWrapper<
         core::sync::atomic::AtomicU64,
     >,
     #[kernel(pass = RustToCuda)] _: Wrapper<T>,

@@ -408,14 +408,28 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
         //          by construction of `HostAndDeviceMutRef`
         unsafe { HostAndDeviceConstRef::new(self.device_box, self.host_ref) }
     }
+
+    #[must_use]
+    pub fn as_mut(&'a mut self) -> Self {
+        // Safety: `device_box` contains EXACTLY the device copy of `host_ref`
+        //          by construction of `HostAndDeviceMutRef`
+        unsafe { Self::new(self.device_box, self.host_ref) }
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy)]
 pub struct HostAndDeviceConstRef<'a, T: DeviceCopy> {
     device_box: &'a HostDeviceBox<T>,
     host_ref: &'a T,
 }
+
+impl<'a, T: DeviceCopy> Clone for HostAndDeviceConstRef<'a, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<'a, T: DeviceCopy> Copy for HostAndDeviceConstRef<'a, T> {}
 
 impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     /// # Safety
@@ -464,6 +478,11 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     #[must_use]
     pub fn for_host(&self) -> &'a T {
         self.host_ref
+    }
+
+    #[must_use]
+    pub fn as_ref(&self) -> Self {
+        *self
     }
 }
 
