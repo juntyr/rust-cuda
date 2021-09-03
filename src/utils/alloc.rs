@@ -20,7 +20,7 @@ unsafe impl Allocator for UnifiedAllocator {
     }
 
     #[cfg(not(feature = "host"))]
-    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+    fn allocate(&self, _layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         Err(AllocError)
     }
 
