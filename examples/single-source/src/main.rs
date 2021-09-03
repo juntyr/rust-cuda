@@ -4,6 +4,7 @@
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
+#![cfg_attr(target_os = "cuda", feature(stdsimd))]
 
 extern crate alloc;
 
@@ -73,7 +74,9 @@ mod host {
 
 #[cfg(target_os = "cuda")]
 mod cuda_prelude {
-    use rust_cuda::device::{nvptx, utils};
+    use core::arch::nvptx;
+
+    use rust_cuda::device::utils;
 
     #[global_allocator]
     static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;

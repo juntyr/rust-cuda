@@ -1,16 +1,5 @@
-//! Support crate for writting GPU kernel in Rust (accel-core)
-//!
-//! - This crate works only for `nvptx64-nvidia-cuda` target
-//! - There is no support of `libstd` for `nvptx64-nvidia-cuda` target, i.e. You
-//!   need to write `#![no_std]` Rust code.
-//! - `alloc` crate is supported by `PTXAllocator` which utilizes CUDA
-//!   malloc/free system-calls
-//!   - You can use `println!` and `assert_eq!` throught it.
-
-extern crate alloc;
-
-use crate::device::nvptx;
 use alloc::alloc::{GlobalAlloc, Layout};
+use core::arch::nvptx;
 
 /// Memory allocator using CUDA malloc/free
 pub struct PTXAllocator;
@@ -30,33 +19,34 @@ unsafe impl GlobalAlloc for PTXAllocator {
 #[doc(hidden)]
 macro_rules! function {
     () => {{
-        // Okay, this is ugly, I get it. However, this is the best we can get on
-        //  stable rust.
+        // Hack to get the name of the enclosing function
         fn f() {}
         fn type_name_of<T>(_: T) -> &'static str {
             core::any::type_name::<T>()
         }
         let name = type_name_of(f);
-        // `3` is the length of the `::f`.
 
-        // TODO: Do we need a String allocation here
-        alloc::string::String::from(&name[..name.len() - 3])
+        // Remove the `::f` suffix
+        &name[..name.len() - 3]
     }};
 }
 
 /// Alternative of [`std::print!`](https://doc.rust-lang.org/std/macro.print.html) using CUDA `vprintf` system-call
+#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
-        let msg = ::alloc::format!($($arg)*);
+        let msg = $crate::alloc::format!($($arg)*);
+
         #[allow(unused_unsafe)]
         unsafe {
-            rust_cuda::device::nvptx::vprintf(msg.as_ptr(), ::core::ptr::null_mut());
+            ::core::arch::nvptx::vprintf(msg.as_ptr(), ::core::ptr::null_mut());
         }
     }
 }
 
 /// Alternative of [`std::println!`](https://doc.rust-lang.org/std/macro.println.html) using CUDA `vprintf` system-call
+#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
@@ -65,17 +55,19 @@ macro_rules! println {
 }
 
 /// Assertion in GPU kernel for one expression is true.
+#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
 #[macro_export]
 macro_rules! assert {
     ($e:expr) => {
         if !$e {
-            let msg = alloc::format!(
+            let msg = $crate::alloc::format!(
                 "\nassertion failed: {}\nexpression: {:?}",
                 stringify!($e),
                 $e,
             );
+
             unsafe {
-                rust_cuda::device::nvptx::__assert_fail(
+                ::core::arch::nvptx::__assert_fail(
                     msg.as_ptr(),
                     file!().as_ptr(),
                     line!(),
@@ -87,19 +79,21 @@ macro_rules! assert {
 }
 
 /// Assertion in GPU kernel for two expressions are equal.
+#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
 #[macro_export]
 macro_rules! assert_eq {
     ($a:expr, $b:expr) => {
         if $a != $b {
-            let msg = alloc::format!(
+            let msg = $crate::alloc::format!(
                 "\nassertion failed: ({} == {})\nleft : {:?}\nright: {:?}",
                 stringify!($a),
                 stringify!($b),
                 $a,
                 $b
             );
+
             unsafe {
-                rust_cuda::device::nvptx::__assert_fail(
+                ::core::arch::nvptx::__assert_fail(
                     msg.as_ptr(),
                     file!().as_ptr(),
                     line!(),
@@ -115,15 +109,16 @@ macro_rules! assert_eq {
 macro_rules! assert_ne {
     ($a:expr, $b:expr) => {
         if $a == $b {
-            let msg = alloc::format!(
+            let msg = $crate::alloc::format!(
                 "\nassertion failed: ({} != {})\nleft : {:?}\nright: {:?}",
                 stringify!($a),
                 stringify!($b),
                 $a,
                 $b
             );
+
             unsafe {
-                rust_cuda::device::nvptx::__assert_fail(
+                ::core::arch::nvptx::__assert_fail(
                     msg.as_ptr(),
                     file!().as_ptr(),
                     line!(),
@@ -142,7 +137,7 @@ pub struct Dim3 {
     pub z: u32,
 }
 
-/// Indices where the kernel code running on
+/// Indices that the kernel code is running on
 #[derive(Debug)]
 pub struct Idx3 {
     pub x: u32,
@@ -152,59 +147,65 @@ pub struct Idx3 {
 
 #[must_use]
 pub fn block_dim() -> Dim3 {
+    #[allow(clippy::cast_sign_loss)]
     unsafe {
         Dim3 {
-            x: nvptx::_block_dim_x(),
-            y: nvptx::_block_dim_y(),
-            z: nvptx::_block_dim_z(),
+            x: nvptx::_block_dim_x() as u32,
+            y: nvptx::_block_dim_y() as u32,
+            z: nvptx::_block_dim_z() as u32,
         }
     }
 }
 
 #[must_use]
 pub fn block_idx() -> Idx3 {
+    #[allow(clippy::cast_sign_loss)]
     unsafe {
         Idx3 {
-            x: nvptx::_block_idx_x(),
-            y: nvptx::_block_idx_y(),
-            z: nvptx::_block_idx_z(),
+            x: nvptx::_block_idx_x() as u32,
+            y: nvptx::_block_idx_y() as u32,
+            z: nvptx::_block_idx_z() as u32,
         }
     }
 }
 
 #[must_use]
 pub fn grid_dim() -> Dim3 {
+    #[allow(clippy::cast_sign_loss)]
     unsafe {
         Dim3 {
-            x: nvptx::_grid_dim_x(),
-            y: nvptx::_grid_dim_y(),
-            z: nvptx::_grid_dim_z(),
+            x: nvptx::_grid_dim_x() as u32,
+            y: nvptx::_grid_dim_y() as u32,
+            z: nvptx::_grid_dim_z() as u32,
         }
     }
 }
 
 #[must_use]
 pub fn thread_idx() -> Idx3 {
+    #[allow(clippy::cast_sign_loss)]
     unsafe {
         Idx3 {
-            x: nvptx::_thread_idx_x(),
-            y: nvptx::_thread_idx_y(),
-            z: nvptx::_thread_idx_z(),
+            x: nvptx::_thread_idx_x() as u32,
+            y: nvptx::_thread_idx_y() as u32,
+            z: nvptx::_thread_idx_z() as u32,
         }
     }
 }
 
 impl Dim3 {
     #[must_use]
-    pub fn size(&self) -> u32 {
-        self.x * self.y * self.z
+    pub fn size(&self) -> usize {
+        (self.x as usize) * (self.y as usize) * (self.z as usize)
     }
 }
 
 impl Idx3 {
     #[must_use]
-    pub fn as_id(&self, dim: &Dim3) -> u32 {
-        self.x + self.y * dim.x + self.z * dim.x * dim.y
+    pub fn as_id(&self, dim: &Dim3) -> usize {
+        (self.x as usize)
+            + (self.y as usize) * (dim.x as usize)
+            + (self.z as usize) * (dim.x as usize) * (dim.y as usize)
     }
 }
 
@@ -213,5 +214,5 @@ pub fn index() -> usize {
     let block_id = block_idx().as_id(&grid_dim());
     let thread_id = thread_idx().as_id(&block_dim());
 
-    (block_id * block_dim().size() + thread_id) as usize
+    block_id * block_dim().size() + thread_id
 }
