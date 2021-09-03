@@ -129,14 +129,9 @@ impl<T: RustToCuda> LendToCuda for T {
         &self,
         inner: F,
     ) -> CudaResult<O> {
-        let (cuda_repr, tail_alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+        let (cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
-        let device_box: HostDeviceBox<_> = DeviceBox::new(&cuda_repr)?.into();
-
-        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
-        let result = inner(unsafe { HostAndDeviceConstRef::new(&device_box, &cuda_repr) });
-
-        let alloc = CombinedCudaAlloc::new(device_box, tail_alloc);
+        let result = HostAndDeviceConstRef::with_new(&cuda_repr, inner);
 
         core::mem::drop(cuda_repr);
         core::mem::drop(alloc);
@@ -155,12 +150,8 @@ impl<T: RustToCuda> LendToCuda for T {
     ) -> CudaResult<O> {
         let (mut cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
-        let mut device_box: HostDeviceBox<_> = DeviceBox::new(&cuda_repr)?.into();
+        let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, inner);
 
-        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
-        let result = inner(unsafe { HostAndDeviceMutRef::new(&mut device_box, &mut cuda_repr) });
-
-        core::mem::drop(device_box);
         core::mem::drop(cuda_repr);
 
         let _: NullCudaAlloc = unsafe { self.restore(alloc) }?;
@@ -182,9 +173,13 @@ impl<T: RustToCuda> LendToCuda for T {
         <Self as RustToCuda>::CudaRepresentation: StackOnly,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
     {
-        let (cuda_repr, _alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+        let (cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
 
-        HostAndDeviceOwned::with_new(cuda_repr, inner)
+        let result = HostAndDeviceOwned::with_new(cuda_repr, inner);
+
+        core::mem::drop(alloc);
+
+        result
     }
 }
 
@@ -360,6 +355,30 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
         }
     }
 
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
+    ///  to CUDA or an error occurs inside `inner`.
+    pub fn with_new<Q, F: for<'b> FnOnce(HostAndDeviceMutRef<'b, T>) -> CudaResult<Q>>(
+        host_ref: &mut T,
+        inner: F,
+    ) -> CudaResult<Q> {
+        let mut device_box: HostDeviceBox<_> = DeviceBox::new(host_ref)?.into();
+
+        // Safety: `device_box` contains exactly the device copy of `host_ref`
+        let result = inner(HostAndDeviceMutRef {
+            device_box: &mut device_box,
+            host_ref,
+        });
+
+        // Copy back any changes made
+        device_box.copy_to(host_ref)?;
+
+        core::mem::drop(device_box);
+
+        result
+    }
+
     #[must_use]
     pub fn for_device(&mut self) -> DeviceMutRef<'a, T> {
         DeviceMutRef {
@@ -369,8 +388,15 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host<'s: 'a>(&'s mut self) -> &'a T {
+    pub fn for_host(&'a mut self) -> &'a T {
         self.host_ref
+    }
+
+    #[must_use]
+    pub fn as_ref(&'a self) -> HostAndDeviceConstRef<'a, T> {
+        // Safety: `device_box` contains EXACTLY the device copy of `host_ref`
+        //          by construction of `HostAndDeviceMutRef`
+        unsafe { HostAndDeviceConstRef::new(self.device_box, self.host_ref) }
     }
 }
 
@@ -390,6 +416,27 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
             device_box,
             host_ref,
         }
+    }
+
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved
+    ///  to CUDA or an error occurs inside `inner`.
+    pub fn with_new<Q, F: for<'b> FnOnce(HostAndDeviceConstRef<'b, T>) -> CudaResult<Q>>(
+        host_ref: &T,
+        inner: F,
+    ) -> CudaResult<Q> {
+        let device_box: HostDeviceBox<_> = DeviceBox::new(host_ref)?.into();
+
+        // Safety: `device_box` contains exactly the device copy of `host_ref`
+        let result = inner(HostAndDeviceConstRef {
+            device_box: &device_box,
+            host_ref,
+        });
+
+        core::mem::drop(device_box);
+
+        result
     }
 
     #[must_use]
@@ -423,13 +470,14 @@ impl<'a, T: StackOnly + DeviceCopy> HostAndDeviceOwned<'a, T> {
     ) -> CudaResult<Q> {
         let mut device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
 
-        // Safety: `device_box` contains exactly the device copy of `cuda_repr`
+        // Safety: `device_box` contains exactly the device copy of `value`
         let result = inner(HostAndDeviceOwned {
             device_box: &mut device_box,
             host_val: &mut value,
         });
 
         core::mem::drop(device_box);
+        core::mem::drop(value);
 
         result
     }
@@ -443,7 +491,7 @@ impl<'a, T: StackOnly + DeviceCopy> HostAndDeviceOwned<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host<'s: 'a>(&'s mut self) -> &'a T {
+    pub fn for_host(&'a mut self) -> &'a T {
         self.host_val
     }
 }
