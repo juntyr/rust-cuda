@@ -1,8 +1,6 @@
 use alloc::alloc::{AllocError, Allocator, Layout};
 use core::ptr::NonNull;
 
-use rustacuda_core::DeviceCopy;
-
 pub struct UnifiedAllocator;
 
 unsafe impl Allocator for UnifiedAllocator {
@@ -44,7 +42,9 @@ unsafe impl Allocator for UnifiedAllocator {
 }
 
 #[cfg(feature = "host")]
-fn alloc_unified_aligned<T: DeviceCopy>(size: usize) -> Result<NonNull<[u8]>, AllocError> {
+fn alloc_unified_aligned<T: rustacuda_core::DeviceCopy>(
+    size: usize,
+) -> Result<NonNull<[u8]>, AllocError> {
     use rustacuda::memory::cuda_malloc_unified;
 
     match unsafe { cuda_malloc_unified::<T>(size) } {
