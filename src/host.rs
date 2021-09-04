@@ -401,7 +401,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host<'b: 'a>(&'b mut self) -> &'a T {
+    pub fn for_host<'b: 'a>(&'b self) -> &'a T {
         self.host_ref
     }
 

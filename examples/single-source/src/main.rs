@@ -5,6 +5,7 @@
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
+#![cfg_attr(target_os = "cuda", feature(asm))]
 
 extern crate alloc;
 
@@ -34,9 +35,9 @@ unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Tuple {}
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
 pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = DeviceCopy)] _x: &Dummy,
-    #[kernel(pass = RustToCuda)] _y: &mut ShallowCopy<Wrapper<T>>,
+    #[kernel(pass = RustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
     #[kernel(pass = RustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = DeviceCopy)] _v @ _w: &'a rust_cuda::utils::stack::StackOnlyWrapper<
+    #[kernel(pass = DeviceCopy, jit)] _v @ _w: &'a rust_cuda::utils::stack::StackOnlyWrapper<
         core::sync::atomic::AtomicU64,
     >,
     #[kernel(pass = RustToCuda)] _: Wrapper<T>,
