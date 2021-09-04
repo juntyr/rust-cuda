@@ -390,7 +390,10 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_device(&mut self) -> DeviceMutRef<'a, T> {
+    pub fn for_device<'b>(&'b mut self) -> DeviceMutRef<'a, T>
+    where
+        'a: 'b,
+    {
         DeviceMutRef {
             pointer: self.device_box.0.as_raw_mut(),
             reference: PhantomData,
@@ -398,22 +401,28 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&'a mut self) -> &'a T {
+    pub fn for_host<'b: 'a>(&'b mut self) -> &'a T {
         self.host_ref
     }
 
     #[must_use]
-    pub fn as_ref(&'a self) -> HostAndDeviceConstRef<'a, T> {
+    pub fn as_ref<'b>(&'b self) -> HostAndDeviceConstRef<'b, T>
+    where
+        'a: 'b,
+    {
         // Safety: `device_box` contains EXACTLY the device copy of `host_ref`
         //          by construction of `HostAndDeviceMutRef`
         unsafe { HostAndDeviceConstRef::new(self.device_box, self.host_ref) }
     }
 
     #[must_use]
-    pub fn as_mut(&'a mut self) -> Self {
+    pub fn as_mut<'b>(&'b mut self) -> HostAndDeviceMutRef<'b, T>
+    where
+        'a: 'b,
+    {
         // Safety: `device_box` contains EXACTLY the device copy of `host_ref`
         //          by construction of `HostAndDeviceMutRef`
-        unsafe { Self::new(self.device_box, self.host_ref) }
+        unsafe { HostAndDeviceMutRef::new(self.device_box, self.host_ref) }
     }
 }
 
@@ -468,7 +477,10 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_device(&self) -> DeviceConstRef<'a, T> {
+    pub fn for_device<'b>(&'b self) -> DeviceConstRef<'a, T>
+    where
+        'a: 'b,
+    {
         DeviceConstRef {
             pointer: self.device_box.0.as_raw(),
             reference: PhantomData,
@@ -476,12 +488,15 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&self) -> &'a T {
+    pub fn for_host(&'a self) -> &'a T {
         self.host_ref
     }
 
     #[must_use]
-    pub fn as_ref(&self) -> Self {
+    pub fn as_ref<'b>(&'b self) -> HostAndDeviceConstRef<'b, T>
+    where
+        'a: 'b,
+    {
         *self
     }
 }
