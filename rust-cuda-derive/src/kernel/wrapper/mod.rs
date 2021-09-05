@@ -34,6 +34,16 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut generic_kernel_params = func.sig.generics.params.clone();
     let mut func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
 
+    let (generic_start_token, generic_close_token) = if generic_kernel_params.is_empty() {
+        (None, None)
+    } else if let (Some(start), Some(close)) =
+        (func.sig.generics.lt_token, func.sig.generics.gt_token)
+    {
+        (Some(start), Some(close))
+    } else {
+        (Some(syn::parse_quote!(<)), Some(syn::parse_quote!(>)))
+    };
+
     let generic_trait_params = generic_kernel_params
         .iter()
         .filter(|generic_param| !matches!(generic_param, syn::GenericParam::Lifetime(_)))
@@ -82,9 +92,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     );
 
     let decl_generics = DeclGenerics {
-        generic_start_token: &func.sig.generics.lt_token,
+        generic_start_token: &generic_start_token,
         generic_trait_params: &generic_trait_params,
-        generic_close_token: &func.sig.generics.gt_token,
+        generic_close_token: &generic_close_token,
         generic_trait_where_clause: &generic_trait_where_clause,
         generic_wrapper_params: &generic_wrapper_params,
         generic_wrapper_where_clause: &generic_wrapper_where_clause,
@@ -92,9 +102,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         generic_kernel_where_clause,
     };
     let trait_generics = syn::Generics {
-        lt_token: func.sig.generics.lt_token,
+        lt_token: generic_start_token,
         params: generic_trait_params.clone(),
-        gt_token: func.sig.generics.gt_token,
+        gt_token: generic_close_token,
         where_clause: generic_trait_where_clause.clone(),
     };
     let impl_generics = {
