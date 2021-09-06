@@ -26,3 +26,55 @@ pub use host::CudaExchangeBufferHost;
 pub use device::CudaExchangeBufferDevice;
 
 pub use common::CudaExchangeBufferCudaRepresentation;
+use rustacuda_core::DeviceCopy;
+
+#[repr(transparent)]
+#[derive(Clone)]
+pub struct CudaExchangeItem<T: DeviceCopy, const M2D: bool, const M2H: bool>(T);
+
+// Safety: Transparent newtype wrapper around `DeviceCopy`
+//          is still `DeviceCopy`
+unsafe impl<T: DeviceCopy, const M2D: bool, const M2H: bool> DeviceCopy
+    for CudaExchangeItem<T, M2D, M2H>
+{
+}
+
+impl<T: DeviceCopy> CudaExchangeItem<T, false, false> {}
+
+impl<T: DeviceCopy> CudaExchangeItem<T, false, true> {
+    #[cfg(any(feature = "host", doc))]
+    #[doc(cfg(feature = "host"))]
+    pub fn read(&self) -> &T {
+        &self.0
+    }
+
+    #[cfg(any(not(feature = "host"), doc))]
+    #[doc(cfg(not(feature = "host")))]
+    pub fn write(&mut self, value: T) {
+        self.0 = value;
+    }
+}
+
+impl<T: DeviceCopy> CudaExchangeItem<T, true, false> {
+    #[cfg(any(not(feature = "host"), doc))]
+    #[doc(cfg(not(feature = "host")))]
+    pub fn read(&self) -> &T {
+        &self.0
+    }
+
+    #[cfg(any(feature = "host", doc))]
+    #[doc(cfg(feature = "host"))]
+    pub fn write(&mut self, value: T) {
+        self.0 = value;
+    }
+}
+
+impl<T: DeviceCopy> CudaExchangeItem<T, true, true> {
+    pub fn read(&self) -> &T {
+        &self.0
+    }
+
+    pub fn write(&mut self, value: T) {
+        self.0 = value;
+    }
+}
