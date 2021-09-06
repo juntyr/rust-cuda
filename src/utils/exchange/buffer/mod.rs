@@ -39,9 +39,7 @@ unsafe impl<T: DeviceCopy, const M2D: bool, const M2H: bool> DeviceCopy
 {
 }
 
-impl<T: DeviceCopy> CudaExchangeItem<T, false, false> {}
-
-impl<T: DeviceCopy> CudaExchangeItem<T, false, true> {
+impl<T: DeviceCopy, const M2D: bool> CudaExchangeItem<T, M2D, true> {
     #[cfg(any(feature = "host", doc))]
     #[doc(cfg(feature = "host"))]
     pub fn read(&self) -> &T {
@@ -55,7 +53,7 @@ impl<T: DeviceCopy> CudaExchangeItem<T, false, true> {
     }
 }
 
-impl<T: DeviceCopy> CudaExchangeItem<T, true, false> {
+impl<T: DeviceCopy, const M2H: bool> CudaExchangeItem<T, true, M2H> {
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
     pub fn read(&self) -> &T {
@@ -64,16 +62,6 @@ impl<T: DeviceCopy> CudaExchangeItem<T, true, false> {
 
     #[cfg(any(feature = "host", doc))]
     #[doc(cfg(feature = "host"))]
-    pub fn write(&mut self, value: T) {
-        self.0 = value;
-    }
-}
-
-impl<T: DeviceCopy> CudaExchangeItem<T, true, true> {
-    pub fn read(&self) -> &T {
-        &self.0
-    }
-
     pub fn write(&mut self, value: T) {
         self.0 = value;
     }
