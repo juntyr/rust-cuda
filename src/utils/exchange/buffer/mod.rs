@@ -66,3 +66,9 @@ impl<T: DeviceCopy, const M2H: bool> CudaExchangeItem<T, true, M2H> {
         self.0 = value;
     }
 }
+
+impl<T: DeviceCopy> AsMut<T> for CudaExchangeItem<T, true, true> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
