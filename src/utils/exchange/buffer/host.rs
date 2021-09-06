@@ -16,18 +16,21 @@ use crate::{
     host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
 };
 
-use super::CudaExchangeBufferCudaRepresentation;
+use super::{CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct CudaExchangeBufferHost<T: DeviceCopy> {
-    host_buffer: CudaDropWrapper<LockedBuffer<T>>,
-    device_buffer: UnsafeCell<CudaDropWrapper<DeviceBuffer<T>>>,
+pub struct CudaExchangeBufferHost<T: DeviceCopy, const M2D: bool, const M2H: bool> {
+    host_buffer: CudaDropWrapper<LockedBuffer<CudaExchangeItem<T, M2D, M2H>>>,
+    device_buffer: UnsafeCell<CudaDropWrapper<DeviceBuffer<CudaExchangeItem<T, M2D, M2H>>>>,
 }
 
-impl<T: Clone + DeviceCopy> CudaExchangeBufferHost<T> {
+impl<T: Clone + DeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBufferHost<T, M2D, M2H> {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(elem: &T, capacity: usize) -> CudaResult<Self> {
+        // Safety: CudaExchangeItem is a `repr(transparent)` wrapper around T
+        let elem: &CudaExchangeItem<T, M2D, M2H> = unsafe { &*(elem as *const T).cast() };
+
         let host_buffer = CudaDropWrapper::from(LockedBuffer::new(elem, capacity)?);
         let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
@@ -40,7 +43,7 @@ impl<T: Clone + DeviceCopy> CudaExchangeBufferHost<T> {
     }
 }
 
-impl<T: DeviceCopy> CudaExchangeBufferHost<T> {
+impl<T: DeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBufferHost<T, M2D, M2H> {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn from_vec(vec: Vec<T>) -> CudaResult<Self> {
@@ -48,7 +51,7 @@ impl<T: DeviceCopy> CudaExchangeBufferHost<T> {
             CudaDropWrapper::from(unsafe { LockedBuffer::uninitialized(vec.len())? });
 
         for (src, dst) in vec.into_iter().zip(host_buffer_uninit.iter_mut()) {
-            *dst = src;
+            *dst = CudaExchangeItem(src);
         }
 
         let host_buffer = host_buffer_uninit;
@@ -64,23 +67,29 @@ impl<T: DeviceCopy> CudaExchangeBufferHost<T> {
     }
 }
 
-impl<T: DeviceCopy> Deref for CudaExchangeBufferHost<T> {
-    type Target = [T];
+impl<T: DeviceCopy, const M2D: bool, const M2H: bool> Deref
+    for CudaExchangeBufferHost<T, M2D, M2H>
+{
+    type Target = [CudaExchangeItem<T, M2D, M2H>];
 
     fn deref(&self) -> &Self::Target {
         self.host_buffer.as_slice()
     }
 }
 
-impl<T: DeviceCopy> DerefMut for CudaExchangeBufferHost<T> {
+impl<T: DeviceCopy, const M2D: bool, const M2H: bool> DerefMut
+    for CudaExchangeBufferHost<T, M2D, M2H>
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.host_buffer.as_mut_slice()
     }
 }
 
-unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
+unsafe impl<T: DeviceCopy, const M2D: bool, const M2H: bool> RustToCuda
+    for CudaExchangeBufferHost<T, M2D, M2H>
+{
     type CudaAllocation = NullCudaAlloc;
-    type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T>;
+    type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
 
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
@@ -90,13 +99,18 @@ unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        use rustacuda::memory::CopyDestination;
-
         // Safety: device_buffer is inside an UnsafeCell
         //         borrow checks must be satisfied through LendToCuda
         let device_buffer = &mut *self.device_buffer.get();
 
-        device_buffer.copy_from(self.host_buffer.as_slice())?;
+        if M2D {
+            // Only move the buffer contents to the device if needed
+
+            rustacuda::memory::CopyDestination::copy_from(
+                &mut ***device_buffer,
+                self.host_buffer.as_slice(),
+            )?;
+        }
 
         Ok((
             DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
@@ -112,13 +126,16 @@ unsafe impl<T: DeviceCopy> RustToCuda for CudaExchangeBufferHost<T> {
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
-        use rustacuda::memory::CopyDestination;
-
         let (_alloc_front, alloc_tail) = alloc.split();
 
-        self.device_buffer
-            .get_mut()
-            .copy_to(self.host_buffer.as_mut_slice())?;
+        if M2H {
+            // Only move the buffer contents back to the host if needed
+
+            rustacuda::memory::CopyDestination::copy_to(
+                &***self.device_buffer.get_mut(),
+                self.host_buffer.as_mut_slice(),
+            )?;
+        }
 
         Ok(alloc_tail)
     }
