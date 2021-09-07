@@ -18,7 +18,7 @@ edition = "2018"
 
 [features]
 default = []
-alloc = []
+alloc = ["hashbrown"]
 host = ["rustacuda", "rust-cuda-ptx-jit/host"]
 derive = ["rustacuda_derive", "rust-cuda-derive"]
 
@@ -29,6 +29,7 @@ rustacuda = { version = "0.1.3", optional = true }
 rustacuda_derive = { version = "0.1.2", optional = true }
 
 final = { git = "https://github.com/MomoLangenstein/final", rev = "a2dbfd6" }
+hashbrown = { version = "0.11", optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }

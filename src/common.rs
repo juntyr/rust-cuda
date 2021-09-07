@@ -19,6 +19,8 @@ pub use rust_cuda_derive::RustToCudaAsRust;
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::kernel;
 
+#[cfg(all(feature = "alloc", feature = "host"))]
+use crate::utils::alloc::unified::{StackOrUnified, StackOrUnifiedWrapper};
 #[cfg(feature = "host")]
 use crate::utils::stack::{StackOnly, StackOnlyWrapper};
 
@@ -45,6 +47,19 @@ impl<T: StackOnly> From<&T> for DeviceAccessible<StackOnlyWrapper<T>> {
         };
 
         Self(StackOnlyWrapper::from(value))
+    }
+}
+
+#[cfg(all(feature = "alloc", feature = "host"))]
+impl<T: StackOrUnified> From<&T> for DeviceAccessible<StackOrUnifiedWrapper<T>> {
+    fn from(value: &T) -> Self {
+        let value = unsafe {
+            let mut uninit = MaybeUninit::uninit();
+            copy_nonoverlapping(value, uninit.as_mut_ptr(), 1);
+            uninit.assume_init()
+        };
+
+        Self(StackOrUnifiedWrapper::from(value))
     }
 }
 

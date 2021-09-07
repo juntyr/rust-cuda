@@ -29,7 +29,7 @@ pub use common::CudaExchangeBufferCudaRepresentation;
 use rustacuda_core::DeviceCopy;
 
 #[repr(transparent)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct CudaExchangeItem<T: DeviceCopy, const M2D: bool, const M2H: bool>(T);
 
 // Safety: Transparent newtype wrapper around `DeviceCopy`

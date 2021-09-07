@@ -31,8 +31,8 @@ use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 /// assert_stackonly(&42);
 /// ```
 #[allow(clippy::module_name_repetitions)]
-pub trait StackOnly: private::StackOnly {}
-impl<T: private::StackOnly> StackOnly for T {}
+pub trait StackOnly: sealed::StackOnly {}
+impl<T: sealed::StackOnly> StackOnly for T {}
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -110,7 +110,7 @@ unsafe impl<T: StackOnly> CudaAsRust for StackOnlyWrapper<T> {
     }
 }
 
-mod private {
+mod sealed {
     pub auto trait StackOnly {}
 
     impl<T> !StackOnly for *const T {}

@@ -1,6 +1,7 @@
 use alloc::alloc::{AllocError, Allocator, Layout};
 use core::ptr::NonNull;
 
+#[allow(clippy::module_name_repetitions)]
 pub struct UnifiedAllocator;
 
 unsafe impl Allocator for UnifiedAllocator {
