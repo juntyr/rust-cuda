@@ -14,21 +14,31 @@ use ptx_builder::{
 use super::utils::skip_kernel_compilation;
 
 mod config;
-use config::LinkKernelConfig;
+use config::{CheckKernelConfig, LinkKernelConfig};
+
+pub fn check_kernel(tokens: TokenStream) -> TokenStream {
+    let CheckKernelConfig {
+        kernel,
+        crate_name,
+        crate_path,
+    } = match syn::parse_macro_input::parse(tokens) {
+        Ok(config) => config,
+        Err(err) => {
+            abort_call_site!(
+                "check_kernel!(KERNEL NAME PATH) expects KERNEL identifier, NAME and PATH string \
+                 literals: {:?}",
+                err
+            )
+        },
+    };
+
+    let _kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, None);
+
+    TokenStream::new()
+}
 
 #[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
-    static mut EARLY_ABORT: bool = false;
-
-    // Check if another invocation of the kernel compilation
-    //  has already failed, if so abort early
-    if unsafe { EARLY_ABORT } {
-        return (quote! {
-            "ABORT in earlier PTX compilation"
-        })
-        .into();
-    }
-
     proc_macro_error::set_dummy(quote! {
         "ERROR in this PTX compilation"
     });
@@ -49,6 +59,17 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
+    let kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, Some(&specialisation));
+
+    (quote! { #kernel_ptx }).into()
+}
+
+fn compile_kernel(
+    kernel: &syn::Ident,
+    crate_name: &str,
+    crate_path: &Path,
+    specialisation: Option<&str>,
+) -> String {
     let colourful = match std::env::var_os("TERM") {
         None => false,
         Some(term) if term == "dumb" => false,
@@ -65,13 +86,13 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         kernel.to_string().to_uppercase()
     );
 
-    let kernel_ptx = match build_kernel_with_specialisation(
-        &crate_path,
+    match build_kernel_with_specialisation(
+        crate_path,
         &specialisation_var,
         if skip_kernel_compilation() {
             None
         } else {
-            specialisation.as_deref()
+            specialisation
         },
         colourful,
     ) {
@@ -87,11 +108,6 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
             kernel_ptx
         },
         Err(err) => {
-            // Reduce duplicate errors by setting the shared failure flag
-            unsafe {
-                EARLY_ABORT = true;
-            }
-
             let mut error_printer = ErrorLogPrinter::print(err);
 
             if !colourful {
@@ -100,9 +116,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
             abort_call_site!(error_printer);
         },
-    };
-
-    (quote! { #kernel_ptx }).into()
+    }
 }
 
 fn build_kernel_with_specialisation(
@@ -111,7 +125,9 @@ fn build_kernel_with_specialisation(
     specialisation: Option<&str>,
     colourful: bool,
 ) -> Result<PathBuf> {
-    env::set_var(env_var, specialisation.unwrap_or(""));
+    if let Some(specialisation) = specialisation {
+        env::set_var(env_var, specialisation);
+    }
 
     let mut builder = Builder::new(kernel_path)?;
 

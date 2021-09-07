@@ -58,6 +58,12 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
 
 #[proc_macro_error]
 #[proc_macro]
+pub fn check_kernel(tokens: TokenStream) -> TokenStream {
+    kernel::link::check_kernel(tokens)
+}
+
+#[proc_macro_error]
+#[proc_macro]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     kernel::link::link_kernel(tokens)
 }

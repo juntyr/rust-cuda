@@ -186,6 +186,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_ident,
         &func.attrs,
     );
+    let cpu_cuda_check = quote_generic_check(&config);
     let cpu_linker_macro = quote_cpu_linker_macro(
         &config,
         &decl_generics,
@@ -214,6 +215,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     (quote! {
         #args_trait
         #cpu_wrapper
+
+        #cpu_cuda_check
 
         #cpu_linker_macro
 
@@ -295,4 +298,19 @@ fn ident_from_pat_iter<'p, I: Iterator<Item = &'p syn::Pat>>(iter: I) -> Option<
             }
         })
         .map(|(string, span)| syn::Ident::new(&string, span))
+}
+
+fn quote_generic_check(KernelConfig { args, .. }: &KernelConfig) -> proc_macro2::TokenStream {
+    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
+        Ok(crate_name) => crate_name.to_uppercase(),
+        Err(err) => abort_call_site!("Failed to read crate name: {:?}.", err),
+    };
+
+    let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
+        .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
+
+    quote! {
+        #[cfg(not(target_os = "cuda"))]
+        rust_cuda::host::check_kernel! { #args #crate_name #crate_manifest_dir }
+    }
 }

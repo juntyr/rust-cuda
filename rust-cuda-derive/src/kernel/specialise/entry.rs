@@ -1,6 +1,6 @@
-use proc_macro::TokenStream;
+use std::env::VarError;
 
-use super::super::utils::skip_kernel_compilation;
+use proc_macro::TokenStream;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStream {
@@ -18,10 +18,6 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
             err
         ),
     };
-
-    if skip_kernel_compilation() {
-        return (quote! {}).into();
-    }
 
     let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
@@ -43,11 +39,12 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
                 seahash::hash(specialisation.as_bytes())
             )
         },
-        Err(err) => abort_call_site!(
+        Err(err @ VarError::NotUnicode(_)) => abort_call_site!(
             "Failed to read specialisation from {:?}: {:?}",
             &specialisation_var,
             err
         ),
+        Err(VarError::NotPresent) => return TokenStream::new(),
     };
 
     (quote! { #func }).into()
