@@ -11,24 +11,13 @@ pub(super) fn quote_get_ptx_str(
     }: &DeclGenerics,
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
-    let crate_name = match std::env::var("CARGO_CRATE_NAME") {
+    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
         Err(err) => abort_call_site!("Failed to read crate name: {:?}.", err),
     };
 
-    let crate_manifest_dir = match std::env::var_os("CARGO_MANIFEST_DIR") {
-        Some(crate_manifest_dir) => {
-            let crate_manifest_dir = format!("{:?}", crate_manifest_dir);
-
-            crate_manifest_dir
-                .strip_prefix('"')
-                .unwrap()
-                .strip_suffix('"')
-                .unwrap()
-                .to_owned()
-        },
-        None => abort_call_site!("Failed to read crate path: NotPresent."),
-    };
+    let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
+        .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
 
     quote! {
         fn get_ptx_str() -> &'static str {
