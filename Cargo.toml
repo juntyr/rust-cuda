@@ -33,3 +33,6 @@ hashbrown = { version = "0.11", optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }
+
+[dev-dependencies]
+hashbrown = "0.11"

@@ -117,6 +117,7 @@ fn build_kernel_with_specialisation(
 
     if !colourful {
         builder = builder.disable_colors();
+        builder = builder.set_error_format(ptx_builder::builder::ErrorFormat::JSON);
     }
 
     match builder.build()? {
