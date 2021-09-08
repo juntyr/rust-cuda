@@ -19,7 +19,7 @@ impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     }
 }
 
-// Safety: If T is DeviceCopy, then the newtype struct can be DeviceCopy as well
+// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`
 unsafe impl<T: DeviceCopy, const STRIDE: usize> DeviceCopy
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {

@@ -1,7 +1,5 @@
 pub use r#final::Final;
 
-use rustacuda_core::DeviceCopy;
-
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
 #[repr(transparent)]
@@ -9,8 +7,8 @@ use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 #[allow(clippy::module_name_repetitions)]
 pub struct FinalCudaRepresentation<T: CudaAsRust>(DeviceAccessible<T>);
 
-// Safety: If T is DeviceCopy, then the newtype struct can be DeviceCopy as well
-unsafe impl<T: CudaAsRust> DeviceCopy for FinalCudaRepresentation<T> {}
+// Safety: If `T` is `CudaAsRust`, then the newtype struct is `DeviceCopy`
+unsafe impl<T: CudaAsRust> rustacuda_core::DeviceCopy for FinalCudaRepresentation<T> {}
 
 unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
     #[cfg(feature = "host")]
