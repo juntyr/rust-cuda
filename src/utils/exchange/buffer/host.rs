@@ -9,22 +9,23 @@ use rustacuda::{
     memory::{DeviceBuffer, LockedBuffer},
 };
 
-use rustacuda_core::DeviceCopy;
-
 use crate::{
     common::{DeviceAccessible, RustToCuda},
     host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
+    utils::SafeDeviceCopy,
 };
 
 use super::{CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
-pub struct CudaExchangeBufferHost<T: DeviceCopy, const M2D: bool, const M2H: bool> {
+pub struct CudaExchangeBufferHost<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> {
     host_buffer: CudaDropWrapper<LockedBuffer<CudaExchangeItem<T, M2D, M2H>>>,
     device_buffer: UnsafeCell<CudaDropWrapper<DeviceBuffer<CudaExchangeItem<T, M2D, M2H>>>>,
 }
 
-impl<T: Clone + DeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBufferHost<T, M2D, M2H> {
+impl<T: Clone + SafeDeviceCopy, const M2D: bool, const M2H: bool>
+    CudaExchangeBufferHost<T, M2D, M2H>
+{
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(elem: &T, capacity: usize) -> CudaResult<Self> {
@@ -43,7 +44,7 @@ impl<T: Clone + DeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBuffer
     }
 }
 
-impl<T: DeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBufferHost<T, M2D, M2H> {
+impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBufferHost<T, M2D, M2H> {
     /// # Errors
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn from_vec(vec: Vec<T>) -> CudaResult<Self> {
@@ -67,7 +68,7 @@ impl<T: DeviceCopy, const M2D: bool, const M2H: bool> CudaExchangeBufferHost<T, 
     }
 }
 
-impl<T: DeviceCopy, const M2D: bool, const M2H: bool> Deref
+impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> Deref
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
     type Target = [CudaExchangeItem<T, M2D, M2H>];
@@ -77,7 +78,7 @@ impl<T: DeviceCopy, const M2D: bool, const M2H: bool> Deref
     }
 }
 
-impl<T: DeviceCopy, const M2D: bool, const M2H: bool> DerefMut
+impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> DerefMut
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -85,7 +86,7 @@ impl<T: DeviceCopy, const M2D: bool, const M2H: bool> DerefMut
     }
 }
 
-unsafe impl<T: DeviceCopy, const M2D: bool, const M2H: bool> RustToCuda
+unsafe impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> RustToCuda
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
     type CudaAllocation = NullCudaAlloc;

@@ -19,10 +19,8 @@ pub use rust_cuda_derive::RustToCudaAsRust;
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::kernel;
 
-#[cfg(all(feature = "alloc", feature = "host"))]
-use crate::utils::alloc::unified::{StackOrUnified, StackOrUnifiedWrapper};
 #[cfg(feature = "host")]
-use crate::utils::stack::{StackOnly, StackOnlyWrapper};
+use crate::utils::{SafeDeviceCopy, SafeDeviceCopyWrapper};
 
 #[repr(transparent)]
 #[cfg_attr(not(feature = "host"), derive(Debug))]
@@ -31,14 +29,14 @@ pub struct DeviceAccessible<T: ?Sized + DeviceCopy>(T);
 unsafe impl<T: ?Sized + DeviceCopy> DeviceCopy for DeviceAccessible<T> {}
 
 #[cfg(feature = "host")]
-impl<T: DeviceCopy> From<T> for DeviceAccessible<T> {
+impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
     fn from(value: T) -> Self {
         Self(value)
     }
 }
 
 #[cfg(feature = "host")]
-impl<T: StackOnly> From<&T> for DeviceAccessible<StackOnlyWrapper<T>> {
+impl<T: SafeDeviceCopy> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
     fn from(value: &T) -> Self {
         let value = unsafe {
             let mut uninit = MaybeUninit::uninit();
@@ -46,20 +44,7 @@ impl<T: StackOnly> From<&T> for DeviceAccessible<StackOnlyWrapper<T>> {
             uninit.assume_init()
         };
 
-        Self(StackOnlyWrapper::from(value))
-    }
-}
-
-#[cfg(all(feature = "alloc", feature = "host"))]
-impl<T: StackOrUnified> From<&T> for DeviceAccessible<StackOrUnifiedWrapper<T>> {
-    fn from(value: &T) -> Self {
-        let value = unsafe {
-            let mut uninit = MaybeUninit::uninit();
-            copy_nonoverlapping(value, uninit.as_mut_ptr(), 1);
-            uninit.assume_init()
-        };
-
-        Self(StackOrUnifiedWrapper::from(value))
+        Self(SafeDeviceCopyWrapper::from(value))
     }
 }
 

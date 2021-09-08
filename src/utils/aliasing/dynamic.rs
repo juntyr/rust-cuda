@@ -22,7 +22,7 @@ impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
     }
 }
 
-// Safety: If T is DeviceCopy, then the entire struct can be DeviceCopy as well
+// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`
 unsafe impl<T: DeviceCopy> DeviceCopy for SplitSliceOverCudaThreadsDynamicStride<T> {}
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]

@@ -1,8 +1,10 @@
-use rustacuda_core::DeviceCopy;
+use crate::{
+    common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy},
+    utils::{SafeDeviceCopy, SafeDeviceCopyWrapper},
+};
 
-use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy};
-
-use super::stack::{StackOnly, StackOnlyWrapper};
+#[cfg(feature = "host")]
+use crate::{host::CombinedCudaAlloc, host::CudaAlloc, rustacuda::error::CudaResult};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
@@ -14,7 +16,7 @@ pub enum OptionCudaRepresentation<T: CudaAsRust> {
 
 // Safety: Since the CUDA representation of T is DeviceCopy,
 //         the full enum is also DeviceCopy
-unsafe impl<T: CudaAsRust> DeviceCopy for OptionCudaRepresentation<T> {}
+unsafe impl<T: CudaAsRust> rustacuda_core::DeviceCopy for OptionCudaRepresentation<T> {}
 
 unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     #[cfg(feature = "host")]
@@ -25,17 +27,17 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: crate::host::CudaAlloc>(
+    unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let (cuda_repr, alloc) = match self {
             None => (
                 OptionCudaRepresentation::None,
-                crate::host::CombinedCudaAlloc::new(None, alloc),
+                CombinedCudaAlloc::new(None, alloc),
             ),
             Some(value) => {
                 let (cuda_repr, alloc) = value.borrow(alloc)?;
@@ -44,7 +46,7 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 
                 (
                     OptionCudaRepresentation::Some(cuda_repr),
-                    crate::host::CombinedCudaAlloc::new(Some(alloc_front), alloc_tail),
+                    CombinedCudaAlloc::new(Some(alloc_front), alloc_tail),
                 )
             },
         };
@@ -54,15 +56,15 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A> {
+        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+    ) -> CudaResult<A> {
         let (alloc_front, alloc_tail) = alloc.split();
 
         match (self, alloc_front) {
             (Some(value), Some(alloc_front)) => {
-                value.restore(crate::host::CombinedCudaAlloc::new(alloc_front, alloc_tail))
+                value.restore(CombinedCudaAlloc::new(alloc_front, alloc_tail))
             },
             _ => Ok(alloc_tail),
         }
@@ -82,18 +84,18 @@ unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     }
 }
 
-impl<T: StackOnly> RustToCudaProxy<Option<T>> for Option<StackOnlyWrapper<T>> {
+impl<T: SafeDeviceCopy> RustToCudaProxy<Option<T>> for Option<SafeDeviceCopyWrapper<T>> {
     fn from_ref(val: &Option<T>) -> &Self {
-        // Safety: StackOnlyWrapper is a transparent newtype
+        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
         unsafe { &*(val as *const Option<T>).cast() }
     }
 
     fn from_mut(val: &mut Option<T>) -> &mut Self {
-        // Safety: StackOnlyWrapper is a transparent newtype
+        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
         unsafe { &mut *(val as *mut Option<T>).cast() }
     }
 
     fn into(self) -> Option<T> {
-        self.map(StackOnlyWrapper::into_inner)
+        self.map(SafeDeviceCopyWrapper::into_inner)
     }
 }
