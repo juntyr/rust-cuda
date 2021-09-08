@@ -38,8 +38,10 @@ pub(super) fn generate_launch_types(
                 cpu_func_unboxed_types.push(syn_type.clone());
 
                 let cuda_type = match cuda_mode {
-                    InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::RustToCuda => quote::quote_spanned! { ty.span()=>
+                    InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
+                        rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                    },
+                    InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
                         rust_cuda::common::DeviceAccessible<
                             <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                         >
@@ -62,7 +64,7 @@ pub(super) fn generate_launch_types(
                                 rust_cuda::common::DeviceConstRef<#lifetime, #cuda_type>
                             }
                         }
-                    } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                    } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                         let lifetime = r2c_move_lifetime(i, ty);
 
                         quote::quote_spanned! { ty.span()=>
@@ -84,7 +86,7 @@ pub(super) fn generate_launch_types(
                                 rust_cuda::common::DeviceConstRef<'static, #cuda_type>
                             }
                         }
-                    } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                    } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                         quote::quote_spanned! { ty.span()=>
                             rust_cuda::common::DeviceMutRef<'static, #cuda_type>
                         }

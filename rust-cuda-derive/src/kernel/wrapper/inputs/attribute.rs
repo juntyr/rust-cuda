@@ -17,12 +17,12 @@ impl syn::parse::Parse for KernelInputAttribute {
                 let mode: syn::Ident = input.parse()?;
 
                 let cuda_type = match &*mode.to_string() {
-                    "DeviceCopy" => InputCudaType::DeviceCopy,
-                    "RustToCuda" => InputCudaType::RustToCuda,
+                    "SafeDeviceCopy" => InputCudaType::SafeDeviceCopy,
+                    "LendRustToCuda" => InputCudaType::LendRustToCuda,
                     _ => abort!(
                         mode.span(),
-                        "Unexpected CUDA transfer mode `{:?}`: Expected `DeviceCopy` or \
-                         `RustToCuda`.",
+                        "Unexpected CUDA transfer mode `{:?}`: Expected `SafeDeviceCopy` or \
+                         `LendRustToCuda`.",
                         mode
                     ),
                 };

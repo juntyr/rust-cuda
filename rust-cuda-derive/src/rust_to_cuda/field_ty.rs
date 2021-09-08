@@ -2,7 +2,7 @@ use syn::{parse_quote, spanned::Spanned};
 
 #[allow(clippy::module_name_repetitions)]
 pub enum CudaReprFieldTy {
-    StackOnly,
+    SafeDeviceCopy,
     RustToCuda {
         field_ty: Box<syn::Type>,
     },
@@ -80,11 +80,11 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
     } else {
         field_ty = parse_quote! {
             rust_cuda::common::DeviceAccessible<
-                rust_cuda::utils::stack::StackOnlyWrapper<#field_ty>
+                rust_cuda::utils::SafeDeviceCopyWrapper<#field_ty>
             >
         };
 
-        CudaReprFieldTy::StackOnly
+        CudaReprFieldTy::SafeDeviceCopy
     };
 
     field.ty = field_ty;

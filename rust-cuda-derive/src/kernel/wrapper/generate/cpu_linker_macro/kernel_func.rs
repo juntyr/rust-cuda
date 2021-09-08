@@ -102,20 +102,22 @@ fn generate_raw_func_input_wrap(
             },
             |inner, ((arg, param), (cuda_mode, _ptx_jit))| match arg {
                 syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => match cuda_mode {
-                    InputCudaType::DeviceCopy => {
+                    InputCudaType::SafeDeviceCopy => {
                         if let syn::Type::Reference(..) = &**ty {
                             let pat_box = quote::format_ident!("__{}_box", param);
 
-                            // DeviceCopy only supports immutable references
+                            // DeviceCopy mode only supports immutable references
                             quote! {
                                 let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
-                                    rust_cuda::rustacuda::memory::DeviceBox::new(#pat)?
+                                    rust_cuda::rustacuda::memory::DeviceBox::new(
+                                        rust_cuda::utils::SafeDeviceCopyWrapper::from_ref(#pat)
+                                    )?
                                 );
                                 #[allow(clippy::redundant_closure_call)]
                                 // Safety: `#pat_box` contains exactly the device copy of `#pat`
                                 let __result = (|#pat| { #inner })(unsafe {
                                     rust_cuda::host::HostAndDeviceConstRef::new(
-                                        &#pat_box, #pat
+                                        &#pat_box,  rust_cuda::utils::SafeDeviceCopyWrapper::from_ref(#pat)
                                     )
                                 });
 
@@ -135,10 +137,13 @@ fn generate_raw_func_input_wrap(
                                 __result
                             }
                         } else {
-                            inner
+                            quote! { {
+                                let #pat = rust_cuda::utils::SafeDeviceCopyWrapper::from(#pat);
+                                #inner
+                            } }
                         }
                     },
-                    InputCudaType::RustToCuda => {
+                    InputCudaType::LendRustToCuda => {
                         if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                             if mutability.is_some() {
                                 quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(

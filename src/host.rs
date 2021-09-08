@@ -20,7 +20,7 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_call};
 
 use crate::{
     common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
-    utils::stack::StackOnly,
+    utils::SafeDeviceCopy,
 };
 
 pub trait Launcher {
@@ -101,7 +101,7 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>;
 
-    /// Moves `self` to CUDA iff `self` is `StackOnly`
+    /// Moves `self` to CUDA iff `self` is `SafeDeviceCopy`
     ///
     /// # Errors
     ///
@@ -117,8 +117,8 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: Sized + StackOnly,
-        <Self as RustToCuda>::CudaRepresentation: StackOnly,
+        Self: Sized + SafeDeviceCopy,
+        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc;
 }
 
@@ -175,8 +175,8 @@ impl<T: RustToCuda> LendToCuda for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: Sized + StackOnly,
-        <Self as RustToCuda>::CudaRepresentation: StackOnly,
+        Self: Sized + SafeDeviceCopy,
+        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
     {
         let (cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
@@ -502,12 +502,12 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwned<'a, T: StackOnly + DeviceCopy> {
+pub struct HostAndDeviceOwned<'a, T: SafeDeviceCopy + DeviceCopy> {
     device_box: &'a mut HostDeviceBox<T>,
     host_val: &'a mut T,
 }
 
-impl<'a, T: StackOnly + DeviceCopy> HostAndDeviceOwned<'a, T> {
+impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
     /// # Errors
     ///
     /// Returns a `rustacuda::errors::CudaError` iff `value` cannot be moved

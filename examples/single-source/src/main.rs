@@ -15,8 +15,6 @@ fn main() {}
 #[repr(C)]
 pub struct Dummy(i32);
 
-unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Dummy {}
-
 #[derive(rust_cuda::common::RustToCudaAsRust)]
 #[allow(dead_code)]
 pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
@@ -30,18 +28,14 @@ pub struct Empty([u8; 0]);
 #[repr(C)]
 pub struct Tuple(u32, i32);
 
-unsafe impl rust_cuda::rustacuda_core::DeviceCopy for Tuple {}
-
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
 pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
-    #[kernel(pass = DeviceCopy)] _x: &Dummy,
-    #[kernel(pass = RustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = RustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = DeviceCopy, jit)] _v @ _w: &'a rust_cuda::utils::stack::StackOnlyWrapper<
-        core::sync::atomic::AtomicU64,
-    >,
-    #[kernel(pass = RustToCuda)] _: Wrapper<T>,
-    #[kernel(pass = DeviceCopy)] Tuple(_s, mut __t): Tuple,
+    #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
+    #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
+    #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
+    #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
+    #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
+    #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,
 ) where
     <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::utils::stack::StackOnly,
 {
@@ -55,7 +49,7 @@ mod host {
     struct Launcher<T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>);
 
     link_kernel!(crate::Empty);
-    link_kernel!(rust_cuda::utils::stack::StackOnlyWrapper<u64>);
+    link_kernel!(rust_cuda::utils::SafeDeviceCopyWrapper<u64>);
 
     impl<T: rust_cuda::common::RustToCuda> rust_cuda::host::Launcher for Launcher<T> {
         type KernelTraitObject = dyn Kernel<T>;

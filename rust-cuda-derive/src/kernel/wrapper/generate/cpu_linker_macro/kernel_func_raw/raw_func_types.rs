@@ -37,12 +37,14 @@ pub(super) fn generate_raw_func_types(
                 };
 
                 let cuda_type = match cuda_mode {
-                    InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::RustToCuda => quote!(
+                    InputCudaType::SafeDeviceCopy => quote! {
+                        rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                    },
+                    InputCudaType::LendRustToCuda => quote! {
                         rust_cuda::common::DeviceAccessible<
                             <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                         >
-                    ),
+                    },
                 };
 
                 if let syn::Type::Reference(syn::TypeReference {
@@ -52,10 +54,10 @@ pub(super) fn generate_raw_func_types(
                 }) = &**ty
                 {
                     let wrapped_type = if mutability.is_some() {
-                        if matches!(cuda_mode, InputCudaType::DeviceCopy) {
+                        if matches!(cuda_mode, InputCudaType::SafeDeviceCopy) {
                             abort!(
                                 mutability.span(),
-                                "Cannot mutably alias a `DeviceCopy` kernel parameter."
+                                "Cannot mutably alias a `SafeDeviceCopy` kernel parameter."
                             );
                         }
 
@@ -71,7 +73,7 @@ pub(super) fn generate_raw_func_types(
                     quote! {
                         #(#attrs)* #mutability #pat #colon_token #wrapped_type
                     }
-                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                     let lifetime = r2c_move_lifetime(i, ty);
 
                     let wrapped_type = quote! {
