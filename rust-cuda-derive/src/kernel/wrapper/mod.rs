@@ -227,8 +227,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 }
 
 enum InputCudaType {
-    DeviceCopy,
-    RustToCuda,
+    SafeDeviceCopy,
+    LendRustToCuda,
 }
 
 struct InputPtxJit(bool);

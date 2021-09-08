@@ -9,7 +9,7 @@ pub use rust_cuda_derive::{specialise_kernel_entry, specialise_kernel_type};
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
-    utils::stack::StackOnly,
+    utils::SafeDeviceCopy,
 };
 
 pub mod utils;
@@ -48,8 +48,8 @@ pub trait BorrowFromRust: RustToCuda {
         inner: F,
     ) -> O
     where
-        Self: Sized + StackOnly,
-        <Self as RustToCuda>::CudaRepresentation: StackOnly;
+        Self: Sized + SafeDeviceCopy,
+        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy;
 }
 
 impl<T: RustToCuda> BorrowFromRust for T {
@@ -83,8 +83,8 @@ impl<T: RustToCuda> BorrowFromRust for T {
         inner: F,
     ) -> O
     where
-        Self: Sized + StackOnly,
-        <Self as RustToCuda>::CudaRepresentation: StackOnly,
+        Self: Sized + SafeDeviceCopy,
+        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
     {
         inner(CudaAsRust::as_rust(cuda_repr_mut.as_mut()))
     }

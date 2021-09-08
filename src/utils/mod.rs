@@ -115,10 +115,17 @@ unsafe impl<T: SafeDeviceCopy> CudaAsRust for SafeDeviceCopyWrapper<T> {
 }
 
 mod sealed {
+    use crate::common::DeviceAccessible;
+
+    use super::SafeDeviceCopyWrapper;
+
     #[marker]
     pub trait SafeDeviceCopy {}
 
     impl<T: super::stack::StackOnly> SafeDeviceCopy for T {}
     #[cfg(any(feature = "alloc", doc))]
-    impl<T: super::alloc::unified::StackOrUnified> SafeDeviceCopy for T {}
+    impl<T: super::alloc::unified::StackOrUnifiedHeap> SafeDeviceCopy for T {}
+
+    impl<T: SafeDeviceCopy + rustacuda_core::DeviceCopy> SafeDeviceCopy for DeviceAccessible<T> {}
+    impl<T: SafeDeviceCopy> SafeDeviceCopy for SafeDeviceCopyWrapper<T> {}
 }

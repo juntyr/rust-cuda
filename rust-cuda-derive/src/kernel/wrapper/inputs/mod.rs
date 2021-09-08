@@ -158,7 +158,7 @@ fn ensure_reference_type_lifetime(
                 lifetime
             });
 
-            let elem = if matches!(cuda_type, InputCudaType::RustToCuda) {
+            let elem = if matches!(cuda_type, InputCudaType::LendRustToCuda) {
                 (|| {
                     if let syn::Type::Path(syn::TypePath {
                         path: syn::Path { segments, .. },
@@ -210,7 +210,7 @@ fn ensure_reference_type_lifetime(
             }))
         },
         ty => {
-            if matches!(cuda_type, InputCudaType::RustToCuda) {
+            if matches!(cuda_type, InputCudaType::LendRustToCuda) {
                 generic_params.insert(
                     *implicit_lifetime_id,
                     syn::GenericParam::Lifetime(syn::LifetimeDef {

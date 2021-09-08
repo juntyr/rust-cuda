@@ -133,11 +133,14 @@ fn generate_new_func_inputs_decl(
                     colon_token: *colon_token,
                     ty: {
                         let type_ident = quote::format_ident!("__T_{}", i);
-                        let syn_type = syn::parse_quote!(<() as #args #ty_generics>::#type_ident);
+                        let syn_type: Box<syn::Type> =
+                            syn::parse_quote!(<() as #args #ty_generics>::#type_ident);
 
                         let cuda_type = match cuda_mode {
-                            InputCudaType::DeviceCopy => syn_type,
-                            InputCudaType::RustToCuda => syn::parse_quote!(
+                            InputCudaType::SafeDeviceCopy => syn::parse_quote!(
+                                rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                            ),
+                            InputCudaType::LendRustToCuda => syn::parse_quote!(
                                 rust_cuda::common::DeviceAccessible<
                                     <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                                 >
@@ -161,7 +164,7 @@ fn generate_new_func_inputs_decl(
                             };
 
                             Box::new(wrapped_type)
-                        } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                        } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                             let lifetime = r2c_move_lifetime(i, ty);
 
                             let wrapped_type = syn::parse_quote!(

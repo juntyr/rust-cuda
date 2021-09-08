@@ -29,7 +29,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     let optional_field_ident = field.ident.as_ref().map(|ident| quote! { #ident: });
 
     match cuda_repr_field_ty {
-        CudaReprFieldTy::StackOnly => {
+        CudaReprFieldTy::SafeDeviceCopy => {
             r2c_field_declarations.push(quote! {
                 let #field_repr_ident = rust_cuda::common::DeviceAccessible::from(
                     &self.#field_accessor,

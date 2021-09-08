@@ -44,15 +44,15 @@ pub(in super::super) fn quote_cuda_wrapper(
                 };
 
                 match cuda_mode {
-                    InputCudaType::DeviceCopy => if let syn::Type::Reference(
+                    InputCudaType::SafeDeviceCopy => if let syn::Type::Reference(
                         syn::TypeReference { and_token, .. }
                     ) = &**ty {
-                        // DeviceCopy only supports immutable references
-                        quote! { #ptx_jit_load; { let #pat: #and_token #syn_type = #pat.as_ref(); #inner } }
+                        // DeviceCopy mode only supports immutable references
+                        quote! { #ptx_jit_load; { let #pat: #and_token #syn_type = #pat.as_ref().into_ref(); #inner } }
                     } else {
-                        inner
+                        quote! { { let #pat: #syn_type = #pat.into_inner(); #inner } }
                     },
-                    InputCudaType::RustToCuda => if let syn::Type::Reference(
+                    InputCudaType::LendRustToCuda => if let syn::Type::Reference(
                         syn::TypeReference { and_token, mutability, ..}
                     ) = &**ty {
                         if mutability.is_some() {
@@ -157,8 +157,10 @@ fn specialise_ptx_func_inputs(
                 };
 
                 let cuda_type = match cuda_mode {
-                    InputCudaType::DeviceCopy => syn_type,
-                    InputCudaType::RustToCuda => quote::quote_spanned! { ty.span()=>
+                    InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
+                        rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                    },
+                    InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
                         rust_cuda::common::DeviceAccessible<
                             <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
                         >
@@ -184,7 +186,7 @@ fn specialise_ptx_func_inputs(
                             rust_cuda::common::DeviceConstRef<#lifetime, #cuda_type>
                         }
                     }
-                } else if matches!(cuda_mode, InputCudaType::RustToCuda) {
+                } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                     let lifetime = quote_spanned! { ty.span()=>
                         'static
                     };
