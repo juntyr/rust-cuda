@@ -142,6 +142,7 @@ pub trait RustToCudaProxy<T>: RustToCuda {
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct DeviceConstRef<'r, T: DeviceCopy> {
+    #[cfg_attr(feature = "host", allow(dead_code))]
     pub(super) pointer: *const T,
     pub(super) reference: PhantomData<&'r T>,
 }
