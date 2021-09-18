@@ -6,7 +6,7 @@ use std::{
 
 use proc_macro::TokenStream;
 use ptx_builder::{
-    builder::{BuildStatus, Builder},
+    builder::{BuildStatus, Builder, ErrorFormat},
     error::{BuildErrorKind, Error, Result},
     reporter::ErrorLogPrinter,
 };
@@ -59,6 +59,10 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
+    if skip_kernel_compilation() {
+        return quote! { "CLIPPY skips specialised PTX compilation" }.into();
+    }
+
     let kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, Some(&specialisation));
 
     (quote! { #kernel_ptx }).into()
@@ -70,10 +74,39 @@ fn compile_kernel(
     crate_path: &Path,
     specialisation: Option<&str>,
 ) -> String {
-    let colourful = match std::env::var_os("TERM") {
-        None => false,
-        Some(term) if term == "dumb" => false,
-        Some(_) => std::env::var_os("NO_COLOR").is_none(),
+    // Force this proc macro to always be evaluated using a dummy env var
+    env::set_var("RUST_CUDA_DERIVE_MARKER", "42");
+    assert_eq!(
+        proc_macro::tracked_env::var("RUST_CUDA_DERIVE_MARKER").as_deref(),
+        Ok("42")
+    );
+
+    let colourful = if let Some(cargo_colour) = with_cargo_args(|args| {
+        let mut colourful = None;
+
+        for arg in args.windows(2) {
+            colourful = Some(match (arg[0].as_str(), arg[1].as_str()) {
+                ("--color=always", _) | ("--color", "always") | (_, "--color=always") => true,
+                ("--color=never", _) | ("--color", "never") | (_, "--color=never") => false,
+                _ => continue,
+            });
+        }
+
+        colourful
+    }) {
+        cargo_colour
+    } else if let Ok(cargo_colour @ ("always" | "never")) =
+        proc_macro::tracked_env::var("CARGO_TERM_COLOR").as_deref()
+    {
+        cargo_colour == "always"
+    } else if let Ok(term) = proc_macro::tracked_env::var("TERM") {
+        term != "dumb"
+            && matches!(
+                proc_macro::tracked_env::var("NO_COLOR"),
+                Err(env::VarError::NotPresent)
+            )
+    } else {
+        false
     };
 
     if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
@@ -89,11 +122,7 @@ fn compile_kernel(
     match build_kernel_with_specialisation(
         crate_path,
         &specialisation_var,
-        if skip_kernel_compilation() {
-            None
-        } else {
-            specialisation
-        },
+        specialisation,
         colourful,
     ) {
         Ok(kernel_path) => {
@@ -127,14 +156,39 @@ fn build_kernel_with_specialisation(
 ) -> Result<PathBuf> {
     if let Some(specialisation) = specialisation {
         env::set_var(env_var, specialisation);
+    } else {
+        env::remove_var(env_var);
     }
 
     let mut builder = Builder::new(kernel_path)?;
 
     if !colourful {
         builder = builder.disable_colors();
-        builder = builder.set_error_format(ptx_builder::builder::ErrorFormat::JSON);
     }
+
+    builder = builder.set_error_format(
+        with_cargo_args(|args| {
+            let mut message_format = None;
+
+            for arg in args.windows(2) {
+                message_format = Some(match (arg[0].as_str(), arg[1].as_str()) {
+                    ("--message-format=human", _)
+                    | ("--message-format", "human")
+                    | (_, "--message-format=human") => ErrorFormat::Human,
+                    ("--message-format=json", _)
+                    | ("--message-format", "json")
+                    | (_, "--message-format=json") => ErrorFormat::JSON,
+                    ("--message-format=short", _)
+                    | ("--message-format", "short")
+                    | (_, "--message-format=short") => ErrorFormat::Short,
+                    _ => continue,
+                });
+            }
+
+            message_format
+        })
+        .unwrap_or(ptx_builder::builder::ErrorFormat::Human),
+    );
 
     match builder.build()? {
         BuildStatus::Success(output) => {
@@ -179,4 +233,20 @@ fn build_kernel_with_specialisation(
             &specialisation
         )]))),
     }
+}
+
+fn with_cargo_args<Q, F: FnOnce(&[String]) -> Option<Q>>(inner: F) -> Option<Q> {
+    use sysinfo::{ProcessExt, RefreshKind, System, SystemExt};
+
+    let mut system = System::new_with_specifics(RefreshKind::new());
+
+    let pid = sysinfo::get_current_pid().ok()?;
+    system.refresh_process(pid);
+    let process = system.process(pid)?;
+
+    let p_pid = process.parent()?;
+    system.refresh_process(p_pid);
+    let parent = system.process(p_pid)?;
+
+    inner(parent.cmd())
 }
