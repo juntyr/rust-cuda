@@ -92,8 +92,7 @@ jobs:
       
       - name: Run the test-suite
         run: |
-          LIBRARY_PATH="$LD_LIBRARY_PATH" cargo test \
-            --workspace --no-fail-fast
+          cargo test --workspace --no-fail-fast
 
   fmt:
     name: Rustfmt

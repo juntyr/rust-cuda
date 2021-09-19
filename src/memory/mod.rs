@@ -8,5 +8,4 @@ pub use device_copy::SafeDeviceCopy;
 pub use no_aliasing::NoAliasing;
 pub use stack_only::StackOnly;
 #[cfg(any(feature = "alloc", doc))]
-#[doc(cfg(feature = "alloc"))]
 pub use unified_heap::UnifiedHeapOnly;

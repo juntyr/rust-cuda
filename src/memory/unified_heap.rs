@@ -1,3 +1,4 @@
+#[doc(cfg(feature = "alloc"))]
 /// ```rust
 /// # use rust_cuda::memory::UnifiedHeapOnly;
 /// fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}
