@@ -32,8 +32,7 @@ jobs:
         run: |
           RUSTFLAGS="-Zinstrument-coverage" \
           LLVM_PROFILE_FILE="codecov-%p-%m.profraw" \
-          cargo test \
-            --workspace
+          cargo test --workspace
 
           grcov . -s . --binary-path ./target/debug/ \
             -t cobertura -o cobertura.xml --branch \
