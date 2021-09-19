@@ -13,14 +13,14 @@ use rustacuda_core::DeviceCopy;
 
 #[cfg(feature = "derive")]
 #[doc(cfg(feature = "derive"))]
-pub use rust_cuda_derive::RustToCudaAsRust;
+pub use rust_cuda_derive::LendRustToCuda;
 
 #[cfg(feature = "derive")]
 #[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::kernel;
 
 #[cfg(feature = "host")]
-use crate::utils::{SafeDeviceCopy, SafeDeviceCopyWrapper};
+use crate::{memory::SafeDeviceCopy, utils::device_copy::SafeDeviceCopyWrapper};
 
 #[repr(transparent)]
 #[cfg_attr(not(feature = "host"), derive(Debug))]
@@ -75,7 +75,7 @@ impl<T: ?Sized + DeviceCopy> DerefMut for DeviceAccessible<T> {
 /// # Safety
 ///
 /// This is an internal trait and should ONLY be derived automatically using
-/// `#[derive(RustToCudaAsRust)]`
+/// `#[derive(LendRustToCuda)]`
 pub unsafe trait RustToCuda {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]

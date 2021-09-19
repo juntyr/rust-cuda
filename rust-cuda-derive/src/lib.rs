@@ -21,7 +21,7 @@ mod rust_to_cuda;
 //  | rustfmt --config max_width=160 > out.rs
 
 #[proc_macro_error]
-#[proc_macro_derive(RustToCudaAsRust, attributes(r2cBound, r2cIgnore, r2cEmbed))]
+#[proc_macro_derive(LendRustToCuda, attributes(r2cBound, r2cIgnore, r2cEmbed))]
 pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
     let ast = match syn::parse(input) {
         Ok(ast) => ast,
@@ -38,30 +38,35 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     kernel::wrapper::kernel(attr, func)
 }
 
+#[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro]
 pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
     kernel::specialise::ty::specialise_kernel_type(tokens)
 }
 
+#[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro]
 pub fn specialise_kernel_call(tokens: TokenStream) -> TokenStream {
     kernel::specialise::call::specialise_kernel_call(tokens)
 }
 
+#[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStream {
     kernel::specialise::entry::specialise_kernel_entry(attr, func)
 }
 
+#[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro]
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     kernel::link::check_kernel(tokens)
 }
 
+#[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {

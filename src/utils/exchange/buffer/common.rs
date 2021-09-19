@@ -1,6 +1,6 @@
 use rustacuda_core::DeviceCopy;
 
-use crate::{common::CudaAsRust, utils::SafeDeviceCopy};
+use crate::{common::CudaAsRust, memory::SafeDeviceCopy};
 
 use super::{CudaExchangeBuffer, CudaExchangeItem};
 

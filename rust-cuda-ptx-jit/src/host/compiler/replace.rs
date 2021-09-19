@@ -2,10 +2,6 @@ use std::{ffi::CString, ops::Deref};
 
 use super::{PtxElement, PtxJITCompiler, PtxJITResult, PtxLoadWidth};
 
-const R_ASCII_BYTE: u8 = 0x72;
-const S_ASCII_BYTE: u8 = 0x73;
-const D_ASCII_BYTE: u8 = 0x64;
-
 impl PtxJITCompiler {
     pub fn with_arguments(&mut self, arguments: Option<&[Option<&[u8]>]>) -> PtxJITResult {
         // Check if the arguments, cast as byte slices, are the same as the last cached
@@ -67,22 +63,18 @@ impl PtxJITCompiler {
                                 ) {
                                     // Generate the mov instruction with the correct data type
                                     output_ptx.extend_from_slice("mov.".as_bytes());
-                                    output_ptx.extend_from_slice(
-                                        if register.contains(&R_ASCII_BYTE) {
-                                            "u".as_bytes()
-                                        } else {
-                                            "f".as_bytes()
-                                        },
-                                    );
-                                    output_ptx.extend_from_slice(
-                                        if register.contains(&S_ASCII_BYTE) {
-                                            "16".as_bytes()
-                                        } else if register.contains(&D_ASCII_BYTE) {
-                                            "64".as_bytes()
-                                        } else {
-                                            "32".as_bytes()
-                                        },
-                                    );
+                                    output_ptx.extend_from_slice(if register.contains(&b"r"[0]) {
+                                        "u".as_bytes()
+                                    } else {
+                                        "f".as_bytes()
+                                    });
+                                    output_ptx.extend_from_slice(if register.contains(&b"s"[0]) {
+                                        "16".as_bytes()
+                                    } else if register.contains(&b"d"[0]) {
+                                        "64".as_bytes()
+                                    } else {
+                                        "32".as_bytes()
+                                    });
 
                                     output_ptx.extend_from_slice(" \t".as_bytes());
 

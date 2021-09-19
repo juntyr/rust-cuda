@@ -1,4 +1,6 @@
 #[macro_export]
+#[doc(hidden)]
+#[doc(cfg(not(feature = "host")))]
 macro_rules! PtxJITConstLoad {
     ([$index:literal] => $reference:expr) => {
         unsafe {

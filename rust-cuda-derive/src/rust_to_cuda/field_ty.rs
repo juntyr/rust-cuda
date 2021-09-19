@@ -80,7 +80,7 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
     } else {
         field_ty = parse_quote! {
             rust_cuda::common::DeviceAccessible<
-                rust_cuda::utils::SafeDeviceCopyWrapper<#field_ty>
+                rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#field_ty>
             >
         };
 

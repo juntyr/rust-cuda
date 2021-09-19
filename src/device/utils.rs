@@ -106,6 +106,7 @@ macro_rules! assert_eq {
 }
 
 /// Assertion in GPU kernel for two expressions are not equal.
+#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
 #[macro_export]
 macro_rules! assert_ne {
     ($a:expr, $b:expr) => {

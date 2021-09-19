@@ -15,14 +15,14 @@ fn main() {}
 #[repr(C)]
 pub struct Dummy(i32);
 
-#[derive(rust_cuda::common::RustToCudaAsRust)]
+#[derive(rust_cuda::common::LendRustToCuda)]
 #[allow(dead_code)]
 pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
     #[r2cEmbed]
     inner: T,
 }
 
-#[derive(rust_cuda::common::RustToCudaAsRust)]
+#[derive(rust_cuda::common::LendRustToCuda)]
 pub struct Empty([u8; 0]);
 
 #[repr(C)]
@@ -37,7 +37,7 @@ pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,
 ) where
-    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::utils::stack::StackOnly,
+    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::memory::StackOnly,
 {
 }
 
@@ -49,7 +49,7 @@ mod host {
     struct Launcher<T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>);
 
     link_kernel!(crate::Empty);
-    link_kernel!(rust_cuda::utils::SafeDeviceCopyWrapper<u64>);
+    link_kernel!(rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<u64>);
 
     impl<T: rust_cuda::common::RustToCuda> rust_cuda::host::Launcher for Launcher<T> {
         type KernelTraitObject = dyn Kernel<T>;

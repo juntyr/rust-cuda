@@ -1,4 +1,4 @@
-pub use r#final::Final;
+use r#final::Final;
 
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 

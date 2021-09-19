@@ -117,7 +117,7 @@ pub(in super::super) fn quote_cuda_wrapper(
 
                 #[allow(dead_code)]
                 fn assert_impl_no_aliasing<
-                    T: rust_cuda::utils::aliasing::NoAliasing
+                    T: rust_cuda::memory::NoAliasing
                 >() {}
 
                 #(assert_impl_devicecopy(&#func_params);)*
@@ -158,7 +158,7 @@ fn specialise_ptx_func_inputs(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
-                        rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                     },
                     InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
                         rust_cuda::common::DeviceAccessible<

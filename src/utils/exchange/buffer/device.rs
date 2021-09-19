@@ -1,10 +1,17 @@
 use core::ops::{Deref, DerefMut};
 
-use crate::{common::RustToCuda, utils::SafeDeviceCopy};
+use crate::{common::RustToCuda, memory::SafeDeviceCopy};
 
-use super::{CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
+use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
+#[doc(cfg(not(feature = "host")))]
+/// When the `host` feature is set,
+/// [`CudaExchangeBuffer`](super::CudaExchangeBuffer)
+/// refers to
+/// [`CudaExchangeBufferHost`](super::CudaExchangeBufferHost)
+/// instead.
+/// [`CudaExchangeBufferDevice`](Self) is never exposed directly.
 pub struct CudaExchangeBufferDevice<T: SafeDeviceCopy, const M2D: bool, const M2H: bool>(
     pub(super) core::mem::ManuallyDrop<alloc::boxed::Box<[CudaExchangeItem<T, M2D, M2H>]>>,
 );

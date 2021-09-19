@@ -38,7 +38,7 @@ pub(super) fn generate_raw_func_types(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::SafeDeviceCopy => quote! {
-                        rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                     },
                     InputCudaType::LendRustToCuda => quote! {
                         rust_cuda::common::DeviceAccessible<

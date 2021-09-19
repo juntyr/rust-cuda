@@ -39,7 +39,7 @@ pub(super) fn generate_launch_types(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
-                        rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                     },
                     InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
                         rust_cuda::common::DeviceAccessible<
