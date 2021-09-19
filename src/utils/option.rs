@@ -1,6 +1,7 @@
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy},
-    utils::{SafeDeviceCopy, SafeDeviceCopyWrapper},
+    memory::SafeDeviceCopy,
+    utils::device_copy::SafeDeviceCopyWrapper,
 };
 
 #[cfg(feature = "host")]

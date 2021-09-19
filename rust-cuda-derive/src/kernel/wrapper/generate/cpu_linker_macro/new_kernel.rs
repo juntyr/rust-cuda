@@ -20,15 +20,15 @@ pub(super) fn quote_new_kernel(
         > {
             #[repr(C)]
             struct TypedKernel {
-                compiler: rust_cuda::ptx_jit::host::compiler::PtxJITCompiler,
-                kernel: Option<rust_cuda::ptx_jit::host::kernel::CudaKernel>,
+                compiler: rust_cuda::ptx_jit::PtxJITCompiler,
+                kernel: Option<rust_cuda::ptx_jit::CudaKernel>,
                 entry_point: Box<[u8]>,
             }
 
             let ptx_cstring = ::std::ffi::CString::new(Self::get_ptx_str())
                 .map_err(|_| rust_cuda::rustacuda::error::CudaError::InvalidPtx)?;
 
-            let compiler = rust_cuda::ptx_jit::host::compiler::PtxJITCompiler::new(
+            let compiler = rust_cuda::ptx_jit::PtxJITCompiler::new(
                 &ptx_cstring
             );
 

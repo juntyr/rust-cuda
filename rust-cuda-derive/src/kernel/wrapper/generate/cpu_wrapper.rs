@@ -138,7 +138,7 @@ fn generate_new_func_inputs_decl(
 
                         let cuda_type = match cuda_mode {
                             InputCudaType::SafeDeviceCopy => syn::parse_quote!(
-                                rust_cuda::utils::SafeDeviceCopyWrapper<#syn_type>
+                                rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                             ),
                             InputCudaType::LendRustToCuda => syn::parse_quote!(
                                 rust_cuda::common::DeviceAccessible<

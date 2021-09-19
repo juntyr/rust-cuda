@@ -110,14 +110,14 @@ fn generate_raw_func_input_wrap(
                             quote! {
                                 let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
                                     rust_cuda::rustacuda::memory::DeviceBox::new(
-                                        rust_cuda::utils::SafeDeviceCopyWrapper::from_ref(#pat)
+                                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
                                     )?
                                 );
                                 #[allow(clippy::redundant_closure_call)]
                                 // Safety: `#pat_box` contains exactly the device copy of `#pat`
                                 let __result = (|#pat| { #inner })(unsafe {
                                     rust_cuda::host::HostAndDeviceConstRef::new(
-                                        &#pat_box,  rust_cuda::utils::SafeDeviceCopyWrapper::from_ref(#pat)
+                                        &#pat_box,  rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
                                     )
                                 });
 
@@ -138,7 +138,7 @@ fn generate_raw_func_input_wrap(
                             }
                         } else {
                             quote! { {
-                                let #pat = rust_cuda::utils::SafeDeviceCopyWrapper::from(#pat);
+                                let #pat = rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from(#pat);
                                 #inner
                             } }
                         }

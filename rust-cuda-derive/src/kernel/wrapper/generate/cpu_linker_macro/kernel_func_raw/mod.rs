@@ -44,14 +44,14 @@ pub(super) fn quote_kernel_func_raw(
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
-            use rust_cuda::ptx_jit::host::compiler::PtxJITResult;
+            use rust_cuda::ptx_jit::PtxJITResult;
 
             #arch_checks
 
             #[repr(C)]
             struct TypedKernel {
-                compiler: rust_cuda::ptx_jit::host::compiler::PtxJITCompiler,
-                kernel: Option<rust_cuda::ptx_jit::host::kernel::CudaKernel>,
+                compiler: rust_cuda::ptx_jit::PtxJITCompiler,
+                kernel: Option<rust_cuda::ptx_jit::CudaKernel>,
                 entry_point: Box<[u8]>,
             }
 
@@ -81,7 +81,7 @@ pub(super) fn quote_kernel_func_raw(
                         )
                     };
 
-                    let kernel = rust_cuda::ptx_jit::host::kernel::CudaKernel::new(
+                    let kernel = rust_cuda::ptx_jit::CudaKernel::new(
                         ptx_cstr, entry_point_cstr
                     )?;
 
@@ -125,7 +125,7 @@ pub(super) fn quote_kernel_func_raw(
 
                     #[allow(dead_code)]
                     fn assert_impl_no_aliasing<
-                        T: rust_cuda::utils::aliasing::NoAliasing
+                        T: rust_cuda::memory::NoAliasing
                     >() {}
 
                     #(assert_impl_devicecopy(&#func_params);)*

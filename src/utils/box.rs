@@ -2,13 +2,13 @@ use alloc::boxed::Box;
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda},
-    utils::SafeDeviceCopy,
+    memory::SafeDeviceCopy,
 };
 
 #[cfg(feature = "host")]
 use crate::{
     host::CombinedCudaAlloc, host::CudaAlloc, host::CudaDropWrapper, rustacuda::error::CudaResult,
-    rustacuda::memory::DeviceBox, utils::SafeDeviceCopyWrapper,
+    rustacuda::memory::DeviceBox, utils::device_copy::SafeDeviceCopyWrapper,
 };
 
 #[repr(transparent)]

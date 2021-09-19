@@ -12,12 +12,19 @@ use rustacuda::{
 use crate::{
     common::{DeviceAccessible, RustToCuda},
     host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
-    utils::SafeDeviceCopy,
+    memory::SafeDeviceCopy,
 };
 
-use super::{CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
+use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
+#[doc(cfg(feature = "host"))]
+/// When the `host` feature is **not** set,
+/// [`CudaExchangeBuffer`](super::CudaExchangeBuffer)
+/// refers to
+/// [`CudaExchangeBufferDevice`](super::CudaExchangeBufferDevice)
+/// instead.
+/// [`CudaExchangeBufferHost`](Self) is never exposed directly.
 pub struct CudaExchangeBufferHost<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> {
     host_buffer: CudaDropWrapper<LockedBuffer<CudaExchangeItem<T, M2D, M2H>>>,
     device_buffer: UnsafeCell<CudaDropWrapper<DeviceBuffer<CudaExchangeItem<T, M2D, M2H>>>>,

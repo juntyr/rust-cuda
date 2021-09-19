@@ -20,7 +20,7 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_call};
 
 use crate::{
     common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
-    utils::SafeDeviceCopy,
+    memory::SafeDeviceCopy,
 };
 
 pub trait Launcher {
@@ -50,8 +50,8 @@ pub struct LaunchConfig {
 
 #[repr(C)]
 pub struct TypedKernel<KernelTraitObject: ?Sized> {
-    _compiler: ptx_jit::host::compiler::PtxJITCompiler,
-    _kernel: Option<ptx_jit::host::kernel::CudaKernel>,
+    _compiler: crate::ptx_jit::PtxJITCompiler,
+    _kernel: Option<crate::ptx_jit::CudaKernel>,
     _entry_point: alloc::boxed::Box<[u8]>,
     _marker: PhantomData<KernelTraitObject>,
 }

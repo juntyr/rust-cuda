@@ -1,4 +1,6 @@
 #[macro_export]
+#[doc(hidden)]
+#[doc(cfg(feature = "host"))]
 macro_rules! compilePtxJITwithArguments {
     // Invocation without arguments fast track
     ($compiler:ident ()) => {

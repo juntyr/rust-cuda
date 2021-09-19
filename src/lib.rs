@@ -11,8 +11,6 @@
 #![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
-#![allow(incomplete_features)]
-#![feature(specialization)]
 
 #[doc(hidden)]
 pub extern crate alloc;
@@ -39,3 +37,5 @@ pub extern crate rustacuda;
 pub mod device;
 
 pub mod utils;
+
+pub mod memory;

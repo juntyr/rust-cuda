@@ -2,6 +2,7 @@ use std::{ffi::CStr, mem::ManuallyDrop};
 
 use rustacuda::{error::CudaResult, function::Function, module::Module};
 
+#[doc(cfg(feature = "host"))]
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaKernel {
     module: ManuallyDrop<Box<Module>>,

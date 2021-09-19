@@ -8,12 +8,6 @@ use super::{
     PtxElement, PtxJITCompiler, PtxLoadWidth,
 };
 
-const B16_ASCII_BYTES: &[u8] = &[0x31, 0x36];
-const B32_ASCII_BYTES: &[u8] = &[0x33, 0x32];
-const B64_ASCII_BYTES: &[u8] = &[0x36, 0x34];
-
-const ZERO_ASCII_BYTES: &[u8] = &[0x30];
-
 impl PtxJITCompiler {
     #[must_use]
     pub fn new(ptx: &CStr) -> Self {
@@ -65,9 +59,9 @@ impl PtxJITCompiler {
                         .name("loadwidth")
                         .map(|s| s.as_bytes())
                     {
-                        Some(B16_ASCII_BYTES) => Some(PtxLoadWidth::B2),
-                        Some(B32_ASCII_BYTES) => Some(PtxLoadWidth::B4),
-                        Some(B64_ASCII_BYTES) => Some(PtxLoadWidth::B8),
+                        Some(b"16") => Some(PtxLoadWidth::B2),
+                        Some(b"32") => Some(PtxLoadWidth::B4),
+                        Some(b"64") => Some(PtxLoadWidth::B8),
                         _ => None,
                     } {
                         if let Some(constreg) = const_load_instruction
@@ -77,7 +71,7 @@ impl PtxJITCompiler {
                             if let Some(loadoffset) = std::str::from_utf8(
                                 const_load_instruction
                                     .name("loadoffset")
-                                    .map_or(ZERO_ASCII_BYTES, |s| s.as_bytes()),
+                                    .map_or(b"0", |s| s.as_bytes()),
                             )
                             .ok()
                             .and_then(|s| s.parse().ok())
