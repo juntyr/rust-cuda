@@ -36,8 +36,9 @@ jobs:
 
           grcov . -s . --binary-path ./target/debug/ \
             -t cobertura -o cobertura.xml --branch \
-            --keep-only "necsim/*" \
-            --keep-only "rustcoalescence/*" \
+            --keep-only "src/*" \
+            --keep-only "rust-cuda-ptx-jit/*" \
+            --keep-only "rust-cuda-derive/*" \
             --ignore-not-existing \
             --excl-line GRCOV_EXCL_LINE \
             --excl-start GRCOV_EXCL_START \

@@ -4,12 +4,18 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
+
+      - name: Install the Rust toolchain
+        run: cargo
       
       - name: Perform the security audit
         uses: actions-rs/audit-check@v1
