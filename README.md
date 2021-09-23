@@ -9,7 +9,7 @@
 [License Status]: https://app.fossa.com/api/projects/git%2Bgithub.com%2FMomoLangenstein%2Frust-cuda.svg?type=shield
 [fossa]: https://app.fossa.com/projects/git%2Bgithub.com%2FMomoLangenstein%2Frust-cuda?ref=badge_shield
 
-[Code Coverage]: https://img.shields.io/codecov/c/github/MomoLangenstein/rust-cuda?token=DCT0WVLU5V
+[Code Coverage]: https://img.shields.io/codecov/c/github/MomoLangenstein/rust-cuda?token=wfeAeybbbx
 [codecov]: https://codecov.io/gh/MomoLangenstein/rust-cuda
 
 [Gitpod Ready-to-Code]: https://img.shields.io/badge/Gitpod-ready-blue?logo=gitpod

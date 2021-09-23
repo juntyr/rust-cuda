@@ -1,0 +1,2 @@
+[alias]
+reap-clippy = "reaper cargo clippy"

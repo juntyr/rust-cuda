@@ -2,9 +2,7 @@
     "crates.localCargoIndexBranch": "origin/HEAD",
     "rust-analyzer.procMacro.enable": false,
     "rust-analyzer.updates.askBeforeDownload": false,
-    //"rust-analyzer.checkOnSave.command": "clippy",
-    // TODO: This would have to be pre-compiled / pre-released
-    "rust-analyzer.checkOnSave.overrideCommand": ["/workspace/rust-cuda/target/release/wrapper", "cargo", "clippy", "--features", "alloc,derive,host", "--message-format=json", "--all-targets", "--all"],
+    "rust-analyzer.checkOnSave.command": "reap-clippy",
     "rust-analyzer.cargo.allFeatures": false,
     "rust-analyzer.cargo.features": ["alloc", "derive", "host"],
 }

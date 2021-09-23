@@ -18,4 +18,5 @@ RUN echo "debconf debconf/frontend select Noninteractive" | sudo debconf-set-sel
     sudo apt-get autoremove -y && \
     sudo rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-RUN cargo install ptx-linker -f
+RUN cargo install ptx-linker -f && \
+    cargo install cargo-reaper --git https://github.com/MomoLangenstein/grim-reaper -f

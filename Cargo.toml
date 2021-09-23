@@ -1,7 +1,7 @@
 [workspace]
 members = [
     ".", "rust-cuda-derive", "rust-cuda-ptx-jit",
-    "examples/single-source", "wrapper"
+    "examples/single-source",
 ]
 default-members = [
     ".", "rust-cuda-derive", "rust-cuda-ptx-jit"
