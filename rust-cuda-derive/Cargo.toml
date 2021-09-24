@@ -18,4 +18,4 @@ proc-macro-error = "1.0"
 sysinfo = "0.20"
 
 seahash = "4.1.0"
-ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "6064d2a" }
+ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "870c02f" }
