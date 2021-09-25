@@ -13,7 +13,6 @@ pub(in super::super) fn quote_cuda_wrapper(
     FuncIdent { func_ident, .. }: &FuncIdent,
     func_attrs: &[syn::Attribute],
     func_params: &[syn::Ident],
-    func_type_errors: &[syn::Ident],
 ) -> TokenStream {
     let arch_checks = super::arch_checks::quote_arch_checks();
 
@@ -91,16 +90,6 @@ pub(in super::super) fn quote_cuda_wrapper(
         pub unsafe extern "ptx-kernel" fn #func_ident(#(#ptx_func_inputs),*) {
             #arch_checks
 
-            #(
-                #[allow(dead_code, non_camel_case_types)]
-                enum #func_type_errors {}
-                const _: [#func_type_errors; 1 - {
-                    const ASSERT: bool = (
-                        ::core::mem::size_of::<#ptx_func_types>() <= 8
-                    ); ASSERT
-                } as usize] = [];
-            )*
-
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
                 use super::#args;
@@ -116,12 +105,16 @@ pub(in super::super) fn quote_cuda_wrapper(
                 fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                 #[allow(dead_code)]
-                fn assert_impl_no_aliasing<
-                    T: rust_cuda::memory::NoAliasing
-                >() {}
+                fn assert_impl_no_aliasing<T: rust_cuda::memory::NoAliasing>() {}
+
+                #[allow(dead_code)]
+                fn assert_impl_fits_into_device_register<
+                    T: rust_cuda::memory::FitsIntoDeviceRegister,
+                >(_val: &T) {}
 
                 #(assert_impl_devicecopy(&#func_params);)*
                 #(assert_impl_no_aliasing::<#ptx_func_unboxed_types>();)*
+                #(assert_impl_fits_into_device_register(&#func_params);)*
             }
 
             #ptx_func_input_unwrap

@@ -26,7 +26,6 @@ pub(super) fn quote_kernel_func_raw(
     FuncIdent { func_ident_raw, .. }: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
-    func_type_errors: &[syn::Ident],
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
     let arch_checks = super::super::arch_checks::quote_arch_checks();
@@ -97,16 +96,6 @@ pub(super) fn quote_kernel_func_raw(
 
             #[allow(clippy::redundant_closure_call)]
             (|#(#func_params: #cpu_func_types_launch),*| {
-                #(
-                    #[allow(dead_code, non_camel_case_types)]
-                    enum #func_type_errors {}
-                    const _: [#func_type_errors; 1 - {
-                        const ASSERT: bool = (
-                            ::std::mem::size_of::<#cpu_func_lifetime_erased_types>() <= 8
-                        ); ASSERT
-                    } as usize] = [];
-                )*
-
                 #[deny(improper_ctypes)]
                 mod __rust_cuda_ffi_safe_assert {
                     use super::#args;
@@ -119,17 +108,19 @@ pub(super) fn quote_kernel_func_raw(
 
                 if false {
                     #[allow(dead_code)]
-                    fn assert_impl_devicecopy<
-                        T: rust_cuda::rustacuda_core::DeviceCopy
-                    >(_val: &T) {}
+                    fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                     #[allow(dead_code)]
-                    fn assert_impl_no_aliasing<
-                        T: rust_cuda::memory::NoAliasing
-                    >() {}
+                    fn assert_impl_no_aliasing<T: rust_cuda::memory::NoAliasing>() {}
+
+                    #[allow(dead_code)]
+                    fn assert_impl_fits_into_device_register<
+                        T: rust_cuda::memory::FitsIntoDeviceRegister,
+                    >(_val: &T) {}
 
                     #(assert_impl_devicecopy(&#func_params);)*
                     #(assert_impl_no_aliasing::<#cpu_func_unboxed_types>();)*
+                    #(assert_impl_fits_into_device_register(&#func_params);)*
                 }
 
                 let stream = rust_cuda::host::Launcher::get_stream(self);
