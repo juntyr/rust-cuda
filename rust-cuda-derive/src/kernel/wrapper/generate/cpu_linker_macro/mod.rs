@@ -34,7 +34,6 @@ pub(in super::super) fn quote_cpu_linker_macro(
     func_ident: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
-    func_type_errors: &[syn::Ident],
 ) -> TokenStream {
     let macro_types = generic_params
         .iter()
@@ -78,7 +77,6 @@ pub(in super::super) fn quote_cpu_linker_macro(
         func_ident,
         func_params,
         func_attrs,
-        func_type_errors,
         &macro_type_ids,
     );
 

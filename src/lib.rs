@@ -11,6 +11,10 @@
 #![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
+#![feature(const_type_name)]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
+#![feature(adt_const_params)]
 
 #[doc(hidden)]
 pub extern crate alloc;

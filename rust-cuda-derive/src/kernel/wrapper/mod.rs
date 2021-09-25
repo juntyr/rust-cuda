@@ -167,16 +167,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let func_type_errors: Vec<syn::Ident> = func_params
-        .iter()
-        .map(|arg| {
-            quote::format_ident!(
-                "Kernel_parameter_{}_must_fit_into_64b_or_be_a_reference",
-                arg,
-            )
-        })
-        .collect();
-
     let args_trait = quote_args_trait(&config, &decl_generics, &impl_generics, &func_inputs);
     let cpu_wrapper = quote_cpu_wrapper(
         &config,
@@ -194,7 +184,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_ident,
         &func_params,
         &func.attrs,
-        &func_type_errors,
     );
     let cuda_wrapper = quote_cuda_wrapper(
         &config,
@@ -202,7 +191,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_ident,
         &func.attrs,
         &func_params,
-        &func_type_errors,
     );
     let cuda_generic_function = quote_cuda_generic_function(
         &decl_generics,
