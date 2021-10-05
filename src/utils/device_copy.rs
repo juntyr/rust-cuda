@@ -3,7 +3,7 @@ use crate::{
     memory::SafeDeviceCopy,
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
 pub struct SafeDeviceCopyWrapper<T: SafeDeviceCopy>(T);
 

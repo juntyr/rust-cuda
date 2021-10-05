@@ -4,6 +4,7 @@ use syn::spanned::Spanned;
 
 use super::super::{FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
+#[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
     config @ KernelConfig { args, .. }: &KernelConfig,
     inputs @ FunctionInputs {
@@ -18,6 +19,11 @@ pub(in super::super) fn quote_cuda_wrapper(
 
     let (ptx_func_inputs, ptx_func_types) = specialise_ptx_func_inputs(config, inputs);
     let ptx_func_unboxed_types = specialise_ptx_unboxed_types(config, inputs);
+
+    let func_layout_params = func_params
+        .iter()
+        .map(|ident| syn::Ident::new(&format!("__{}_layout", ident).to_uppercase(), ident.span()))
+        .collect::<Vec<_>>();
 
     let ptx_func_input_unwrap = func_inputs
         .iter().zip(func_input_cuda_types.iter()).enumerate()
@@ -83,6 +89,25 @@ pub(in super::super) fn quote_cuda_wrapper(
         });
 
     quote! {
+        #[cfg(target_os = "cuda")]
+        #[rust_cuda::device::specialise_kernel_entry(#args)]
+        #[no_mangle]
+        #(#func_attrs)*
+        pub unsafe extern "ptx-kernel" fn test(#(#func_params: &mut &[u8]),*) {
+            #(
+                // TODO:
+                // - generate a better decoy-kernel-name
+                // - remove the generated arrays and kernel from the source inside the linker
+
+                #[no_mangle]
+                static #func_layout_params: [
+                    u8; ::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()
+                ] = ::const_type_layout::serialise_type_graph::<#ptx_func_types>();
+
+                *#func_params = &#func_layout_params;
+            )*
+        }
+
         #[cfg(target_os = "cuda")]
         #[rust_cuda::device::specialise_kernel_entry(#args)]
         #[no_mangle]

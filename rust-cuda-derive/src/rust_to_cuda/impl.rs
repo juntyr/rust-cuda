@@ -25,6 +25,7 @@ pub fn cuda_struct_declaration(
         #[doc(hidden)]
         #(#struct_attrs_cuda)*
         #struct_repr
+        #[derive(rust_cuda::const_type_layout::TypeLayout)]
         #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda
             #struct_fields_cuda #struct_semi_cuda
 
