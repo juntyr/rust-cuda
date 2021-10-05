@@ -24,6 +24,7 @@ use crate::{memory::SafeDeviceCopy, utils::device_copy::SafeDeviceCopyWrapper};
 
 #[repr(transparent)]
 #[cfg_attr(not(feature = "host"), derive(Debug))]
+#[derive(TypeLayout)]
 pub struct DeviceAccessible<T: ?Sized + DeviceCopy>(T);
 
 unsafe impl<T: ?Sized + DeviceCopy> DeviceCopy for DeviceAccessible<T> {}
@@ -140,8 +141,8 @@ pub trait RustToCudaProxy<T>: RustToCuda {
 }
 
 #[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct DeviceConstRef<'r, T: DeviceCopy> {
+#[derive(Clone, Copy, TypeLayout)]
+pub struct DeviceConstRef<'r, T: DeviceCopy + 'r> {
     #[cfg_attr(feature = "host", allow(dead_code))]
     pub(super) pointer: *const T,
     pub(super) reference: PhantomData<&'r T>,
@@ -158,7 +159,8 @@ impl<'r, T: DeviceCopy> AsRef<T> for DeviceConstRef<'r, T> {
 }
 
 #[repr(transparent)]
-pub struct DeviceMutRef<'r, T: DeviceCopy> {
+#[derive(TypeLayout)]
+pub struct DeviceMutRef<'r, T: DeviceCopy + 'r> {
     #[cfg_attr(feature = "host", allow(dead_code))]
     pub(super) pointer: *mut T,
     pub(super) reference: PhantomData<&'r mut T>,

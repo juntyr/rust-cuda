@@ -1,4 +1,3 @@
-#[allow(clippy::module_name_repetitions)]
 pub trait FitsIntoDeviceRegister: private::FitsIntoDeviceRegister {}
 impl<T: private::FitsIntoDeviceRegister> FitsIntoDeviceRegister for T {}
 
