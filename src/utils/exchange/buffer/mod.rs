@@ -17,7 +17,7 @@ pub use self::{device::CudaExchangeBufferDevice, host::CudaExchangeBufferHost};
 use crate::memory::SafeDeviceCopy;
 
 #[repr(transparent)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, TypeLayout)]
 pub struct CudaExchangeItem<T: SafeDeviceCopy, const M2D: bool, const M2H: bool>(T);
 
 // Safety: Transparent newtype wrapper around `SafeDeviceCopy`

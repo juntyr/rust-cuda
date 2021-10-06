@@ -88,15 +88,16 @@ pub(in super::super) fn quote_cuda_wrapper(
             syn::FnArg::Receiver(_) => unreachable!(),
         });
 
+    let func_type_layout_ident = quote::format_ident!("{}_type_layout", func_ident);
+
     quote! {
         #[cfg(target_os = "cuda")]
         #[rust_cuda::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
-        pub unsafe extern "ptx-kernel" fn test(#(#func_params: &mut &[u8]),*) {
+        pub unsafe extern "ptx-kernel" fn #func_type_layout_ident(#(#func_params: &mut &[u8]),*) {
             #(
                 // TODO:
-                // - generate a better decoy-kernel-name
                 // - remove the generated arrays and kernel from the source inside the linker
 
                 #[no_mangle]

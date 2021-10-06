@@ -1,3 +1,7 @@
+use core::mem::MaybeUninit;
+
+use const_type_layout::TypeLayout;
+
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy},
     memory::SafeDeviceCopy,
@@ -9,10 +13,11 @@ use crate::{host::CombinedCudaAlloc, host::CudaAlloc, rustacuda::error::CudaResu
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
-#[repr(C, u8)]
-pub enum OptionCudaRepresentation<T: CudaAsRust> {
-    None,
-    Some(DeviceAccessible<T>),
+#[derive(TypeLayout)]
+#[repr(C)]
+pub struct OptionCudaRepresentation<T: CudaAsRust> {
+    maybe: MaybeUninit<DeviceAccessible<T>>,
+    present: bool,
 }
 
 // Safety: Since the CUDA representation of T is DeviceCopy,
@@ -37,7 +42,10 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     )> {
         let (cuda_repr, alloc) = match self {
             None => (
-                OptionCudaRepresentation::None,
+                OptionCudaRepresentation {
+                    maybe: MaybeUninit::uninit(),
+                    present: false,
+                },
                 CombinedCudaAlloc::new(None, alloc),
             ),
             Some(value) => {
@@ -46,7 +54,10 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
                 let (alloc_front, alloc_tail) = alloc.split();
 
                 (
-                    OptionCudaRepresentation::Some(cuda_repr),
+                    OptionCudaRepresentation {
+                        maybe: MaybeUninit::new(cuda_repr),
+                        present: true,
+                    },
                     CombinedCudaAlloc::new(Some(alloc_front), alloc_tail),
                 )
             },
@@ -78,14 +89,17 @@ unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        match &**this {
-            OptionCudaRepresentation::None => None,
-            OptionCudaRepresentation::Some(value) => Some(CudaAsRust::as_rust(value)),
+        if this.present {
+            Some(CudaAsRust::as_rust(this.maybe.assume_init_ref()))
+        } else {
+            None
         }
     }
 }
 
-impl<T: SafeDeviceCopy> RustToCudaProxy<Option<T>> for Option<SafeDeviceCopyWrapper<T>> {
+impl<T: SafeDeviceCopy + TypeLayout> RustToCudaProxy<Option<T>>
+    for Option<SafeDeviceCopyWrapper<T>>
+{
     fn from_ref(val: &Option<T>) -> &Self {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
         unsafe { &*(val as *const Option<T>).cast() }

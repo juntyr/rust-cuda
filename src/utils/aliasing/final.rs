@@ -2,8 +2,9 @@ use r#final::Final;
 
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
-#[repr(transparent)]
 #[doc(hidden)]
+#[repr(transparent)]
+#[derive(TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
 pub struct FinalCudaRepresentation<T: CudaAsRust>(DeviceAccessible<T>);
 

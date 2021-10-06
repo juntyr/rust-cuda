@@ -1,3 +1,5 @@
+use const_type_layout::TypeLayout;
+
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda},
     memory::SafeDeviceCopy,
@@ -5,17 +7,20 @@ use crate::{
 
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
-pub struct SafeDeviceCopyWrapper<T: SafeDeviceCopy>(T);
+pub struct SafeDeviceCopyWrapper<T: SafeDeviceCopy + TypeLayout>(T);
 
-unsafe impl<T: SafeDeviceCopy> rustacuda_core::DeviceCopy for SafeDeviceCopyWrapper<T> {}
+unsafe impl<T: SafeDeviceCopy + TypeLayout> rustacuda_core::DeviceCopy
+    for SafeDeviceCopyWrapper<T>
+{
+}
 
-impl<T: SafeDeviceCopy> From<T> for SafeDeviceCopyWrapper<T> {
+impl<T: SafeDeviceCopy + TypeLayout> From<T> for SafeDeviceCopyWrapper<T> {
     fn from(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T: SafeDeviceCopy> SafeDeviceCopyWrapper<T> {
+impl<T: SafeDeviceCopy + TypeLayout> SafeDeviceCopyWrapper<T> {
     pub fn into_inner(self) -> T {
         self.0
     }
@@ -61,7 +66,7 @@ impl<T: SafeDeviceCopy> SafeDeviceCopyWrapper<T> {
     }
 }
 
-unsafe impl<T: SafeDeviceCopy> RustToCuda for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: SafeDeviceCopy + TypeLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
     #[cfg(feature = "host")]
     type CudaAllocation = crate::host::NullCudaAlloc;
     type CudaRepresentation = Self;
@@ -91,7 +96,7 @@ unsafe impl<T: SafeDeviceCopy> RustToCuda for SafeDeviceCopyWrapper<T> {
     }
 }
 
-unsafe impl<T: SafeDeviceCopy> CudaAsRust for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: SafeDeviceCopy + TypeLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
     type RustRepresentation = Self;
 
     #[cfg(any(not(feature = "host"), doc))]

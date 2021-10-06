@@ -9,6 +9,7 @@ use core::ops::{Deref, DerefMut};
 #[cfg(feature = "host")]
 use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 
+use const_type_layout::TypeLayout;
 use rustacuda_core::DeviceCopy;
 
 #[cfg(feature = "derive")]
@@ -37,7 +38,7 @@ impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
 }
 
 #[cfg(feature = "host")]
-impl<T: SafeDeviceCopy> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
+impl<T: SafeDeviceCopy + TypeLayout> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
     fn from(value: &T) -> Self {
         let value = unsafe {
             let mut uninit = MaybeUninit::uninit();
@@ -122,7 +123,7 @@ pub unsafe trait RustToCuda {
 /// # Safety
 ///
 /// This is an internal trait and should NEVER be implemented manually
-pub unsafe trait CudaAsRust: DeviceCopy {
+pub unsafe trait CudaAsRust: DeviceCopy + TypeLayout {
     type RustRepresentation: RustToCuda<CudaRepresentation = Self>;
 
     #[cfg(any(not(feature = "host"), doc))]

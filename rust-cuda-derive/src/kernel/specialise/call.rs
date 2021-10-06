@@ -43,9 +43,9 @@ impl syn::parse::Parse for SpecialiseMangleConfig {
                 None
             } else {
                 let specialisation_types = syn::punctuated::Punctuated::<
-                        syn::Type,
-                        syn::token::Comma,
-                    >::parse_separated_nonempty(input)?;
+                    syn::Type,
+                    syn::token::Comma,
+                >::parse_separated_nonempty(input)?;
 
                 let _gt_token: syn::token::Gt = input.parse()?;
 

@@ -1,3 +1,4 @@
+use const_type_layout::TypeLayout;
 use rustacuda_core::DeviceCopy;
 
 use crate::{common::CudaAsRust, memory::SafeDeviceCopy};
@@ -6,20 +7,25 @@ use super::{CudaExchangeBuffer, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
 #[doc(hidden)]
+#[derive(TypeLayout)]
 #[repr(C)]
-pub struct CudaExchangeBufferCudaRepresentation<T: SafeDeviceCopy, const M2D: bool, const M2H: bool>(
+pub struct CudaExchangeBufferCudaRepresentation<
+    T: SafeDeviceCopy + TypeLayout,
+    const M2D: bool,
+    const M2H: bool,
+>(
     pub(super) *mut CudaExchangeItem<T, M2D, M2H>,
     pub(super) usize,
 );
 
 // Safety: `CudaExchangeBufferCudaRepresentation<T>` is `DeviceCopy`
 //         iff `T` is `SafeDeviceCopy`
-unsafe impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> DeviceCopy
+unsafe impl<T: SafeDeviceCopy + TypeLayout, const M2D: bool, const M2H: bool> DeviceCopy
     for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
 {
 }
 
-unsafe impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> CudaAsRust
+unsafe impl<T: SafeDeviceCopy + TypeLayout, const M2D: bool, const M2H: bool> CudaAsRust
     for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
 {
     type RustRepresentation = CudaExchangeBuffer<T, M2D, M2H>;
