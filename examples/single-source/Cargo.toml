@@ -8,7 +8,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", rev = "20e04c4" }
+const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", rev = "5461e55" }
 
 [target.'cfg(target_os = "cuda")'.dependencies]
 rust-cuda = { path = "../../", features = ["derive"] }
