@@ -33,31 +33,35 @@ fn main() {}
 #[derive(TypeLayout)]
 pub struct Dummy(i32);
 
-/*#[derive(rust_cuda::common::LendRustToCuda)]
-#[allow(dead_code)]
-pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
-    #[r2cEmbed]
-    inner: T,
-}
+// TODO: derive bounds for CudaRepr should be focussed on the cuda reprs
+
+// #[derive(rust_cuda::common::LendRustToCuda)]
+// #[allow(dead_code)]
+// pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
+// #[r2cEmbed]
+// inner: T,
+// }
 
 #[derive(rust_cuda::common::LendRustToCuda)]
 pub struct Empty([u8; 0]);
 
 #[repr(C)]
 #[derive(TypeLayout)]
-pub struct Tuple(u32, i32);*/
+pub struct Tuple(u32, i32);
 
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
-pub fn kernel/*<'a, T: rust_cuda::common::RustToCuda>*/(
+pub fn kernel(
     #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
     #[kernel(pass = SafeDeviceCopy)] _y: &Dummy,
-    /*#[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
-    #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
-    #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,*/
-) /*where
-    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::memory::StackOnly,*/
+    /* #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
+     * #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
+     * #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
+     * #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
+     * #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple, */
+)
+// where
+// <T as rust_cuda::common::RustToCuda>::CudaRepresentation:
+// rust_cuda::memory::StackOnly,
 {
 }
 
@@ -66,14 +70,16 @@ mod host {
     use super::{Kernel, KernelArgs};
 
     #[allow(dead_code)]
-    struct Launcher/*<T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>)*/;
+    struct Launcher;
+    // <T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>);
 
     link_kernel!();
-    /*link_kernel!(crate::Empty);
-    link_kernel!(rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<u64>);*/
+    // link_kernel!(crate::Empty);
+    // link_kernel!(rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<u64>);
 
-    impl/*<T: rust_cuda::common::RustToCuda>*/ rust_cuda::host::Launcher for Launcher/*<T>*/ {
-        type KernelTraitObject = dyn Kernel/*<T>*/;
+    impl rust_cuda::host::Launcher for Launcher // <T>
+    {
+        type KernelTraitObject = dyn Kernel;
 
         fn get_config(&self) -> rust_cuda::host::LaunchConfig {
             unimplemented!()

@@ -15,5 +15,8 @@ mod sealed {
         for crate::common::DeviceAccessible<T>
     {
     }
-    impl<T: SafeDeviceCopy> SafeDeviceCopy for crate::utils::device_copy::SafeDeviceCopyWrapper<T> {}
+    impl<T: SafeDeviceCopy + const_type_layout::TypeLayout> SafeDeviceCopy
+        for crate::utils::device_copy::SafeDeviceCopyWrapper<T>
+    {
+    }
 }

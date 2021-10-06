@@ -9,7 +9,7 @@ use rustacuda_core::DeviceCopy;
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
 #[repr(transparent)]
-#[derive(Clone)]
+#[derive(Clone, TypeLayout)]
 pub struct SplitSliceOverCudaThreadsConstStride<T, const STRIDE: usize>(T);
 
 impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
