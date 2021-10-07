@@ -52,7 +52,7 @@ pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
     #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
     #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
-    //#[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
+    #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,
 ) where
