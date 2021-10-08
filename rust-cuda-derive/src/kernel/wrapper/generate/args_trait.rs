@@ -53,6 +53,7 @@ pub(in super::super) fn quote_args_trait(
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
+        #[allow(clippy::missing_safety_doc)]
         #visibility unsafe trait #args #generic_start_token #generic_params #generic_close_token
             #generic_where_clause
         {
@@ -62,6 +63,7 @@ pub(in super::super) fn quote_args_trait(
         // #args must always be pub in CUDA kernel as it is used to define the
         //  public kernel entry point signature
         #[cfg(target_os = "cuda")]
+        #[allow(clippy::missing_safety_doc)]
         pub unsafe trait #args #generic_start_token #generic_params #generic_close_token
             #generic_where_clause
         {

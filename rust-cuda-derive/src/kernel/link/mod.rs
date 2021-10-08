@@ -18,23 +18,29 @@ use config::{CheckKernelConfig, LinkKernelConfig};
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     let CheckKernelConfig {
-        kernel,
+        args,
         crate_name,
         crate_path,
     } = match syn::parse_macro_input::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "check_kernel!(KERNEL NAME PATH) expects KERNEL identifier, NAME and PATH string \
+                "check_kernel!(ARGS NAME PATH) expects ARGS identifier, NAME and PATH string \
                  literals: {:?}",
                 err
             )
         },
     };
 
-    let _kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, None);
+    let _kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, None);
 
     TokenStream::new()
+}
+
+lazy_static::lazy_static! {
+    pub static ref CONST_LAYOUT_REGEX: regex::Regex = {
+        regex::Regex::new(r"(?m)^\.global \.align 1 \.b8 (?P<param>[A-Z_0-9]+)\[(?:<len>\d+)\] = \{(?P<bytes>\d+(?:, \d+)*)\};$").unwrap()
+    };
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -45,6 +51,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
     let LinkKernelConfig {
         kernel,
+        args,
         crate_name,
         crate_path,
         specialisation,
@@ -52,8 +59,8 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "link_kernel!(KERNEL NAME PATH SPECIALISATION) expects KERNEL identifier, NAME \
-                 and PATH string literals, and SPECIALISATION tokens: {:?}",
+                "link_kernel!(KERNEL ARGS NAME PATH SPECIALISATION) expects KERNEL and ARGS \
+                 identifiers, NAME and PATH string literals, and SPECIALISATION tokens: {:?}",
                 err
             )
         },
@@ -63,13 +70,81 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         return quote! { "CLIPPY skips specialised PTX compilation" }.into();
     }
 
-    let kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, Some(&specialisation));
+    let mut kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Some(&specialisation));
 
-    (quote! { #kernel_ptx }).into()
+    let kernel_layout_name = if specialisation.is_empty() {
+        format!("{}_type_layout_kernel", kernel)
+    } else {
+        format!(
+            "{}_type_layout_kernel_{:016x}",
+            kernel,
+            seahash::hash(specialisation.as_bytes())
+        )
+    };
+
+    let mut type_layouts = Vec::new();
+
+    if let Some(start) = kernel_ptx.find(&format!("\n\t// .globl\t{}", kernel_layout_name)) {
+        let middle =
+            match kernel_ptx[start..].find(&format!(".visible .entry {}", kernel_layout_name)) {
+                Some(middle) => middle,
+                None => abort_call_site!(
+                    "Kernel compilation generated invalid PTX: incomplete type layout information."
+                ),
+            };
+
+        for capture in CONST_LAYOUT_REGEX.captures_iter(&kernel_ptx[start..(start + middle)]) {
+            match (
+                capture.name("param"),
+                capture.name("len"),
+                capture.name("bytes"),
+            ) {
+                (Some(param), Some(len), Some(bytes)) => {
+                    let param = quote::format_ident!("{}", param.as_str());
+
+                    let len = match len.as_str().parse::<usize>() {
+                        Ok(len) => len,
+                        Err(err) => {
+                            abort_call_site!("Kernel compilation generated invalid PTX: {}", err)
+                        },
+                    };
+
+                    let bytes: Vec<u8> = match bytes
+                        .as_str()
+                        .split(", ")
+                        .map(std::str::FromStr::from_str)
+                        .collect()
+                    {
+                        Ok(len) => len,
+                        Err(err) => {
+                            abort_call_site!("Kernel compilation generated invalid PTX: {}", err)
+                        },
+                    };
+                    let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
+
+                    type_layouts.push(quote! {
+                        const #param: [u8; #len] = #byte_str
+                    });
+                },
+                _ => abort_call_site!(
+                    "Kernel compilation generated invalid PTX: invalid type layout."
+                ),
+            };
+        }
+
+        let stop = match kernel_ptx[(start + middle)..].find('}') {
+            Some(stop) => stop,
+            None => abort_call_site!("Kernel compilation generated invalid PTX"),
+        };
+
+        kernel_ptx.replace_range(start..(start + middle + stop + '}'.len_utf8()), "");
+    }
+
+    (quote! { #kernel_ptx #(; #type_layouts)* }).into()
 }
 
 fn compile_kernel(
-    kernel: &syn::Ident,
+    args: &syn::Ident,
     crate_name: &str,
     crate_path: &Path,
     specialisation: Option<&str>,
@@ -116,7 +191,7 @@ fn compile_kernel(
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
         crate_name,
-        kernel.to_string().to_uppercase()
+        args.to_string().to_uppercase()
     );
 
     match build_kernel_with_specialisation(
