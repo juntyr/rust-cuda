@@ -58,6 +58,7 @@ pub(in super::super) fn quote_cpu_wrapper(
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
+        #[allow(clippy::missing_safety_doc)]
         #visibility unsafe trait #kernel #generic_start_token #generic_trait_params #generic_close_token
             #generic_trait_where_clause
         {

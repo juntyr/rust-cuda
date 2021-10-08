@@ -1,8 +1,9 @@
 use proc_macro2::TokenStream;
 
-use super::super::super::{DeclGenerics, KernelConfig};
+use super::super::super::{DeclGenerics, FuncIdent, KernelConfig};
 
 pub(super) fn quote_get_ptx_str(
+    FuncIdent { func_ident, .. }: &FuncIdent,
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
@@ -21,11 +22,13 @@ pub(super) fn quote_get_ptx_str(
 
     quote! {
         fn get_ptx_str() -> &'static str {
-            rust_cuda::host::link_kernel!(
-                #args #crate_name #crate_manifest_dir #generic_start_token
+            const PTX_STR: &'static str = rust_cuda::host::link_kernel!(
+                #func_ident #args #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token
-            )
+            );
+
+            PTX_STR
         }
     }
 }

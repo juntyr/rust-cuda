@@ -45,8 +45,6 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
             err
         ),
         Err(VarError::NotPresent) => {
-            std::thread::sleep(std::time::Duration::from_secs(30));
-
             return TokenStream::new();
         },
     };
