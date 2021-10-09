@@ -33,6 +33,7 @@ pub extern crate alloc;
 pub extern crate rust_cuda_ptx_jit as ptx_jit;
 pub extern crate rustacuda_core;
 
+#[doc(hidden)]
 #[macro_use]
 pub extern crate const_type_layout;
 

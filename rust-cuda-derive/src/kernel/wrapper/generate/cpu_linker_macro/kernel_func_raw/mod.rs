@@ -6,7 +6,7 @@ mod launch_types;
 mod raw_func_types;
 mod type_wrap;
 
-use launch_types::generate_launch_types;
+pub(super) use launch_types::generate_launch_types;
 use raw_func_types::generate_raw_func_types;
 use type_wrap::generate_func_input_and_ptx_jit_wraps;
 

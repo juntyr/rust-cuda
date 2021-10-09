@@ -59,7 +59,14 @@ pub(in super::super) fn quote_cpu_linker_macro(
         quote! {}
     };
 
-    let get_ptx_str = quote_get_ptx_str(func_ident, config, decl_generics, &macro_type_ids);
+    let get_ptx_str = quote_get_ptx_str(
+        func_ident,
+        config,
+        decl_generics,
+        func_inputs,
+        func_params,
+        &macro_type_ids,
+    );
     let new_kernel = quote_new_kernel(config, decl_generics, func_ident, &macro_type_ids);
     let kernel_func = quote_kernel_func(
         config,

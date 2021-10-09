@@ -39,14 +39,14 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
 
 lazy_static::lazy_static! {
     pub static ref CONST_LAYOUT_REGEX: regex::Regex = {
-        regex::Regex::new(r"(?m)^\.global \.align 1 \.b8 (?P<param>[A-Z_0-9]+)\[(?:<len>\d+)\] = \{(?P<bytes>\d+(?:, \d+)*)\};$").unwrap()
+        regex::Regex::new(r"(?m)^\.global \.align 1 \.b8 (?P<param>[A-Z_0-9]+)\[(?P<len>\d+)\] = \{(?P<bytes>\d+(?:, \d+)*)\};$").unwrap()
     };
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {
-        "ERROR in this PTX compilation"
+        const PTX_STR: &'static str = "ERROR in this PTX compilation";
     });
 
     let LinkKernelConfig {
@@ -67,7 +67,10 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     };
 
     if skip_kernel_compilation() {
-        return quote! { "CLIPPY skips specialised PTX compilation" }.into();
+        return quote! {
+            const PTX_STR: &'static str = "CLIPPY skips specialised PTX compilation";
+        }
+        .into();
     }
 
     let mut kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Some(&specialisation));
@@ -123,7 +126,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
                     let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
 
                     type_layouts.push(quote! {
-                        const #param: [u8; #len] = #byte_str
+                        const #param: &[u8; #len] = #byte_str;
                     });
                 },
                 _ => abort_call_site!(
@@ -140,7 +143,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         kernel_ptx.replace_range(start..(start + middle + stop + '}'.len_utf8()), "");
     }
 
-    (quote! { #kernel_ptx #(; #type_layouts)* }).into()
+    (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
 }
 
 fn compile_kernel(
