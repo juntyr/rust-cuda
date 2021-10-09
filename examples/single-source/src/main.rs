@@ -18,6 +18,7 @@
 #![feature(const_trait_impl)]
 #![feature(const_mut_refs)]
 #![feature(const_fn_trait_bound)]
+#![feature(adt_const_params)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 

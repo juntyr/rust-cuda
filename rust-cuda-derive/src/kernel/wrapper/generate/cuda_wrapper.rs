@@ -97,9 +97,6 @@ pub(in super::super) fn quote_cuda_wrapper(
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_type_layout_ident(#(#func_params: &mut &[u8]),*) {
             #(
-                // TODO:
-                // - remove the generated arrays and kernel from the source inside the linker
-
                 #[no_mangle]
                 static #func_layout_params: [
                     u8; ::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()

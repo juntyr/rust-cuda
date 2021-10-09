@@ -5,7 +5,7 @@ use crate::kernel::utils::r2c_move_lifetime;
 
 use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
 
-pub(super) fn generate_launch_types(
+pub(in super::super) fn generate_launch_types(
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
