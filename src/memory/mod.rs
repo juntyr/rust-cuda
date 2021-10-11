@@ -6,6 +6,8 @@ mod stack_only;
 mod unified_heap;
 
 #[doc(hidden)]
+pub mod kernel_signature;
+#[doc(hidden)]
 pub mod type_layout;
 
 pub use device_copy::SafeDeviceCopy;

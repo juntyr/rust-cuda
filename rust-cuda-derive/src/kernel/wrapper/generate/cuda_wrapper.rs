@@ -11,7 +11,11 @@ pub(in super::super) fn quote_cuda_wrapper(
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
-    FuncIdent { func_ident, .. }: &FuncIdent,
+    FuncIdent {
+        func_ident,
+        func_ident_hash,
+        ..
+    }: &FuncIdent,
     func_attrs: &[syn::Attribute],
     func_params: &[syn::Ident],
 ) -> TokenStream {
@@ -110,7 +114,7 @@ pub(in super::super) fn quote_cuda_wrapper(
         #[rust_cuda::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
-        pub unsafe extern "ptx-kernel" fn #func_ident(#(#ptx_func_inputs),*) {
+        pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
             #arch_checks
 
             #[deny(improper_ctypes)]

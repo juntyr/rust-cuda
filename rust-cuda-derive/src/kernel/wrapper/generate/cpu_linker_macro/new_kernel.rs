@@ -9,7 +9,9 @@ pub(super) fn quote_new_kernel(
         generic_close_token,
         ..
     }: &DeclGenerics,
-    FuncIdent { func_ident, .. }: &FuncIdent,
+    FuncIdent {
+        func_ident_hash, ..
+    }: &FuncIdent,
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
     quote! {
@@ -33,7 +35,7 @@ pub(super) fn quote_new_kernel(
             );
 
             let entry_point_str = rust_cuda::host::specialise_kernel_call!(
-                #func_ident #generic_start_token
+                #func_ident_hash #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token
             );

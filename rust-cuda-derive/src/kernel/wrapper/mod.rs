@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 use proc_macro::TokenStream;
 
 mod config;
@@ -18,6 +20,13 @@ use syn::spanned::Spanned;
 
 #[allow(clippy::too_many_lines)]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
+    let mut hasher = seahash::SeaHasher::new();
+
+    attr.to_string().hash(&mut hasher);
+    func.to_string().hash(&mut hasher);
+
+    let kernel_hash = hasher.finish();
+
     let config: KernelConfig = match syn::parse_macro_input::parse(attr) {
         Ok(config) => config,
         Err(err) => {
@@ -120,6 +129,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let func_ident = FuncIdent {
         func_ident: &func.sig.ident,
         func_ident_raw: quote::format_ident!("{}_raw", &func.sig.ident),
+        func_ident_hash: quote::format_ident!("{}_{:016x}", &func.sig.ident, kernel_hash),
     };
 
     let func_params = func_inputs
@@ -176,7 +186,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_ident,
         &func.attrs,
     );
-    let cpu_cuda_check = quote_generic_check(&config);
+    let cpu_cuda_check = quote_generic_check(&func_ident, &config);
     let cpu_linker_macro = quote_cpu_linker_macro(
         &config,
         &decl_generics,
@@ -241,6 +251,7 @@ struct ImplGenerics<'f> {
 struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
     func_ident_raw: syn::Ident,
+    func_ident_hash: syn::Ident,
 }
 
 fn ident_from_pat(pat: &syn::Pat) -> Option<syn::Ident> {
@@ -288,7 +299,12 @@ fn ident_from_pat_iter<'p, I: Iterator<Item = &'p syn::Pat>>(iter: I) -> Option<
         .map(|(string, span)| syn::Ident::new(&string, span))
 }
 
-fn quote_generic_check(KernelConfig { args, .. }: &KernelConfig) -> proc_macro2::TokenStream {
+fn quote_generic_check(
+    FuncIdent {
+        func_ident_hash, ..
+    }: &FuncIdent,
+    KernelConfig { args, .. }: &KernelConfig,
+) -> proc_macro2::TokenStream {
     let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
         Err(err) => abort_call_site!("Failed to read crate name: {:?}.", err),
@@ -297,8 +313,15 @@ fn quote_generic_check(KernelConfig { args, .. }: &KernelConfig) -> proc_macro2:
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
 
-    quote! {
+    quote::quote_spanned! { func_ident_hash.span()=>
         #[cfg(not(target_os = "cuda"))]
-        rust_cuda::host::check_kernel! { #args #crate_name #crate_manifest_dir }
+        const _: ::rust_cuda::memory::kernel_signature::Assert<{
+            ::rust_cuda::memory::kernel_signature::CpuAndGpuKernelSignatures::Match
+        }> = ::rust_cuda::memory::kernel_signature::Assert::<{
+            ::rust_cuda::memory::kernel_signature::check(
+                rust_cuda::host::check_kernel!(#args #crate_name #crate_manifest_dir).as_bytes(),
+                concat!(".visible .entry ", stringify!(#func_ident_hash)).as_bytes()
+            )
+        }>;
     }
 }

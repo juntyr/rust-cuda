@@ -6,7 +6,11 @@ use crate::kernel::utils::skip_kernel_compilation;
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
 
 pub(super) fn quote_get_ptx_str(
-    FuncIdent { func_ident, .. }: &FuncIdent,
+    FuncIdent {
+        func_ident,
+        func_ident_hash,
+        ..
+    }: &FuncIdent,
     config @ KernelConfig { args, .. }: &KernelConfig,
     generics
     @ DeclGenerics {
@@ -28,6 +32,25 @@ pub(super) fn quote_get_ptx_str(
 
     let cpu_func_lifetime_erased_types =
         super::kernel_func_raw::generate_launch_types(config, generics, inputs, macro_type_ids).1;
+
+    let matching_kernel_assert = if skip_kernel_compilation() {
+        quote!()
+    } else {
+        quote::quote_spanned! { func_ident.span()=>
+            const _: ::rust_cuda::memory::kernel_signature::Assert<{
+                ::rust_cuda::memory::kernel_signature::CpuAndGpuKernelSignatures::Match
+            }> = ::rust_cuda::memory::kernel_signature::Assert::<{
+                ::rust_cuda::memory::kernel_signature::check(
+                    PTX_STR.as_bytes(),
+                    concat!(".visible .entry ", rust_cuda::host::specialise_kernel_call!(
+                        #func_ident_hash #generic_start_token
+                            #($#macro_type_ids),*
+                        #generic_close_token
+                    )).as_bytes()
+                )
+            }>;
+        }
+    };
 
     let type_layout_asserts = if skip_kernel_compilation() {
         Vec::new()
@@ -57,6 +80,8 @@ pub(super) fn quote_get_ptx_str(
                     #($#macro_type_ids),*
                 #generic_close_token
             }
+
+            #matching_kernel_assert
 
             #(#type_layout_asserts)*
 
