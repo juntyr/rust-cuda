@@ -31,10 +31,10 @@ rustacuda_derive = { version = "0.1.2", optional = true }
 const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", rev = "b675e0c" }
 
 final = { git = "https://github.com/MomoLangenstein/final", rev = "a2dbfd6" }
-hashbrown = { version = "0.11", optional = true }
+hashbrown = { version = "0.11", default-features = false, features = ["inline-more"], optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }
 
 [dev-dependencies]
-hashbrown = "0.11"
+hashbrown = { version = "0.11", default-features = false, features = ["inline-more"] }
