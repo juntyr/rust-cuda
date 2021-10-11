@@ -17,6 +17,10 @@ mod config;
 use config::{CheckKernelConfig, LinkKernelConfig};
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
+    proc_macro_error::set_dummy(quote! {
+        "ERROR in this PTX compilation"
+    });
+
     let CheckKernelConfig {
         args,
         crate_name,
@@ -32,9 +36,9 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
-    let _kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, None);
+    let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, None);
 
-    TokenStream::new()
+    quote!(#kernel_ptx).into()
 }
 
 lazy_static::lazy_static! {
@@ -272,13 +276,16 @@ fn build_kernel_with_specialisation(
         BuildStatus::Success(output) => {
             let ptx_path = output.get_assembly_path();
 
+            let specialisation = match specialisation {
+                None => return Ok(ptx_path),
+                Some(specialisation) => specialisation,
+            };
+
             let mut specialised_ptx_path = ptx_path.clone();
-            if let Some(specialisation) = specialisation {
-                specialised_ptx_path.set_extension(&format!(
-                    "{:016x}.ptx",
-                    seahash::hash(specialisation.as_bytes())
-                ));
-            }
+            specialised_ptx_path.set_extension(&format!(
+                "{:016x}.ptx",
+                seahash::hash(specialisation.as_bytes())
+            ));
 
             fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
                 Error::from(BuildErrorKind::BuildFailed(vec![format!(
@@ -290,13 +297,7 @@ fn build_kernel_with_specialisation(
             fs::OpenOptions::new()
                 .append(true)
                 .open(&specialised_ptx_path)
-                .and_then(|mut file| {
-                    if let Some(specialisation) = specialisation {
-                        writeln!(file, "\n// {}", specialisation)
-                    } else {
-                        Ok(())
-                    }
-                })
+                .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
                 .map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(vec![format!(
                         "Failed to write specialisation to {:?}: {}",

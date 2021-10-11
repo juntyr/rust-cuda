@@ -45,7 +45,14 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
             err
         ),
         Err(VarError::NotPresent) => {
-            return TokenStream::new();
+            let func_ident = func.sig.ident;
+
+            return (quote! {
+                #[cfg(target_os = "cuda")]
+                #[no_mangle]
+                pub unsafe extern "ptx-kernel" fn #func_ident() {}
+            })
+            .into();
         },
     };
 

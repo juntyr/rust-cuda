@@ -24,6 +24,7 @@ pub(in super::super) fn quote_cpu_wrapper(
     FuncIdent {
         func_ident,
         func_ident_raw,
+        ..
     }: &FuncIdent,
     func_attrs: &[syn::Attribute],
 ) -> TokenStream {
