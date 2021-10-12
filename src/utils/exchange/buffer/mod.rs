@@ -14,7 +14,7 @@ pub use host::CudaExchangeBufferHost as CudaExchangeBuffer;
 #[cfg(doc)]
 pub use self::{device::CudaExchangeBufferDevice, host::CudaExchangeBufferHost};
 
-use crate::memory::SafeDeviceCopy;
+use crate::safety::SafeDeviceCopy;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, TypeLayout)]

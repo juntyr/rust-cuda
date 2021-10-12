@@ -4,7 +4,7 @@ use const_type_layout::TypeLayout;
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy},
-    memory::SafeDeviceCopy,
+    safety::SafeDeviceCopy,
     utils::device_copy::SafeDeviceCopyWrapper,
 };
 

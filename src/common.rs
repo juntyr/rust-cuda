@@ -21,7 +21,7 @@ pub use rust_cuda_derive::LendRustToCuda;
 pub use rust_cuda_derive::kernel;
 
 #[cfg(feature = "host")]
-use crate::{memory::SafeDeviceCopy, utils::device_copy::SafeDeviceCopyWrapper};
+use crate::{safety::SafeDeviceCopy, utils::device_copy::SafeDeviceCopyWrapper};
 
 #[repr(transparent)]
 #[cfg_attr(not(feature = "host"), derive(Debug))]

@@ -9,7 +9,7 @@ pub use rust_cuda_derive::{specialise_kernel_entry, specialise_kernel_type};
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
-    memory::SafeDeviceCopy,
+    safety::SafeDeviceCopy,
 };
 
 pub mod utils;

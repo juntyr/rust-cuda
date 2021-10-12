@@ -1,4 +1,3 @@
-pub mod arch_checks;
 pub mod args_trait;
 pub mod cpu_linker_macro;
 pub mod cpu_wrapper;

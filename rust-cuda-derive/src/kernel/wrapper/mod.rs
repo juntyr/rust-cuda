@@ -315,10 +315,10 @@ fn quote_generic_check(
 
     quote::quote_spanned! { func_ident_hash.span()=>
         #[cfg(not(target_os = "cuda"))]
-        const _: ::rust_cuda::memory::kernel_signature::Assert<{
-            ::rust_cuda::memory::kernel_signature::CpuAndGpuKernelSignatures::Match
-        }> = ::rust_cuda::memory::kernel_signature::Assert::<{
-            ::rust_cuda::memory::kernel_signature::check(
+        const _: ::rust_cuda::safety::kernel_signature::Assert<{
+            ::rust_cuda::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
+        }> = ::rust_cuda::safety::kernel_signature::Assert::<{
+            ::rust_cuda::safety::kernel_signature::check(
                 rust_cuda::host::check_kernel!(#args #crate_name #crate_manifest_dir).as_bytes(),
                 concat!(".visible .entry ", stringify!(#func_ident_hash)).as_bytes()
             )

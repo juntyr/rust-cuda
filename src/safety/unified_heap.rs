@@ -1,26 +1,26 @@
 #[doc(cfg(feature = "alloc"))]
 /// ```rust
-/// # use rust_cuda::memory::UnifiedHeapOnly;
+/// # use rust_cuda::safety::UnifiedHeapOnly;
 /// fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}
 /// ```
 /// ```rust
-/// # use rust_cuda::memory::UnifiedHeapOnly;
+/// # use rust_cuda::safety::UnifiedHeapOnly;
 /// # fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}
 /// assert_unified_heap_only(42);
 /// ```
 /// ```rust
-/// # use rust_cuda::memory::UnifiedHeapOnly;
+/// # use rust_cuda::safety::UnifiedHeapOnly;
 /// # fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}
 /// assert_unified_heap_only([42; 42]);
 /// ```
 /// ```rust,compile_fail
 /// # use alloc::vec;
-/// # use rust_cuda::memory::UnifiedHeapOnly;
+/// # use rust_cuda::safety::UnifiedHeapOnly;
 /// # fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}
 /// assert_unified_heap_only(vec![42]);
 /// ```
 /// ```rust,compile_fail
-/// # use rust_cuda::memory::UnifiedHeapOnly;
+/// # use rust_cuda::safety::UnifiedHeapOnly;
 /// # fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}
 /// assert_unified_heap_only(&42);
 /// ```

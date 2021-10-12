@@ -20,34 +20,14 @@ pub(super) fn quote_new_kernel(
                 #($#macro_type_ids),*
             #generic_close_token>
         > {
-            #[repr(C)]
-            struct TypedKernel {
-                compiler: rust_cuda::ptx_jit::PtxJITCompiler,
-                kernel: Option<rust_cuda::ptx_jit::CudaKernel>,
-                entry_point: Box<[u8]>,
-            }
-
-            let ptx_cstring = ::std::ffi::CString::new(Self::get_ptx_str())
-                .map_err(|_| rust_cuda::rustacuda::error::CudaError::InvalidPtx)?;
-
-            let compiler = rust_cuda::ptx_jit::PtxJITCompiler::new(
-                &ptx_cstring
-            );
-
-            let entry_point_str = rust_cuda::host::specialise_kernel_call!(
+            let ptx = Self::get_ptx_str();
+            let entry_point = rust_cuda::host::specialise_kernel_call!(
                 #func_ident_hash #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token
             );
-            let entry_point_cstring = ::std::ffi::CString::new(entry_point_str)
-                .map_err(|_| rust_cuda::rustacuda::error::CudaError::UnknownError)?;
-            let entry_point = entry_point_cstring
-                .into_bytes_with_nul()
-                .into_boxed_slice();
 
-            let typed_kernel = TypedKernel { compiler, kernel: None, entry_point };
-
-            Ok(unsafe { ::std::mem::transmute(typed_kernel) })
+            rust_cuda::host::TypedKernel::new(ptx, entry_point)
         }
     }
 }
