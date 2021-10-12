@@ -2,7 +2,7 @@ use core::ops::{Deref, DerefMut};
 
 use const_type_layout::TypeLayout;
 
-use crate::{common::RustToCuda, memory::SafeDeviceCopy};
+use crate::{common::RustToCuda, safety::SafeDeviceCopy};
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 

@@ -2,7 +2,7 @@ use const_type_layout::TypeLayout;
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda},
-    memory::SafeDeviceCopy,
+    safety::SafeDeviceCopy,
 };
 
 #[derive(Copy, Clone, Debug, TypeLayout)]

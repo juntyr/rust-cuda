@@ -37,10 +37,10 @@ pub(super) fn quote_get_ptx_str(
         quote!()
     } else {
         quote::quote_spanned! { func_ident.span()=>
-            const _: ::rust_cuda::memory::kernel_signature::Assert<{
-                ::rust_cuda::memory::kernel_signature::CpuAndGpuKernelSignatures::Match
-            }> = ::rust_cuda::memory::kernel_signature::Assert::<{
-                ::rust_cuda::memory::kernel_signature::check(
+            const _: ::rust_cuda::safety::kernel_signature::Assert<{
+                ::rust_cuda::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
+            }> = ::rust_cuda::safety::kernel_signature::Assert::<{
+                ::rust_cuda::safety::kernel_signature::check(
                     PTX_STR.as_bytes(),
                     concat!(".visible .entry ", rust_cuda::host::specialise_kernel_call!(
                         #func_ident_hash #generic_start_token
@@ -63,10 +63,10 @@ pub(super) fn quote_get_ptx_str(
                     syn::Ident::new(&format!("__{}_layout", param).to_uppercase(), param.span());
 
                 quote::quote_spanned! { ty.span()=>
-                    const _: ::rust_cuda::memory::type_layout::Assert<{
-                        ::rust_cuda::memory::type_layout::CpuAndGpuTypeLayouts::Match
-                    }> = ::rust_cuda::memory::type_layout::Assert::<{
-                        ::rust_cuda::memory::type_layout::check::<#ty>(#layout_param)
+                    const _: ::rust_cuda::safety::type_layout::Assert<{
+                        ::rust_cuda::safety::type_layout::CpuAndGpuTypeLayouts::Match
+                    }> = ::rust_cuda::safety::type_layout::Assert::<{
+                        ::rust_cuda::safety::type_layout::check::<#ty>(#layout_param)
                     }>;
                 }
             })

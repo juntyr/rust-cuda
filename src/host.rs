@@ -20,23 +20,22 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_call};
 
 use crate::{
     common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
-    memory::SafeDeviceCopy,
+    ptx_jit::{CudaKernel, PtxJITCompiler, PtxJITResult},
+    safety::SafeDeviceCopy,
 };
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
+    type CompilationWatcher;
 
-    fn get_config(&self) -> LaunchConfig;
-    fn get_stream(&self) -> &Stream;
-
-    fn get_kernel_mut(&mut self) -> &mut TypedKernel<Self::KernelTraitObject>;
+    fn get_launch_package(&mut self) -> LaunchPackage<Self>;
 
     /// # Errors
     ///
     /// Should only return a `CudaError` if some implementation-defined
     ///  critical kernel function configuration failed.
     #[allow(unused_variables)]
-    fn on_compile(&mut self, kernel: &Function) -> CudaResult<()> {
+    fn on_compile(kernel: &Function, watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
         Ok(())
     }
 }
@@ -48,12 +47,83 @@ pub struct LaunchConfig {
     pub shared_memory_size: u32,
 }
 
-#[repr(C)]
+pub struct LaunchPackage<'l, L: ?Sized + Launcher> {
+    pub config: LaunchConfig,
+
+    pub kernel: &'l mut TypedKernel<L::KernelTraitObject>,
+    pub stream: &'l mut Stream,
+
+    pub watcher: &'l mut L::CompilationWatcher,
+}
+
+pub enum KernelJITResult<'k> {
+    Cached(&'k Function<'k>),
+    Recompiled(&'k Function<'k>),
+}
+
 pub struct TypedKernel<KernelTraitObject: ?Sized> {
-    _compiler: crate::ptx_jit::PtxJITCompiler,
-    _kernel: Option<crate::ptx_jit::CudaKernel>,
-    _entry_point: alloc::boxed::Box<[u8]>,
-    _marker: PhantomData<KernelTraitObject>,
+    compiler: PtxJITCompiler,
+    kernel: Option<CudaKernel>,
+    entry_point: alloc::boxed::Box<std::ffi::CStr>,
+    marker: PhantomData<KernelTraitObject>,
+}
+
+impl<KernelTraitObject: ?Sized> TypedKernel<KernelTraitObject> {
+    /// # Errors
+    ///
+    /// Returns a `CudaError` if `ptx` or `entry_point` contain nul bytes.
+    pub fn new(ptx: &str, entry_point: &str) -> CudaResult<Self> {
+        let ptx_cstring = std::ffi::CString::new(ptx).map_err(|_| CudaError::InvalidPtx)?;
+
+        let compiler = crate::ptx_jit::PtxJITCompiler::new(&ptx_cstring);
+
+        let entry_point_cstring =
+            std::ffi::CString::new(entry_point).map_err(|_| CudaError::InvalidValue)?;
+        let entry_point = entry_point_cstring.into_boxed_c_str();
+
+        Ok(Self {
+            compiler,
+            kernel: None,
+            entry_point,
+            marker: PhantomData,
+        })
+    }
+
+    /// # Errors
+    ///
+    /// Returns a `CudaError` if `ptx` (from [`Self::new`]) is not a valid
+    ///  PTX source, or it does not contain an entry point named `entry_point`
+    ///  (from [`Self::new`]).
+    pub fn compile_with_ptx_jit_args(
+        &mut self,
+        arguments: Option<&[Option<&[u8]>]>,
+    ) -> CudaResult<KernelJITResult> {
+        let ptx_jit = self.compiler.with_arguments(arguments);
+
+        let kernel_jit = if self.kernel.is_none() || matches!(ptx_jit, PtxJITResult::Recomputed(_))
+        {
+            let ptx_cstr = match ptx_jit {
+                PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr) => ptx_cstr,
+            };
+
+            let recomputed_kernel = CudaKernel::new(ptx_cstr, &self.entry_point)?;
+
+            // Replace the existing compiled kernel, drop the old one
+            let kernel = self.kernel.insert(recomputed_kernel);
+
+            KernelJITResult::Recompiled(kernel.get_function())
+        } else {
+            // Safety: if tells us that kernel is some and ptx_jit is cached
+            let kernel = match &self.kernel {
+                Some(kernel) => kernel,
+                None => unsafe { core::hint::unreachable_unchecked() },
+            };
+
+            KernelJITResult::Cached(kernel.get_function())
+        };
+
+        Ok(kernel_jit)
+    }
 }
 
 pub trait LendToCuda: RustToCuda {

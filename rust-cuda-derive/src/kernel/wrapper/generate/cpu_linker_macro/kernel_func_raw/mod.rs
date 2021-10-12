@@ -28,7 +28,6 @@ pub(super) fn quote_kernel_func_raw(
     func_attrs: &[syn::Attribute],
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
-    let arch_checks = super::super::arch_checks::quote_arch_checks();
     let new_func_inputs_raw =
         generate_raw_func_types(config, decl_generics, func_inputs, macro_type_ids);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
@@ -43,56 +42,23 @@ pub(super) fn quote_kernel_func_raw(
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
-            use rust_cuda::ptx_jit::PtxJITResult;
+            let rust_cuda::host::LaunchPackage {
+                kernel, watcher, config, stream
+            } = rust_cuda::host::Launcher::get_launch_package(self);
 
-            #arch_checks
+            let kernel_jit_result = rust_cuda::ptx_jit::compilePtxJITwithArguments! {
+                kernel.compile_with_ptx_jit_args(#(#func_cpu_ptx_jit_wrap),*)
+            }?;
 
-            #[repr(C)]
-            struct TypedKernel {
-                compiler: rust_cuda::ptx_jit::PtxJITCompiler,
-                kernel: Option<rust_cuda::ptx_jit::CudaKernel>,
-                entry_point: Box<[u8]>,
-            }
-
-            let kernel = rust_cuda::host::Launcher::get_kernel_mut(self);
-            let typed_kernel: &mut TypedKernel = unsafe { &mut *(
-                kernel as *mut rust_cuda::host::TypedKernel<_> as *mut TypedKernel
-            ) };
-            let compiler = &mut typed_kernel.compiler;
-
-            let function = match (rust_cuda::ptx_jit::compilePtxJITwithArguments! {
-                compiler(#(#func_cpu_ptx_jit_wrap),*)
-            }, typed_kernel.kernel.as_mut()) {
-                (
-                    PtxJITResult::Cached(_),
-                    Some(kernel),
-                ) => kernel,
-                (
-                    PtxJITResult::Cached(ptx_cstr)
-                    | PtxJITResult::Recomputed(ptx_cstr),
-                    _,
-                ) => {
-                    // Safety: `entry_point` is created using
-                    //         `CString::into_bytes_with_nul`
-                    let entry_point_cstr = unsafe {
-                        ::std::ffi::CStr::from_bytes_with_nul_unchecked(
-                            &typed_kernel.entry_point
-                        )
-                    };
-
-                    let kernel = rust_cuda::ptx_jit::CudaKernel::new(
-                        ptx_cstr, entry_point_cstr
-                    )?;
-
+            let function = match kernel_jit_result {
+                rust_cuda::host::KernelJITResult::Recompiled(function) => {
                     // Call launcher hook on kernel compilation
-                    rust_cuda::host::Launcher::on_compile(
-                        self, kernel.get_function()
-                    )?;
+                    <Self as rust_cuda::host::Launcher>::on_compile(function, watcher)?;
 
-                    // Replace the existing compiled kernel, drop the old one
-                    typed_kernel.kernel.insert(kernel)
+                    function
                 },
-            }.get_function();
+                rust_cuda::host::KernelJITResult::Cached(function) => function,
+            };
 
             #[allow(clippy::redundant_closure_call)]
             (|#(#func_params: #cpu_func_types_launch),*| {
@@ -111,11 +77,11 @@ pub(super) fn quote_kernel_func_raw(
                     fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                     #[allow(dead_code)]
-                    fn assert_impl_no_aliasing<T: rust_cuda::memory::NoAliasing>() {}
+                    fn assert_impl_no_aliasing<T: rust_cuda::safety::NoAliasing>() {}
 
                     #[allow(dead_code)]
                     fn assert_impl_fits_into_device_register<
-                        T: rust_cuda::memory::FitsIntoDeviceRegister,
+                        T: rust_cuda::safety::FitsIntoDeviceRegister,
                     >(_val: &T) {}
 
                     #(assert_impl_devicecopy(&#func_params);)*
@@ -123,10 +89,9 @@ pub(super) fn quote_kernel_func_raw(
                     #(assert_impl_fits_into_device_register(&#func_params);)*
                 }
 
-                let stream = rust_cuda::host::Launcher::get_stream(self);
                 let rust_cuda::host::LaunchConfig {
                     grid, block, shared_memory_size
-                } = rust_cuda::host::Launcher::get_config(self);
+                } = config;
 
                 unsafe { stream.launch(function, grid, block, shared_memory_size,
                     &[

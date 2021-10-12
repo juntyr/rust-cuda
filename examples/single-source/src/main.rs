@@ -57,7 +57,7 @@ pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,
 ) where
-    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::memory::StackOnly,
+    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::safety::StackOnly,
 {
 }
 
@@ -72,17 +72,10 @@ mod host {
     link_kernel!(rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<u64>);
 
     impl<T: rust_cuda::common::RustToCuda> rust_cuda::host::Launcher for Launcher<T> {
+        type CompilationWatcher = ();
         type KernelTraitObject = dyn Kernel<T>;
 
-        fn get_config(&self) -> rust_cuda::host::LaunchConfig {
-            unimplemented!()
-        }
-
-        fn get_stream(&self) -> &rust_cuda::rustacuda::stream::Stream {
-            unimplemented!()
-        }
-
-        fn get_kernel_mut(&mut self) -> &mut rust_cuda::host::TypedKernel<Self::KernelTraitObject> {
+        fn get_launch_package(&mut self) -> rust_cuda::host::LaunchPackage<Self> {
             unimplemented!()
         }
     }

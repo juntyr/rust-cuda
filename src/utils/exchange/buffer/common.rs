@@ -1,7 +1,7 @@
 use const_type_layout::TypeLayout;
 use rustacuda_core::DeviceCopy;
 
-use crate::{common::CudaAsRust, memory::SafeDeviceCopy};
+use crate::{common::CudaAsRust, safety::SafeDeviceCopy};
 
 use super::{CudaExchangeBuffer, CudaExchangeItem};
 

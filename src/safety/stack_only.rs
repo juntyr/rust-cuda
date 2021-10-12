@@ -1,26 +1,26 @@
 /// ```rust
-/// # use rust_cuda::memory::StackOnly;
+/// # use rust_cuda::safety::StackOnly;
 /// fn assert_stackonly(_x: impl StackOnly) {}
 /// ```
 /// ```rust
-/// # use rust_cuda::memory::StackOnly;
+/// # use rust_cuda::safety::StackOnly;
 /// # fn assert_stackonly(_x: impl StackOnly) {}
 /// assert_stackonly(42);
 /// ```
 /// ```rust
-/// # use rust_cuda::memory::StackOnly;
+/// # use rust_cuda::safety::StackOnly;
 /// # fn assert_stackonly(_x: impl StackOnly) {}
 /// assert_stackonly([42; 42]);
 /// ```
 /// ```rust,compile_fail
 /// # use alloc::vec;
-/// # use rust_cuda::memory::StackOnly;
+/// # use rust_cuda::safety::StackOnly;
 /// # fn assert_stackonly(_x: impl StackOnly) {}
 /// assert_stackonly(vec![42]);
 /// ```
 /// ```rust,compile_fail
 /// # use alloc::vec;
-/// # use rust_cuda::memory::StackOnly;
+/// # use rust_cuda::safety::StackOnly;
 /// # fn assert_stackonly(_x: impl StackOnly) {}
 /// assert_stackonly(&42);
 /// ```

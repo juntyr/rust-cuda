@@ -19,8 +19,6 @@ pub(in super::super) fn quote_cuda_wrapper(
     func_attrs: &[syn::Attribute],
     func_params: &[syn::Ident],
 ) -> TokenStream {
-    let arch_checks = super::arch_checks::quote_arch_checks();
-
     let (ptx_func_inputs, ptx_func_types) = specialise_ptx_func_inputs(config, inputs);
     let ptx_func_unboxed_types = specialise_ptx_unboxed_types(config, inputs);
 
@@ -115,8 +113,6 @@ pub(in super::super) fn quote_cuda_wrapper(
         #[no_mangle]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
-            #arch_checks
-
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
                 use super::#args;
@@ -132,11 +128,11 @@ pub(in super::super) fn quote_cuda_wrapper(
                 fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                 #[allow(dead_code)]
-                fn assert_impl_no_aliasing<T: rust_cuda::memory::NoAliasing>() {}
+                fn assert_impl_no_aliasing<T: rust_cuda::safety::NoAliasing>() {}
 
                 #[allow(dead_code)]
                 fn assert_impl_fits_into_device_register<
-                    T: rust_cuda::memory::FitsIntoDeviceRegister,
+                    T: rust_cuda::safety::FitsIntoDeviceRegister,
                 >(_val: &T) {}
 
                 #(assert_impl_devicecopy(&#func_params);)*

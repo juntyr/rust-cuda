@@ -1,6 +1,6 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::useless_attribute)]
-#![no_std]
+#![cfg_attr(not(feature = "host"), no_std)]
 #![feature(cfg_version)]
 #![feature(associated_type_bounds)]
 #![feature(auto_traits)]
@@ -57,4 +57,4 @@ pub mod device;
 
 pub mod utils;
 
-pub mod memory;
+pub mod safety;

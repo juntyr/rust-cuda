@@ -1,3 +1,4 @@
+mod arch;
 mod device_copy;
 mod no_aliasing;
 mod register_fit;

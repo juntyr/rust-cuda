@@ -13,7 +13,7 @@ use rustacuda::{
 use crate::{
     common::{DeviceAccessible, RustToCuda},
     host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
-    memory::SafeDeviceCopy,
+    safety::SafeDeviceCopy,
 };
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
