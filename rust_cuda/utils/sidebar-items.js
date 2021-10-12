@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["aliasing",""],["exchange",""],["stack",""]]});
+initSidebarItems({"mod":[["aliasing",""],["alloc",""],["device_copy",""],["exchange",""]]});

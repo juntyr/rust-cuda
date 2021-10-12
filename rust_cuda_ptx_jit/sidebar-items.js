@@ -1,1 +1,1 @@
-initSidebarItems({"macro":[["PtxJITConstLoad",""],["compilePtxJITwithArguments",""]],"mod":[["host",""]]});
+initSidebarItems({"enum":[["PtxJITResult",""]],"struct":[["CudaKernel",""],["PtxJITCompiler",""]]});

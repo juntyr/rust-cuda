@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ExchangeWithCudaWrapper",""],["ExchangeWithHostWrapper",""]]});
+initSidebarItems({"struct":[["ExchangeWrapperOnDevice",""],["ExchangeWrapperOnHost",""]]});

@@ -72,9 +72,6 @@
 <span id="72">72</span>
 <span id="73">73</span>
 <span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">deny</span>(<span class="ident">clippy::pedantic</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">cfg_version</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">box_patterns</span>)]</span>
@@ -89,9 +86,7 @@
 
 <span class="kw">use</span> <span class="ident">proc_macro::TokenStream</span>;
 
-<span class="kw">mod</span> <span class="ident">generics</span>;
 <span class="kw">mod</span> <span class="ident">kernel</span>;
-<span class="kw">mod</span> <span class="ident">lend_to_cuda</span>;
 <span class="kw">mod</span> <span class="ident">rust_to_cuda</span>;
 
 <span class="comment">// cargo expand --target x86_64-unknown-linux-gnu --ugly \</span>
@@ -100,11 +95,11 @@
 <span class="comment">//  | rustfmt --config max_width=160 &gt; out.rs</span>
 
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
-<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">RustToCudaAsRust</span>, <span class="ident">attributes</span>(<span class="ident">r2cEmbed</span>, <span class="ident">r2cBound</span>))]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rust_to_cuda_derive</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">LendRustToCuda</span>, <span class="ident">attributes</span>(<span class="ident">r2cBound</span>, <span class="ident">r2cIgnore</span>, <span class="ident">r2cEmbed</span>))]</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rust_to_cuda_derive</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">ast</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse</span>(<span class="ident">input</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">ast</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ast</span>,
-        <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort!</span>(<span class="ident">err</span>),
+        <span class="prelude-val">Ok</span>(<span class="ident">ast</span>) =&gt; <span class="ident">ast</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">abort!</span>(<span class="ident">err</span>),
     };
 
     <span class="comment">// Build the implementation of the `RustToCuda` and `CudaAsRust` traits</span>
@@ -112,44 +107,43 @@
 }
 
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
-<span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">LendRustBorrowToCuda</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lend_to_cuda_derive</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">ast</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse</span>(<span class="ident">input</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">ast</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ast</span>,
-        <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort!</span>(<span class="ident">err</span>),
-    };
-
-    <span class="comment">// Build the implementation of the `LendToCuda` and `BorrowFromRust` traits</span>
-    <span class="ident">lend_to_cuda::impl_lend_to_cuda</span>(<span class="kw-2">&amp;</span><span class="ident">ast</span>)
-}
-
-<span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
 <span class="attribute">#[<span class="ident">proc_macro_attribute</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">kernel</span>(<span class="ident">attr</span>: <span class="ident">TokenStream</span>, <span class="ident">func</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">kernel</span>(<span class="ident">attr</span>: <span class="ident">TokenStream</span>, <span class="ident">func</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="ident">kernel::wrapper::kernel</span>(<span class="ident">attr</span>, <span class="ident">func</span>)
 }
 
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
 <span class="attribute">#[<span class="ident">proc_macro</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_type</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_type</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="ident">kernel::specialise::ty::specialise_kernel_type</span>(<span class="ident">tokens</span>)
 }
 
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
 <span class="attribute">#[<span class="ident">proc_macro</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_call</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_call</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="ident">kernel::specialise::call::specialise_kernel_call</span>(<span class="ident">tokens</span>)
 }
 
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
 <span class="attribute">#[<span class="ident">proc_macro_attribute</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_entry</span>(<span class="ident">attr</span>: <span class="ident">TokenStream</span>, <span class="ident">func</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_entry</span>(<span class="ident">attr</span>: <span class="ident">TokenStream</span>, <span class="ident">func</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="ident">kernel::specialise::entry::specialise_kernel_entry</span>(<span class="ident">attr</span>, <span class="ident">func</span>)
 }
 
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
 <span class="attribute">#[<span class="ident">proc_macro</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">link_kernel</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_kernel</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
+    <span class="ident">kernel::link::check_kernel</span>(<span class="ident">tokens</span>)
+}
+
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+<span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
+<span class="attribute">#[<span class="ident">proc_macro</span>]</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">link_kernel</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="ident">kernel::link::link_kernel</span>(<span class="ident">tokens</span>)
 }
 </code></pre></div>

@@ -40,45 +40,143 @@
 <span id="40">40</span>
 <span id="41">41</span>
 <span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
+<span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">KernelConfig</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::kernel::utils::skip_kernel_compilation</span>;
+
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">KernelConfig</span>};
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">quote_get_ptx_str</span>(
-    <span class="ident">KernelConfig</span> { <span class="ident">args</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">KernelConfig</span>,
-    <span class="ident">DeclGenerics</span> {
+    <span class="ident">FuncIdent</span> {
+        <span class="ident">func_ident</span>,
+        <span class="ident">func_ident_hash</span>,
+        ..
+    }: <span class="kw-2">&amp;</span><span class="ident">FuncIdent</span>,
+    <span class="ident">config</span> @ <span class="ident">KernelConfig</span> { <span class="ident">args</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">KernelConfig</span>,
+    <span class="ident">generics</span>
+    @ <span class="ident">DeclGenerics</span> {
         <span class="ident">generic_start_token</span>,
         <span class="ident">generic_close_token</span>,
         ..
     }: <span class="kw-2">&amp;</span><span class="ident">DeclGenerics</span>,
+    <span class="ident">inputs</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionInputs</span>,
+    <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
     <span class="ident">macro_type_ids</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">crate_name</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">std::env::var</span>(<span class="string">&quot;CARGO_CRATE_NAME&quot;</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">crate_name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">crate_name</span>.<span class="ident">to_uppercase</span>(),
-        <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate name: {:?}.&quot;</span>, <span class="ident">err</span>),
+) -&gt; <span class="ident">TokenStream</span> {
+    <span class="kw">let</span> <span class="ident">crate_name</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proc_macro::tracked_env::var</span>(<span class="string">&quot;CARGO_CRATE_NAME&quot;</span>) {
+        <span class="prelude-val">Ok</span>(<span class="ident">crate_name</span>) =&gt; <span class="ident">crate_name</span>.<span class="ident">to_uppercase</span>(),
+        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate name: {:?}.&quot;</span>, <span class="ident">err</span>),
     };
 
-    <span class="kw">let</span> <span class="ident">crate_manifest_dir</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">std::env::var_os</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>) {
-        <span class="prelude-val">Some</span>(<span class="ident">crate_manifest_dir</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">crate_manifest_dir</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">crate_manifest_dir</span>);
+    <span class="kw">let</span> <span class="ident">crate_manifest_dir</span> <span class="op">=</span> <span class="ident">proc_macro::tracked_env::var</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>)
+        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate path: {:?}.&quot;</span>, <span class="ident">err</span>));
 
-            <span class="ident">crate_manifest_dir</span>
-                .<span class="ident">strip_prefix</span>(<span class="string">&#39;&quot;&#39;</span>)
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">strip_suffix</span>(<span class="string">&#39;&quot;&#39;</span>)
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">to_owned</span>()
-        },
-        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate path: NotPresent.&quot;</span>),
+    <span class="kw">let</span> <span class="ident">cpu_func_lifetime_erased_types</span> <span class="op">=</span>
+        <span class="ident"><span class="kw">super</span>::kernel_func_raw::generate_launch_types</span>(<span class="ident">config</span>, <span class="ident">generics</span>, <span class="ident">inputs</span>, <span class="ident">macro_type_ids</span>).<span class="number">1</span>;
+
+    <span class="kw">let</span> <span class="ident">matching_kernel_assert</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">skip_kernel_compilation</span>() {
+        <span class="macro">quote!</span>()
+    } <span class="kw">else</span> {
+        <span class="macro">quote::quote_spanned!</span> { <span class="ident">func_ident</span>.<span class="ident">span</span>()=&gt;
+            <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::kernel_signature::Assert</span><span class="op">&lt;</span>{
+                <span class="ident">::rust_cuda::safety::kernel_signature::CpuAndGpuKernelSignatures::Match</span>
+            }<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">::rust_cuda::safety::kernel_signature::Assert</span>::<span class="op">&lt;</span>{
+                <span class="ident">::rust_cuda::safety::kernel_signature::check</span>(
+                    <span class="ident">PTX_STR</span>.<span class="ident">as_bytes</span>(),
+                    <span class="macro">concat!</span>(<span class="string">&quot;.visible .entry &quot;</span>, <span class="macro">rust_cuda::host::specialise_kernel_call!</span>(
+                        #<span class="ident">func_ident_hash</span> #<span class="ident">generic_start_token</span>
+                            #($#<span class="ident">macro_type_ids</span>),<span class="op">*</span>
+                        #<span class="ident">generic_close_token</span>
+                    )).<span class="ident">as_bytes</span>()
+                )
+            }<span class="op">&gt;</span>;
+        }
+    };
+
+    <span class="kw">let</span> <span class="ident">type_layout_asserts</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">skip_kernel_compilation</span>() {
+        <span class="ident">Vec::new</span>()
+    } <span class="kw">else</span> {
+        <span class="ident">cpu_func_lifetime_erased_types</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">zip</span>(<span class="ident">func_params</span>.<span class="ident">iter</span>())
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">ty</span>, <span class="ident">param</span>)<span class="op">|</span> {
+                <span class="kw">let</span> <span class="ident">layout_param</span> <span class="op">=</span>
+                    <span class="ident">syn::Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__{}_layout&quot;</span>, <span class="ident">param</span>).<span class="ident">to_uppercase</span>(), <span class="ident">param</span>.<span class="ident">span</span>());
+
+                <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()=&gt;
+                    <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::type_layout::Assert</span><span class="op">&lt;</span>{
+                        <span class="ident">::rust_cuda::safety::type_layout::CpuAndGpuTypeLayouts::Match</span>
+                    }<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">::rust_cuda::safety::type_layout::Assert</span>::<span class="op">&lt;</span>{
+                        <span class="ident">::rust_cuda::safety::type_layout::check</span>::<span class="op">&lt;</span>#<span class="ident">ty</span><span class="op">&gt;</span>(#<span class="ident">layout_param</span>)
+                    }<span class="op">&gt;</span>;
+                }
+            })
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
     };
 
     <span class="macro">quote!</span> {
-        <span class="kw">fn</span> <span class="ident">get_ptx_str</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-            <span class="macro">rust_cuda::host::link_kernel!</span>(
-                #<span class="ident">args</span> #<span class="ident">crate_name</span> #<span class="ident">crate_manifest_dir</span> #<span class="ident">generic_start_token</span>
+        <span class="kw">fn</span> <span class="ident">get_ptx_str</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+            <span class="macro">rust_cuda::host::link_kernel!</span>{
+                #<span class="ident">func_ident</span> #<span class="ident">args</span> #<span class="ident">crate_name</span> #<span class="ident">crate_manifest_dir</span> #<span class="ident">generic_start_token</span>
                     #($#<span class="ident">macro_type_ids</span>),<span class="op">*</span>
                 #<span class="ident">generic_close_token</span>
-            )
+            }
+
+            #<span class="ident">matching_kernel_assert</span>
+
+            #(#<span class="ident">type_layout_asserts</span>)<span class="op">*</span>
+
+            <span class="ident">PTX_STR</span>
         }
     }
 }

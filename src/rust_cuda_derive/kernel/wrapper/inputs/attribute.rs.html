@@ -101,21 +101,21 @@
 }
 
 <span class="kw">impl</span> <span class="ident">syn::parse::Parse</span> <span class="kw">for</span> <span class="ident">KernelInputAttribute</span> {
-    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) -&gt; <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ident</span>: <span class="ident">syn::Ident</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">ident</span>.<span class="ident">to_string</span>() {
-            <span class="string">&quot;pass&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="string">&quot;pass&quot;</span> =&gt; {
                 <span class="kw">let</span> <span class="ident">eq</span>: <span class="ident">syn::token::Eq</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
                 <span class="kw">let</span> <span class="ident">mode</span>: <span class="ident">syn::Ident</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> <span class="ident">cuda_type</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">mode</span>.<span class="ident">to_string</span>() {
-                    <span class="string">&quot;DeviceCopy&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">InputCudaType::DeviceCopy</span>,
-                    <span class="string">&quot;LendRustBorrowToCuda&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">InputCudaType::LendRustBorrowToCuda</span>,
-                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort!</span>(
+                    <span class="string">&quot;SafeDeviceCopy&quot;</span> =&gt; <span class="ident">InputCudaType::SafeDeviceCopy</span>,
+                    <span class="string">&quot;LendRustToCuda&quot;</span> =&gt; <span class="ident">InputCudaType::LendRustToCuda</span>,
+                    <span class="kw">_</span> =&gt; <span class="macro">abort!</span>(
                         <span class="ident">mode</span>.<span class="ident">span</span>(),
-                        <span class="string">&quot;Unexpected CUDA transfer mode `{:?}`: Expected `DeviceCopy` or \
-                         `LendRustBorrowToCuda`.&quot;</span>,
+                        <span class="string">&quot;Unexpected CUDA transfer mode `{:?}`: Expected `SafeDeviceCopy` or \
+                         `LendRustToCuda`.&quot;</span>,
                         <span class="ident">mode</span>
                     ),
                 };
@@ -130,7 +130,7 @@
                     <span class="ident">cuda_type</span>,
                 ))
             },
-            <span class="string">&quot;jit&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="string">&quot;jit&quot;</span> =&gt; {
                 <span class="kw">let</span> <span class="ident">eq</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">syn::token::Eq</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> (<span class="ident">ptx_jit</span>, <span class="ident">span</span>) <span class="op">=</span> <span class="kw">if</span> <span class="ident">eq</span>.<span class="ident">is_some</span>() {
@@ -152,7 +152,7 @@
 
                 <span class="prelude-val">Ok</span>(<span class="ident">KernelInputAttribute::PtxJit</span>(<span class="ident">span</span>, <span class="ident">ptx_jit</span>))
             },
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort!</span>(
+            <span class="kw">_</span> =&gt; <span class="macro">abort!</span>(
                 <span class="ident">ident</span>.<span class="ident">span</span>(),
                 <span class="string">&quot;Unexpected kernel attribute `{:?}`: Expected `pass` or `jit`.&quot;</span>,
                 <span class="ident">ident</span>
@@ -164,7 +164,7 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">KernelInputAttributes</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">KernelInputAttribute</span><span class="op">&gt;</span>);
 
 <span class="kw">impl</span> <span class="ident">syn::parse::Parse</span> <span class="kw">for</span> <span class="ident">KernelInputAttributes</span> {
-    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) -&gt; <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">content</span>;
         <span class="kw">let</span> <span class="ident">_parens</span> <span class="op">=</span> <span class="macro">syn::parenthesized!</span>(<span class="ident">content</span> <span class="kw">in</span> <span class="ident">input</span>);
 
@@ -180,7 +180,7 @@
     <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">std::vec::IntoIter</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">KernelInputAttribute</span>;
 
-    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::IntoIter</span> {
+    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_iter</span>()
     }
 }

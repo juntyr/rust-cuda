@@ -111,36 +111,94 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">alloc::vec::Vec</span>;
-<span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>};
+<span class="kw">use</span> <span class="ident">core</span>::{
+    <span class="ident">cell::UnsafeCell</span>,
+    <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
+};
 
+<span class="kw">use</span> <span class="ident">const_type_layout::TypeLayout</span>;
 <span class="kw">use</span> <span class="ident">rustacuda</span>::{
     <span class="ident">error::CudaResult</span>,
     <span class="ident">memory</span>::{<span class="ident">DeviceBuffer</span>, <span class="ident">LockedBuffer</span>},
 };
 
-<span class="kw">use</span> <span class="ident">rustacuda_core::DeviceCopy</span>;
-
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">common</span>::{<span class="ident">DeviceOwnedSlice</span>, <span class="ident">RustToCuda</span>},
+    <span class="ident">common</span>::{<span class="ident">DeviceAccessible</span>, <span class="ident">RustToCuda</span>},
     <span class="ident">host</span>::{<span class="ident">CombinedCudaAlloc</span>, <span class="ident">CudaAlloc</span>, <span class="ident">CudaDropWrapper</span>, <span class="ident">NullCudaAlloc</span>},
+    <span class="ident">safety::SafeDeviceCopy</span>,
 };
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::CudaExchangeBufferCudaRepresentation</span>;
+<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">common::CudaExchangeBufferCudaRepresentation</span>, <span class="ident">CudaExchangeItem</span>};
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeviceCopy</span><span class="op">&gt;</span> {
-    <span class="ident">host_buffer</span>: <span class="ident">CudaDropWrapper</span><span class="op">&lt;</span><span class="ident">LockedBuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">device_buffer</span>: <span class="ident">CudaDropWrapper</span><span class="op">&lt;</span><span class="ident">DeviceBuffer</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+<span class="doccomment">/// When the `host` feature is **not** set,</span>
+<span class="doccomment">/// [`CudaExchangeBuffer`](super::CudaExchangeBuffer)</span>
+<span class="doccomment">/// refers to</span>
+<span class="doccomment">/// [`CudaExchangeBufferDevice`](super::CudaExchangeBufferDevice)</span>
+<span class="doccomment">/// instead.</span>
+<span class="doccomment">/// [`CudaExchangeBufferHost`](Self) is never exposed directly.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span>
+{
+    <span class="ident">host_buffer</span>: <span class="ident">CudaDropWrapper</span><span class="op">&lt;</span><span class="ident">LockedBuffer</span><span class="op">&lt;</span><span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">device_buffer</span>: <span class="ident">UnsafeCell</span><span class="op">&lt;</span><span class="ident">CudaDropWrapper</span><span class="op">&lt;</span><span class="ident">DeviceBuffer</span><span class="op">&lt;</span><span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">DeviceCopy</span><span class="op">&gt;</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span>
+    <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>
+{
     <span class="doccomment">/// # Errors</span>
     <span class="doccomment">/// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">elem</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">elem</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="comment">// Safety: CudaExchangeItem is a `repr(transparent)` wrapper around T</span>
+        <span class="kw">let</span> <span class="ident">elem</span>: <span class="kw-2">&amp;</span><span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="kw-2">*</span>(<span class="ident">elem</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span>).<span class="ident">cast</span>() };
+
         <span class="kw">let</span> <span class="ident">host_buffer</span> <span class="op">=</span> <span class="ident">CudaDropWrapper::from</span>(<span class="ident">LockedBuffer::new</span>(<span class="ident">elem</span>, <span class="ident">capacity</span>)<span class="question-mark">?</span>);
-        <span class="kw">let</span> <span class="ident">device_buffer</span> <span class="op">=</span>
-            <span class="ident">CudaDropWrapper::from</span>(<span class="ident">DeviceBuffer::from_slice</span>(<span class="ident">host_buffer</span>.<span class="ident">as_slice</span>())<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">device_buffer</span> <span class="op">=</span> <span class="ident">UnsafeCell::new</span>(<span class="ident">CudaDropWrapper::from</span>(<span class="ident">DeviceBuffer::from_slice</span>(
+            <span class="ident">host_buffer</span>.<span class="ident">as_slice</span>(),
+        )<span class="question-mark">?</span>));
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">host_buffer</span>,
@@ -149,21 +207,24 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeviceCopy</span><span class="op">&gt;</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span>
+    <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>
+{
     <span class="doccomment">/// # Errors</span>
     <span class="doccomment">/// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_vec</span>(<span class="ident">vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_vec</span>(<span class="ident">vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">host_buffer_uninit</span> <span class="op">=</span>
             <span class="ident">CudaDropWrapper::from</span>(<span class="kw">unsafe</span> { <span class="ident">LockedBuffer::uninitialized</span>(<span class="ident">vec</span>.<span class="ident">len</span>())<span class="question-mark">?</span> });
 
         <span class="kw">for</span> (<span class="ident">src</span>, <span class="ident">dst</span>) <span class="kw">in</span> <span class="ident">vec</span>.<span class="ident">into_iter</span>().<span class="ident">zip</span>(<span class="ident">host_buffer_uninit</span>.<span class="ident">iter_mut</span>()) {
-            <span class="kw-2">*</span><span class="ident">dst</span> <span class="op">=</span> <span class="ident">src</span>;
+            <span class="kw-2">*</span><span class="ident">dst</span> <span class="op">=</span> <span class="ident">CudaExchangeItem</span>(<span class="ident">src</span>);
         }
 
         <span class="kw">let</span> <span class="ident">host_buffer</span> <span class="op">=</span> <span class="ident">host_buffer_uninit</span>;
 
-        <span class="kw">let</span> <span class="ident">device_buffer</span> <span class="op">=</span>
-            <span class="ident">CudaDropWrapper::from</span>(<span class="ident">DeviceBuffer::from_slice</span>(<span class="ident">host_buffer</span>.<span class="ident">as_slice</span>())<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">device_buffer</span> <span class="op">=</span> <span class="ident">UnsafeCell::new</span>(<span class="ident">CudaDropWrapper::from</span>(<span class="ident">DeviceBuffer::from_slice</span>(
+            <span class="ident">host_buffer</span>.<span class="ident">as_slice</span>(),
+        )<span class="question-mark">?</span>));
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">host_buffer</span>,
@@ -172,54 +233,75 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeviceCopy</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">T</span>];
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span> <span class="ident">Deref</span>
+    <span class="kw">for</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>
+{
+    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>];
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
+    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="self">self</span>.<span class="ident">host_buffer</span>.<span class="ident">as_slice</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeviceCopy</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span> <span class="ident">DerefMut</span>
+    <span class="kw">for</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>
+{
+    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="self">self</span>.<span class="ident">host_buffer</span>.<span class="ident">as_mut_slice</span>()
     }
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeviceCopy</span><span class="op">&gt;</span> <span class="ident">RustToCuda</span> <span class="kw">for</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span> <span class="ident">RustToCuda</span>
+    <span class="kw">for</span> <span class="ident">CudaExchangeBufferHost</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>
+{
     <span class="kw">type</span> <span class="ident">CudaAllocation</span> <span class="op">=</span> <span class="ident">NullCudaAlloc</span>;
-    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> <span class="op">=</span> <span class="ident">CudaExchangeBufferCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> <span class="op">=</span> <span class="ident">CudaExchangeBufferCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>;
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow_mut</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">CudaAlloc</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">CudaAlloc</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">alloc</span>: <span class="ident">A</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">rustacuda::error::CudaResult</span><span class="op">&lt;</span>(
-        <span class="ident"><span class="self">Self</span>::CudaRepresentation</span>,
+    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span><span class="op">&lt;</span>(
+        <span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaRepresentation</span><span class="op">&gt;</span>,
         <span class="ident">CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span><span class="op">&gt;</span>,
     )<span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">rustacuda::memory::CopyDestination</span>;
+        <span class="comment">// Safety: device_buffer is inside an UnsafeCell</span>
+        <span class="comment">//         borrow checks must be satisfied through LendToCuda</span>
+        <span class="kw">let</span> <span class="ident">device_buffer</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">device_buffer</span>.<span class="ident">get</span>();
 
-        <span class="self">self</span>.<span class="ident">device_buffer</span>.<span class="ident">copy_from</span>(<span class="self">self</span>.<span class="ident">host_buffer</span>.<span class="ident">as_slice</span>())<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">M2D</span> {
+            <span class="comment">// Only move the buffer contents to the device if needed</span>
+
+            <span class="ident">rustacuda::memory::CopyDestination::copy_from</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">device_buffer</span>,
+                <span class="self">self</span>.<span class="ident">host_buffer</span>.<span class="ident">as_slice</span>(),
+            )<span class="question-mark">?</span>;
+        }
 
         <span class="prelude-val">Ok</span>((
-            <span class="ident">CudaExchangeBufferCudaRepresentation</span>(<span class="ident">DeviceOwnedSlice::from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">device_buffer</span>)),
+            <span class="ident">DeviceAccessible::from</span>(<span class="ident">CudaExchangeBufferCudaRepresentation</span>(
+                <span class="ident">device_buffer</span>.<span class="ident">as_mut_ptr</span>(),
+                <span class="ident">device_buffer</span>.<span class="ident">len</span>(),
+            )),
             <span class="ident">CombinedCudaAlloc::new</span>(<span class="ident">NullCudaAlloc</span>, <span class="ident">alloc</span>),
         ))
     }
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">un_borrow_mut</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">CudaAlloc</span><span class="op">&gt;</span>(
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">restore</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">CudaAlloc</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">_cuda_repr</span>: <span class="ident"><span class="self">Self</span>::CudaRepresentation</span>,
         <span class="ident">alloc</span>: <span class="ident">CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">rustacuda::error::CudaResult</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">rustacuda::memory::CopyDestination</span>;
-
+    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">_alloc_front</span>, <span class="ident">alloc_tail</span>) <span class="op">=</span> <span class="ident">alloc</span>.<span class="ident">split</span>();
 
-        <span class="self">self</span>.<span class="ident">device_buffer</span>
-            .<span class="ident">copy_to</span>(<span class="self">self</span>.<span class="ident">host_buffer</span>.<span class="ident">as_mut_slice</span>())<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="ident">M2H</span> {
+            <span class="comment">// Only move the buffer contents back to the host if needed</span>
+
+            <span class="ident">rustacuda::memory::CopyDestination::copy_to</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">device_buffer</span>.<span class="ident">get_mut</span>(),
+                <span class="self">self</span>.<span class="ident">host_buffer</span>.<span class="ident">as_mut_slice</span>(),
+            )<span class="question-mark">?</span>;
+        }
 
         <span class="prelude-val">Ok</span>(<span class="ident">alloc_tail</span>)
     }

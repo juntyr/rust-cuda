@@ -61,16 +61,20 @@
 <span id="61">61</span>
 <span id="62">62</span>
 <span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro::TokenStream</span>;
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_call</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">specialise_kernel_call</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">SpecialiseMangleConfig</span> {
         <span class="ident">kernel</span>,
         <span class="ident">specialisation</span>,
     } <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse_macro_input::parse</span>(<span class="ident">tokens</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config</span>,
-        <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">config</span>) =&gt; <span class="ident">config</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
             <span class="macro">abort_call_site!</span>(
                 <span class="string">&quot;specialise_kernel_call!(KERNEL SPECIALISATION) expects KERNEL identifier and \
                  SPECIALISATION tokens: {:?}&quot;</span>,
@@ -98,22 +102,26 @@
 }
 
 <span class="kw">impl</span> <span class="ident">syn::parse::Parse</span> <span class="kw">for</span> <span class="ident">SpecialiseMangleConfig</span> {
-    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) -&gt; <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">kernel</span>: <span class="ident">syn::Ident</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">specialisation</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">syn::token::Lt</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
-            <span class="kw">let</span> <span class="ident">specialisation_types</span> <span class="op">=</span> <span class="ident">syn::punctuated::Punctuated</span>::<span class="op">&lt;</span>
+            <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">syn::token::Gt</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
+                <span class="prelude-val">None</span>
+            } <span class="kw">else</span> {
+                <span class="kw">let</span> <span class="ident">specialisation_types</span> <span class="op">=</span> <span class="ident">syn::punctuated::Punctuated</span>::<span class="op">&lt;</span>
                     <span class="ident">syn::Type</span>,
                     <span class="ident">syn::token::Comma</span>,
                 <span class="op">&gt;</span><span class="ident">::parse_separated_nonempty</span>(<span class="ident">input</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">_gt_token</span>: <span class="ident">syn::token::Gt</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">_gt_token</span>: <span class="ident">syn::token::Gt</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Some</span>(
-                (<span class="macro">quote!</span> { <span class="op">&lt;</span>#<span class="ident">specialisation_types</span><span class="op">&gt;</span> })
-                    .<span class="ident">to_string</span>()
-                    .<span class="ident">replace</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39; &#39;</span>, <span class="string">&#39;\n&#39;</span>, <span class="string">&#39;\t&#39;</span>][..], <span class="string">&quot;&quot;</span>),
-            )
+                <span class="prelude-val">Some</span>(
+                    (<span class="macro">quote!</span> { <span class="op">&lt;</span>#<span class="ident">specialisation_types</span><span class="op">&gt;</span> })
+                        .<span class="ident">to_string</span>()
+                        .<span class="ident">replace</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39; &#39;</span>, <span class="string">&#39;\n&#39;</span>, <span class="string">&#39;\t&#39;</span>][..], <span class="string">&quot;&quot;</span>),
+                )
+            }
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
         };

@@ -26,34 +26,102 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
 </pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">common</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)))]</span>
 <span class="kw">mod</span> <span class="ident">device</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
 <span class="kw">mod</span> <span class="ident">host</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)))]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">device::CudaExchangeBufferDevice</span> <span class="kw">as</span> <span class="ident">CudaExchangeBuffer</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">host::CudaExchangeBufferHost</span> <span class="kw">as</span> <span class="ident">CudaExchangeBuffer</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">doc</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-<span class="doccomment">/// If the `host` feature is enabled, `CudaExchangeBufferHost` is exported as</span>
-<span class="doccomment">///  `CudaExchangeBuffer`.</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">host::CudaExchangeBufferHost</span>;
-
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">doc</span>)]</span>
-<span class="doccomment">/// If the `host` feature is NOT enabled, `CudaExchangeBufferDevice` is</span>
-<span class="doccomment">///  exported as `CudaExchangeBuffer`.</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">device::CudaExchangeBufferDevice</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{<span class="ident">device::CudaExchangeBufferDevice</span>, <span class="ident">host::CudaExchangeBufferHost</span>};
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">common::CudaExchangeBufferCudaRepresentation</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::safety::SafeDeviceCopy</span>;
+
+<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">transparent</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">TypeLayout</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span>(<span class="ident">T</span>);
+
+<span class="comment">// Safety: Transparent newtype wrapper around `SafeDeviceCopy`</span>
+<span class="comment">//          is `DeviceCopy`</span>
+<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span> <span class="ident">rustacuda_core::DeviceCopy</span>
+    <span class="kw">for</span> <span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="ident">M2H</span><span class="op">&gt;</span>
+{
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span>, <span class="kw">const</span> <span class="ident">M2D</span>: <span class="ident">bool</span><span class="op">&gt;</span> <span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M2D</span>, <span class="bool-val">true</span><span class="op">&gt;</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">doc</span>))]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">T</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    }
+
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">T</span>) {
+        <span class="self">self</span>.<span class="number">0</span> <span class="op">=</span> <span class="ident">value</span>;
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span>, <span class="kw">const</span> <span class="ident">M2H</span>: <span class="ident">bool</span><span class="op">&gt;</span> <span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="bool-val">true</span>, <span class="ident">M2H</span><span class="op">&gt;</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">T</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    }
+
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">doc</span>))]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">T</span>) {
+        <span class="self">self</span>.<span class="number">0</span> <span class="op">=</span> <span class="ident">value</span>;
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span><span class="op">&gt;</span> <span class="ident">AsMut</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">CudaExchangeItem</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">as_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span> {
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="number">0</span>
+    }
+}
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="rust_cuda" data-search-index-js="../../../../../search-index.js" data-search-js="../../../../../search.js"></div>
     <script src="../../../../../main.js"></script><script src="../../../../../source-script.js"></script><script src="../../../../../source-files.js"></script>

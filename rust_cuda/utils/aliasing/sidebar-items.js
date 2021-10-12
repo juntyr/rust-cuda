@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["const",""],["dynamic",""],["final",""]],"trait":[["NoAliasing",""]]});
+initSidebarItems({"struct":[["SplitSliceOverCudaThreadsConstStride",""],["SplitSliceOverCudaThreadsDynamicStride",""]]});

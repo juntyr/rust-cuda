@@ -165,17 +165,7 @@
 <span id="165">165</span>
 <span id="166">166</span>
 <span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
-<span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">InputCudaType</span>, <span class="ident">KernelConfig</span>};
 
@@ -183,15 +173,17 @@
     <span class="ident">KernelConfig</span> { <span class="ident">args</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">KernelConfig</span>,
     <span class="ident">DeclGenerics</span> {
         <span class="ident">generic_start_token</span>,
+        <span class="ident">generic_wrapper_params</span>,
         <span class="ident">generic_close_token</span>,
+        <span class="ident">generic_wrapper_where_clause</span>,
         ..
     }: <span class="kw-2">&amp;</span><span class="ident">DeclGenerics</span>,
     <span class="ident">inputs</span> @ <span class="ident">FunctionInputs</span> { <span class="ident">func_inputs</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">FunctionInputs</span>,
     <span class="ident">fn_ident</span> @ <span class="ident">FuncIdent</span> { <span class="ident">func_ident</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">FuncIdent</span>,
-    <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Pat</span>],
+    <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
     <span class="ident">func_attrs</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Attribute</span>],
     <span class="ident">macro_type_ids</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+) -&gt; <span class="ident">TokenStream</span> {
     <span class="kw">let</span> <span class="ident">new_func_inputs</span> <span class="op">=</span> <span class="ident">func_inputs</span>
         .<span class="ident">iter</span>()
         .<span class="ident">enumerate</span>()
@@ -201,7 +193,7 @@
                 <span class="ident">pat</span>,
                 <span class="ident">colon_token</span>,
                 <span class="ident">ty</span>,
-            }) <span class="op">=</span><span class="op">&gt;</span> {
+            }) =&gt; {
                 <span class="kw">let</span> <span class="ident">type_ident</span> <span class="op">=</span> <span class="macro">quote::format_ident!</span>(<span class="string">&quot;__T_{}&quot;</span>, <span class="ident">i</span>);
                 <span class="kw">let</span> <span class="ident">syn_type</span> <span class="op">=</span> <span class="macro">quote!</span> {
                     <span class="op">&lt;</span>() <span class="kw">as</span> #<span class="ident">args</span> #<span class="ident">generic_start_token</span>
@@ -223,7 +215,7 @@
                     <span class="macro">quote!</span> { #(#<span class="ident">attrs</span>)<span class="op">*</span> #<span class="ident">pat</span> #<span class="ident">colon_token</span> #<span class="ident">syn_type</span> }
                 }
             },
-            <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(),
+            <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
         })
         .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
@@ -231,9 +223,27 @@
 
     <span class="macro">quote!</span> {
         #(#<span class="ident">func_attrs</span>)<span class="op">*</span>
-        <span class="kw">fn</span> #<span class="ident">func_ident</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, #(#<span class="ident">new_func_inputs</span>),<span class="kw-2">*</span>)
-            <span class="op">-</span><span class="op">&gt;</span> <span class="ident">rust_cuda::rustacuda::error::CudaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+        <span class="kw">fn</span> #<span class="ident">func_ident</span> #<span class="ident">generic_start_token</span> #<span class="ident">generic_wrapper_params</span> #<span class="ident">generic_close_token</span> (
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, #(#<span class="ident">new_func_inputs</span>),<span class="op">*</span>
+        ) -&gt; <span class="ident">rust_cuda::rustacuda::error::CudaResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+            #<span class="ident">generic_wrapper_where_clause</span>
         {
+            <span class="comment">// impls check adapted from Nikolai Vazquez&#39;s `impls` crate:</span>
+            <span class="comment">//  https://docs.rs/impls/1.0.3/src/impls/lib.rs.html#584-602</span>
+            <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">__check_is_sync</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span>(<span class="ident">_x</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) -&gt; <span class="ident">bool</span> {
+                <span class="kw">trait</span> <span class="ident">IsSyncMarker</span> {
+                    <span class="kw">const</span> <span class="ident">SYNC</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">false</span>;
+                }
+                <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span> <span class="ident">IsSyncMarker</span> <span class="kw">for</span> <span class="ident">T</span> {}
+                <span class="kw">struct</span> <span class="ident">CheckIs</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span>(<span class="ident">::core::marker::PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
+                <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+                <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> <span class="ident">CheckIs</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+                    <span class="kw">const</span> <span class="ident">SYNC</span>: <span class="ident">bool</span> <span class="op">=</span> <span class="bool-val">true</span>;
+                }
+
+                <span class="op">&lt;</span><span class="ident">CheckIs</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::SYNC</span>
+            }
+
             #<span class="ident">raw_func_input_wrap</span>
         }
     }
@@ -246,109 +256,81 @@
         <span class="ident">func_input_cuda_types</span>,
     }: <span class="kw-2">&amp;</span><span class="ident">FunctionInputs</span>,
     <span class="ident">FuncIdent</span> { <span class="ident">func_ident_raw</span>, .. }: <span class="kw-2">&amp;</span><span class="ident">FuncIdent</span>,
-    <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Pat</span>],
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TokenStream</span> {
+    <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
+) -&gt; <span class="ident">TokenStream</span> {
     <span class="ident">func_inputs</span>
-        .<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">func_input_cuda_types</span>.<span class="ident">iter</span>())
+        .<span class="ident">iter</span>()
+        .<span class="ident">zip</span>(<span class="ident">func_params</span>)
+        .<span class="ident">zip</span>(<span class="ident">func_input_cuda_types</span>.<span class="ident">iter</span>())
         .<span class="ident">rev</span>()
-        .<span class="ident">fold</span>(<span class="macro">quote!</span> {
-            <span class="self">self</span>.#<span class="ident">func_ident_raw</span>(#(#<span class="ident">func_params</span>),<span class="kw-2">*</span>)
-        }, <span class="op">|</span><span class="ident">inner</span>, (<span class="ident">arg</span>, (<span class="ident">cuda_mode</span>, <span class="ident">_ptx_jit</span>))<span class="op">|</span> <span class="kw">match</span> <span class="ident">arg</span> {
-            <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> {
-                <span class="ident">pat</span>,
-                <span class="ident">ty</span>,
-                ..
-            }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">match</span> <span class="ident">cuda_mode</span> {
-                    <span class="ident">InputCudaType::DeviceCopy</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Reference</span>(
-                        <span class="ident">syn::TypeReference</span> { <span class="ident">mutability</span>, .. }
-                    ) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span> {
-                        <span class="kw">let</span> <span class="ident">pat_box</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">pat</span> {
-                            <span class="ident">syn::Pat::Ident</span>(<span class="ident">syn::PatIdent</span> {
-                                <span class="ident">attrs</span>,
-                                <span class="ident">by_ref</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">mutability</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">ident</span>,
-                                <span class="ident">subpat</span>: <span class="prelude-val">None</span>,
-                            }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">syn::Pat::Ident</span>(<span class="ident">syn::PatIdent</span> {
-                                <span class="ident">attrs</span>: <span class="ident">attrs</span>.<span class="ident">clone</span>(),
-                                <span class="ident">by_ref</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">mutability</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">ident</span>: <span class="macro">quote::format_ident!</span>(<span class="string">&quot;__{}_box&quot;</span>, <span class="ident">ident</span>),
-                                <span class="ident">subpat</span>: <span class="prelude-val">None</span>,
-                            }),
-                            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">abort!</span>(
-                                <span class="ident">pat</span>.<span class="ident">span</span>(),
-                                <span class="string">&quot;Unexpected kernel input parameter: only identifiers are accepted.&quot;</span>
-                            ),
-                        };
+        .<span class="ident">fold</span>(
+            <span class="macro">quote!</span> {
+                <span class="self">self</span>.#<span class="ident">func_ident_raw</span>(#(#<span class="ident">func_params</span>),<span class="kw-2">*</span>)
+            },
+            <span class="op">|</span><span class="ident">inner</span>, ((<span class="ident">arg</span>, <span class="ident">param</span>), (<span class="ident">cuda_mode</span>, <span class="ident">_ptx_jit</span>))<span class="op">|</span> <span class="kw">match</span> <span class="ident">arg</span> {
+                <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> { <span class="ident">pat</span>, <span class="ident">ty</span>, .. }) =&gt; <span class="kw">match</span> <span class="ident">cuda_mode</span> {
+                    <span class="ident">InputCudaType::SafeDeviceCopy</span> =&gt; {
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Reference</span>(..) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span> {
+                            <span class="kw">let</span> <span class="ident">pat_box</span> <span class="op">=</span> <span class="macro">quote::format_ident!</span>(<span class="string">&quot;__{}_box&quot;</span>, <span class="ident">param</span>);
 
-                        <span class="kw">let</span> <span class="ident">pat_host_box</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">pat</span> {
-                            <span class="ident">syn::Pat::Ident</span>(<span class="ident">syn::PatIdent</span> {
-                                <span class="ident">attrs</span>,
-                                <span class="ident">by_ref</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">mutability</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">ident</span>,
-                                <span class="ident">subpat</span>: <span class="prelude-val">None</span>,
-                            }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">syn::Pat::Ident</span>(<span class="ident">syn::PatIdent</span> {
-                                <span class="ident">attrs</span>: <span class="ident">attrs</span>.<span class="ident">clone</span>(),
-                                <span class="ident">by_ref</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">mutability</span>: <span class="prelude-val">None</span>,
-                                <span class="ident">ident</span>: <span class="macro">quote::format_ident!</span>(<span class="string">&quot;__{}_host_box&quot;</span>, <span class="ident">ident</span>),
-                                <span class="ident">subpat</span>: <span class="prelude-val">None</span>,
-                            }),
-                            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(),
-                        };
-
-                        <span class="kw">if</span> <span class="ident">mutability</span>.<span class="ident">is_some</span>() {
+                            <span class="comment">// DeviceCopy mode only supports immutable references</span>
                             <span class="macro">quote!</span> {
-                                <span class="kw">let</span> <span class="kw-2">mut</span> #<span class="ident">pat_box</span> <span class="op">=</span> <span class="ident">rust_cuda::rustacuda::memory::DeviceBox::new</span>(
-                                    #<span class="ident">pat</span>
-                                )<span class="question-mark">?</span>;
-                                <span class="kw">let</span> <span class="kw-2">mut</span> #<span class="ident">pat_host_box</span> <span class="op">=</span> <span class="ident">rust_cuda::host::HostDeviceBoxMut::new</span>(
-                                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> #<span class="ident">pat_box</span>, #<span class="ident">pat</span>
+                                <span class="kw">let</span> <span class="kw-2">mut</span> #<span class="ident">pat_box</span> <span class="op">=</span> <span class="ident">rust_cuda::host::HostDeviceBox::from</span>(
+                                    <span class="ident">rust_cuda::rustacuda::memory::DeviceBox::new</span>(
+                                        <span class="ident">rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref</span>(#<span class="ident">pat</span>)
+                                    )<span class="question-mark">?</span>
                                 );
                                 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::redundant_closure_call</span>)]</span>
-                                <span class="kw">let</span> <span class="ident">__result</span> <span class="op">=</span> (<span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> { #<span class="ident">inner</span> })(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> #<span class="ident">pat_host_box</span>);
-                                <span class="ident">rust_cuda::rustacuda::memory::CopyDestination::copy_to</span>(
-                                    <span class="kw-2">&amp;</span>#<span class="ident">pat_box</span>, #<span class="ident">pat</span>
-                                )<span class="question-mark">?</span>;
+                                <span class="comment">// Safety: `#pat_box` contains exactly the device copy of `#pat`</span>
+                                <span class="kw">let</span> <span class="ident">__result</span> <span class="op">=</span> (<span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> { #<span class="ident">inner</span> })(<span class="kw">unsafe</span> {
+                                    <span class="ident">rust_cuda::host::HostAndDeviceConstRef::new</span>(
+                                        <span class="kw-2">&amp;</span>#<span class="ident">pat_box</span>,  <span class="ident">rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref</span>(#<span class="ident">pat</span>)
+                                    )
+                                });
+
+                                <span class="kw">if</span> <span class="op">!</span><span class="ident">__check_is_sync</span>(#<span class="ident">pat</span>) {
+                                    <span class="comment">// Safety:</span>
+                                    <span class="comment">// * Since `#ty` is `!Sync`, it contains interior mutability</span>
+                                    <span class="comment">// * Therefore, part of the &#39;immutable&#39; device copy may have</span>
+                                    <span class="comment">//    been mutated</span>
+                                    <span class="comment">// * If all mutation was confined to interior mutability,</span>
+                                    <span class="comment">//    then passing these changes on is safe (and expected)</span>
+                                    <span class="comment">// * If any mutations occured outside interior mutability,</span>
+                                    <span class="comment">//    then UB occurred, in the kernel (we&#39;re not the cause)</span>
+                                    #<span class="ident">pat_box</span>.<span class="ident">copy_to</span>(<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span>(#<span class="ident">pat</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>) })<span class="question-mark">?</span>;
+                                }
+
+                                <span class="ident">::core::mem::drop</span>(#<span class="ident">pat_box</span>);
                                 <span class="ident">__result</span>
                             }
                         } <span class="kw">else</span> {
-                            <span class="macro">quote!</span> {
-                                <span class="kw">let</span> #<span class="ident">pat_box</span> <span class="op">=</span> <span class="ident">rust_cuda::rustacuda::memory::DeviceBox::new</span>(#<span class="ident">pat</span>)<span class="question-mark">?</span>;
-                                <span class="kw">let</span> #<span class="ident">pat_host_box</span> <span class="op">=</span> <span class="ident">rust_cuda::host::HostDeviceBoxConst::new</span>(
-                                    <span class="kw-2">&amp;</span>#<span class="ident">pat_box</span>, #<span class="ident">pat</span>
-                                );
-                                <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::redundant_closure_call</span>)]</span>
-                                (<span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> { #<span class="ident">inner</span> })(<span class="kw-2">&amp;</span>#<span class="ident">pat_host_box</span>)
-                            }
-                        }
-                    } <span class="kw">else</span> {
-                        <span class="ident">inner</span>
-                    },
-                    <span class="ident">InputCudaType::LendRustBorrowToCuda</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Reference</span>(
-                        <span class="ident">syn::TypeReference</span> { <span class="ident">mutability</span>, .. }
-                    ) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span> {
-                        <span class="kw">if</span> <span class="ident">mutability</span>.<span class="ident">is_some</span>() {
-                            <span class="macro">quote!</span> { <span class="ident">rust_cuda::host::LendToCuda::lend_to_cuda_mut</span>(
-                                #<span class="ident">pat</span>, <span class="op">|</span><span class="kw-2">mut</span> #<span class="ident">pat</span><span class="op">|</span> {
-                                    <span class="kw">let</span> #<span class="ident">pat</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> #<span class="ident">pat</span>;
-                                    #<span class="ident">inner</span>
-                                }
-                            ) }
-                        } <span class="kw">else</span> {
-                            <span class="macro">quote!</span> { <span class="ident">rust_cuda::host::LendToCuda::lend_to_cuda</span>(#<span class="ident">pat</span>, <span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> {
-                                <span class="kw">let</span> #<span class="ident">pat</span> <span class="op">=</span> <span class="kw-2">&amp;</span>#<span class="ident">pat</span>;
+                            <span class="macro">quote!</span> { {
+                                <span class="kw">let</span> #<span class="ident">pat</span> <span class="op">=</span> <span class="ident">rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from</span>(#<span class="ident">pat</span>);
                                 #<span class="ident">inner</span>
-                            }) }
+                            } }
                         }
-                    } <span class="kw">else</span> { <span class="macro">unreachable!</span>() }
-                }
+                    },
+                    <span class="ident">InputCudaType::LendRustToCuda</span> =&gt; {
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Reference</span>(<span class="ident">syn::TypeReference</span> { <span class="ident">mutability</span>, .. }) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span> {
+                            <span class="kw">if</span> <span class="ident">mutability</span>.<span class="ident">is_some</span>() {
+                                <span class="macro">quote!</span> { <span class="ident">rust_cuda::host::LendToCuda::lend_to_cuda_mut</span>(
+                                    #<span class="ident">pat</span>, <span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> { #<span class="ident">inner</span> }
+                                ) }
+                            } <span class="kw">else</span> {
+                                <span class="macro">quote!</span> { <span class="ident">rust_cuda::host::LendToCuda::lend_to_cuda</span>(
+                                    #<span class="ident">pat</span>, <span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> { #<span class="ident">inner</span> }
+                                ) }
+                            }
+                        } <span class="kw">else</span> {
+                            <span class="macro">quote!</span> { <span class="ident">rust_cuda::host::LendToCuda::move_to_cuda</span>(
+                                #<span class="ident">pat</span>, <span class="op">|</span>#<span class="ident">pat</span><span class="op">|</span> { #<span class="ident">inner</span> }
+                            ) }
+                        }
+                    },
+                },
+                <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
             },
-            <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(),
-        })
+        )
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="rust_cuda_derive" data-search-index-js="../../../../../../search-index.js" data-search-js="../../../../../../search.js"></div>
