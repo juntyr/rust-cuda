@@ -58,6 +58,8 @@
 <span id="58">58</span>
 <span id="59">59</span>
 <span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">deny</span>(<span class="ident">clippy::pedantic</span>)]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::useless_attribute</span>)]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">no_std</span>)]</span>
@@ -83,6 +85,8 @@
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">const_trait_impl</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">const_mut_refs</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">const_fn_trait_bound</span>)]</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">const_eval_limit</span>)]</span>
+<span class="attribute">#![<span class="ident">const_eval_limit</span> <span class="op">=</span> <span class="string">&quot;1000000000&quot;</span>]</span>
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">incomplete_features</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">generic_const_exprs</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">adt_const_params</span>)]</span>
