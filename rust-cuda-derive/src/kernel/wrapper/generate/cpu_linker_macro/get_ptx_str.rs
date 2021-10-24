@@ -12,8 +12,7 @@ pub(super) fn quote_get_ptx_str(
         ..
     }: &FuncIdent,
     config @ KernelConfig { args, .. }: &KernelConfig,
-    generics
-    @ DeclGenerics {
+    generics @ DeclGenerics {
         generic_start_token,
         generic_close_token,
         ..

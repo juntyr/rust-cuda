@@ -13,18 +13,14 @@ use kernel_func_raw::quote_kernel_func_raw;
 use new_kernel::quote_new_kernel;
 
 pub(in super::super) fn quote_cpu_linker_macro(
-    config
-    @
-    KernelConfig {
+    config @ KernelConfig {
         visibility,
         kernel,
         linker,
         launcher,
         ..
     }: &KernelConfig,
-    decl_generics
-    @
-    DeclGenerics {
+    decl_generics @ DeclGenerics {
         generic_start_token,
         generic_trait_params: generic_params,
         generic_close_token,

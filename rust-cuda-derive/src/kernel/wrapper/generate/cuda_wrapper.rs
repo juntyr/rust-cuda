@@ -158,9 +158,7 @@ fn specialise_ptx_func_inputs(
         .enumerate()
         .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
             syn::FnArg::Typed(
-                fn_arg
-                @
-                syn::PatType {
+                fn_arg @ syn::PatType {
                     attrs,
                     pat,
                     colon_token,

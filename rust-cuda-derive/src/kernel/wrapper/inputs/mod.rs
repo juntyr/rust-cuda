@@ -31,9 +31,7 @@ pub(super) fn parse_function_inputs(
                 abort!(receiver.span(), "Kernel function must not have a receiver.")
             },
             syn::FnArg::Typed(
-                input
-                @
-                syn::PatType {
+                input @ syn::PatType {
                     attrs,
                     pat,
                     colon_token,
@@ -59,7 +57,7 @@ pub(super) fn parse_function_inputs(
                                         if cuda_type.is_none() =>
                                     {
                                         cuda_type = Some(pass_type);
-                                    }
+                                    },
                                     KernelInputAttribute::PassType(span, _pass_type) => {
                                         abort!(span, "Duplicate CUDA transfer mode declaration.");
                                     },
@@ -74,7 +72,7 @@ pub(super) fn parse_function_inputs(
                                         }
 
                                         ptx_jit = Some(InputPtxJit(jit));
-                                    }
+                                    },
                                     KernelInputAttribute::PtxJit(span, _jit) => {
                                         abort!(span, "Duplicate PTX JIT declaration.");
                                     },

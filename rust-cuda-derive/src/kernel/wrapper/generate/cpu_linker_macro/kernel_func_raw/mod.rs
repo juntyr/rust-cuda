@@ -13,9 +13,7 @@ use type_wrap::generate_func_input_and_ptx_jit_wraps;
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_raw(
     config @ KernelConfig { args, .. }: &KernelConfig,
-    decl_generics
-    @
-    DeclGenerics {
+    decl_generics @ DeclGenerics {
         generic_start_token,
         generic_wrapper_params,
         generic_close_token,
