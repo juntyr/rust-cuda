@@ -335,6 +335,16 @@
 <span id="335">335</span>
 <span id="336">336</span>
 <span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">env</span>, <span class="ident">fs</span>,
     <span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>},
@@ -373,7 +383,7 @@
         },
     };
 
-    <span class="kw">let</span> <span class="ident">kernel_ptx</span> <span class="op">=</span> <span class="ident">compile_kernel</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>, <span class="kw-2">&amp;</span><span class="ident">crate_name</span>, <span class="kw-2">&amp;</span><span class="ident">crate_path</span>, <span class="prelude-val">None</span>);
+    <span class="kw">let</span> <span class="ident">kernel_ptx</span> <span class="op">=</span> <span class="ident">compile_kernel</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>, <span class="kw-2">&amp;</span><span class="ident">crate_name</span>, <span class="kw-2">&amp;</span><span class="ident">crate_path</span>, <span class="ident">Specialisation::Check</span>);
 
     <span class="macro">quote!</span>(#<span class="ident">kernel_ptx</span>).<span class="ident">into</span>()
 }
@@ -414,7 +424,12 @@
         .<span class="ident">into</span>();
     }
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">kernel_ptx</span> <span class="op">=</span> <span class="ident">compile_kernel</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>, <span class="kw-2">&amp;</span><span class="ident">crate_name</span>, <span class="kw-2">&amp;</span><span class="ident">crate_path</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">specialisation</span>));
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">kernel_ptx</span> <span class="op">=</span> <span class="ident">compile_kernel</span>(
+        <span class="kw-2">&amp;</span><span class="ident">args</span>,
+        <span class="kw-2">&amp;</span><span class="ident">crate_name</span>,
+        <span class="kw-2">&amp;</span><span class="ident">crate_path</span>,
+        <span class="ident">Specialisation::Link</span>(<span class="kw-2">&amp;</span><span class="ident">specialisation</span>),
+    );
 
     <span class="kw">let</span> <span class="ident">kernel_layout_name</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">specialisation</span>.<span class="ident">is_empty</span>() {
         <span class="macro">format!</span>(<span class="string">&quot;{}_type_layout_kernel&quot;</span>, <span class="ident">kernel</span>)
@@ -491,7 +506,7 @@
     <span class="ident">args</span>: <span class="kw-2">&amp;</span><span class="ident">syn::Ident</span>,
     <span class="ident">crate_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">crate_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>,
-    <span class="ident">specialisation</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+    <span class="ident">specialisation</span>: <span class="ident">Specialisation</span>,
 ) -&gt; <span class="ident">String</span> {
     <span class="comment">// Force this proc macro to always be evaluated using a dummy env var</span>
     <span class="ident">env::set_var</span>(<span class="string">&quot;RUST_CUDA_DERIVE_MARKER&quot;</span>, <span class="string">&quot;42&quot;</span>);
@@ -570,14 +585,13 @@
 <span class="kw">fn</span> <span class="ident">build_kernel_with_specialisation</span>(
     <span class="ident">kernel_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>,
     <span class="ident">env_var</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">specialisation</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+    <span class="ident">specialisation</span>: <span class="ident">Specialisation</span>,
     <span class="ident">colourful</span>: <span class="ident">bool</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">specialisation</span>) <span class="op">=</span> <span class="ident">specialisation</span> {
-        <span class="ident">env::set_var</span>(<span class="ident">env_var</span>, <span class="ident">specialisation</span>);
-    } <span class="kw">else</span> {
-        <span class="ident">env::remove_var</span>(<span class="ident">env_var</span>);
-    }
+    <span class="kw">match</span> <span class="ident">specialisation</span> {
+        <span class="ident">Specialisation::Check</span> =&gt; <span class="ident">env::set_var</span>(<span class="ident">env_var</span>, <span class="string">&quot;chECK&quot;</span>),
+        <span class="ident">Specialisation::Link</span>(<span class="ident">specialisation</span>) =&gt; <span class="ident">env::set_var</span>(<span class="ident">env_var</span>, <span class="ident">specialisation</span>),
+    };
 
     <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> (<span class="op">|</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">Builder::new</span>(<span class="ident">kernel_path</span>)<span class="question-mark">?</span>;
@@ -615,8 +629,8 @@
                 <span class="kw">let</span> <span class="ident">ptx_path</span> <span class="op">=</span> <span class="ident">output</span>.<span class="ident">get_assembly_path</span>();
 
                 <span class="kw">let</span> <span class="ident">specialisation</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">specialisation</span> {
-                    <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ptx_path</span>),
-                    <span class="prelude-val">Some</span>(<span class="ident">specialisation</span>) =&gt; <span class="ident">specialisation</span>,
+                    <span class="ident">Specialisation::Check</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ptx_path</span>),
+                    <span class="ident">Specialisation::Link</span>(<span class="ident">specialisation</span>) =&gt; <span class="ident">specialisation</span>,
                 };
 
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">specialised_ptx_path</span> <span class="op">=</span> <span class="ident">ptx_path</span>.<span class="ident">clone</span>();
@@ -655,6 +669,12 @@
     <span class="ident">env::remove_var</span>(<span class="ident">env_var</span>);
 
     <span class="ident">result</span>
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">enum</span> <span class="ident">Specialisation</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="ident">Check</span>,
+    <span class="ident">Link</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>),
 }
 
 <span class="kw">fn</span> <span class="ident">with_cargo_args</span><span class="op">&lt;</span><span class="ident">Q</span>, <span class="ident">F</span>: <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span>[<span class="ident">String</span>]) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">inner</span>: <span class="ident">F</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span> {
