@@ -58,8 +58,10 @@ pub(super) fn quote_get_ptx_str(
             .iter()
             .zip(func_params.iter())
             .map(|(ty, param)| {
-                let layout_param =
-                    syn::Ident::new(&format!("__{}_layout", param).to_uppercase(), param.span());
+                let layout_param = syn::Ident::new(
+                    &format!("__{}_{}_layout", func_ident_hash, param).to_uppercase(),
+                    param.span(),
+                );
 
                 quote::quote_spanned! { ty.span()=>
                     const _: ::rust_cuda::safety::type_layout::Assert<{

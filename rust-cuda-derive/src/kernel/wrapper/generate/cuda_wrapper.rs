@@ -24,7 +24,12 @@ pub(in super::super) fn quote_cuda_wrapper(
 
     let func_layout_params = func_params
         .iter()
-        .map(|ident| syn::Ident::new(&format!("__{}_layout", ident).to_uppercase(), ident.span()))
+        .map(|ident| {
+            syn::Ident::new(
+                &format!("__{}_{}_layout", func_ident_hash, ident).to_uppercase(),
+                ident.span(),
+            )
+        })
         .collect::<Vec<_>>();
 
     let ptx_func_input_unwrap = func_inputs
@@ -101,8 +106,8 @@ pub(in super::super) fn quote_cuda_wrapper(
             #(
                 #[no_mangle]
                 static #func_layout_params: [
-                    u8; ::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()
-                ] = ::const_type_layout::serialise_type_graph::<#ptx_func_types>();
+                    u8; rust_cuda::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()
+                ] = rust_cuda::const_type_layout::serialise_type_graph::<#ptx_func_types>();
 
                 *#func_params = &#func_layout_params;
             )*
