@@ -36,7 +36,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
-    let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, None);
+    let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Specialisation::Check);
 
     quote!(#kernel_ptx).into()
 }
@@ -77,7 +77,12 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     }
 
-    let mut kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Some(&specialisation));
+    let mut kernel_ptx = compile_kernel(
+        &args,
+        &crate_name,
+        &crate_path,
+        Specialisation::Link(&specialisation),
+    );
 
     let kernel_layout_name = if specialisation.is_empty() {
         format!("{}_type_layout_kernel", kernel)
@@ -154,7 +159,7 @@ fn compile_kernel(
     args: &syn::Ident,
     crate_name: &str,
     crate_path: &Path,
-    specialisation: Option<&str>,
+    specialisation: Specialisation,
 ) -> String {
     // Force this proc macro to always be evaluated using a dummy env var
     env::set_var("RUST_CUDA_DERIVE_MARKER", "42");
@@ -233,14 +238,13 @@ fn compile_kernel(
 fn build_kernel_with_specialisation(
     kernel_path: &Path,
     env_var: &str,
-    specialisation: Option<&str>,
+    specialisation: Specialisation,
     colourful: bool,
 ) -> Result<PathBuf> {
-    if let Some(specialisation) = specialisation {
-        env::set_var(env_var, specialisation);
-    } else {
-        env::remove_var(env_var);
-    }
+    match specialisation {
+        Specialisation::Check => env::set_var(env_var, "chECK"),
+        Specialisation::Link(specialisation) => env::set_var(env_var, specialisation),
+    };
 
     let result = (|| {
         let mut builder = Builder::new(kernel_path)?;
@@ -278,8 +282,8 @@ fn build_kernel_with_specialisation(
                 let ptx_path = output.get_assembly_path();
 
                 let specialisation = match specialisation {
-                    None => return Ok(ptx_path),
-                    Some(specialisation) => specialisation,
+                    Specialisation::Check => return Ok(ptx_path),
+                    Specialisation::Link(specialisation) => specialisation,
                 };
 
                 let mut specialised_ptx_path = ptx_path.clone();
@@ -318,6 +322,12 @@ fn build_kernel_with_specialisation(
     env::remove_var(env_var);
 
     result
+}
+
+#[derive(Copy, Clone, Debug)]
+enum Specialisation<'a> {
+    Check,
+    Link(&'a str),
 }
 
 fn with_cargo_args<Q, F: FnOnce(&[String]) -> Option<Q>>(inner: F) -> Option<Q> {

@@ -32,6 +32,16 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
 
     func.sig.ident = match proc_macro::tracked_env::var(&specialisation_var).as_deref() {
         Ok("") => quote::format_ident!("{}_kernel", func.sig.ident),
+        Ok("chECK") => {
+            let func_ident = func.sig.ident;
+
+            return (quote! {
+                #[cfg(target_os = "cuda")]
+                #[no_mangle]
+                pub unsafe extern "ptx-kernel" fn #func_ident() {}
+            })
+            .into();
+        },
         Ok(specialisation) => {
             quote::format_ident!(
                 "{}_kernel_{:016x}",
@@ -44,16 +54,7 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
             &specialisation_var,
             err
         ),
-        Err(VarError::NotPresent) => {
-            let func_ident = func.sig.ident;
-
-            return (quote! {
-                #[cfg(target_os = "cuda")]
-                #[no_mangle]
-                pub unsafe extern "ptx-kernel" fn #func_ident() {}
-            })
-            .into();
-        },
+        Err(VarError::NotPresent) => return quote!().into(),
     };
 
     (quote! { #func }).into()
