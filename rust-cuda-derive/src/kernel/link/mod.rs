@@ -242,76 +242,82 @@ fn build_kernel_with_specialisation(
         env::remove_var(env_var);
     }
 
-    let mut builder = Builder::new(kernel_path)?;
+    let result = (|| {
+        let mut builder = Builder::new(kernel_path)?;
 
-    if !colourful {
-        builder = builder.disable_colors();
-    }
+        if !colourful {
+            builder = builder.disable_colors();
+        }
 
-    builder = builder.set_error_format(
-        with_cargo_args(|args| {
-            let mut message_format = None;
+        builder = builder.set_error_format(
+            with_cargo_args(|args| {
+                let mut message_format = None;
 
-            for arg in args.windows(2) {
-                message_format = Some(match (arg[0].as_str(), arg[1].as_str()) {
-                    ("--message-format=human", _)
-                    | ("--message-format", "human")
-                    | (_, "--message-format=human") => ErrorFormat::Human,
-                    ("--message-format=json", _)
-                    | ("--message-format", "json")
-                    | (_, "--message-format=json") => ErrorFormat::JSON,
-                    ("--message-format=short", _)
-                    | ("--message-format", "short")
-                    | (_, "--message-format=short") => ErrorFormat::Short,
-                    _ => continue,
-                });
-            }
+                for arg in args.windows(2) {
+                    message_format = Some(match (arg[0].as_str(), arg[1].as_str()) {
+                        ("--message-format=human", _)
+                        | ("--message-format", "human")
+                        | (_, "--message-format=human") => ErrorFormat::Human,
+                        ("--message-format=json", _)
+                        | ("--message-format", "json")
+                        | (_, "--message-format=json") => ErrorFormat::JSON,
+                        ("--message-format=short", _)
+                        | ("--message-format", "short")
+                        | (_, "--message-format=short") => ErrorFormat::Short,
+                        _ => continue,
+                    });
+                }
 
-            message_format
-        })
-        .unwrap_or(ptx_builder::builder::ErrorFormat::Human),
-    );
+                message_format
+            })
+            .unwrap_or(ptx_builder::builder::ErrorFormat::Human),
+        );
 
-    match builder.build()? {
-        BuildStatus::Success(output) => {
-            let ptx_path = output.get_assembly_path();
+        match builder.build()? {
+            BuildStatus::Success(output) => {
+                let ptx_path = output.get_assembly_path();
 
-            let specialisation = match specialisation {
-                None => return Ok(ptx_path),
-                Some(specialisation) => specialisation,
-            };
+                let specialisation = match specialisation {
+                    None => return Ok(ptx_path),
+                    Some(specialisation) => specialisation,
+                };
 
-            let mut specialised_ptx_path = ptx_path.clone();
-            specialised_ptx_path.set_extension(&format!(
-                "{:016x}.ptx",
-                seahash::hash(specialisation.as_bytes())
-            ));
+                let mut specialised_ptx_path = ptx_path.clone();
+                specialised_ptx_path.set_extension(&format!(
+                    "{:016x}.ptx",
+                    seahash::hash(specialisation.as_bytes())
+                ));
 
-            fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
-                Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                    "Failed to copy kernel from {:?} to {:?}: {}",
-                    ptx_path, specialised_ptx_path, err,
-                )]))
-            })?;
-
-            fs::OpenOptions::new()
-                .append(true)
-                .open(&specialised_ptx_path)
-                .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
-                .map_err(|err| {
+                fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                        "Failed to write specialisation to {:?}: {}",
-                        specialised_ptx_path, err,
+                        "Failed to copy kernel from {:?} to {:?}: {}",
+                        ptx_path, specialised_ptx_path, err,
                     )]))
                 })?;
 
-            Ok(specialised_ptx_path)
-        },
-        BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
-            "Kernel build for specialisation {:?} was not needed.",
-            &specialisation
-        )]))),
-    }
+                fs::OpenOptions::new()
+                    .append(true)
+                    .open(&specialised_ptx_path)
+                    .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
+                    .map_err(|err| {
+                        Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                            "Failed to write specialisation to {:?}: {}",
+                            specialised_ptx_path, err,
+                        )]))
+                    })?;
+
+                Ok(specialised_ptx_path)
+            },
+            BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                "Kernel build for specialisation {:?} was not needed.",
+                &specialisation
+            )]))),
+        }
+    })();
+
+    env::remove_var(env_var);
+
+    result
 }
 
 fn with_cargo_args<Q, F: FnOnce(&[String]) -> Option<Q>>(inner: F) -> Option<Q> {
