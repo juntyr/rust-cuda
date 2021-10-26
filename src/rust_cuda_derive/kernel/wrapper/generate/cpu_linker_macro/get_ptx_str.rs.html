@@ -88,6 +88,8 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 <span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
 
@@ -148,8 +150,10 @@
             .<span class="ident">iter</span>()
             .<span class="ident">zip</span>(<span class="ident">func_params</span>.<span class="ident">iter</span>())
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">ty</span>, <span class="ident">param</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">layout_param</span> <span class="op">=</span>
-                    <span class="ident">syn::Ident::new</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__{}_layout&quot;</span>, <span class="ident">param</span>).<span class="ident">to_uppercase</span>(), <span class="ident">param</span>.<span class="ident">span</span>());
+                <span class="kw">let</span> <span class="ident">layout_param</span> <span class="op">=</span> <span class="ident">syn::Ident::new</span>(
+                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__{}_{}_layout&quot;</span>, <span class="ident">func_ident_hash</span>, <span class="ident">param</span>).<span class="ident">to_uppercase</span>(),
+                    <span class="ident">param</span>.<span class="ident">span</span>(),
+                );
 
                 <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()=&gt;
                     <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::type_layout::Assert</span><span class="op">&lt;</span>{
