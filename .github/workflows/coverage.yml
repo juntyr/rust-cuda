@@ -24,8 +24,8 @@ jobs:
 
       - name: Install the Rust toolchain
         run: |
-          cargo install ptx-linker -f
-          cargo install grcov -f
+          cargo install ptx-linker --force --locked
+          cargo install grcov --force --locked
           rustup component add llvm-tools-preview
 
       - name: Generate the code coverage

@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install the Rust toolchain
-        run: cargo install ptx-linker -f
+        run: cargo install ptx-linker --force --locked
 
       - name: Build the Documentation
         run: |
