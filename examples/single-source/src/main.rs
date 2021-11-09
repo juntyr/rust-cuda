@@ -6,6 +6,7 @@
 #![cfg_attr(target_os = "cuda", feature(panic_info_message))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(asm))]
+#![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(cfg_version)]
 #![feature(const_type_name)]
 #![feature(const_raw_ptr_deref)]
