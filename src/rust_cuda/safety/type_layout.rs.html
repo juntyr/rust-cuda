@@ -44,7 +44,7 @@
 <span class="attribute">#[<span class="ident">must_use</span>]</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">check</span><span class="op">&lt;</span><span class="ident">T</span>: ~<span class="kw">const</span> <span class="ident">TypeGraph</span><span class="op">&gt;</span>(<span class="ident">device</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>]) -&gt; <span class="ident">CpuAndGpuTypeLayouts</span>
 <span class="kw">where</span>
-    [<span class="ident">u8</span>; <span class="ident">serialised_type_graph_len</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>()]: ,
+    [<span class="ident">u8</span>; <span class="ident">serialised_type_graph_len</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>()]:,
 {
     <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="ident">serialise_type_graph</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>();
 
