@@ -20,4 +20,4 @@ regex = "1.5"
 lazy_static = "1.4"
 
 seahash = "4.1"
-ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "29e42e2" }
+ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "042c8f0" }

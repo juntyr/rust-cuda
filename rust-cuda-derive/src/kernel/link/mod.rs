@@ -6,7 +6,7 @@ use std::{
 
 use proc_macro::TokenStream;
 use ptx_builder::{
-    builder::{BuildStatus, Builder, ErrorFormat},
+    builder::{BuildStatus, Builder, ErrorFormat, Profile},
     error::{BuildErrorKind, Error, Result},
     reporter::ErrorLogPrinter,
 };
@@ -253,6 +253,11 @@ fn build_kernel_with_specialisation(
             builder = builder.disable_colors();
         }
 
+        builder = match specialisation {
+            Specialisation::Check => builder.set_profile(Profile::Debug),
+            Specialisation::Link(_) => builder.set_profile(Profile::Release),
+        };
+
         builder = builder.set_error_format(
             with_cargo_args(|args| {
                 let mut message_format = None;
@@ -277,20 +282,25 @@ fn build_kernel_with_specialisation(
             .unwrap_or(ptx_builder::builder::ErrorFormat::Human),
         );
 
+        builder = builder.set_prefix(match specialisation {
+            Specialisation::Check => String::from("chECK"),
+            Specialisation::Link(specialisation) => {
+                format!("{:016x}", seahash::hash(specialisation.as_bytes()))
+            },
+        });
+
         match builder.build()? {
             BuildStatus::Success(output) => {
                 let ptx_path = output.get_assembly_path();
 
-                let specialisation = match specialisation {
-                    Specialisation::Check => return Ok(ptx_path),
-                    Specialisation::Link(specialisation) => specialisation,
-                };
-
                 let mut specialised_ptx_path = ptx_path.clone();
-                specialised_ptx_path.set_extension(&format!(
-                    "{:016x}.ptx",
-                    seahash::hash(specialisation.as_bytes())
-                ));
+
+                specialised_ptx_path.set_extension(match specialisation {
+                    Specialisation::Check => String::from("chECK.ptx"),
+                    Specialisation::Link(specialisation) => {
+                        format!("{:016x}.ptx", seahash::hash(specialisation.as_bytes()))
+                    },
+                });
 
                 fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(vec![format!(
@@ -299,16 +309,18 @@ fn build_kernel_with_specialisation(
                     )]))
                 })?;
 
-                fs::OpenOptions::new()
-                    .append(true)
-                    .open(&specialised_ptx_path)
-                    .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
-                    .map_err(|err| {
-                        Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                            "Failed to write specialisation to {:?}: {}",
-                            specialised_ptx_path, err,
-                        )]))
-                    })?;
+                if let Specialisation::Link(specialisation) = specialisation {
+                    fs::OpenOptions::new()
+                        .append(true)
+                        .open(&specialised_ptx_path)
+                        .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
+                        .map_err(|err| {
+                            Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                                "Failed to write specialisation to {:?}: {}",
+                                specialised_ptx_path, err,
+                            )]))
+                        })?;
+                }
 
                 Ok(specialised_ptx_path)
             },
