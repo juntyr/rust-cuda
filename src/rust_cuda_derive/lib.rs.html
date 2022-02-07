@@ -74,9 +74,12 @@
 <span id="69">69</span>
 <span id="70">70</span>
 <span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">deny</span>(<span class="ident">clippy::pedantic</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">box_patterns</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">proc_macro_tracked_env</span>)]</span>
+<span class="attribute">#![<span class="ident">feature</span>(<span class="ident">proc_macro_span</span>)]</span>
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">proc_macro</span>;
 
@@ -96,6 +99,7 @@
 <span class="attribute">#[<span class="ident">proc_macro_error</span>]</span>
 <span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">LendRustToCuda</span>, <span class="ident">attributes</span>(<span class="ident">r2cBound</span>, <span class="ident">r2cIgnore</span>, <span class="ident">r2cEmbed</span>))]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rust_to_cuda_derive</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
+    <span class="comment">// Note: We cannot report a more precise span yet</span>
     <span class="kw">let</span> <span class="ident">ast</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse</span>(<span class="ident">input</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">ast</span>) =&gt; <span class="ident">ast</span>,
         <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">abort!</span>(<span class="ident">err</span>),
