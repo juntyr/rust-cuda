@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
+#![feature(proc_macro_span)]
 
 extern crate proc_macro;
 
@@ -20,6 +21,7 @@ mod rust_to_cuda;
 #[proc_macro_error]
 #[proc_macro_derive(LendRustToCuda, attributes(r2cBound, r2cIgnore, r2cEmbed))]
 pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
+    // Note: We cannot report a more precise span yet
     let ast = match syn::parse(input) {
         Ok(ast) => ast,
         Err(err) => abort!(err),

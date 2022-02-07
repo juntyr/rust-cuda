@@ -8,13 +8,15 @@ use proc_macro::TokenStream;
 use ptx_builder::{
     builder::{BuildStatus, Builder, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
-    reporter::ErrorLogPrinter,
 };
 
 use super::utils::skip_kernel_compilation;
 
 mod config;
+mod error;
+
 use config::{CheckKernelConfig, LinkKernelConfig};
+use error::emit_ptx_build_error;
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {
@@ -38,7 +40,10 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
 
     let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Specialisation::Check);
 
-    quote!(#kernel_ptx).into()
+    match kernel_ptx {
+        Some(kernel_ptx) => quote!(#kernel_ptx).into(),
+        None => quote!("ERROR in this PTX compilation").into(),
+    }
 }
 
 lazy_static::lazy_static! {
@@ -77,12 +82,20 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     }
 
-    let mut kernel_ptx = compile_kernel(
+    let mut kernel_ptx = match compile_kernel(
         &args,
         &crate_name,
         &crate_path,
         Specialisation::Link(&specialisation),
-    );
+    ) {
+        Some(kernel_ptx) => kernel_ptx,
+        None => {
+            return (quote! {
+                const PTX_STR: &'static str = "ERROR in this PTX compilation";
+            })
+            .into()
+        },
+    };
 
     let kernel_layout_name = if specialisation.is_empty() {
         format!("{}_type_layout_kernel", kernel)
@@ -160,7 +173,7 @@ fn compile_kernel(
     crate_name: &str,
     crate_path: &Path,
     specialisation: Specialisation,
-) -> String {
+) -> Option<String> {
     if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
         env::set_var("RUSTFLAGS", rust_flags.replace("-Zinstrument-coverage", ""));
     }
@@ -181,11 +194,12 @@ fn compile_kernel(
             file.read_to_string(&mut kernel_ptx)
                 .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
 
-            kernel_ptx
+            Some(kernel_ptx)
         },
         Err(err) => {
-            // TODO: Handle colour output here as well - maybe build diagnostic?
-            abort_call_site!(ErrorLogPrinter::print(err));
+            emit_ptx_build_error(err);
+
+            None
         },
     }
 }
