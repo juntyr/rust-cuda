@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use colored::Colorize;
 use proc_macro::TokenStream;
 use ptx_builder::{
     builder::{BuildStatus, Builder, MessageFormat, Profile},
@@ -237,9 +238,23 @@ fn build_kernel_with_specialisation(
 
         match builder.build_live(
             |stdout_line| {
-                if let Ok(cargo_metadata::Message::CompilerMessage(message)) =
+                if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
                     serde_json::from_str(stdout_line)
                 {
+                    // Prefix the rendered live PTX error messages with '[PTX]'
+                    if let Some(rendered) = &mut message.message.rendered {
+                        colored::control::set_override(true);
+                        let prefix = "[PTX] ".bright_black().to_string();
+                        colored::control::unset_override();
+
+                        let glue = String::from('\n') + &prefix;
+
+                        let mut prefixed =
+                            prefix + &rendered.split('\n').collect::<Vec<_>>().join(&glue);
+
+                        std::mem::swap(rendered, &mut prefixed);
+                    }
+
                     eprintln!("{}", serde_json::to_string(&message.message).unwrap());
                 }
             },
