@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![cfg_attr(not(feature = "host"), no_std)]
 #![feature(doc_cfg)]
+#![doc(html_root_url = "https://momolangenstein.github.io/rust-cuda/")]
 
 #[cfg(feature = "host")]
 mod host;

@@ -2,6 +2,7 @@
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
 #![feature(proc_macro_span)]
+#![doc(html_root_url = "https://momolangenstein.github.io/rust-cuda/")]
 
 extern crate proc_macro;
 

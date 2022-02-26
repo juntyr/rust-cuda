@@ -20,6 +20,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![feature(adt_const_params)]
+#![doc(html_root_url = "https://momolangenstein.github.io/rust-cuda/")]
 
 #[doc(hidden)]
 pub extern crate alloc;
