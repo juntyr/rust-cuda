@@ -10,7 +10,7 @@ default-members = [
 [package]
 name = "rust-cuda"
 version = "0.1.0"
-authors = ["Momo Langenstein <ml5717@ic.ac.uk>"]
+authors = ["Momo Langenstein <momo.langenstein@helsinki.fi>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 
@@ -30,7 +30,7 @@ rustacuda_derive = { version = "0.1.2", optional = true }
 
 const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", branch = "main" }
 
-final = { git = "https://github.com/MomoLangenstein/final", rev = "a2dbfd6" }
+final = "0.1.1"
 hashbrown = { version = "0.12", default-features = false, features = ["inline-more"], optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
