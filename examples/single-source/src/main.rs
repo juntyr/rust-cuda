@@ -5,12 +5,13 @@
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
+#![feature(cfg_version)]
 #![feature(const_type_name)]
 #![feature(const_ptr_offset_from)]
 #![feature(const_refs_to_cell)]
 #![feature(const_trait_impl)]
 #![feature(const_mut_refs)]
-#![feature(const_fn_trait_bound)]
+#![cfg_attr(not(version("1.61.0")), feature(const_fn_trait_bound))]
 
 extern crate alloc;
 
