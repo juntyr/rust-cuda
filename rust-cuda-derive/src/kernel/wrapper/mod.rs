@@ -277,9 +277,8 @@ fn ident_from_pat(pat: &syn::Pat) -> Option<syn::Ident> {
         syn::Pat::Struct(syn::PatStruct { fields, .. }) => {
             ident_from_pat_iter(fields.iter().map(|field| &*field.pat))
         },
-        #[cfg(test)]
-        syn::Pat::__TestExhaustive(_) => unimplemented!(),
-        #[cfg(not(test))]
+        #[cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+        #[cfg_attr(not(test), allow(non_exhaustive_omitted_patterns))]
         _ => Err(()).ok(),
     }
 }
