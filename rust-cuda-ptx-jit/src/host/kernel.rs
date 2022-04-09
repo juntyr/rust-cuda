@@ -47,7 +47,11 @@ impl CudaKernel {
 
 impl Drop for CudaKernel {
     fn drop(&mut self) {
-        std::mem::drop(unsafe { ManuallyDrop::take(&mut self.function) });
+        {
+            // Ensure that self.function is dropped before self.module as
+            //  it borrows data from the module and must not outlive it
+            let _function = unsafe { ManuallyDrop::take(&mut self.function) };
+        }
 
         if let Err((_err, module)) = Module::drop(*unsafe { ManuallyDrop::take(&mut self.module) })
         {
