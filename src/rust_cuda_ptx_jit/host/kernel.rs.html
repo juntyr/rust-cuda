@@ -60,6 +60,10 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">ffi::CStr</span>, <span class="ident">mem::ManuallyDrop</span>};
 
 <span class="kw">use</span> <span class="ident">rustacuda</span>::{<span class="ident">error::CudaResult</span>, <span class="ident">function::Function</span>, <span class="ident">module::Module</span>};
@@ -109,7 +113,11 @@
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">CudaKernel</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="ident">std::mem::drop</span>(<span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">function</span>) });
+        {
+            <span class="comment">// Ensure that self.function is dropped before self.module as</span>
+            <span class="comment">//  it borrows data from the module and must not outlive it</span>
+            <span class="kw">let</span> <span class="ident">_function</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">function</span>) };
+        }
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>((<span class="ident">_err</span>, <span class="ident">module</span>)) <span class="op">=</span> <span class="ident">Module::drop</span>(<span class="kw-2">*</span><span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">module</span>) })
         {
@@ -118,5 +126,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0-nightly (9c06e1ba4 2022-03-29)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (f4a7ce997 2022-04-08)" ></div>
 </body></html>
