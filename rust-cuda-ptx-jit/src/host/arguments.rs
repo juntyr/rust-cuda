@@ -1,6 +1,7 @@
 #[macro_export]
 #[doc(hidden)]
 #[doc(cfg(feature = "host"))]
+#[allow(clippy::module_name_repetitions)]
 macro_rules! compilePtxJITwithArguments {
     // Invocation without arguments fast track
     ($compiler:ident ()) => {
