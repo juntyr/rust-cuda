@@ -31,7 +31,7 @@ jobs:
 
       - name: Generate the code coverage
         run: |
-          RUSTFLAGS="-Zinstrument-coverage" \
+          RUSTFLAGS="-Cinstrument-coverage" \
           LLVM_PROFILE_FILE="codecov-%p-%m.profraw" \
           cargo test --workspace
 

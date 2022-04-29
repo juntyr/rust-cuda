@@ -176,7 +176,12 @@ fn compile_kernel(
     specialisation: Specialisation,
 ) -> Option<String> {
     if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
-        env::set_var("RUSTFLAGS", rust_flags.replace("-Zinstrument-coverage", ""));
+        env::set_var(
+            "RUSTFLAGS",
+            rust_flags
+                .replace("-Zinstrument-coverage", "")
+                .replace("-Cinstrument-coverage", ""),
+        );
     }
 
     let specialisation_var = format!(
