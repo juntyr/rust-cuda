@@ -23,4 +23,4 @@ strip-ansi-escapes = "0.1"
 colored = "2.0"
 
 seahash = "4.1"
-ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "83d5419" }
+ptx-builder = { git = "https://github.com/MomoLangenstein/rust-ptx-builder", rev = "65e8f21" }
