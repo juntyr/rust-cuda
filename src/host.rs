@@ -45,6 +45,7 @@ pub struct LaunchConfig {
     pub grid: rustacuda::function::GridSize,
     pub block: rustacuda::function::BlockSize,
     pub shared_memory_size: u32,
+    pub ptx_jit: bool,
 }
 
 pub struct LaunchPackage<'l, L: ?Sized + Launcher> {

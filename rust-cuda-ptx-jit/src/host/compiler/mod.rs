@@ -21,6 +21,7 @@ pub enum PtxJITResult<'s> {
 }
 
 enum PtxLoadWidth {
+    B1,
     B2,
     B4,
     B8,

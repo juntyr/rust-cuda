@@ -56,6 +56,7 @@ impl PtxJITCompiler {
                                     *byte_offset
                                         ..byte_offset
                                             + match load_width {
+                                                PtxLoadWidth::B1 => 1,
                                                 PtxLoadWidth::B2 => 2,
                                                 PtxLoadWidth::B4 => 4,
                                                 PtxLoadWidth::B8 => 8,
@@ -82,10 +83,20 @@ impl PtxJITCompiler {
                                     output_ptx.extend_from_slice(register);
 
                                     // Generate the hexadecimal constant in little-endian order
-                                    output_ptx.extend_from_slice(", 0x".as_bytes());
+                                    output_ptx.extend_from_slice(", 0".as_bytes());
+                                    output_ptx.extend_from_slice(if register.contains(&b"r"[0]) {
+                                        "x".as_bytes()
+                                    } else if register.contains(&b"d"[0]) {
+                                        "d".as_bytes()
+                                    } else {
+                                        "f".as_bytes()
+                                    });
                                     for byte in bytes.iter().rev() {
                                         output_ptx
                                             .extend_from_slice(format!("{:02X}", byte).as_bytes());
+                                    }
+                                    if register.contains(&b"r"[0]) {
+                                        output_ptx.extend_from_slice("U".as_bytes());
                                     }
 
                                     output_ptx.extend_from_slice(";".as_bytes());

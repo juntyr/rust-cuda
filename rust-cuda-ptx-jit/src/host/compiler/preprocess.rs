@@ -59,6 +59,7 @@ impl PtxJITCompiler {
                         .name("loadwidth")
                         .map(|s| s.as_bytes())
                     {
+                        Some(b"8") => Some(PtxLoadWidth::B1),
                         Some(b"16") => Some(PtxLoadWidth::B2),
                         Some(b"32") => Some(PtxLoadWidth::B4),
                         Some(b"64") => Some(PtxLoadWidth::B8),

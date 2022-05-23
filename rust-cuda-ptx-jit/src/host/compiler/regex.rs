@@ -14,7 +14,7 @@ lazy_static::lazy_static! {
 
     pub static ref CONST_LOAD_INSTRUCTION_REGEX: Regex = {
         Regex::new(
-            r"(?x-u)(?P<instruction>ld\.global\.[suf](?P<loadwidth>16|32|64)\s*(?P<constreg>
+            r"(?x-u)(?P<instruction>ld\.global\.[suf](?P<loadwidth>8|16|32|64)\s*(?P<constreg>
             %[rf][sd]?\d+),\s*\[(?P<basereg>%r[ds]?\d+)(?:\+(?P<loadoffset>\d+))?\]\s*;)",
         ).unwrap()
     };

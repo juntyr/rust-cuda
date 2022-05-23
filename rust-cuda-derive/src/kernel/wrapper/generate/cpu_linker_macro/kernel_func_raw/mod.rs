@@ -44,9 +44,13 @@ pub(super) fn quote_kernel_func_raw(
                 kernel, watcher, config, stream
             } = rust_cuda::host::Launcher::get_launch_package(self);
 
-            let kernel_jit_result = rust_cuda::ptx_jit::compilePtxJITwithArguments! {
-                kernel.compile_with_ptx_jit_args(#(#func_cpu_ptx_jit_wrap),*)
-            }?;
+            let kernel_jit_result = if config.ptx_jit {
+                rust_cuda::ptx_jit::compilePtxJITwithArguments! {
+                    kernel.compile_with_ptx_jit_args(#(#func_cpu_ptx_jit_wrap),*)
+                }?
+            } else {
+                 kernel.compile_with_ptx_jit_args(None)?
+            };
 
             let function = match kernel_jit_result {
                 rust_cuda::host::KernelJITResult::Recompiled(function) => {
@@ -88,7 +92,7 @@ pub(super) fn quote_kernel_func_raw(
                 }
 
                 let rust_cuda::host::LaunchConfig {
-                    grid, block, shared_memory_size
+                    grid, block, shared_memory_size, ptx_jit: _,
                 } = config;
 
                 unsafe { stream.launch(function, grid, block, shared_memory_size,
