@@ -111,6 +111,10 @@
 <span id="104">104</span>
 <span id="105">105</span>
 <span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">DeclGenerics</span>, <span class="ident">FuncIdent</span>, <span class="ident">FunctionInputs</span>, <span class="ident">KernelConfig</span>};
@@ -157,9 +161,13 @@
                 <span class="ident">kernel</span>, <span class="ident">watcher</span>, <span class="ident">config</span>, <span class="ident">stream</span>
             } <span class="op">=</span> <span class="ident">rust_cuda::host::Launcher::get_launch_package</span>(<span class="self">self</span>);
 
-            <span class="kw">let</span> <span class="ident">kernel_jit_result</span> <span class="op">=</span> <span class="macro">rust_cuda::ptx_jit::compilePtxJITwithArguments!</span> {
-                <span class="ident">kernel</span>.<span class="ident">compile_with_ptx_jit_args</span>(#(#<span class="ident">func_cpu_ptx_jit_wrap</span>),<span class="kw-2">*</span>)
-            }<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">kernel_jit_result</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">ptx_jit</span> {
+                <span class="macro">rust_cuda::ptx_jit::compilePtxJITwithArguments!</span> {
+                    <span class="ident">kernel</span>.<span class="ident">compile_with_ptx_jit_args</span>(#(#<span class="ident">func_cpu_ptx_jit_wrap</span>),<span class="kw-2">*</span>)
+                }<span class="question-mark">?</span>
+            } <span class="kw">else</span> {
+                 <span class="ident">kernel</span>.<span class="ident">compile_with_ptx_jit_args</span>(<span class="prelude-val">None</span>)<span class="question-mark">?</span>
+            };
 
             <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">kernel_jit_result</span> {
                 <span class="ident">rust_cuda::host::KernelJITResult::Recompiled</span>(<span class="ident">function</span>) =&gt; {
@@ -201,7 +209,7 @@
                 }
 
                 <span class="kw">let</span> <span class="ident">rust_cuda::host::LaunchConfig</span> {
-                    <span class="ident">grid</span>, <span class="ident">block</span>, <span class="ident">shared_memory_size</span>
+                    <span class="ident">grid</span>, <span class="ident">block</span>, <span class="ident">shared_memory_size</span>, <span class="ident">ptx_jit</span>: <span class="kw">_</span>,
                 } <span class="op">=</span> <span class="ident">config</span>;
 
                 <span class="kw">unsafe</span> { <span class="ident">stream</span>.<span class="ident">launch</span>(<span class="ident">function</span>, <span class="ident">grid</span>, <span class="ident">block</span>, <span class="ident">shared_memory_size</span>,
@@ -218,5 +226,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4c5f6e627 2022-05-17)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (b2eed72a6 2022-05-22)" ></div>
 </body></html>

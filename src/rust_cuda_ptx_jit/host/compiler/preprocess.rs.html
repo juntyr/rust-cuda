@@ -130,6 +130,7 @@
 <span id="123">123</span>
 <span id="124">124</span>
 <span id="125">125</span>
+<span id="126">126</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
     <span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>},
@@ -191,6 +192,7 @@
                         .<span class="ident">name</span>(<span class="string">&quot;loadwidth&quot;</span>)
                         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>())
                     {
+                        <span class="prelude-val">Some</span>(<span class="string">b&quot;8&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B1</span>),
                         <span class="prelude-val">Some</span>(<span class="string">b&quot;16&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B2</span>),
                         <span class="prelude-val">Some</span>(<span class="string">b&quot;32&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B4</span>),
                         <span class="prelude-val">Some</span>(<span class="string">b&quot;64&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B8</span>),
@@ -256,5 +258,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4c5f6e627 2022-05-17)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (b2eed72a6 2022-05-22)" ></div>
 </body></html>

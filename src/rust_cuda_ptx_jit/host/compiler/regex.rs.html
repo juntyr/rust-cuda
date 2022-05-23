@@ -42,11 +42,11 @@
 
     <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_LOAD_INSTRUCTION_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> {
         <span class="ident">Regex::new</span>(
-            <span class="string">r&quot;(?x-u)(?P&lt;instruction&gt;ld\.global\.[suf](?P&lt;loadwidth&gt;16|32|64)\s*(?P&lt;constreg&gt;
+            <span class="string">r&quot;(?x-u)(?P&lt;instruction&gt;ld\.global\.[suf](?P&lt;loadwidth&gt;8|16|32|64)\s*(?P&lt;constreg&gt;
             %[rf][sd]?\d+),\s*\[(?P&lt;basereg&gt;%r[ds]?\d+)(?:\+(?P&lt;loadoffset&gt;\d+))?\]\s*;)&quot;</span>,
         ).<span class="ident">unwrap</span>()
     };
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4c5f6e627 2022-05-17)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (b2eed72a6 2022-05-22)" ></div>
 </body></html>

@@ -624,6 +624,7 @@
 <span id="617">617</span>
 <span id="618">618</span>
 <span id="619">619</span>
+<span id="620">620</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">marker::PhantomData</span>,
     <span class="ident">mem::ManuallyDrop</span>,
@@ -671,6 +672,7 @@
     <span class="kw">pub</span> <span class="ident">grid</span>: <span class="ident">rustacuda::function::GridSize</span>,
     <span class="kw">pub</span> <span class="ident">block</span>: <span class="ident">rustacuda::function::BlockSize</span>,
     <span class="kw">pub</span> <span class="ident">shared_memory_size</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">ptx_jit</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LaunchPackage</span><span class="op">&lt;</span><span class="lifetime">&#39;l</span>, <span class="ident">L</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Launcher</span><span class="op">&gt;</span> {
@@ -1244,5 +1246,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4c5f6e627 2022-05-17)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (b2eed72a6 2022-05-22)" ></div>
 </body></html>
