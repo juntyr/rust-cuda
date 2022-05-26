@@ -131,18 +131,32 @@
 <span id="124">124</span>
 <span id="125">125</span>
 <span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashMap</span>,
     <span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>},
 };
 
 <span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">regex</span>::{<span class="ident">CONST_BASE_REGISTER_REGEX</span>, <span class="ident">CONST_LOAD_INSTRUCTION_REGEX</span>, <span class="ident">CONST_MARKER_REGEX</span>},
+    <span class="ident">regex</span>::{
+        <span class="ident">CONST_BASE_REGISTER_REGEX</span>, <span class="ident">CONST_LOAD_INSTRUCTION_REGEX</span>, <span class="ident">CONST_MARKER_REGEX</span>, <span class="ident">REGISTER_REGEX</span>,
+    },
     <span class="ident">PtxElement</span>, <span class="ident">PtxJITCompiler</span>, <span class="ident">PtxLoadWidth</span>,
 };
 
 <span class="kw">impl</span> <span class="ident">PtxJITCompiler</span> {
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_lines</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ptx</span>: <span class="kw-2">&amp;</span><span class="ident">CStr</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">ptx</span> <span class="op">=</span> <span class="ident">ptx</span>.<span class="ident">to_bytes</span>();
 
@@ -230,7 +244,15 @@
                                         <span class="ident">parameter_index</span>: <span class="kw-2">*</span><span class="ident">param</span>,
                                         <span class="ident">byte_offset</span>: <span class="ident">loadoffset</span>,
                                         <span class="ident">load_width</span>: <span class="ident">loadwidth</span>,
-                                        <span class="ident">register</span>: <span class="ident">constreg</span>.<span class="ident">to_owned</span>().<span class="ident">into_boxed_slice</span>(),
+                                        <span class="ident">registers</span>: <span class="ident">REGISTER_REGEX</span>
+                                            .<span class="ident">captures_iter</span>(<span class="ident">constreg</span>)
+                                            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> {
+                                                <span class="ident">m</span>.<span class="ident">name</span>(<span class="string">&quot;register&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
+                                                    <span class="ident">s</span>.<span class="ident">as_bytes</span>().<span class="ident">to_owned</span>().<span class="ident">into_boxed_slice</span>()
+                                                })
+                                            })
+                                            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                                            .<span class="ident">into_boxed_slice</span>(),
                                     });
                                 }
                             }
@@ -258,5 +280,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (b2eed72a6 2022-05-22)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4cbaac699 2022-05-25)" ></div>
 </body></html>

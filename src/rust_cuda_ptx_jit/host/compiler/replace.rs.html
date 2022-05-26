@@ -140,11 +140,45 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">ffi::CString</span>, <span class="ident">ops::Deref</span>};
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">PtxElement</span>, <span class="ident">PtxJITCompiler</span>, <span class="ident">PtxJITResult</span>, <span class="ident">PtxLoadWidth</span>};
 
 <span class="kw">impl</span> <span class="ident">PtxJITCompiler</span> {
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_lines</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_arguments</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">arguments</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>]<span class="op">&gt;</span>) -&gt; <span class="ident">PtxJITResult</span> {
         <span class="comment">// Check if the arguments, cast as byte slices, are the same as the last cached</span>
         <span class="comment">//  ones</span>
@@ -177,6 +211,7 @@
             });
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output_ptx</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer_ptx</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
 
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">args</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">last_arguments</span> {
                 <span class="comment">// Some constant loads are required, rebuild PTX string from source and newly</span>
@@ -189,67 +224,98 @@
                             <span class="ident">parameter_index</span>,
                             <span class="ident">byte_offset</span>,
                             <span class="ident">load_width</span>,
-                            <span class="ident">register</span>,
+                            <span class="ident">registers</span>,
                         } =&gt; {
-                            <span class="comment">// Only generate a constant load instructions if the arguments contain</span>
-                            <span class="comment">//  the byte range requested by the load instruction</span>
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">arg</span>)) <span class="op">=</span> <span class="ident">args</span>.<span class="ident">get</span>(<span class="kw-2">*</span><span class="ident">parameter_index</span>) {
-                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">bytes</span>) <span class="op">=</span> <span class="ident">arg</span>.<span class="ident">get</span>(
-                                    <span class="kw-2">*</span><span class="ident">byte_offset</span>
-                                        ..<span class="ident">byte_offset</span>
-                                            <span class="op">+</span> <span class="kw">match</span> <span class="ident">load_width</span> {
-                                                <span class="ident">PtxLoadWidth::B1</span> =&gt; <span class="number">1</span>,
-                                                <span class="ident">PtxLoadWidth::B2</span> =&gt; <span class="number">2</span>,
-                                                <span class="ident">PtxLoadWidth::B4</span> =&gt; <span class="number">4</span>,
-                                                <span class="ident">PtxLoadWidth::B8</span> =&gt; <span class="number">8</span>,
-                                            },
-                                ) {
-                                    <span class="comment">// Generate the mov instruction with the correct data type</span>
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">&quot;mov.&quot;</span>.<span class="ident">as_bytes</span>());
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&quot;r&quot;</span>[<span class="number">0</span>]) {
-                                        <span class="string">&quot;u&quot;</span>.<span class="ident">as_bytes</span>()
-                                    } <span class="kw">else</span> {
-                                        <span class="string">&quot;f&quot;</span>.<span class="ident">as_bytes</span>()
-                                    });
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&quot;s&quot;</span>[<span class="number">0</span>]) {
-                                        <span class="string">&quot;16&quot;</span>.<span class="ident">as_bytes</span>()
-                                    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&quot;d&quot;</span>[<span class="number">0</span>]) {
-                                        <span class="string">&quot;64&quot;</span>.<span class="ident">as_bytes</span>()
-                                    } <span class="kw">else</span> {
-                                        <span class="string">&quot;32&quot;</span>.<span class="ident">as_bytes</span>()
-                                    });
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">byte_offset</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">byte_offset</span>;
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">registers_iter</span> <span class="op">=</span> <span class="ident">registers</span>.<span class="ident">iter</span>();
 
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">&quot; \t&quot;</span>.<span class="ident">as_bytes</span>());
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">register</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">registers_iter</span>.<span class="ident">next</span>() {
+                                <span class="prelude-val">Some</span>(<span class="ident">register</span>) =&gt; <span class="ident">register</span>,
+                                <span class="prelude-val">None</span> =&gt; <span class="kw">continue</span>,
+                            };
 
-                                    <span class="comment">// Append the destination register from the load instruction</span>
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="ident">register</span>);
+                            <span class="kw">loop</span> {
+                                <span class="comment">// Only generate a constant load instructions if the arguments</span>
+                                <span class="comment">// contain  the byte range requested</span>
+                                <span class="comment">// by the load instruction</span>
+                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">arg</span>)) <span class="op">=</span> <span class="ident">args</span>.<span class="ident">get</span>(<span class="kw-2">*</span><span class="ident">parameter_index</span>) {
+                                    <span class="kw">let</span> <span class="ident">load_width_bytes</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">load_width</span> {
+                                        <span class="ident">PtxLoadWidth::B1</span> =&gt; <span class="number">1</span>,
+                                        <span class="ident">PtxLoadWidth::B2</span> =&gt; <span class="number">2</span>,
+                                        <span class="ident">PtxLoadWidth::B4</span> =&gt; <span class="number">4</span>,
+                                        <span class="ident">PtxLoadWidth::B8</span> =&gt; <span class="number">8</span>,
+                                    };
 
-                                    <span class="comment">// Generate the hexadecimal constant in little-endian order</span>
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">&quot;, 0&quot;</span>.<span class="ident">as_bytes</span>());
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&quot;r&quot;</span>[<span class="number">0</span>]) {
-                                        <span class="string">&quot;x&quot;</span>.<span class="ident">as_bytes</span>()
-                                    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&quot;d&quot;</span>[<span class="number">0</span>]) {
-                                        <span class="string">&quot;d&quot;</span>.<span class="ident">as_bytes</span>()
-                                    } <span class="kw">else</span> {
-                                        <span class="string">&quot;f&quot;</span>.<span class="ident">as_bytes</span>()
-                                    });
-                                    <span class="kw">for</span> <span class="ident">byte</span> <span class="kw">in</span> <span class="ident">bytes</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
-                                        <span class="ident">output_ptx</span>
-                                            .<span class="ident">extend_from_slice</span>(<span class="macro">format!</span>(<span class="string">&quot;{:02X}&quot;</span>, <span class="ident">byte</span>).<span class="ident">as_bytes</span>());
+                                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">bytes</span>) <span class="op">=</span>
+                                        <span class="ident">arg</span>.<span class="ident">get</span>(<span class="ident">byte_offset</span>..(<span class="ident">byte_offset</span> <span class="op">+</span> <span class="ident">load_width_bytes</span>))
+                                    {
+                                        <span class="ident">byte_offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">load_width_bytes</span>;
+
+                                        <span class="comment">// Generate the mov instruction with the correct data type</span>
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">b&quot;mov.&quot;</span>);
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;r&#39;</span>) {
+                                            <span class="string">b&#39;u&#39;</span>
+                                        } <span class="kw">else</span> {
+                                            <span class="string">b&#39;f&#39;</span>
+                                        });
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;s&#39;</span>) {
+                                            <span class="string">b&quot;16&quot;</span>
+                                        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;d&#39;</span>) {
+                                            <span class="string">b&quot;64&quot;</span>
+                                        } <span class="kw">else</span> {
+                                            <span class="string">b&quot;32&quot;</span>
+                                        });
+
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">b&quot; \t&quot;</span>);
+
+                                        <span class="comment">// Append the destination register from the load</span>
+                                        <span class="comment">//  instruction</span>
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="ident">register</span>);
+
+                                        <span class="comment">// Generate the hexadecimal constant in little-endian</span>
+                                        <span class="comment">//  order</span>
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">b&quot;, 0&quot;</span>);
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;r&#39;</span>) {
+                                            <span class="string">b&#39;x&#39;</span>
+                                        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;d&#39;</span>) {
+                                            <span class="string">b&#39;d&#39;</span>
+                                        } <span class="kw">else</span> {
+                                            <span class="string">b&#39;f&#39;</span>
+                                        });
+                                        <span class="kw">for</span> <span class="ident">byte</span> <span class="kw">in</span> <span class="ident">bytes</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
+                                            <span class="ident">buffer_ptx</span>
+                                                .<span class="ident">push</span>(<span class="string">b&quot;0123456789ABCDEF&quot;</span>[<span class="ident">usize::from</span>(<span class="kw-2">*</span><span class="ident">byte</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">4</span>)]);
+                                            <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(
+                                                <span class="string">b&quot;0123456789ABCDEF&quot;</span>[<span class="ident">usize::from</span>(<span class="kw-2">*</span><span class="ident">byte</span> <span class="op">&amp;</span> <span class="number">0x0F_u8</span>)],
+                                            );
+                                        }
+                                        <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;r&#39;</span>) {
+                                            <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="string">b&#39;U&#39;</span>);
+                                        }
+
+                                        <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="string">b&#39;;&#39;</span>);
+
+                                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">next_register</span>) <span class="op">=</span> <span class="ident">registers_iter</span>.<span class="ident">next</span>() {
+                                            <span class="comment">// Early continue to the next `PtxElement` to avoid</span>
+                                            <span class="comment">//  else branch</span>
+                                            <span class="ident">register</span> <span class="op">=</span> <span class="ident">next_register</span>;
+                                            <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="string">b&#39; &#39;</span>);
+                                            <span class="kw">continue</span>;
+                                        }
+
+                                        <span class="comment">// const load generation finished successfully</span>
+                                        <span class="comment">// flush the generated instruction(s)</span>
+                                        <span class="ident">output_ptx</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buffer_ptx</span>);
+                                        <span class="kw">break</span>;
                                     }
-                                    <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&quot;r&quot;</span>[<span class="number">0</span>]) {
-                                        <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">&quot;U&quot;</span>.<span class="ident">as_bytes</span>());
-                                    }
-
-                                    <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">&quot;;&quot;</span>.<span class="ident">as_bytes</span>());
-
-                                    <span class="comment">// Early continue to the next `PtxElement` to avoid else branch</span>
-                                    <span class="kw">continue</span>;
                                 }
-                            }
 
-                            <span class="comment">// else: const load generation failed, fall back to original PTX source</span>
-                            <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="ident">ptx</span>);
+                                <span class="comment">// else: const load generation failed</span>
+                                <span class="comment">//       fall back to original PTX source</span>
+                                <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="ident">ptx</span>);
+                                <span class="ident">buffer_ptx</span>.<span class="ident">clear</span>();
+                                <span class="kw">break</span>;
+                            }
                         },
                     }
                 }
@@ -276,5 +342,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (b2eed72a6 2022-05-22)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4cbaac699 2022-05-25)" ></div>
 </body></html>
