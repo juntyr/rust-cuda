@@ -4,12 +4,15 @@ use std::{
 };
 
 use super::{
-    regex::{CONST_BASE_REGISTER_REGEX, CONST_LOAD_INSTRUCTION_REGEX, CONST_MARKER_REGEX},
+    regex::{
+        CONST_BASE_REGISTER_REGEX, CONST_LOAD_INSTRUCTION_REGEX, CONST_MARKER_REGEX, REGISTER_REGEX,
+    },
     PtxElement, PtxJITCompiler, PtxLoadWidth,
 };
 
 impl PtxJITCompiler {
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn new(ptx: &CStr) -> Self {
         let ptx = ptx.to_bytes();
 
@@ -97,7 +100,15 @@ impl PtxJITCompiler {
                                         parameter_index: *param,
                                         byte_offset: loadoffset,
                                         load_width: loadwidth,
-                                        register: constreg.to_owned().into_boxed_slice(),
+                                        registers: REGISTER_REGEX
+                                            .captures_iter(constreg)
+                                            .filter_map(|m| {
+                                                m.name("register").map(|s| {
+                                                    s.as_bytes().to_owned().into_boxed_slice()
+                                                })
+                                            })
+                                            .collect::<Vec<_>>()
+                                            .into_boxed_slice(),
                                     });
                                 }
                             }

@@ -2,6 +2,7 @@ use std::{
     env, fs,
     io::{Read, Write},
     path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use colored::Colorize;
@@ -190,26 +191,34 @@ fn compile_kernel(
         args.to_string().to_uppercase()
     );
 
-    match build_kernel_with_specialisation(crate_path, &specialisation_var, specialisation) {
-        Ok(kernel_path) => {
-            let mut file = fs::File::open(&kernel_path)
-                .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
+    if let Ok(kernel_path) =
+        build_kernel_with_specialisation(crate_path, &specialisation_var, specialisation)
+    {
+        let mut file = fs::File::open(&kernel_path)
+            .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
 
-            let mut kernel_ptx = String::new();
+        let mut kernel_ptx = String::new();
 
-            file.read_to_string(&mut kernel_ptx)
-                .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
+        file.read_to_string(&mut kernel_ptx)
+            .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
 
-            Some(kernel_ptx)
-        },
-        Err(err) => {
-            emit_ptx_build_error(err);
+        colored::control::set_override(true);
+        eprintln!(
+            "{} {} compiling a PTX crate.",
+            "[PTX]".bright_black().bold(),
+            "Finished".green().bold()
+        );
+        colored::control::unset_override();
 
-            None
-        },
+        Some(kernel_ptx)
+    } else {
+        emit_ptx_build_error();
+
+        None
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_kernel_with_specialisation(
     kernel_path: &Path,
     env_var: &str,
@@ -234,28 +243,51 @@ fn build_kernel_with_specialisation(
             ansi: true,
         });
 
-        builder = builder.set_prefix(match specialisation {
+        let specialisation_prefix = match specialisation {
             Specialisation::Check => String::from("chECK"),
             Specialisation::Link(specialisation) => {
                 format!("{:016x}", seahash::hash(specialisation.as_bytes()))
             },
-        });
+        };
+        builder = builder.set_prefix(specialisation_prefix.clone());
+
+        let any_output = AtomicBool::new(false);
+        let crate_name = String::from(builder.get_crate_name());
 
         match builder.build_live(
             |stdout_line| {
                 if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
                     serde_json::from_str(stdout_line)
                 {
-                    // Prefix the rendered live PTX error messages with '[PTX]'
+                    if any_output
+                        .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+                        .is_ok()
+                    {
+                        colored::control::set_override(true);
+                        eprintln!(
+                            "{} of {} ({})",
+                            "[PTX]".bright_black().bold(),
+                            crate_name.bold(),
+                            specialisation_prefix.to_ascii_lowercase(),
+                        );
+                        colored::control::unset_override();
+                    }
+
                     if let Some(rendered) = &mut message.message.rendered {
                         colored::control::set_override(true);
-                        let prefix = "[PTX] ".bright_black().to_string();
+                        let prefix = "  | ".bright_black().bold().to_string();
                         colored::control::unset_override();
 
                         let glue = String::from('\n') + &prefix;
 
-                        let mut prefixed =
-                            prefix + &rendered.split('\n').collect::<Vec<_>>().join(&glue);
+                        let mut lines = rendered
+                            .split('\n')
+                            .rev()
+                            .skip_while(|l| l.trim().is_empty())
+                            .collect::<Vec<_>>();
+                        lines.reverse();
+
+                        let mut prefixed = prefix + &lines.join(&glue);
 
                         std::mem::swap(rendered, &mut prefixed);
                     }
@@ -263,19 +295,40 @@ fn build_kernel_with_specialisation(
                     eprintln!("{}", serde_json::to_string(&message.message).unwrap());
                 }
             },
-            |_line| (),
+            |stderr_line| {
+                if stderr_line.trim().is_empty() {
+                    return;
+                }
+
+                if any_output
+                    .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+                    .is_ok()
+                {
+                    colored::control::set_override(true);
+                    eprintln!(
+                        "{} of {} ({})",
+                        "[PTX]".bright_black().bold(),
+                        crate_name.bold(),
+                        specialisation_prefix.to_ascii_lowercase(),
+                    );
+                    colored::control::unset_override();
+                }
+
+                colored::control::set_override(true);
+                eprintln!(
+                    "  {} {}",
+                    "|".bright_black().bold(),
+                    stderr_line.replace("   ", "")
+                );
+                colored::control::unset_override();
+            },
         )? {
             BuildStatus::Success(output) => {
                 let ptx_path = output.get_assembly_path();
 
                 let mut specialised_ptx_path = ptx_path.clone();
 
-                specialised_ptx_path.set_extension(match specialisation {
-                    Specialisation::Check => String::from("chECK.ptx"),
-                    Specialisation::Link(specialisation) => {
-                        format!("{:016x}.ptx", seahash::hash(specialisation.as_bytes()))
-                    },
-                });
+                specialised_ptx_path.set_extension(format!("{}.ptx", specialisation_prefix));
 
                 fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(vec![format!(

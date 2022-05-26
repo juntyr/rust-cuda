@@ -1,6 +1,6 @@
 use cargo_metadata::diagnostic::{DiagnosticBuilder, DiagnosticLevel, DiagnosticSpanBuilder};
 
-use ptx_builder::{error::Error, reporter::ErrorLogPrinter};
+use colored::Colorize;
 
 lazy_static::lazy_static! {
     pub static ref PROC_MACRO_SPAN_REGEX: regex::Regex = {
@@ -9,10 +9,15 @@ lazy_static::lazy_static! {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn emit_ptx_build_error(err: Error) {
-    let err = ErrorLogPrinter::print(err);
+pub fn emit_ptx_build_error() {
+    colored::control::set_override(true);
+    let rendered = format!(
+        "{} {} to compile a PTX crate.",
+        "[PTX]".bright_black().bold(),
+        "Failed".red().bold()
+    );
+    colored::control::unset_override();
 
-    let rendered = err.to_string();
     let message = String::from_utf8(strip_ansi_escapes::strip(&rendered).unwrap()).unwrap();
 
     let call_site = proc_macro::Span::call_site();

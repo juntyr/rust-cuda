@@ -36,6 +36,6 @@ enum PtxElement {
         parameter_index: usize,
         byte_offset: usize,
         load_width: PtxLoadWidth,
-        register: Box<[u8]>,
+        registers: Box<[Box<[u8]>]>,
     },
 }
