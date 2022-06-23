@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["UnifiedAllocator",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["UnifiedAllocator",""]]};

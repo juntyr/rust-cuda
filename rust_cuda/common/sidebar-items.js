@@ -1,1 +1,1 @@
-initSidebarItems({"attr":[["kernel",""]],"derive":[["LendRustToCuda",""]],"struct":[["DeviceAccessible",""],["DeviceConstRef",""],["DeviceMutRef",""]],"trait":[["CudaAsRust","Safety"],["RustToCuda","Safety"],["RustToCudaProxy",""]]});
+window.SIDEBAR_ITEMS = {"attr":[["kernel",""]],"derive":[["LendRustToCuda",""]],"struct":[["DeviceAccessible",""],["DeviceConstRef",""],["DeviceMutRef",""]],"trait":[["CudaAsRust","Safety"],["RustToCuda","Safety"],["RustToCudaProxy",""]]};

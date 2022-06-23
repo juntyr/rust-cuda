@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["SafeDeviceCopyWrapper",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["SafeDeviceCopyWrapper",""]]};

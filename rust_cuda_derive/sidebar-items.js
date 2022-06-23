@@ -1,1 +1,1 @@
-initSidebarItems({"attr":[["kernel",""]],"derive":[["LendRustToCuda",""]]});
+window.SIDEBAR_ITEMS = {"attr":[["kernel",""]],"derive":[["LendRustToCuda",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["SplitSliceOverCudaThreadsConstStride",""],["SplitSliceOverCudaThreadsDynamicStride",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["SplitSliceOverCudaThreadsConstStride",""],["SplitSliceOverCudaThreadsDynamicStride",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["buffer",""],["wrapper",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["buffer",""],["wrapper",""]]};

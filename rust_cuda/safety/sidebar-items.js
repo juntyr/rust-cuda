@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["FitsIntoDeviceRegister",""],["NoAliasing",""],["SafeDeviceCopy",""],["StackOnly",""],["UnifiedHeapOnly",""]]});
+window.SIDEBAR_ITEMS = {"trait":[["FitsIntoDeviceRegister",""],["NoAliasing",""],["SafeDeviceCopy",""],["StackOnly",""],["UnifiedHeapOnly",""]]};

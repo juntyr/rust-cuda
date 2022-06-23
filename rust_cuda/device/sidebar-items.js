@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["utils",""]],"struct":[["ShallowCopy",""]],"trait":[["BorrowFromRust",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["utils",""]],"struct":[["ShallowCopy",""]],"trait":[["BorrowFromRust",""]]};
