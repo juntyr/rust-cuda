@@ -48,7 +48,7 @@ impl<E, T: Deref<Target = [E]>, const STRIDE: usize> Deref
     type Target = [E];
 
     fn deref(&self) -> &Self::Target {
-        split_slice_const_stride::<E, STRIDE>(&*self.0)
+        split_slice_const_stride::<E, STRIDE>(&self.0)
     }
 }
 
@@ -57,7 +57,7 @@ impl<E, T: DerefMut<Target = [E]>, const STRIDE: usize> DerefMut
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        split_slice_const_stride_mut::<E, STRIDE>(&mut *self.0)
+        split_slice_const_stride_mut::<E, STRIDE>(&mut self.0)
     }
 }
 
