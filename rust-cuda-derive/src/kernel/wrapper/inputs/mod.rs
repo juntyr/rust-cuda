@@ -96,7 +96,7 @@ pub(super) fn parse_function_inputs(
 
                 let ty = ensure_reference_type_lifetime(
                     i,
-                    &**ty,
+                    ty,
                     &cuda_type,
                     &mut implicit_lifetime_id,
                     generic_params,

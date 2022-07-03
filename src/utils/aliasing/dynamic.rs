@@ -90,14 +90,14 @@ impl<E, T: Deref<Target = [E]>> Deref for SplitSliceOverCudaThreadsDynamicStride
     type Target = [E];
 
     fn deref(&self) -> &Self::Target {
-        &*self.inner
+        &self.inner
     }
 }
 
 #[cfg(any(feature = "host", not(target_os = "cuda")))]
 impl<E, T: DerefMut<Target = [E]>> DerefMut for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.inner
+        &mut self.inner
     }
 }
 
