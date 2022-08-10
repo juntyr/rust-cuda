@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["rust_cuda"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html\" title=\"trait core::cmp::Eq\">Eq</a> for <a class=\"struct\" href=\"rust_cuda/host/struct.LaunchConfig.html\" title=\"struct rust_cuda::host::LaunchConfig\">LaunchConfig</a>","synthetic":false,"types":["rust_cuda::host::LaunchConfig"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"rust_cuda":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html\" title=\"trait core::cmp::Eq\">Eq</a> for <a class=\"struct\" href=\"rust_cuda/host/struct.LaunchConfig.html\" title=\"struct rust_cuda::host::LaunchConfig\">LaunchConfig</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
