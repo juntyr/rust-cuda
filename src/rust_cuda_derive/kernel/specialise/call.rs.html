@@ -72,7 +72,7 @@
     <span class="kw">let</span> <span class="ident">SpecialiseMangleConfig</span> {
         <span class="ident">kernel</span>,
         <span class="ident">specialisation</span>,
-    } <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse_macro_input::parse</span>(<span class="ident">tokens</span>) {
+    } = <span class="kw">match</span> <span class="ident">syn::parse_macro_input::parse</span>(<span class="ident">tokens</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">config</span>) =&gt; <span class="ident">config</span>,
         <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
             <span class="macro">abort_call_site!</span>(
@@ -83,7 +83,7 @@
         },
     };
 
-    <span class="kw">let</span> <span class="ident">mangled_kernel_ident</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">specialisation</span>) <span class="op">=</span> <span class="ident">specialisation</span> {
+    <span class="kw">let</span> <span class="ident">mangled_kernel_ident</span> = <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">specialisation</span>) = <span class="ident">specialisation</span> {
         <span class="macro">format!</span>(
             <span class="string">&quot;{}_kernel_{:016x}&quot;</span>,
             <span class="ident">kernel</span>,
@@ -98,26 +98,26 @@
 
 <span class="kw">struct</span> <span class="ident">SpecialiseMangleConfig</span> {
     <span class="ident">kernel</span>: <span class="ident">syn::Ident</span>,
-    <span class="ident">specialisation</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">specialisation</span>: <span class="prelude-ty">Option</span>&lt;<span class="ident">String</span>&gt;,
 }
 
 <span class="kw">impl</span> <span class="ident">syn::parse::Parse</span> <span class="kw">for</span> <span class="ident">SpecialiseMangleConfig</span> {
-    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) -&gt; <span class="ident">syn::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">kernel</span>: <span class="ident">syn::Ident</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">syn::parse::ParseStream</span>) -&gt; <span class="ident">syn::Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let</span> <span class="ident">kernel</span>: <span class="ident">syn::Ident</span> = <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">specialisation</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">syn::token::Lt</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
-            <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">syn::token::Gt</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
+        <span class="kw">let</span> <span class="ident">specialisation</span> = <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::&lt;<span class="prelude-ty">Option</span>&lt;<span class="ident">syn::token::Lt</span>&gt;&gt;()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
+            <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">parse</span>::&lt;<span class="prelude-ty">Option</span>&lt;<span class="ident">syn::token::Gt</span>&gt;&gt;()<span class="question-mark">?</span>.<span class="ident">is_some</span>() {
                 <span class="prelude-val">None</span>
             } <span class="kw">else</span> {
-                <span class="kw">let</span> <span class="ident">specialisation_types</span> <span class="op">=</span> <span class="ident">syn::punctuated::Punctuated</span>::<span class="op">&lt;</span>
+                <span class="kw">let</span> <span class="ident">specialisation_types</span> = <span class="ident">syn::punctuated::Punctuated</span>::&lt;
                     <span class="ident">syn::Type</span>,
                     <span class="ident">syn::token::Comma</span>,
-                <span class="op">&gt;</span><span class="ident">::parse_separated_nonempty</span>(<span class="ident">input</span>)<span class="question-mark">?</span>;
+                &gt;<span class="ident">::parse_separated_nonempty</span>(<span class="ident">input</span>)<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">_gt_token</span>: <span class="ident">syn::token::Gt</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">_gt_token</span>: <span class="ident">syn::token::Gt</span> = <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
 
                 <span class="prelude-val">Some</span>(
-                    (<span class="macro">quote!</span> { <span class="op">&lt;</span>#<span class="ident">specialisation_types</span><span class="op">&gt;</span> })
+                    (<span class="macro">quote!</span> { &lt;#<span class="ident">specialisation_types</span>&gt; })
                         .<span class="ident">to_string</span>()
                         .<span class="ident">replace</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39; &#39;</span>, <span class="string">&#39;\n&#39;</span>, <span class="string">&#39;\t&#39;</span>][..], <span class="string">&quot;&quot;</span>),
                 )
@@ -133,4 +133,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

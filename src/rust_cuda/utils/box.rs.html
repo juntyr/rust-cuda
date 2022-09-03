@@ -81,14 +81,14 @@
 <span id="81">81</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">alloc::boxed::Box</span>;
 
-<span class="kw">use</span> <span class="ident">const_type_layout::TypeLayout</span>;
+<span class="kw">use</span> <span class="ident">const_type_layout::TypeGraphLayout</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">common</span>::{<span class="ident">CudaAsRust</span>, <span class="ident">DeviceAccessible</span>, <span class="ident">RustToCuda</span>},
     <span class="ident">safety::SafeDeviceCopy</span>,
 };
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">host::CombinedCudaAlloc</span>, <span class="ident">host::CudaAlloc</span>, <span class="ident">host::CudaDropWrapper</span>, <span class="ident">rustacuda::error::CudaResult</span>,
     <span class="ident">rustacuda::memory::DeviceBox</span>, <span class="ident">utils::device_copy::SafeDeviceCopyWrapper</span>,
@@ -98,31 +98,31 @@
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">transparent</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">TypeLayout</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BoxCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span><span class="op">&gt;</span>(<span class="kw-2">*mut</span> <span class="ident">T</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BoxCudaRepresentation</span>&lt;<span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> + <span class="ident">TypeGraphLayout</span>&gt;(<span class="kw-2">*mut</span> <span class="ident">T</span>);
 
 <span class="comment">// Safety: This repr(C) struct only contains a device-owned pointer</span>
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span><span class="op">&gt;</span> <span class="ident">rustacuda_core::DeviceCopy</span>
-    <span class="kw">for</span> <span class="ident">BoxCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> + <span class="ident">TypeGraphLayout</span>&gt; <span class="ident">rustacuda_core::DeviceCopy</span>
+    <span class="kw">for</span> <span class="ident">BoxCudaRepresentation</span>&lt;<span class="ident">T</span>&gt;
 {
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span><span class="op">&gt;</span> <span class="ident">RustToCuda</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">type</span> <span class="ident">CudaAllocation</span> <span class="op">=</span> <span class="ident">CudaDropWrapper</span><span class="op">&lt;</span><span class="ident">DeviceBox</span><span class="op">&lt;</span><span class="ident">SafeDeviceCopyWrapper</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> <span class="op">=</span> <span class="ident">BoxCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
+<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> + <span class="ident">TypeGraphLayout</span>&gt; <span class="ident">RustToCuda</span> <span class="kw">for</span> <span class="ident">Box</span>&lt;<span class="ident">T</span>&gt; {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">type</span> <span class="ident">CudaAllocation</span> = <span class="ident">CudaDropWrapper</span>&lt;<span class="ident">DeviceBox</span>&lt;<span class="ident">SafeDeviceCopyWrapper</span>&lt;<span class="ident">T</span>&gt;&gt;&gt;;
+    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> = <span class="ident">BoxCudaRepresentation</span>&lt;<span class="ident">T</span>&gt;;
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">CudaAlloc</span><span class="op">&gt;</span>(
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow</span>&lt;<span class="ident">A</span>: <span class="ident">CudaAlloc</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">alloc</span>: <span class="ident">A</span>,
-    ) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span>(
-        <span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaRepresentation</span><span class="op">&gt;</span>,
-        <span class="ident">CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span><span class="op">&gt;</span>,
-    )<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">device_box</span> <span class="op">=</span>
+    ) -&gt; <span class="ident">CudaResult</span>&lt;(
+        <span class="ident">DeviceAccessible</span>&lt;<span class="ident"><span class="self">Self</span>::CudaRepresentation</span>&gt;,
+        <span class="ident">CombinedCudaAlloc</span>&lt;<span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span>&gt;,
+    )&gt; {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">device_box</span> =
             <span class="ident">CudaDropWrapper::from</span>(<span class="ident">DeviceBox::new</span>(<span class="ident">SafeDeviceCopyWrapper::from_ref</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>))<span class="question-mark">?</span>);
 
         <span class="prelude-val">Ok</span>((
@@ -133,15 +133,15 @@
         ))
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">restore</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">CudaAlloc</span><span class="op">&gt;</span>(
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">restore</span>&lt;<span class="ident">A</span>: <span class="ident">CudaAlloc</span>&gt;(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">alloc</span>: <span class="ident">CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> {
+        <span class="ident">alloc</span>: <span class="ident">CombinedCudaAlloc</span>&lt;<span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span>&gt;,
+    ) -&gt; <span class="ident">CudaResult</span>&lt;<span class="ident">A</span>&gt; {
         <span class="kw">use</span> <span class="ident">rustacuda::memory::CopyDestination</span>;
 
-        <span class="kw">let</span> (<span class="ident">alloc_front</span>, <span class="ident">alloc_tail</span>) <span class="op">=</span> <span class="ident">alloc</span>.<span class="ident">split</span>();
+        <span class="kw">let</span> (<span class="ident">alloc_front</span>, <span class="ident">alloc_tail</span>) = <span class="ident">alloc</span>.<span class="ident">split</span>();
 
         <span class="ident">alloc_front</span>.<span class="ident">copy_to</span>(<span class="ident">SafeDeviceCopyWrapper::from_mut</span>(<span class="kw-2">&amp;mut</span> <span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>))<span class="question-mark">?</span>;
 
@@ -151,14 +151,14 @@
     }
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">TypeLayout</span><span class="op">&gt;</span> <span class="ident">CudaAsRust</span> <span class="kw">for</span> <span class="ident">BoxCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">RustRepresentation</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
+<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> + <span class="ident">TypeGraphLayout</span>&gt; <span class="ident">CudaAsRust</span> <span class="kw">for</span> <span class="ident">BoxCudaRepresentation</span>&lt;<span class="ident">T</span>&gt; {
+    <span class="kw">type</span> <span class="ident">RustRepresentation</span> = <span class="ident">Box</span>&lt;<span class="ident">T</span>&gt;;
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_rust</span>(<span class="ident">this</span>: <span class="kw-2">&amp;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::RustRepresentation</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)))]</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_rust</span>(<span class="ident">this</span>: <span class="kw-2">&amp;</span><span class="ident">DeviceAccessible</span>&lt;<span class="self">Self</span>&gt;) -&gt; <span class="ident"><span class="self">Self</span>::RustRepresentation</span> {
         <span class="ident">alloc::boxed::Box::from_raw</span>(<span class="ident">this</span>.<span class="number">0</span>)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

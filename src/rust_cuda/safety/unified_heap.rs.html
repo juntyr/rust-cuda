@@ -44,7 +44,7 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
-</pre><pre class="rust"><code><span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;alloc&quot;</span>))]</span>
+</pre><pre class="rust"><code><span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;alloc&quot;</span>))]</span>
 <span class="doccomment">/// ```rust</span>
 <span class="doccomment">/// # use rust_cuda::safety::UnifiedHeapOnly;</span>
 <span class="doccomment">/// fn assert_unified_heap_only(_x: impl UnifiedHeapOnly) {}</span>
@@ -72,23 +72,23 @@
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">UnifiedHeapOnly</span>: <span class="ident">sealed::UnifiedHeapOnly</span> {}
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">sealed::UnifiedHeapOnly</span><span class="op">&gt;</span> <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">T</span> {}
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">sealed::UnifiedHeapOnly</span>&gt; <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
 <span class="kw">mod</span> <span class="ident">sealed</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils::alloc::UnifiedAllocator</span>;
 
     <span class="kw">pub</span> <span class="ident">auto</span> <span class="kw">trait</span> <span class="ident">UnifiedHeapOnly</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">*const</span> <span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">*mut</span> <span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;mut</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">*const</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">*mut</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;mut</span> <span class="ident">T</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span>&lt;<span class="ident">T</span>&gt; {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">alloc::boxed::Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">UnifiedAllocator</span><span class="op">&gt;</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">UnifiedAllocator</span><span class="op">&gt;</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">hashbrown::HashMap</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">UnifiedAllocator</span><span class="op">&gt;</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">alloc::boxed::Box</span>&lt;<span class="ident">T</span>, <span class="ident">UnifiedAllocator</span>&gt; {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">alloc::vec::Vec</span>&lt;<span class="ident">T</span>, <span class="ident">UnifiedAllocator</span>&gt; {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">UnifiedHeapOnly</span> <span class="kw">for</span> <span class="ident">hashbrown::HashMap</span>&lt;<span class="ident">T</span>, <span class="ident">UnifiedAllocator</span>&gt; {}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

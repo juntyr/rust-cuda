@@ -25,28 +25,28 @@
 <span id="25">25</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NoAliasing</span>: <span class="ident">private::NoAliasing</span> {}
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">private::NoAliasing</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">T</span> {}
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">private::NoAliasing</span>&gt; <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
 <span class="kw">mod</span> <span class="ident">private</span> {
     <span class="kw">pub</span> <span class="ident">auto</span> <span class="kw">trait</span> <span class="ident">NoAliasing</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="kw-2">*const</span> <span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="kw-2">*mut</span> <span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="kw-2">&amp;mut</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="kw-2">*const</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="kw-2">*mut</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="kw-2">&amp;mut</span> <span class="ident">T</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span>&lt;<span class="ident">T</span>&gt; {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">r#final</span><span class="ident">::Final</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::common::CudaAsRust</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span>
-        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::aliasing::FinalCudaRepresentation</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident">r#final</span><span class="ident">::Final</span>&lt;<span class="ident">T</span>&gt; {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::common::CudaAsRust</span>&gt; <span class="ident">NoAliasing</span>
+        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::aliasing::FinalCudaRepresentation</span>&lt;<span class="ident">T</span>&gt;
     {
     }
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span>
-        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::aliasing::SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">NoAliasing</span>
+        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::aliasing::SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
     {
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::aliasing::SplitSliceOverCudaThreadsDynamicStride</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">NoAliasing</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::aliasing::SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

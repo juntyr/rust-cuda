@@ -113,74 +113,74 @@
     <span class="ident">func_params</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
     <span class="ident">macro_type_ids</span>: <span class="kw-2">&amp;</span>[<span class="ident">syn::Ident</span>],
 ) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">crate_name</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proc_macro::tracked_env::var</span>(<span class="string">&quot;CARGO_CRATE_NAME&quot;</span>) {
+    <span class="kw">let</span> <span class="ident">crate_name</span> = <span class="kw">match</span> <span class="ident">proc_macro::tracked_env::var</span>(<span class="string">&quot;CARGO_CRATE_NAME&quot;</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">crate_name</span>) =&gt; <span class="ident">crate_name</span>.<span class="ident">to_uppercase</span>(),
         <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate name: {:?}.&quot;</span>, <span class="ident">err</span>),
     };
 
-    <span class="kw">let</span> <span class="ident">crate_manifest_dir</span> <span class="op">=</span> <span class="ident">proc_macro::tracked_env::var</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>)
-        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate path: {:?}.&quot;</span>, <span class="ident">err</span>));
+    <span class="kw">let</span> <span class="ident">crate_manifest_dir</span> = <span class="ident">proc_macro::tracked_env::var</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>)
+        .<span class="ident">unwrap_or_else</span>(|<span class="ident">err</span>| <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to read crate path: {:?}.&quot;</span>, <span class="ident">err</span>));
 
-    <span class="kw">let</span> <span class="ident">cpu_func_lifetime_erased_types</span> <span class="op">=</span>
+    <span class="kw">let</span> <span class="ident">cpu_func_lifetime_erased_types</span> =
         <span class="ident"><span class="kw">super</span>::kernel_func_raw::generate_launch_types</span>(<span class="ident">config</span>, <span class="ident">generics</span>, <span class="ident">inputs</span>, <span class="ident">macro_type_ids</span>).<span class="number">1</span>;
 
-    <span class="kw">let</span> <span class="ident">matching_kernel_assert</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">skip_kernel_compilation</span>() {
+    <span class="kw">let</span> <span class="ident">matching_kernel_assert</span> = <span class="kw">if</span> <span class="ident">skip_kernel_compilation</span>() {
         <span class="macro">quote!</span>()
     } <span class="kw">else</span> {
         <span class="macro">quote::quote_spanned!</span> { <span class="ident">func_ident</span>.<span class="ident">span</span>()=&gt;
-            <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::kernel_signature::Assert</span><span class="op">&lt;</span>{
+            <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::kernel_signature::Assert</span>&lt;{
                 <span class="ident">::rust_cuda::safety::kernel_signature::CpuAndGpuKernelSignatures::Match</span>
-            }<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">::rust_cuda::safety::kernel_signature::Assert</span>::<span class="op">&lt;</span>{
+            }&gt; = <span class="ident">::rust_cuda::safety::kernel_signature::Assert</span>::&lt;{
                 <span class="ident">::rust_cuda::safety::kernel_signature::check</span>(
                     <span class="ident">PTX_STR</span>.<span class="ident">as_bytes</span>(),
                     <span class="macro">concat!</span>(<span class="string">&quot;.visible .entry &quot;</span>, <span class="macro">rust_cuda::host::specialise_kernel_call!</span>(
                         #<span class="ident">func_ident_hash</span> #<span class="ident">generic_start_token</span>
-                            #($#<span class="ident">macro_type_ids</span>),<span class="op">*</span>
+                            #($#<span class="ident">macro_type_ids</span>),*
                         #<span class="ident">generic_close_token</span>
                     )).<span class="ident">as_bytes</span>()
                 )
-            }<span class="op">&gt;</span>;
+            }&gt;;
         }
     };
 
-    <span class="kw">let</span> <span class="ident">type_layout_asserts</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">skip_kernel_compilation</span>() {
+    <span class="kw">let</span> <span class="ident">type_layout_asserts</span> = <span class="kw">if</span> <span class="ident">skip_kernel_compilation</span>() {
         <span class="ident">Vec::new</span>()
     } <span class="kw">else</span> {
         <span class="ident">cpu_func_lifetime_erased_types</span>
             .<span class="ident">iter</span>()
             .<span class="ident">zip</span>(<span class="ident">func_params</span>.<span class="ident">iter</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">ty</span>, <span class="ident">param</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">layout_param</span> <span class="op">=</span> <span class="ident">syn::Ident::new</span>(
+            .<span class="ident">map</span>(|(<span class="ident">ty</span>, <span class="ident">param</span>)| {
+                <span class="kw">let</span> <span class="ident">layout_param</span> = <span class="ident">syn::Ident::new</span>(
                     <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__{}_{}_layout&quot;</span>, <span class="ident">func_ident_hash</span>, <span class="ident">param</span>).<span class="ident">to_uppercase</span>(),
                     <span class="ident">param</span>.<span class="ident">span</span>(),
                 );
 
                 <span class="macro">quote::quote_spanned!</span> { <span class="ident">ty</span>.<span class="ident">span</span>()=&gt;
-                    <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::type_layout::Assert</span><span class="op">&lt;</span>{
+                    <span class="kw">const</span> <span class="kw">_</span>: <span class="ident">::rust_cuda::safety::type_layout::Assert</span>&lt;{
                         <span class="ident">::rust_cuda::safety::type_layout::CpuAndGpuTypeLayouts::Match</span>
-                    }<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">::rust_cuda::safety::type_layout::Assert</span>::<span class="op">&lt;</span>{
-                        <span class="ident">::rust_cuda::safety::type_layout::check</span>::<span class="op">&lt;</span>#<span class="ident">ty</span><span class="op">&gt;</span>(#<span class="ident">layout_param</span>)
-                    }<span class="op">&gt;</span>;
+                    }&gt; = <span class="ident">::rust_cuda::safety::type_layout::Assert</span>::&lt;{
+                        <span class="ident">::rust_cuda::safety::type_layout::check</span>::&lt;#<span class="ident">ty</span>&gt;(#<span class="ident">layout_param</span>)
+                    }&gt;;
                 }
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+            .<span class="ident">collect</span>::&lt;<span class="ident">Vec</span>&lt;<span class="kw">_</span>&gt;&gt;()
     };
 
     <span class="macro">quote!</span> {
         <span class="kw">fn</span> <span class="ident">get_ptx_str</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
             <span class="macro">rust_cuda::host::link_kernel!</span>{
                 #<span class="ident">func_ident</span> #<span class="ident">args</span> #<span class="ident">crate_name</span> #<span class="ident">crate_manifest_dir</span> #<span class="ident">generic_start_token</span>
-                    #($#<span class="ident">macro_type_ids</span>),<span class="op">*</span>
+                    #($#<span class="ident">macro_type_ids</span>),*
                 #<span class="ident">generic_close_token</span>
             }
 
             #<span class="ident">matching_kernel_assert</span>
 
-            #(#<span class="ident">type_layout_asserts</span>)<span class="op">*</span>
+            #(#<span class="ident">type_layout_asserts</span>)*
 
             <span class="ident">PTX_STR</span>
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

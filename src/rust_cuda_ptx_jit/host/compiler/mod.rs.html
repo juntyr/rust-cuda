@@ -45,18 +45,18 @@
 <span class="kw">mod</span> <span class="ident">regex</span>;
 <span class="kw">mod</span> <span class="ident">replace</span>;
 
-<span class="kw">type</span> <span class="ident">ByteSliceOptionalArguments</span> <span class="op">=</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span><span class="op">&gt;</span>]<span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">type</span> <span class="ident">ByteSliceOptionalArguments</span> = <span class="prelude-ty">Option</span>&lt;<span class="ident">Box</span>&lt;[<span class="prelude-ty">Option</span>&lt;<span class="ident">Box</span>&lt;[<span class="ident">u8</span>]&gt;&gt;]&gt;&gt;;
 
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PtxJITCompiler</span> {
-    <span class="ident">ptx_slices</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">PtxElement</span>]<span class="op">&gt;</span>,
+    <span class="ident">ptx_slices</span>: <span class="ident">Box</span>&lt;[<span class="ident">PtxElement</span>]&gt;,
     <span class="ident">last_arguments</span>: <span class="ident">ByteSliceOptionalArguments</span>,
     <span class="ident">last_ptx</span>: <span class="ident">CString</span>,
 }
 
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PtxJITResult</span><span class="op">&lt;</span><span class="lifetime">&#39;s</span><span class="op">&gt;</span> {
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PtxJITResult</span>&lt;<span class="lifetime">&#39;s</span>&gt; {
     <span class="ident">Cached</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;s</span> <span class="ident">CStr</span>),
     <span class="ident">Recomputed</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;s</span> <span class="ident">CStr</span>),
 }
@@ -70,15 +70,15 @@
 
 <span class="kw">enum</span> <span class="ident">PtxElement</span> {
     <span class="ident">CopiedSource</span> {
-        <span class="ident">ptx</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>,
+        <span class="ident">ptx</span>: <span class="ident">Box</span>&lt;[<span class="ident">u8</span>]&gt;,
     },
     <span class="ident">ConstLoad</span> {
-        <span class="ident">ptx</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>,
+        <span class="ident">ptx</span>: <span class="ident">Box</span>&lt;[<span class="ident">u8</span>]&gt;,
         <span class="ident">parameter_index</span>: <span class="ident">usize</span>,
         <span class="ident">byte_offset</span>: <span class="ident">usize</span>,
         <span class="ident">load_width</span>: <span class="ident">PtxLoadWidth</span>,
-        <span class="ident">registers</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>]<span class="op">&gt;</span>,
+        <span class="ident">registers</span>: <span class="ident">Box</span>&lt;[<span class="ident">Box</span>&lt;[<span class="ident">u8</span>]&gt;]&gt;,
     },
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

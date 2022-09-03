@@ -213,9 +213,9 @@
 
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">transparent</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">TypeLayout</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">T</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt;(<span class="ident">T</span>);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span> {
+<span class="kw">impl</span>&lt;<span class="ident">T</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt; {
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span>(<span class="ident">inner</span>)
@@ -223,159 +223,159 @@
 }
 
 <span class="comment">// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`</span>
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeviceCopy</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">DeviceCopy</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">DeviceCopy</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">DeviceCopy</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">split_slice_const_stride</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">slice</span>: <span class="kw-2">&amp;</span>[<span class="ident">E</span>]) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-    <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() <span class="op">*</span> <span class="ident">STRIDE</span>;
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">STRIDE</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">fn</span> <span class="ident">split_slice_const_stride</span>&lt;<span class="ident">E</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt;(<span class="ident">slice</span>: <span class="kw-2">&amp;</span>[<span class="ident">E</span>]) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
+    <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> = <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() * <span class="ident">STRIDE</span>;
+    <span class="kw">let</span> <span class="ident">len</span> = <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> + <span class="ident">STRIDE</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
 
     <span class="kw">unsafe</span> { <span class="ident">core::slice::from_raw_parts</span>(<span class="ident">slice</span>.<span class="ident">as_ptr</span>().<span class="ident">add</span>(<span class="ident">offset</span>), <span class="ident">len</span>) }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">split_slice_const_stride_mut</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">slice</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>]) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-    <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() <span class="op">*</span> <span class="ident">STRIDE</span>;
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">STRIDE</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">fn</span> <span class="ident">split_slice_const_stride_mut</span>&lt;<span class="ident">E</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt;(<span class="ident">slice</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>]) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
+    <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> = <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() * <span class="ident">STRIDE</span>;
+    <span class="kw">let</span> <span class="ident">len</span> = <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> + <span class="ident">STRIDE</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
 
     <span class="kw">unsafe</span> { <span class="ident">core::slice::from_raw_parts_mut</span>(<span class="ident">slice</span>.<span class="ident">as_mut_ptr</span>().<span class="ident">add</span>(<span class="ident">offset</span>), <span class="ident">len</span>) }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Deref</span><span class="op">&lt;</span><span class="ident">Target</span> <span class="op">=</span> [<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Deref</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Deref</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">Deref</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">E</span>];
+    <span class="kw">type</span> <span class="ident">Target</span> = [<span class="ident">E</span>];
 
     <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="ident">split_slice_const_stride</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
+        <span class="ident">split_slice_const_stride</span>::&lt;<span class="ident">E</span>, <span class="ident">STRIDE</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">DerefMut</span><span class="op">&lt;</span><span class="ident">Target</span> <span class="op">=</span> [<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">DerefMut</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">DerefMut</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">DerefMut</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="ident">split_slice_const_stride_mut</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span>)
+        <span class="ident">split_slice_const_stride_mut</span>::&lt;<span class="ident">E</span>, <span class="ident">STRIDE</span>&gt;(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-        <span class="ident">split_slice_const_stride</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>())
+        <span class="ident">split_slice_const_stride</span>::&lt;<span class="ident">E</span>, <span class="ident">STRIDE</span>&gt;(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">AsMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">as_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-        <span class="ident">split_slice_const_stride_mut</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_mut</span>())
+        <span class="ident">split_slice_const_stride_mut</span>::&lt;<span class="ident">E</span>, <span class="ident">STRIDE</span>&gt;(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_mut</span>())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Borrow</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Borrow</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">borrow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-        <span class="ident">split_slice_const_stride</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>())
+        <span class="ident">split_slice_const_stride</span>::&lt;<span class="ident">E</span>, <span class="ident">STRIDE</span>&gt;(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">BorrowMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">BorrowMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">borrow_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-        <span class="ident">split_slice_const_stride_mut</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>())
+        <span class="ident">split_slice_const_stride_mut</span>::&lt;<span class="ident">E</span>, <span class="ident">STRIDE</span>&gt;(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Deref</span><span class="op">&lt;</span><span class="ident">Target</span> <span class="op">=</span> [<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Deref</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Deref</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">Deref</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">E</span>];
+    <span class="kw">type</span> <span class="ident">Target</span> = [<span class="ident">E</span>];
 
     <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">DerefMut</span><span class="op">&lt;</span><span class="ident">Target</span> <span class="op">=</span> [<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">DerefMut</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">DerefMut</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">DerefMut</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span>
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">AsMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">as_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_mut</span>()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Borrow</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Borrow</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">borrow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">BorrowMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">BorrowMut</span><span class="op">&lt;</span>[<span class="ident">E</span>]<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
+<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt;, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt;
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
     <span class="kw">fn</span> <span class="ident">borrow_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow_mut</span>()
     }
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">RustToCuda</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">RustToCuda</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T</span>, <span class="ident">STRIDE</span>&gt;
 {
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">type</span> <span class="ident">CudaAllocation</span> <span class="op">=</span> <span class="ident">T::CudaAllocation</span>;
-    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> <span class="op">=</span>
-        <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="ident">T::CudaRepresentation</span><span class="op">&gt;</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>;
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">type</span> <span class="ident">CudaAllocation</span> = <span class="ident">T::CudaAllocation</span>;
+    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> =
+        <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">DeviceAccessible</span>&lt;<span class="ident">T::CudaRepresentation</span>&gt;, <span class="ident">STRIDE</span>&gt;;
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident"><span class="kw">crate</span>::host::CudaAlloc</span><span class="op">&gt;</span>(
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow</span>&lt;<span class="ident">A</span>: <span class="ident"><span class="kw">crate</span>::host::CudaAlloc</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">alloc</span>: <span class="ident">A</span>,
-    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span><span class="op">&lt;</span>(
-        <span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaRepresentation</span><span class="op">&gt;</span>,
-        <span class="ident"><span class="kw">crate</span>::host::CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span><span class="op">&gt;</span>,
-    )<span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">alloc</span>) <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>(<span class="ident">alloc</span>)<span class="question-mark">?</span>;
+    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span>&lt;(
+        <span class="ident">DeviceAccessible</span>&lt;<span class="ident"><span class="self">Self</span>::CudaRepresentation</span>&gt;,
+        <span class="ident"><span class="kw">crate</span>::host::CombinedCudaAlloc</span>&lt;<span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span>&gt;,
+    )&gt; {
+        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">alloc</span>) = <span class="self">self</span>.<span class="number">0</span>.<span class="ident">borrow</span>(<span class="ident">alloc</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((
             <span class="ident">DeviceAccessible::from</span>(<span class="ident">SplitSliceOverCudaThreadsConstStride::new</span>(<span class="ident">cuda_repr</span>)),
@@ -383,26 +383,26 @@
         ))
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">restore</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident"><span class="kw">crate</span>::host::CudaAlloc</span><span class="op">&gt;</span>(
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">restore</span>&lt;<span class="ident">A</span>: <span class="ident"><span class="kw">crate</span>::host::CudaAlloc</span>&gt;(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">alloc</span>: <span class="ident"><span class="kw">crate</span>::host::CombinedCudaAlloc</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> {
+        <span class="ident">alloc</span>: <span class="ident"><span class="kw">crate</span>::host::CombinedCudaAlloc</span>&lt;<span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span>&gt;,
+    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span>&lt;<span class="ident">A</span>&gt; {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">restore</span>(<span class="ident">alloc</span>)
     }
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">CudaAsRust</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">CudaAsRust</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>
+<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">CudaAsRust</span>, <span class="kw">const</span> <span class="ident">STRIDE</span>: <span class="ident">usize</span>&gt; <span class="ident">CudaAsRust</span>
+    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">DeviceAccessible</span>&lt;<span class="ident">T</span>&gt;, <span class="ident">STRIDE</span>&gt;
 {
-    <span class="kw">type</span> <span class="ident">RustRepresentation</span> <span class="op">=</span> <span class="ident">SplitSliceOverCudaThreadsConstStride</span><span class="op">&lt;</span><span class="ident">T::RustRepresentation</span>, <span class="ident">STRIDE</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">RustRepresentation</span> = <span class="ident">SplitSliceOverCudaThreadsConstStride</span>&lt;<span class="ident">T::RustRepresentation</span>, <span class="ident">STRIDE</span>&gt;;
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_rust</span>(<span class="ident">this</span>: <span class="kw-2">&amp;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::RustRepresentation</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)))]</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_rust</span>(<span class="ident">this</span>: <span class="kw-2">&amp;</span><span class="ident">DeviceAccessible</span>&lt;<span class="self">Self</span>&gt;) -&gt; <span class="ident"><span class="self">Self</span>::RustRepresentation</span> {
         <span class="ident">SplitSliceOverCudaThreadsConstStride::new</span>(<span class="ident">CudaAsRust::as_rust</span>(<span class="kw-2">&amp;</span><span class="ident">this</span>.<span class="number">0</span>))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

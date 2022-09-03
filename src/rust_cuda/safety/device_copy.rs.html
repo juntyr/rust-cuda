@@ -23,24 +23,24 @@
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SafeDeviceCopy</span>: <span class="ident">sealed::SafeDeviceCopy</span> {}
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">sealed::SafeDeviceCopy</span><span class="op">&gt;</span> <span class="ident">SafeDeviceCopy</span> <span class="kw">for</span> <span class="ident">T</span> {}
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">sealed::SafeDeviceCopy</span>&gt; <span class="ident">SafeDeviceCopy</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
 <span class="kw">mod</span> <span class="ident">sealed</span> {
     <span class="attribute">#[<span class="ident">marker</span>]</span>
     <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SafeDeviceCopy</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::safety::StackOnly</span><span class="op">&gt;</span> <span class="ident">SafeDeviceCopy</span> <span class="kw">for</span> <span class="ident">T</span> {}
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;alloc&quot;</span>, <span class="ident">doc</span>))]</span>
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::safety::UnifiedHeapOnly</span><span class="op">&gt;</span> <span class="ident">SafeDeviceCopy</span> <span class="kw">for</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::safety::StackOnly</span>&gt; <span class="ident">SafeDeviceCopy</span> <span class="kw">for</span> <span class="ident">T</span> {}
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;alloc&quot;</span>, <span class="ident">doc</span>))]</span>
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::safety::UnifiedHeapOnly</span>&gt; <span class="ident">SafeDeviceCopy</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">rustacuda_core::DeviceCopy</span><span class="op">&gt;</span> <span class="ident">SafeDeviceCopy</span>
-        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::common::DeviceAccessible</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> + <span class="ident">rustacuda_core::DeviceCopy</span>&gt; <span class="ident">SafeDeviceCopy</span>
+        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::common::DeviceAccessible</span>&lt;<span class="ident">T</span>&gt;
     {
     }
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> <span class="op">+</span> <span class="ident">const_type_layout::TypeLayout</span><span class="op">&gt;</span> <span class="ident">SafeDeviceCopy</span>
-        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::device_copy::SafeDeviceCopyWrapper</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">SafeDeviceCopy</span> + <span class="ident">const_type_layout::TypeGraphLayout</span>&gt; <span class="ident">SafeDeviceCopy</span>
+        <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::utils::device_copy::SafeDeviceCopyWrapper</span>&lt;<span class="ident">T</span>&gt;
     {
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

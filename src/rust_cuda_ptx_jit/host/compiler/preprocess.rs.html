@@ -151,18 +151,18 @@
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_lines</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ptx</span>: <span class="kw-2">&amp;</span><span class="ident">CStr</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">ptx</span> <span class="op">=</span> <span class="ident">ptx</span>.<span class="ident">to_bytes</span>();
+        <span class="kw">let</span> <span class="ident">ptx</span> = <span class="ident">ptx</span>.<span class="ident">to_bytes</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">const_markers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">const_markers</span>: <span class="ident">HashMap</span>&lt;<span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">usize</span>&gt; = <span class="ident">HashMap::new</span>();
 
         <span class="comment">// Find injected rust-cuda-const-markers which identify dummy register rxx</span>
         <span class="kw">for</span> <span class="ident">const_marker</span> <span class="kw">in</span> <span class="ident">CONST_MARKER_REGEX</span>.<span class="ident">captures_iter</span>(<span class="ident">ptx</span>) {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tmpreg</span>) <span class="op">=</span> <span class="ident">const_marker</span>.<span class="ident">name</span>(<span class="string">&quot;tmpreg&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>()) {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">param</span>) <span class="op">=</span> <span class="ident">const_marker</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tmpreg</span>) = <span class="ident">const_marker</span>.<span class="ident">name</span>(<span class="string">&quot;tmpreg&quot;</span>).<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>()) {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">param</span>) = <span class="ident">const_marker</span>
                     .<span class="ident">name</span>(<span class="string">&quot;param&quot;</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>())
-                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">std::str::from_utf8</span>(<span class="ident">b</span>).<span class="ident">ok</span>())
-                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>().<span class="ident">ok</span>())
+                    .<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>())
+                    .<span class="ident">and_then</span>(|<span class="ident">b</span>| <span class="ident">std::str::from_utf8</span>(<span class="ident">b</span>).<span class="ident">ok</span>())
+                    .<span class="ident">and_then</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">parse</span>().<span class="ident">ok</span>())
                 {
                     <span class="ident">const_markers</span>.<span class="ident">insert</span>(<span class="ident">tmpreg</span>, <span class="ident">param</span>);
                 }
@@ -170,13 +170,13 @@
         }
         <span class="comment">// const_markers now contains a mapping rxx =&gt; param index</span>
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">const_base_registers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">const_base_registers</span>: <span class="ident">HashMap</span>&lt;<span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">usize</span>&gt; = <span class="ident">HashMap::new</span>();
 
         <span class="comment">// Find base register ryy which was used in `ld.global.u32 rxx, [ryy];`</span>
         <span class="kw">for</span> <span class="ident">const_base_register</span> <span class="kw">in</span> <span class="ident">CONST_BASE_REGISTER_REGEX</span>.<span class="ident">captures_iter</span>(<span class="ident">ptx</span>) {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tmpreg</span>) <span class="op">=</span> <span class="ident">const_base_register</span>.<span class="ident">name</span>(<span class="string">&quot;tmpreg&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>()) {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">param</span>) <span class="op">=</span> <span class="ident">const_markers</span>.<span class="ident">get</span>(<span class="ident">tmpreg</span>) {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">basereg</span>) <span class="op">=</span> <span class="ident">const_base_register</span>.<span class="ident">name</span>(<span class="string">&quot;basereg&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>())
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tmpreg</span>) = <span class="ident">const_base_register</span>.<span class="ident">name</span>(<span class="string">&quot;tmpreg&quot;</span>).<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>()) {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">param</span>) = <span class="ident">const_markers</span>.<span class="ident">get</span>(<span class="ident">tmpreg</span>) {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">basereg</span>) = <span class="ident">const_base_register</span>.<span class="ident">name</span>(<span class="string">&quot;basereg&quot;</span>).<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>())
                     {
                         <span class="ident">const_base_registers</span>.<span class="ident">insert</span>(<span class="ident">basereg</span>, <span class="kw-2">*</span><span class="ident">param</span>);
                     }
@@ -185,19 +185,19 @@
         }
         <span class="comment">// const_base_registers now contains a mapping ryy =&gt; param index</span>
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">from_index</span> <span class="op">=</span> <span class="number">0_usize</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last_slice</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">from_index</span> = <span class="number">0_usize</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last_slice</span> = <span class="ident">Vec::new</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ptx_slices</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PtxElement</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ptx_slices</span>: <span class="ident">Vec</span>&lt;<span class="ident">PtxElement</span>&gt; = <span class="ident">Vec::new</span>();
 
         <span class="comment">// Iterate over all load from base register with offset instructions</span>
         <span class="kw">for</span> <span class="ident">const_load_instruction</span> <span class="kw">in</span> <span class="ident">CONST_LOAD_INSTRUCTION_REGEX</span>.<span class="ident">captures_iter</span>(<span class="ident">ptx</span>) {
             <span class="comment">// Only consider instructions where the base register is ryy</span>
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">basereg</span>) <span class="op">=</span> <span class="ident">const_load_instruction</span>.<span class="ident">name</span>(<span class="string">&quot;basereg&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>()) {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">param</span>) <span class="op">=</span> <span class="ident">const_base_registers</span>.<span class="ident">get</span>(<span class="ident">basereg</span>) {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">loadwidth</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">const_load_instruction</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">basereg</span>) = <span class="ident">const_load_instruction</span>.<span class="ident">name</span>(<span class="string">&quot;basereg&quot;</span>).<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>()) {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">param</span>) = <span class="ident">const_base_registers</span>.<span class="ident">get</span>(<span class="ident">basereg</span>) {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">loadwidth</span>) = <span class="kw">match</span> <span class="ident">const_load_instruction</span>
                         .<span class="ident">name</span>(<span class="string">&quot;loadwidth&quot;</span>)
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>())
+                        .<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>())
                     {
                         <span class="prelude-val">Some</span>(<span class="string">b&quot;8&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B1</span>),
                         <span class="prelude-val">Some</span>(<span class="string">b&quot;16&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B2</span>),
@@ -205,21 +205,21 @@
                         <span class="prelude-val">Some</span>(<span class="string">b&quot;64&quot;</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">PtxLoadWidth::B8</span>),
                         <span class="kw">_</span> =&gt; <span class="prelude-val">None</span>,
                     } {
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">constreg</span>) <span class="op">=</span> <span class="ident">const_load_instruction</span>
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">constreg</span>) = <span class="ident">const_load_instruction</span>
                             .<span class="ident">name</span>(<span class="string">&quot;constreg&quot;</span>)
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>())
+                            .<span class="ident">map</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>())
                         {
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">loadoffset</span>) <span class="op">=</span> <span class="ident">std::str::from_utf8</span>(
+                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">loadoffset</span>) = <span class="ident">std::str::from_utf8</span>(
                                 <span class="ident">const_load_instruction</span>
                                     .<span class="ident">name</span>(<span class="string">&quot;loadoffset&quot;</span>)
-                                    .<span class="ident">map_or</span>(<span class="string">b&quot;0&quot;</span>, <span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_bytes</span>()),
+                                    .<span class="ident">map_or</span>(<span class="string">b&quot;0&quot;</span>, |<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">as_bytes</span>()),
                             )
                             .<span class="ident">ok</span>()
-                            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>().<span class="ident">ok</span>())
+                            .<span class="ident">and_then</span>(|<span class="ident">s</span>| <span class="ident">s</span>.<span class="ident">parse</span>().<span class="ident">ok</span>())
                             {
-                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">range</span>, <span class="ident">instruction</span>)) <span class="op">=</span> <span class="ident">const_load_instruction</span>
+                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">range</span>, <span class="ident">instruction</span>)) = <span class="ident">const_load_instruction</span>
                                     .<span class="ident">name</span>(<span class="string">&quot;instruction&quot;</span>)
-                                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> (<span class="ident">s</span>.<span class="ident">range</span>(), <span class="ident">s</span>.<span class="ident">as_bytes</span>()))
+                                    .<span class="ident">map</span>(|<span class="ident">s</span>| (<span class="ident">s</span>.<span class="ident">range</span>(), <span class="ident">s</span>.<span class="ident">as_bytes</span>()))
                                 {
                                     <span class="comment">// Store the PTX source code before the load instruction</span>
                                     <span class="ident">last_slice</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">ptx</span>[<span class="ident">from_index</span>..<span class="ident">range</span>.<span class="ident">start</span>]);
@@ -228,7 +228,7 @@
                                         <span class="ident">ptx</span>: <span class="ident">std::mem::take</span>(<span class="kw-2">&amp;mut</span> <span class="ident">last_slice</span>).<span class="ident">into_boxed_slice</span>(),
                                     });
 
-                                    <span class="ident">from_index</span> <span class="op">=</span> <span class="ident">range</span>.<span class="ident">end</span>;
+                                    <span class="ident">from_index</span> = <span class="ident">range</span>.<span class="ident">end</span>;
 
                                     <span class="comment">// Store the load instruction with extracted parameters to</span>
                                     <span class="comment">//  generate a constant load if requested</span>
@@ -239,12 +239,12 @@
                                         <span class="ident">load_width</span>: <span class="ident">loadwidth</span>,
                                         <span class="ident">registers</span>: <span class="ident">REGISTER_REGEX</span>
                                             .<span class="ident">captures_iter</span>(<span class="ident">constreg</span>)
-                                            .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> {
-                                                <span class="ident">m</span>.<span class="ident">name</span>(<span class="string">&quot;register&quot;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
+                                            .<span class="ident">filter_map</span>(|<span class="ident">m</span>| {
+                                                <span class="ident">m</span>.<span class="ident">name</span>(<span class="string">&quot;register&quot;</span>).<span class="ident">map</span>(|<span class="ident">s</span>| {
                                                     <span class="ident">s</span>.<span class="ident">as_bytes</span>().<span class="ident">to_owned</span>().<span class="ident">into_boxed_slice</span>()
                                                 })
                                             })
-                                            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                                            .<span class="ident">collect</span>::&lt;<span class="ident">Vec</span>&lt;<span class="kw">_</span>&gt;&gt;()
                                             .<span class="ident">into_boxed_slice</span>(),
                                     });
                                 }
@@ -258,7 +258,7 @@
         <span class="comment">// Store the remainder of the PTX source code</span>
         <span class="ident">last_slice</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">ptx</span>[<span class="ident">from_index</span>..<span class="ident">ptx</span>.<span class="ident">len</span>()]);
 
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">last_slice</span>.<span class="ident">is_empty</span>() {
+        <span class="kw">if</span> !<span class="ident">last_slice</span>.<span class="ident">is_empty</span>() {
             <span class="ident">ptx_slices</span>.<span class="ident">push</span>(<span class="ident">PtxElement::CopiedSource</span> {
                 <span class="ident">ptx</span>: <span class="ident">last_slice</span>.<span class="ident">into_boxed_slice</span>(),
             });
@@ -273,4 +273,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

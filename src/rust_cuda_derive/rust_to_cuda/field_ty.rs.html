@@ -97,35 +97,35 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CudaReprFieldTy</span> {
     <span class="ident">SafeDeviceCopy</span>,
     <span class="ident">RustToCuda</span> {
-        <span class="ident">field_ty</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">syn::Type</span><span class="op">&gt;</span>,
+        <span class="ident">field_ty</span>: <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt;,
     },
     <span class="ident">RustToCudaProxy</span> {
-        <span class="ident">proxy_ty</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">syn::Type</span><span class="op">&gt;</span>,
-        <span class="ident">field_ty</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">syn::Type</span><span class="op">&gt;</span>,
+        <span class="ident">proxy_ty</span>: <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt;,
+        <span class="ident">field_ty</span>: <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt;,
     },
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">swap_field_type_and_filter_attrs</span>(<span class="ident">field</span>: <span class="kw-2">&amp;mut</span> <span class="ident">syn::Field</span>) -&gt; <span class="ident">CudaReprFieldTy</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cuda_repr_field_ty</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">CudaReprFieldTy</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_ty</span> <span class="op">=</span> <span class="ident">field</span>.<span class="ident">ty</span>.<span class="ident">clone</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cuda_repr_field_ty</span>: <span class="prelude-ty">Option</span>&lt;<span class="ident">CudaReprFieldTy</span>&gt; = <span class="prelude-val">None</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_ty</span> = <span class="ident">field</span>.<span class="ident">ty</span>.<span class="ident">clone</span>();
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r2c_ignore</span> <span class="op">=</span> <span class="bool-val">false</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r2c_ignore</span> = <span class="bool-val">false</span>;
 
     <span class="comment">// Remove all attributes from the fields in the Cuda representation</span>
-    <span class="ident">field</span>.<span class="ident">attrs</span>.<span class="ident">retain</span>(<span class="op">|</span><span class="ident">attr</span><span class="op">|</span> {
+    <span class="ident">field</span>.<span class="ident">attrs</span>.<span class="ident">retain</span>(|<span class="ident">attr</span>| {
         <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">is_ident</span>(<span class="string">&quot;r2cEmbed&quot;</span>) {
             <span class="kw">if</span> <span class="ident">cuda_repr_field_ty</span>.<span class="ident">is_none</span>() {
                 <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">is_empty</span>() {
-                    <span class="ident">cuda_repr_field_ty</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::RustToCuda</span> {
+                    <span class="ident">cuda_repr_field_ty</span> = <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::RustToCuda</span> {
                         <span class="ident">field_ty</span>: <span class="ident">Box::new</span>(<span class="ident">field_ty</span>.<span class="ident">clone</span>()),
                     });
-                    <span class="ident">field_ty</span> <span class="op">=</span> <span class="macro">parse_quote!</span> {
-                        <span class="ident">rust_cuda::common::DeviceAccessible</span><span class="op">&lt;</span>
-                            <span class="op">&lt;</span>#<span class="ident">field_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span>
-                        <span class="op">&gt;</span>
+                    <span class="ident">field_ty</span> = <span class="macro">parse_quote!</span> {
+                        <span class="ident">rust_cuda::common::DeviceAccessible</span>&lt;
+                            &lt;#<span class="ident">field_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>
+                        &gt;
                     };
                 } <span class="kw">else</span> {
-                    <span class="kw">let</span> <span class="ident">proxy_ty</span>: <span class="ident">syn::Type</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">attr</span>.<span class="ident">parse_args</span>() {
+                    <span class="kw">let</span> <span class="ident">proxy_ty</span>: <span class="ident">syn::Type</span> = <span class="kw">match</span> <span class="ident">attr</span>.<span class="ident">parse_args</span>() {
                         <span class="prelude-val">Ok</span>(<span class="ident">proxy_ty</span>) =&gt; <span class="ident">proxy_ty</span>,
                         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                             <span class="macro">abort!</span>(
@@ -136,13 +136,13 @@
                         },
                     };
 
-                    <span class="kw">let</span> <span class="ident">old_field_ty</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">field_ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">field_ty</span> <span class="op">=</span> <span class="macro">parse_quote!</span> {
-                        <span class="ident">rust_cuda::common::DeviceAccessible</span><span class="op">&lt;</span>
-                            <span class="op">&lt;</span>#<span class="ident">proxy_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span>
-                        <span class="op">&gt;</span>
+                    <span class="kw">let</span> <span class="ident">old_field_ty</span> = <span class="ident">Box::new</span>(<span class="ident">field_ty</span>.<span class="ident">clone</span>());
+                    <span class="ident">field_ty</span> = <span class="macro">parse_quote!</span> {
+                        <span class="ident">rust_cuda::common::DeviceAccessible</span>&lt;
+                            &lt;#<span class="ident">proxy_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>
+                        &gt;
                     };
-                    <span class="ident">cuda_repr_field_ty</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::RustToCudaProxy</span> {
+                    <span class="ident">cuda_repr_field_ty</span> = <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::RustToCudaProxy</span> {
                         <span class="ident">proxy_ty</span>: <span class="ident">Box::new</span>(<span class="ident">proxy_ty</span>),
                         <span class="ident">field_ty</span>: <span class="ident">old_field_ty</span>,
                     });
@@ -153,36 +153,36 @@
 
             <span class="bool-val">false</span>
         } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">is_ident</span>(<span class="string">&quot;r2cIgnore&quot;</span>) {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">is_empty</span>() {
+            <span class="kw">if</span> !<span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">is_empty</span>() {
                 <span class="macro">emit_error!</span>(
                     <span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">span</span>(),
                     <span class="string">&quot;#[r2cIgnore] does not take any arguments.&quot;</span>
                 );
             }
 
-            <span class="ident">r2c_ignore</span> <span class="op">=</span> <span class="bool-val">true</span>;
+            <span class="ident">r2c_ignore</span> = <span class="bool-val">true</span>;
 
             <span class="bool-val">false</span>
         } <span class="kw">else</span> {
-            <span class="op">!</span><span class="ident">r2c_ignore</span>
+            !<span class="ident">r2c_ignore</span>
         }
     });
 
-    <span class="kw">let</span> <span class="ident">cuda_repr_field_ty</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cuda_repr_field_ty</span>) <span class="op">=</span> <span class="ident">cuda_repr_field_ty</span> {
+    <span class="kw">let</span> <span class="ident">cuda_repr_field_ty</span> = <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cuda_repr_field_ty</span>) = <span class="ident">cuda_repr_field_ty</span> {
         <span class="ident">cuda_repr_field_ty</span>
     } <span class="kw">else</span> {
-        <span class="ident">field_ty</span> <span class="op">=</span> <span class="macro">parse_quote!</span> {
-            <span class="ident">rust_cuda::common::DeviceAccessible</span><span class="op">&lt;</span>
-                <span class="ident">rust_cuda::utils::device_copy::SafeDeviceCopyWrapper</span><span class="op">&lt;</span>#<span class="ident">field_ty</span><span class="op">&gt;</span>
-            <span class="op">&gt;</span>
+        <span class="ident">field_ty</span> = <span class="macro">parse_quote!</span> {
+            <span class="ident">rust_cuda::common::DeviceAccessible</span>&lt;
+                <span class="ident">rust_cuda::utils::device_copy::SafeDeviceCopyWrapper</span>&lt;#<span class="ident">field_ty</span>&gt;
+            &gt;
         };
 
         <span class="ident">CudaReprFieldTy::SafeDeviceCopy</span>
     };
 
-    <span class="ident">field</span>.<span class="ident">ty</span> <span class="op">=</span> <span class="ident">field_ty</span>;
+    <span class="ident">field</span>.<span class="ident">ty</span> = <span class="ident">field_ty</span>;
 
     <span class="ident">cuda_repr_field_ty</span>
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

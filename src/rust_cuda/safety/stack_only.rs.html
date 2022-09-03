@@ -66,17 +66,17 @@
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">StackOnly</span>: <span class="ident">sealed::StackOnly</span> {}
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">sealed::StackOnly</span><span class="op">&gt;</span> <span class="ident">StackOnly</span> <span class="kw">for</span> <span class="ident">T</span> {}
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">sealed::StackOnly</span>&gt; <span class="ident">StackOnly</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
 <span class="kw">mod</span> <span class="ident">sealed</span> {
     <span class="kw">pub</span> <span class="ident">auto</span> <span class="kw">trait</span> <span class="ident">StackOnly</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">*const</span> <span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">*mut</span> <span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">!</span><span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;mut</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">*const</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">*mut</span> <span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; !<span class="ident">StackOnly</span> <span class="kw">for</span> <span class="kw-2">&amp;mut</span> <span class="ident">T</span> {}
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">StackOnly</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">StackOnly</span> <span class="kw">for</span> <span class="ident">core::marker::PhantomData</span>&lt;<span class="ident">T</span>&gt; {}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

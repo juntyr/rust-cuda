@@ -56,14 +56,14 @@
 <span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">parse_kernel_fn</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">syn::ItemFn</span> {
-    <span class="kw">let</span> <span class="ident">func</span>: <span class="ident">syn::ItemFn</span> <span class="op">=</span> <span class="ident">syn::parse</span>(<span class="ident">tokens</span>).<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+    <span class="kw">let</span> <span class="ident">func</span>: <span class="ident">syn::ItemFn</span> = <span class="ident">syn::parse</span>(<span class="ident">tokens</span>).<span class="ident">unwrap_or_else</span>(|<span class="ident">err</span>| {
         <span class="macro">abort_call_site!</span>(
             <span class="string">&quot;#[kernel(...)] must be wrapped around a function: {:?}&quot;</span>,
             <span class="ident">err</span>
         )
     });
 
-    <span class="kw">if</span> <span class="op">!</span><span class="macro">matches!</span>(<span class="ident">func</span>.<span class="ident">vis</span>, <span class="ident">syn::Visibility::Public</span>(<span class="kw">_</span>)) {
+    <span class="kw">if</span> !<span class="macro">matches!</span>(<span class="ident">func</span>.<span class="ident">vis</span>, <span class="ident">syn::Visibility::Public</span>(<span class="kw">_</span>)) {
         <span class="macro">abort!</span>(<span class="ident">func</span>.<span class="ident">vis</span>.<span class="ident">span</span>(), <span class="string">&quot;Kernel function must be public.&quot;</span>);
     }
 
@@ -107,4 +107,4 @@
     <span class="ident">func</span>
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

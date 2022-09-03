@@ -172,19 +172,19 @@
 
 <span class="kw">impl</span> <span class="ident">PtxJITCompiler</span> {
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_lines</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_arguments</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">arguments</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>]<span class="op">&gt;</span>) -&gt; <span class="ident">PtxJITResult</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_arguments</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">arguments</span>: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[<span class="ident">u8</span>]&gt;]&gt;) -&gt; <span class="ident">PtxJITResult</span> {
         <span class="comment">// Check if the arguments, cast as byte slices, are the same as the last cached</span>
         <span class="comment">//  ones</span>
         <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::explicit_deref_methods</span>)]</span>
-        <span class="kw">let</span> <span class="ident">needs_recomputation</span> <span class="op">=</span> <span class="kw">match</span> (<span class="ident">arguments</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">last_arguments</span>) {
+        <span class="kw">let</span> <span class="ident">needs_recomputation</span> = <span class="kw">match</span> (<span class="ident">arguments</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">last_arguments</span>) {
             (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="bool-val">false</span>,
-            (<span class="prelude-val">Some</span>(<span class="ident">arguments</span>), <span class="prelude-val">Some</span>(<span class="ident">last_arguments</span>)) <span class="kw">if</span> <span class="ident">arguments</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">last_arguments</span>.<span class="ident">len</span>() =&gt; {
+            (<span class="prelude-val">Some</span>(<span class="ident">arguments</span>), <span class="prelude-val">Some</span>(<span class="ident">last_arguments</span>)) <span class="kw">if</span> <span class="ident">arguments</span>.<span class="ident">len</span>() == <span class="ident">last_arguments</span>.<span class="ident">len</span>() =&gt; {
                 <span class="ident">arguments</span>
                     .<span class="ident">iter</span>()
                     .<span class="ident">zip</span>(<span class="ident">last_arguments</span>.<span class="ident">iter</span>())
-                    .<span class="ident">all</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="kw">match</span> (<span class="ident">a</span>, <span class="ident">b</span>) {
+                    .<span class="ident">all</span>(|(<span class="ident">a</span>, <span class="ident">b</span>)| <span class="kw">match</span> (<span class="ident">a</span>, <span class="ident">b</span>) {
                         (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="bool-val">false</span>,
-                        (<span class="prelude-val">Some</span>(<span class="ident">a</span>), <span class="prelude-val">Some</span>(<span class="ident">b</span>)) =&gt; <span class="kw-2">*</span><span class="ident">a</span> <span class="op">!</span><span class="op">=</span> <span class="ident">b</span>.<span class="ident">deref</span>(),
+                        (<span class="prelude-val">Some</span>(<span class="ident">a</span>), <span class="prelude-val">Some</span>(<span class="ident">b</span>)) =&gt; <span class="kw-2">*</span><span class="ident">a</span> != <span class="ident">b</span>.<span class="ident">deref</span>(),
                         <span class="kw">_</span> =&gt; <span class="bool-val">true</span>,
                     })
             },
@@ -195,18 +195,18 @@
         <span class="comment">//  arguments</span>
         <span class="kw">if</span> <span class="ident">needs_recomputation</span> {
             <span class="comment">// Cache the new arguments</span>
-            <span class="self">self</span>.<span class="ident">last_arguments</span> <span class="op">=</span> <span class="ident">arguments</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">arguments</span><span class="op">|</span> {
+            <span class="self">self</span>.<span class="ident">last_arguments</span> = <span class="ident">arguments</span>.<span class="ident">map</span>(|<span class="ident">arguments</span>| {
                 <span class="ident">arguments</span>
                     .<span class="ident">iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">arg</span><span class="op">|</span> <span class="ident">arg</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">bytes</span><span class="op">|</span> <span class="ident">bytes</span>.<span class="ident">to_owned</span>().<span class="ident">into_boxed_slice</span>()))
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                    .<span class="ident">map</span>(|<span class="ident">arg</span>| <span class="ident">arg</span>.<span class="ident">map</span>(|<span class="ident">bytes</span>| <span class="ident">bytes</span>.<span class="ident">to_owned</span>().<span class="ident">into_boxed_slice</span>()))
+                    .<span class="ident">collect</span>::&lt;<span class="ident">Vec</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="ident">Box</span>&lt;[<span class="ident">u8</span>]&gt;&gt;&gt;&gt;()
                     .<span class="ident">into_boxed_slice</span>()
             });
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output_ptx</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer_ptx</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output_ptx</span> = <span class="ident">Vec::new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer_ptx</span> = <span class="ident">Vec::new</span>();
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">args</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">last_arguments</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">args</span>) = <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">last_arguments</span> {
                 <span class="comment">// Some constant loads are required, rebuild PTX string from source and newly</span>
                 <span class="comment">//  generated constant load instructions</span>
                 <span class="kw">for</span> <span class="ident">element</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">ptx_slices</span>.<span class="ident">iter</span>() {
@@ -219,10 +219,10 @@
                             <span class="ident">load_width</span>,
                             <span class="ident">registers</span>,
                         } =&gt; {
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">byte_offset</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">byte_offset</span>;
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">registers_iter</span> <span class="op">=</span> <span class="ident">registers</span>.<span class="ident">iter</span>();
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">byte_offset</span> = <span class="kw-2">*</span><span class="ident">byte_offset</span>;
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">registers_iter</span> = <span class="ident">registers</span>.<span class="ident">iter</span>();
 
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">register</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">registers_iter</span>.<span class="ident">next</span>() {
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">register</span> = <span class="kw">match</span> <span class="ident">registers_iter</span>.<span class="ident">next</span>() {
                                 <span class="prelude-val">Some</span>(<span class="ident">register</span>) =&gt; <span class="ident">register</span>,
                                 <span class="prelude-val">None</span> =&gt; <span class="kw">continue</span>,
                             };
@@ -231,18 +231,18 @@
                                 <span class="comment">// Only generate a constant load instructions if the arguments</span>
                                 <span class="comment">// contain  the byte range requested</span>
                                 <span class="comment">// by the load instruction</span>
-                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">arg</span>)) <span class="op">=</span> <span class="ident">args</span>.<span class="ident">get</span>(<span class="kw-2">*</span><span class="ident">parameter_index</span>) {
-                                    <span class="kw">let</span> <span class="ident">load_width_bytes</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">load_width</span> {
+                                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">arg</span>)) = <span class="ident">args</span>.<span class="ident">get</span>(<span class="kw-2">*</span><span class="ident">parameter_index</span>) {
+                                    <span class="kw">let</span> <span class="ident">load_width_bytes</span> = <span class="kw">match</span> <span class="ident">load_width</span> {
                                         <span class="ident">PtxLoadWidth::B1</span> =&gt; <span class="number">1</span>,
                                         <span class="ident">PtxLoadWidth::B2</span> =&gt; <span class="number">2</span>,
                                         <span class="ident">PtxLoadWidth::B4</span> =&gt; <span class="number">4</span>,
                                         <span class="ident">PtxLoadWidth::B8</span> =&gt; <span class="number">8</span>,
                                     };
 
-                                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">bytes</span>) <span class="op">=</span>
-                                        <span class="ident">arg</span>.<span class="ident">get</span>(<span class="ident">byte_offset</span>..(<span class="ident">byte_offset</span> <span class="op">+</span> <span class="ident">load_width_bytes</span>))
+                                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">bytes</span>) =
+                                        <span class="ident">arg</span>.<span class="ident">get</span>(<span class="ident">byte_offset</span>..(<span class="ident">byte_offset</span> + <span class="ident">load_width_bytes</span>))
                                     {
-                                        <span class="ident">byte_offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">load_width_bytes</span>;
+                                        <span class="ident">byte_offset</span> += <span class="ident">load_width_bytes</span>;
 
                                         <span class="comment">// Generate the mov instruction with the correct data type</span>
                                         <span class="ident">buffer_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="string">b&quot;mov.&quot;</span>);
@@ -277,9 +277,9 @@
                                         });
                                         <span class="kw">for</span> <span class="ident">byte</span> <span class="kw">in</span> <span class="ident">bytes</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
                                             <span class="ident">buffer_ptx</span>
-                                                .<span class="ident">push</span>(<span class="string">b&quot;0123456789ABCDEF&quot;</span>[<span class="ident">usize::from</span>(<span class="kw-2">*</span><span class="ident">byte</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">4</span>)]);
+                                                .<span class="ident">push</span>(<span class="string">b&quot;0123456789ABCDEF&quot;</span>[<span class="ident">usize::from</span>(<span class="kw-2">*</span><span class="ident">byte</span> &gt;&gt; <span class="number">4</span>)]);
                                             <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(
-                                                <span class="string">b&quot;0123456789ABCDEF&quot;</span>[<span class="ident">usize::from</span>(<span class="kw-2">*</span><span class="ident">byte</span> <span class="op">&amp;</span> <span class="number">0x0F_u8</span>)],
+                                                <span class="string">b&quot;0123456789ABCDEF&quot;</span>[<span class="ident">usize::from</span>(<span class="kw-2">*</span><span class="ident">byte</span> &amp; <span class="number">0x0F_u8</span>)],
                                             );
                                         }
                                         <span class="kw">if</span> <span class="ident">register</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="string">b&#39;r&#39;</span>) {
@@ -288,10 +288,10 @@
 
                                         <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="string">b&#39;;&#39;</span>);
 
-                                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">next_register</span>) <span class="op">=</span> <span class="ident">registers_iter</span>.<span class="ident">next</span>() {
+                                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">next_register</span>) = <span class="ident">registers_iter</span>.<span class="ident">next</span>() {
                                             <span class="comment">// Early continue to the next `PtxElement` to avoid</span>
                                             <span class="comment">//  else branch</span>
-                                            <span class="ident">register</span> <span class="op">=</span> <span class="ident">next_register</span>;
+                                            <span class="ident">register</span> = <span class="ident">next_register</span>;
                                             <span class="ident">buffer_ptx</span>.<span class="ident">push</span>(<span class="string">b&#39; &#39;</span>);
                                             <span class="kw">continue</span>;
                                         }
@@ -316,7 +316,7 @@
                 <span class="comment">// No constant loads are requires, just rebuild the PTX string from its slices</span>
                 <span class="kw">for</span> <span class="ident">element</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">ptx_slices</span>.<span class="ident">iter</span>() {
                     <span class="kw">match</span> <span class="ident">element</span> {
-                        <span class="ident">PtxElement::CopiedSource</span> { <span class="ident">ptx</span> } <span class="op">|</span> <span class="ident">PtxElement::ConstLoad</span> { <span class="ident">ptx</span>, .. } =&gt; {
+                        <span class="ident">PtxElement::CopiedSource</span> { <span class="ident">ptx</span> } | <span class="ident">PtxElement::ConstLoad</span> { <span class="ident">ptx</span>, .. } =&gt; {
                             <span class="ident">output_ptx</span>.<span class="ident">extend_from_slice</span>(<span class="ident">ptx</span>);
                         },
                     }
@@ -324,7 +324,7 @@
             }
 
             <span class="comment">// Cache the newly built PTX string</span>
-            <span class="self">self</span>.<span class="ident">last_ptx</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">CString::from_vec_unchecked</span>(<span class="ident">output_ptx</span>) };
+            <span class="self">self</span>.<span class="ident">last_ptx</span> = <span class="kw">unsafe</span> { <span class="ident">CString::from_vec_unchecked</span>(<span class="ident">output_ptx</span>) };
         }
 
         <span class="kw">if</span> <span class="ident">needs_recomputation</span> {
@@ -335,4 +335,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

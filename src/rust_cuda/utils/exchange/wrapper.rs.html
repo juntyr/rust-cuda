@@ -104,34 +104,34 @@
 };
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExchangeWrapperOnHost</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span><span class="op">&lt;</span><span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExchangeWrapperOnHost</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&lt;<span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span>&gt;&gt; {
     <span class="ident">value</span>: <span class="ident">T</span>,
-    <span class="ident">device_box</span>: <span class="ident">HostDeviceBox</span><span class="op">&lt;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">device_box</span>: <span class="ident">HostDeviceBox</span>&lt;<span class="ident">DeviceAccessible</span>&lt;&lt;<span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>&gt;&gt;,
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExchangeWrapperOnDevice</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span><span class="op">&lt;</span><span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExchangeWrapperOnDevice</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&lt;<span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span>&gt;&gt; {
     <span class="ident">value</span>: <span class="ident">T</span>,
-    <span class="ident">device_box</span>: <span class="ident">HostDeviceBox</span><span class="op">&lt;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">cuda_repr</span>: <span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span><span class="op">&gt;</span>,
-    <span class="ident">null_alloc</span>: <span class="ident">CombinedCudaAlloc</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaAllocation</span>, <span class="ident">NullCudaAlloc</span><span class="op">&gt;</span>,
+    <span class="ident">device_box</span>: <span class="ident">HostDeviceBox</span>&lt;<span class="ident">DeviceAccessible</span>&lt;&lt;<span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>&gt;&gt;,
+    <span class="ident">cuda_repr</span>: <span class="ident">DeviceAccessible</span>&lt;&lt;<span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>&gt;,
+    <span class="ident">null_alloc</span>: <span class="ident">CombinedCudaAlloc</span>&lt;&lt;<span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span>&gt;<span class="ident">::CudaAllocation</span>, <span class="ident">NullCudaAlloc</span>&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span><span class="op">&lt;</span><span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ExchangeWrapperOnHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&lt;<span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span>&gt;&gt; <span class="ident">ExchangeWrapperOnHost</span>&lt;<span class="ident">T</span>&gt; {
     <span class="doccomment">/// # Errors</span>
     <span class="doccomment">/// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">value</span>: <span class="ident">T</span>) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">_null_alloc</span>) <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">value</span>.<span class="ident">borrow</span>(<span class="ident">NullCudaAlloc</span>) }<span class="question-mark">?</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">value</span>: <span class="ident">T</span>) -&gt; <span class="ident">CudaResult</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">_null_alloc</span>) = <span class="kw">unsafe</span> { <span class="ident">value</span>.<span class="ident">borrow</span>(<span class="ident">NullCudaAlloc</span>) }<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">device_box</span> <span class="op">=</span> <span class="ident">DeviceBox::new</span>(<span class="kw-2">&amp;</span><span class="ident">cuda_repr</span>)<span class="question-mark">?</span>.<span class="ident">into</span>();
+        <span class="kw">let</span> <span class="ident">device_box</span> = <span class="ident">DeviceBox::new</span>(<span class="kw-2">&amp;</span><span class="ident">cuda_repr</span>)<span class="question-mark">?</span>.<span class="ident">into</span>();
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">value</span>, <span class="ident">device_box</span> })
     }
 
     <span class="doccomment">/// # Errors</span>
     <span class="doccomment">/// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">move_to_device</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="ident">ExchangeWrapperOnDevice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">null_alloc</span>) <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">borrow</span>(<span class="ident">NullCudaAlloc</span>) }<span class="question-mark">?</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">move_to_device</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">CudaResult</span>&lt;<span class="ident">ExchangeWrapperOnDevice</span>&lt;<span class="ident">T</span>&gt;&gt; {
+        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">null_alloc</span>) = <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">borrow</span>(<span class="ident">NullCudaAlloc</span>) }<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">device_box</span>.<span class="ident">copy_from</span>(<span class="kw-2">&amp;</span><span class="ident">cuda_repr</span>)<span class="question-mark">?</span>;
 
@@ -144,25 +144,25 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span><span class="op">&lt;</span><span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">ExchangeWrapperOnHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">T</span>;
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&lt;<span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span>&gt;&gt; <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">ExchangeWrapperOnHost</span>&lt;<span class="ident">T</span>&gt; {
+    <span class="kw">type</span> <span class="ident">Target</span> = <span class="ident">T</span>;
 
     <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">value</span>
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span><span class="op">&lt;</span><span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">ExchangeWrapperOnHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&lt;<span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span>&gt;&gt; <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">ExchangeWrapperOnHost</span>&lt;<span class="ident">T</span>&gt; {
     <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">value</span>
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">RustToCuda</span><span class="op">&lt;</span><span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ExchangeWrapperOnDevice</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&lt;<span class="ident">CudaAllocation</span>: <span class="ident">EmptyCudaAlloc</span>&gt;&gt; <span class="ident">ExchangeWrapperOnDevice</span>&lt;<span class="ident">T</span>&gt; {
     <span class="doccomment">/// # Errors</span>
     <span class="doccomment">/// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">move_to_host</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="ident">ExchangeWrapperOnHost</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">_null_alloc</span>: <span class="ident">NullCudaAlloc</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">restore</span>(<span class="self">self</span>.<span class="ident">null_alloc</span>) }<span class="question-mark">?</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">move_to_host</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">CudaResult</span>&lt;<span class="ident">ExchangeWrapperOnHost</span>&lt;<span class="ident">T</span>&gt;&gt; {
+        <span class="kw">let</span> <span class="ident">_null_alloc</span>: <span class="ident">NullCudaAlloc</span> = <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">restore</span>(<span class="self">self</span>.<span class="ident">null_alloc</span>) }<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">ExchangeWrapperOnHost</span> {
             <span class="ident">value</span>: <span class="self">self</span>.<span class="ident">value</span>,
@@ -172,17 +172,17 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_ref</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; <span class="ident">HostAndDeviceConstRef</span><span class="op">&lt;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">HostAndDeviceConstRef</span>&lt;<span class="ident">DeviceAccessible</span>&lt;&lt;<span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>&gt;&gt; {
         <span class="comment">// Safety: `device_box` contains exactly the device copy of `cuda_repr`</span>
         <span class="kw">unsafe</span> { <span class="ident">HostAndDeviceConstRef::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">device_box</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cuda_repr</span>) }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_mut</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-    ) -&gt; <span class="ident">HostAndDeviceMutRef</span><span class="op">&lt;</span><span class="ident">DeviceAccessible</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span><span class="op">&gt;</span><span class="ident">::CudaRepresentation</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">HostAndDeviceMutRef</span>&lt;<span class="ident">DeviceAccessible</span>&lt;&lt;<span class="ident">T</span> <span class="kw">as</span> <span class="ident">RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>&gt;&gt; {
         <span class="comment">// Safety: `device_box` contains exactly the device copy of `cuda_repr`</span>
         <span class="kw">unsafe</span> { <span class="ident">HostAndDeviceMutRef::new</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">device_box</span>, <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">cuda_repr</span>) }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

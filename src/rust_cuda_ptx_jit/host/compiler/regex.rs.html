@@ -48,19 +48,19 @@
 <span class="kw">use</span> <span class="ident">regex::bytes::Regex</span>;
 
 <span class="macro">lazy_static::lazy_static!</span> {
-    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_MARKER_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> {
+    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_MARKER_REGEX</span>: <span class="ident">Regex</span> = {
         <span class="ident">Regex::new</span>(
             <span class="string">r&quot;(?-u)// &lt;rust-cuda-ptx-jit-const-load-(?P&lt;tmpreg&gt;%r\d+)-(?P&lt;param&gt;\d+)&gt; //&quot;</span>
         ).<span class="ident">unwrap</span>()
     };
 
-    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_BASE_REGISTER_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> {
+    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_BASE_REGISTER_REGEX</span>: <span class="ident">Regex</span> = {
         <span class="ident">Regex::new</span>(
             <span class="string">r&quot;(?-u)ld\.global\.u32\s*(?P&lt;tmpreg&gt;%r\d+)\s*,\s*\[(?P&lt;basereg&gt;%r[ds]?\d+)]\s*;&quot;</span>,
         ).<span class="ident">unwrap</span>()
     };
 
-    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_LOAD_INSTRUCTION_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> {
+    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CONST_LOAD_INSTRUCTION_REGEX</span>: <span class="ident">Regex</span> = {
         <span class="ident">Regex::new</span>(
             <span class="string">r&quot;(?x-u)(?P&lt;instruction&gt;
                 ld\.global
@@ -86,9 +86,9 @@
         ).<span class="ident">unwrap</span>()
     };
 
-    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">REGISTER_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> {
+    <span class="kw">pub</span> <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">REGISTER_REGEX</span>: <span class="ident">Regex</span> = {
         <span class="ident">Regex::new</span>(<span class="string">r&quot;(?-u)(?P&lt;register&gt;%[rf][sd]?\d+)&quot;</span>).<span class="ident">unwrap</span>()
     };
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

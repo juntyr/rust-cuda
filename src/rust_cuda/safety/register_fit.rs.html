@@ -31,12 +31,12 @@
 <span id="31">31</span>
 <span id="32">32</span>
 </pre><pre class="rust"><code><span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FitsIntoDeviceRegister</span>: <span class="ident">private::FitsIntoDeviceRegister</span> {}
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">private::FitsIntoDeviceRegister</span><span class="op">&gt;</span> <span class="ident">FitsIntoDeviceRegister</span> <span class="kw">for</span> <span class="ident">T</span> {}
+<span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">private::FitsIntoDeviceRegister</span>&gt; <span class="ident">FitsIntoDeviceRegister</span> <span class="kw">for</span> <span class="ident">T</span> {}
 
 <span class="kw">mod</span> <span class="ident">private</span> {
     <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FitsIntoDeviceRegister</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">FitsIntoDeviceRegister</span> <span class="kw">for</span> <span class="ident">T</span> <span class="kw">where</span>
-        <span class="ident">AssertTypeFitsInto64Bits</span><span class="op">&lt;</span>{ <span class="ident">TypeSize::check</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() }<span class="op">&gt;</span>: <span class="ident">FitsInto64Bits</span>
+    <span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">FitsIntoDeviceRegister</span> <span class="kw">for</span> <span class="ident">T</span> <span class="kw">where</span>
+        <span class="ident">AssertTypeFitsInto64Bits</span>&lt;{ <span class="ident">TypeSize::check</span>::&lt;<span class="ident">T</span>&gt;() }&gt;: <span class="ident">FitsInto64Bits</span>
     {
     }
 
@@ -47,20 +47,20 @@
     }
 
     <span class="kw">impl</span> <span class="ident">TypeSize</span> {
-        <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">check</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() -&gt; <span class="self">Self</span> {
-            <span class="kw">if</span> <span class="ident">core::mem::size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">core::mem::size_of</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>() {
+        <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">check</span>&lt;<span class="ident">T</span>&gt;() -&gt; <span class="self">Self</span> {
+            <span class="kw">if</span> <span class="ident">core::mem::size_of</span>::&lt;<span class="ident">T</span>&gt;() &lt;= <span class="ident">core::mem::size_of</span>::&lt;<span class="ident">u64</span>&gt;() {
                 <span class="ident"><span class="self">Self</span>::TypeFitsInto64Bits</span>
             } <span class="kw">else</span> {
-                <span class="ident"><span class="self">Self</span>::TypeExeceeds64Bits</span>(<span class="ident">core::any::type_name</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>())
+                <span class="ident"><span class="self">Self</span>::TypeExeceeds64Bits</span>(<span class="ident">core::any::type_name</span>::&lt;<span class="ident">T</span>&gt;())
             }
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AssertTypeFitsInto64Bits</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">CHECK</span>: <span class="ident">TypeSize</span><span class="op">&gt;</span> {}
+    <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AssertTypeFitsInto64Bits</span>&lt;<span class="kw">const</span> <span class="ident">CHECK</span>: <span class="ident">TypeSize</span>&gt; {}
 
     <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FitsInto64Bits</span> {}
 
-    <span class="kw">impl</span> <span class="ident">FitsInto64Bits</span> <span class="kw">for</span> <span class="ident">AssertTypeFitsInto64Bits</span><span class="op">&lt;</span>{ <span class="ident">TypeSize::TypeFitsInto64Bits</span> }<span class="op">&gt;</span> {}
+    <span class="kw">impl</span> <span class="ident">FitsInto64Bits</span> <span class="kw">for</span> <span class="ident">AssertTypeFitsInto64Bits</span>&lt;{ <span class="ident">TypeSize::TypeFitsInto64Bits</span> }&gt; {}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

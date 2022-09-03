@@ -78,7 +78,7 @@
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">proc_macro_tracked_env</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">proc_macro_span</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">non_exhaustive_omitted_patterns_lint</span>)]</span>
-<span class="attribute">#![<span class="ident">doc</span>(<span class="ident">html_root_url</span> <span class="op">=</span> <span class="string">&quot;https://momolangenstein.github.io/rust-cuda/&quot;</span>)]</span>
+<span class="attribute">#![<span class="ident">doc</span>(<span class="ident">html_root_url</span> = <span class="string">&quot;https://momolangenstein.github.io/rust-cuda/&quot;</span>)]</span>
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">proc_macro</span>;
 
@@ -99,7 +99,7 @@
 <span class="attribute">#[<span class="ident">proc_macro_derive</span>(<span class="ident">LendRustToCuda</span>, <span class="ident">attributes</span>(<span class="ident">r2cBound</span>, <span class="ident">r2cIgnore</span>, <span class="ident">r2cEmbed</span>))]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rust_to_cuda_derive</span>(<span class="ident">input</span>: <span class="ident">TokenStream</span>) -&gt; <span class="ident">TokenStream</span> {
     <span class="comment">// Note: We cannot report a more precise span yet</span>
-    <span class="kw">let</span> <span class="ident">ast</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">syn::parse</span>(<span class="ident">input</span>) {
+    <span class="kw">let</span> <span class="ident">ast</span> = <span class="kw">match</span> <span class="ident">syn::parse</span>(<span class="ident">input</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">ast</span>) =&gt; <span class="ident">ast</span>,
         <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">abort!</span>(<span class="ident">err</span>),
     };
@@ -149,4 +149,4 @@
     <span class="ident">kernel::link::link_kernel</span>(<span class="ident">tokens</span>)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

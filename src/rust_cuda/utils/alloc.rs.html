@@ -69,55 +69,55 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UnifiedAllocator</span>;
 
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Allocator</span> <span class="kw">for</span> <span class="ident">UnifiedAllocator</span> {
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">allocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">layout</span>: <span class="ident">Layout</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>, <span class="ident">AllocError</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">layout</span>.<span class="ident">size</span>() <span class="op">==</span> <span class="number">0</span> {
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">NonNull</span>::<span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="number">0</span>]<span class="op">&gt;</span><span class="ident">::dangling</span>());
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="kw">fn</span> <span class="ident">allocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">layout</span>: <span class="ident">Layout</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="ident">NonNull</span>&lt;[<span class="ident">u8</span>]&gt;, <span class="ident">AllocError</span>&gt; {
+        <span class="kw">if</span> <span class="ident">layout</span>.<span class="ident">size</span>() == <span class="number">0</span> {
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">NonNull</span>::&lt;[<span class="ident">u8</span>; <span class="number">0</span>]&gt;<span class="ident">::dangling</span>());
         }
 
         <span class="kw">match</span> <span class="ident">layout</span>.<span class="ident">align</span>() {
-            <span class="number">1</span> =&gt; <span class="ident">alloc_unified_aligned</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(<span class="ident">layout</span>.<span class="ident">size</span>()),
-            <span class="number">2</span> =&gt; <span class="ident">alloc_unified_aligned</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>(<span class="ident">layout</span>.<span class="ident">size</span>() <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">1</span>),
-            <span class="number">4</span> =&gt; <span class="ident">alloc_unified_aligned</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>(<span class="ident">layout</span>.<span class="ident">size</span>() <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">2</span>),
-            <span class="number">8</span> =&gt; <span class="ident">alloc_unified_aligned</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>(<span class="ident">layout</span>.<span class="ident">size</span>() <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">3</span>),
+            <span class="number">1</span> =&gt; <span class="ident">alloc_unified_aligned</span>::&lt;<span class="ident">u8</span>&gt;(<span class="ident">layout</span>.<span class="ident">size</span>()),
+            <span class="number">2</span> =&gt; <span class="ident">alloc_unified_aligned</span>::&lt;<span class="ident">u16</span>&gt;(<span class="ident">layout</span>.<span class="ident">size</span>() &gt;&gt; <span class="number">1</span>),
+            <span class="number">4</span> =&gt; <span class="ident">alloc_unified_aligned</span>::&lt;<span class="ident">u32</span>&gt;(<span class="ident">layout</span>.<span class="ident">size</span>() &gt;&gt; <span class="number">2</span>),
+            <span class="number">8</span> =&gt; <span class="ident">alloc_unified_aligned</span>::&lt;<span class="ident">u64</span>&gt;(<span class="ident">layout</span>.<span class="ident">size</span>() &gt;&gt; <span class="number">3</span>),
             <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">AllocError</span>),
         }
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">fn</span> <span class="ident">allocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_layout</span>: <span class="ident">Layout</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>, <span class="ident">AllocError</span><span class="op">&gt;</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">fn</span> <span class="ident">allocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_layout</span>: <span class="ident">Layout</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="ident">NonNull</span>&lt;[<span class="ident">u8</span>]&gt;, <span class="ident">AllocError</span>&gt; {
         <span class="prelude-val">Err</span>(<span class="ident">AllocError</span>)
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">deallocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ptr</span>: <span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">layout</span>: <span class="ident">Layout</span>) {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">deallocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ptr</span>: <span class="ident">NonNull</span>&lt;<span class="ident">u8</span>&gt;, <span class="ident">layout</span>: <span class="ident">Layout</span>) {
         <span class="kw">use</span> <span class="ident">rustacuda::memory</span>::{<span class="ident">cuda_free_unified</span>, <span class="ident">UnifiedPointer</span>};
 
-        <span class="kw">if</span> <span class="ident">layout</span>.<span class="ident">size</span>() <span class="op">==</span> <span class="number">0</span> {
+        <span class="kw">if</span> <span class="ident">layout</span>.<span class="ident">size</span>() == <span class="number">0</span> {
             <span class="kw">return</span>;
         }
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">cuda_free_unified</span>(<span class="ident">UnifiedPointer::wrap</span>(<span class="ident">ptr</span>.<span class="ident">as_ptr</span>()));
+        <span class="kw">let</span> <span class="kw">_</span> = <span class="ident">cuda_free_unified</span>(<span class="ident">UnifiedPointer::wrap</span>(<span class="ident">ptr</span>.<span class="ident">as_ptr</span>()));
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">deallocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_ptr</span>: <span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">_layout</span>: <span class="ident">Layout</span>) {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">deallocate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_ptr</span>: <span class="ident">NonNull</span>&lt;<span class="ident">u8</span>&gt;, <span class="ident">_layout</span>: <span class="ident">Layout</span>) {
         <span class="comment">// no-op</span>
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">alloc_unified_aligned</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">rustacuda_core::DeviceCopy</span><span class="op">&gt;</span>(
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
+<span class="kw">fn</span> <span class="ident">alloc_unified_aligned</span>&lt;<span class="ident">T</span>: <span class="ident">rustacuda_core::DeviceCopy</span>&gt;(
     <span class="ident">size</span>: <span class="ident">usize</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>, <span class="ident">AllocError</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="ident">NonNull</span>&lt;[<span class="ident">u8</span>]&gt;, <span class="ident">AllocError</span>&gt; {
     <span class="kw">use</span> <span class="ident">rustacuda::memory::cuda_malloc_unified</span>;
 
-    <span class="kw">match</span> <span class="kw">unsafe</span> { <span class="ident">cuda_malloc_unified</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">size</span>) } {
+    <span class="kw">match</span> <span class="kw">unsafe</span> { <span class="ident">cuda_malloc_unified</span>::&lt;<span class="ident">T</span>&gt;(<span class="ident">size</span>) } {
         <span class="prelude-val">Ok</span>(<span class="kw-2">mut</span> <span class="ident">ptr</span>) =&gt; {
-            <span class="kw">let</span> <span class="ident">bytes</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="kw">unsafe</span> {
+            <span class="kw">let</span> <span class="ident">bytes</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">u8</span>] = <span class="kw">unsafe</span> {
                 <span class="ident">core::slice::from_raw_parts_mut</span>(
                     <span class="ident">ptr</span>.<span class="ident">as_raw_mut</span>().<span class="ident">cast</span>(),
-                    <span class="ident">size</span> <span class="op">*</span> <span class="ident">core::mem::align_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(),
+                    <span class="ident">size</span> * <span class="ident">core::mem::align_of</span>::&lt;<span class="ident">T</span>&gt;(),
                 )
             };
 
@@ -127,4 +127,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>

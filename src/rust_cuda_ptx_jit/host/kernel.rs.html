@@ -63,11 +63,11 @@
 
 <span class="kw">use</span> <span class="ident">rustacuda</span>::{<span class="ident">error::CudaResult</span>, <span class="ident">function::Function</span>, <span class="ident">module::Module</span>};
 
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;host&quot;</span>))]</span>
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CudaKernel</span> {
-    <span class="ident">module</span>: <span class="ident">ManuallyDrop</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Module</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">function</span>: <span class="ident">ManuallyDrop</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">module</span>: <span class="ident">ManuallyDrop</span>&lt;<span class="ident">Box</span>&lt;<span class="ident">Module</span>&gt;&gt;,
+    <span class="ident">function</span>: <span class="ident">ManuallyDrop</span>&lt;<span class="ident">Function</span>&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
 }
 
 <span class="kw">impl</span> <span class="ident">CudaKernel</span> {
@@ -75,18 +75,18 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns a `CudaError` if `ptx` is not a valid PTX source, or it does</span>
     <span class="doccomment">///  not contain an entry point named `entry_point`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ptx</span>: <span class="kw-2">&amp;</span><span class="ident">CStr</span>, <span class="ident">entry_point</span>: <span class="kw-2">&amp;</span><span class="ident">CStr</span>) -&gt; <span class="ident">CudaResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">Box::leak</span>(<span class="ident">Box::new</span>(<span class="ident">Module::load_from_string</span>(<span class="ident">ptx</span>)<span class="question-mark">?</span>)) <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">Module</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ptx</span>: <span class="kw-2">&amp;</span><span class="ident">CStr</span>, <span class="ident">entry_point</span>: <span class="kw-2">&amp;</span><span class="ident">CStr</span>) -&gt; <span class="ident">CudaResult</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let</span> <span class="ident">module</span> = <span class="ident">Box::leak</span>(<span class="ident">Box::new</span>(<span class="ident">Module::load_from_string</span>(<span class="ident">ptx</span>)<span class="question-mark">?</span>)) <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="ident">Module</span>;
 
-        <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">get_function</span>(<span class="ident">entry_point</span>);
+        <span class="kw">let</span> <span class="ident">function</span> = <span class="ident">module</span>.<span class="ident">get_function</span>(<span class="ident">entry_point</span>);
 
-        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">module</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="ident">Module</span> <span class="kw">as</span> <span class="kw-2">*mut</span> <span class="ident">Module</span>;
-        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">Box::from_raw</span>(<span class="ident">module</span>) };
+        <span class="kw">let</span> <span class="ident">module</span> = <span class="ident">module</span> <span class="kw">as</span> <span class="kw-2">*const</span> <span class="ident">Module</span> <span class="kw">as</span> <span class="kw-2">*mut</span> <span class="ident">Module</span>;
+        <span class="kw">let</span> <span class="ident">module</span> = <span class="kw">unsafe</span> { <span class="ident">Box::from_raw</span>(<span class="ident">module</span>) };
 
-        <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">function</span> {
+        <span class="kw">let</span> <span class="ident">function</span> = <span class="kw">match</span> <span class="ident">function</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">function</span>) =&gt; <span class="ident">function</span>,
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>((<span class="ident">_err</span>, <span class="ident">module</span>)) <span class="op">=</span> <span class="ident">Module::drop</span>(<span class="kw-2">*</span><span class="ident">module</span>) {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>((<span class="ident">_err</span>, <span class="ident">module</span>)) = <span class="ident">Module::drop</span>(<span class="kw-2">*</span><span class="ident">module</span>) {
                     <span class="ident">std::mem::forget</span>(<span class="ident">module</span>);
                 }
 
@@ -111,14 +111,14 @@
         {
             <span class="comment">// Ensure that self.function is dropped before self.module as</span>
             <span class="comment">//  it borrows data from the module and must not outlive it</span>
-            <span class="kw">let</span> <span class="ident">_function</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">function</span>) };
+            <span class="kw">let</span> <span class="ident">_function</span> = <span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">function</span>) };
         }
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>((<span class="ident">_err</span>, <span class="ident">module</span>)) <span class="op">=</span> <span class="ident">Module::drop</span>(<span class="kw-2">*</span><span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">module</span>) })
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>((<span class="ident">_err</span>, <span class="ident">module</span>)) = <span class="ident">Module::drop</span>(<span class="kw-2">*</span><span class="kw">unsafe</span> { <span class="ident">ManuallyDrop::take</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">module</span>) })
         {
             <span class="ident">std::mem::forget</span>(<span class="ident">module</span>);
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (34a6cae28 2022-08-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_ptx_jit" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>
