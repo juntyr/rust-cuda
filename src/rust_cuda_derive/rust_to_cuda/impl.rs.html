@@ -146,6 +146,9 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
 <span class="kw">use</span> <span class="ident">quote::quote</span>;
 
@@ -172,6 +175,7 @@
         <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
         <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
         #(#<span class="ident">struct_attrs_cuda</span>)*
+        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_repetition_in_bounds</span>)]</span>
         #<span class="ident">struct_repr</span>
         <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">rust_cuda::const_type_layout::TypeLayout</span>)]</span>
         #<span class="ident">struct_vis_cuda</span> <span class="kw">struct</span> #<span class="ident">struct_name_cuda</span> #<span class="ident">struct_generics_cuda</span> #<span class="ident">where_clause</span>
@@ -211,6 +215,7 @@
     <span class="kw">let</span> (<span class="ident">impl_generics</span>, <span class="ident">ty_generics</span>, <span class="ident">where_clause</span>) = <span class="ident">struct_generics_cuda</span>.<span class="ident">split_for_impl</span>();
 
     <span class="macro">quote!</span> {
+        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_repetition_in_bounds</span>)]</span>
         <span class="kw">unsafe</span> <span class="kw">impl</span> #<span class="ident">impl_generics</span> <span class="ident">rust_cuda::common::RustToCuda</span> <span class="kw">for</span> #<span class="ident">struct_name</span> #<span class="ident">ty_generics</span>
             #<span class="ident">where_clause</span>
         {
@@ -280,6 +285,7 @@
     <span class="kw">let</span> (<span class="ident">impl_generics</span>, <span class="ident">ty_generics</span>, <span class="ident">where_clause</span>) = <span class="kw-2">&amp;</span><span class="ident">struct_generics_cuda</span>.<span class="ident">split_for_impl</span>();
 
     <span class="macro">quote!</span> {
+        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_repetition_in_bounds</span>)]</span>
         <span class="kw">unsafe</span> <span class="kw">impl</span> #<span class="ident">impl_generics</span> <span class="ident">rust_cuda::common::CudaAsRust</span>
             <span class="kw">for</span> #<span class="ident">struct_name_cuda</span> #<span class="ident">ty_generics</span> #<span class="ident">where_clause</span>
         {
