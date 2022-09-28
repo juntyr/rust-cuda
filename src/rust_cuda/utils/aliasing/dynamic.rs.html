@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils/aliasing/dynamic.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>dynamic.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../rust_cuda/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../rust_cuda/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../rust_cuda/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils/aliasing/dynamic.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>dynamic.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../rust_cuda/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../rust_cuda/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../rust_cuda/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -178,185 +178,185 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core</span>::{
-    <span class="ident">borrow</span>::{<span class="ident">Borrow</span>, <span class="ident">BorrowMut</span>},
-    <span class="ident">convert</span>::{<span class="ident">AsMut</span>, <span class="ident">AsRef</span>},
-    <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
+</pre><pre class="rust"><code><span class="kw">use </span>core::{
+    borrow::{Borrow, BorrowMut},
+    convert::{AsMut, AsRef},
+    ops::{Deref, DerefMut},
 };
 
-<span class="kw">use</span> <span class="ident">rustacuda_core::DeviceCopy</span>;
+<span class="kw">use </span>rustacuda_core::DeviceCopy;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::common</span>::{<span class="ident">CudaAsRust</span>, <span class="ident">DeviceAccessible</span>, <span class="ident">RustToCuda</span>};
+<span class="kw">use </span><span class="kw">crate</span>::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">C</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">TypeLayout</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="ident">stride</span>: <span class="ident">usize</span>,
-    <span class="ident">inner</span>: <span class="ident">T</span>,
+<span class="attribute">#[repr(C)]
+#[derive(Clone, TypeLayout)]
+</span><span class="kw">pub struct </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    stride: usize,
+    inner: T,
 }
 
-<span class="kw">impl</span>&lt;<span class="ident">T</span>&gt; <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">T</span>, <span class="ident">stride</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">stride</span>, <span class="ident">inner</span> }
+<span class="kw">impl</span>&lt;T&gt; SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="attribute">#[must_use]
+    </span><span class="kw">pub fn </span>new(inner: T, stride: usize) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ stride, inner }
     }
 }
 
-<span class="comment">// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`</span>
-<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">DeviceCopy</span>&gt; <span class="ident">DeviceCopy</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {}
+<span class="comment">// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`
+</span><span class="kw">unsafe impl</span>&lt;T: DeviceCopy&gt; DeviceCopy <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {}
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">split_slice_dynamic_stride</span>&lt;<span class="ident">E</span>&gt;(<span class="ident">slice</span>: <span class="kw-2">&amp;</span>[<span class="ident">E</span>], <span class="ident">stride</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-    <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> = <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() * <span class="ident">stride</span>;
-    <span class="kw">let</span> <span class="ident">len</span> = <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> + <span class="ident">stride</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">fn </span>split_slice_dynamic_stride&lt;E&gt;(slice: <span class="kw-2">&amp;</span>[E], stride: usize) -&gt; <span class="kw-2">&amp;</span>[E] {
+    <span class="kw">let </span>offset: usize = <span class="kw">crate</span>::device::utils::index() * stride;
+    <span class="kw">let </span>len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    <span class="kw">unsafe</span> { <span class="ident">core::slice::from_raw_parts</span>(<span class="ident">slice</span>.<span class="ident">as_ptr</span>().<span class="ident">add</span>(<span class="ident">offset</span>), <span class="ident">len</span>) }
+    <span class="kw">unsafe </span>{ core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">split_slice_dynamic_stride_mut</span>&lt;<span class="ident">E</span>&gt;(<span class="ident">slice</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>], <span class="ident">stride</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-    <span class="kw">let</span> <span class="ident">offset</span>: <span class="ident">usize</span> = <span class="ident"><span class="kw">crate</span>::device::utils::index</span>() * <span class="ident">stride</span>;
-    <span class="kw">let</span> <span class="ident">len</span> = <span class="ident">slice</span>.<span class="ident">len</span>().<span class="ident">min</span>(<span class="ident">offset</span> + <span class="ident">stride</span>).<span class="ident">saturating_sub</span>(<span class="ident">offset</span>);
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">fn </span>split_slice_dynamic_stride_mut&lt;E&gt;(slice: <span class="kw-2">&amp;mut </span>[E], stride: usize) -&gt; <span class="kw-2">&amp;mut </span>[E] {
+    <span class="kw">let </span>offset: usize = <span class="kw">crate</span>::device::utils::index() * stride;
+    <span class="kw">let </span>len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    <span class="kw">unsafe</span> { <span class="ident">core::slice::from_raw_parts_mut</span>(<span class="ident">slice</span>.<span class="ident">as_mut_ptr</span>().<span class="ident">add</span>(<span class="ident">offset</span>), <span class="ident">len</span>) }
+    <span class="kw">unsafe </span>{ core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Deref</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;&gt; <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">type</span> <span class="ident">Target</span> = [<span class="ident">E</span>];
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">impl</span>&lt;E, T: Deref&lt;Target = [E]&gt;&gt; Deref <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">type </span>Target = [E];
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="ident">split_slice_dynamic_stride</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>, <span class="self">self</span>.<span class="ident">stride</span>)
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        split_slice_dynamic_stride(<span class="kw-2">&amp;</span><span class="self">self</span>.inner, <span class="self">self</span>.stride)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">DerefMut</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;&gt; <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="ident">split_slice_dynamic_stride_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">inner</span>, <span class="self">self</span>.<span class="ident">stride</span>)
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">impl</span>&lt;E, T: DerefMut&lt;Target = [E]&gt;&gt; DerefMut <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
+        split_slice_dynamic_stride_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, <span class="self">self</span>.stride)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-        <span class="ident">split_slice_dynamic_stride</span>(<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>(), <span class="self">self</span>.<span class="ident">stride</span>)
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">impl</span>&lt;E, T: AsRef&lt;[E]&gt;&gt; AsRef&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[E] {
+        split_slice_dynamic_stride(<span class="self">self</span>.inner.as_ref(), <span class="self">self</span>.stride)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">as_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-        <span class="ident">split_slice_dynamic_stride_mut</span>(<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_mut</span>(), <span class="self">self</span>.<span class="ident">stride</span>)
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">impl</span>&lt;E, T: AsMut&lt;[E]&gt;&gt; AsMut&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[E] {
+        split_slice_dynamic_stride_mut(<span class="self">self</span>.inner.as_mut(), <span class="self">self</span>.stride)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">borrow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-        <span class="ident">split_slice_dynamic_stride</span>(<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">borrow</span>(), <span class="self">self</span>.<span class="ident">stride</span>)
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">impl</span>&lt;E, T: Borrow&lt;[E]&gt;&gt; Borrow&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[E] {
+        split_slice_dynamic_stride(<span class="self">self</span>.inner.borrow(), <span class="self">self</span>.stride)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">borrow_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-        <span class="ident">split_slice_dynamic_stride_mut</span>(<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">borrow_mut</span>(), <span class="self">self</span>.<span class="ident">stride</span>)
+<span class="attribute">#[cfg(all(not(feature = <span class="string">&quot;host&quot;</span>), target_os = <span class="string">&quot;cuda&quot;</span>))]
+</span><span class="kw">impl</span>&lt;E, T: BorrowMut&lt;[E]&gt;&gt; BorrowMut&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>borrow_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[E] {
+        split_slice_dynamic_stride_mut(<span class="self">self</span>.inner.borrow_mut(), <span class="self">self</span>.stride)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Deref</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;&gt; <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">type</span> <span class="ident">Target</span> = [<span class="ident">E</span>];
+<span class="attribute">#[cfg(any(feature = <span class="string">&quot;host&quot;</span>, not(target_os = <span class="string">&quot;cuda&quot;</span>)))]
+</span><span class="kw">impl</span>&lt;E, T: Deref&lt;Target = [E]&gt;&gt; Deref <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">type </span>Target = [E];
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">DerefMut</span>&lt;<span class="ident">Target</span> = [<span class="ident">E</span>]&gt;&gt; <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">inner</span>
+<span class="attribute">#[cfg(any(feature = <span class="string">&quot;host&quot;</span>, not(target_os = <span class="string">&quot;cuda&quot;</span>)))]
+</span><span class="kw">impl</span>&lt;E, T: DerefMut&lt;Target = [E]&gt;&gt; DerefMut <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">AsRef</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>()
+<span class="attribute">#[cfg(any(feature = <span class="string">&quot;host&quot;</span>, not(target_os = <span class="string">&quot;cuda&quot;</span>)))]
+</span><span class="kw">impl</span>&lt;E, T: AsRef&lt;[E]&gt;&gt; AsRef&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[E] {
+        <span class="self">self</span>.inner.as_ref()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">AsMut</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">as_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_mut</span>()
+<span class="attribute">#[cfg(any(feature = <span class="string">&quot;host&quot;</span>, not(target_os = <span class="string">&quot;cuda&quot;</span>)))]
+</span><span class="kw">impl</span>&lt;E, T: AsMut&lt;[E]&gt;&gt; AsMut&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[E] {
+        <span class="self">self</span>.inner.as_mut()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">Borrow</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">borrow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">E</span>] {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">borrow</span>()
+<span class="attribute">#[cfg(any(feature = <span class="string">&quot;host&quot;</span>, not(target_os = <span class="string">&quot;cuda&quot;</span>)))]
+</span><span class="kw">impl</span>&lt;E, T: Borrow&lt;[E]&gt;&gt; Borrow&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[E] {
+        <span class="self">self</span>.inner.borrow()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>, <span class="ident">not</span>(<span class="ident">target_os</span> = <span class="string">&quot;cuda&quot;</span>)))]</span>
-<span class="kw">impl</span>&lt;<span class="ident">E</span>, <span class="ident">T</span>: <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt;&gt; <span class="ident">BorrowMut</span>&lt;[<span class="ident">E</span>]&gt; <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="kw">fn</span> <span class="ident">borrow_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">E</span>] {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">borrow_mut</span>()
+<span class="attribute">#[cfg(any(feature = <span class="string">&quot;host&quot;</span>, not(target_os = <span class="string">&quot;cuda&quot;</span>)))]
+</span><span class="kw">impl</span>&lt;E, T: BorrowMut&lt;[E]&gt;&gt; BorrowMut&lt;[E]&gt; <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="kw">fn </span>borrow_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[E] {
+        <span class="self">self</span>.inner.borrow_mut()
     }
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">RustToCuda</span>&gt; <span class="ident">RustToCuda</span> <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T</span>&gt; {
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">type</span> <span class="ident">CudaAllocation</span> = <span class="ident">T::CudaAllocation</span>;
-    <span class="kw">type</span> <span class="ident">CudaRepresentation</span> =
-        <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">DeviceAccessible</span>&lt;<span class="ident">T::CudaRepresentation</span>&gt;&gt;;
+<span class="kw">unsafe impl</span>&lt;T: RustToCuda&gt; RustToCuda <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;T&gt; {
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+    #[doc(cfg(feature = <span class="string">&quot;host&quot;</span>))]
+    </span><span class="kw">type </span>CudaAllocation = T::CudaAllocation;
+    <span class="kw">type </span>CudaRepresentation =
+        SplitSliceOverCudaThreadsDynamicStride&lt;DeviceAccessible&lt;T::CudaRepresentation&gt;&gt;;
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">borrow</span>&lt;<span class="ident">A</span>: <span class="ident"><span class="kw">crate</span>::host::CudaAlloc</span>&gt;(
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+    #[doc(cfg(feature = <span class="string">&quot;host&quot;</span>))]
+    #[allow(clippy::type_complexity)]
+    </span><span class="kw">unsafe fn </span>borrow&lt;A: <span class="kw">crate</span>::host::CudaAlloc&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">alloc</span>: <span class="ident">A</span>,
-    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span>&lt;(
-        <span class="ident">DeviceAccessible</span>&lt;<span class="ident"><span class="self">Self</span>::CudaRepresentation</span>&gt;,
-        <span class="ident"><span class="kw">crate</span>::host::CombinedCudaAlloc</span>&lt;<span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span>&gt;,
+        alloc: A,
+    ) -&gt; rustacuda::error::CudaResult&lt;(
+        DeviceAccessible&lt;<span class="self">Self</span>::CudaRepresentation&gt;,
+        <span class="kw">crate</span>::host::CombinedCudaAlloc&lt;<span class="self">Self</span>::CudaAllocation, A&gt;,
     )&gt; {
-        <span class="kw">let</span> (<span class="ident">cuda_repr</span>, <span class="ident">alloc</span>) = <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">borrow</span>(<span class="ident">alloc</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(cuda_repr, alloc) = <span class="self">self</span>.inner.borrow(alloc)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((
-            <span class="ident">DeviceAccessible::from</span>(<span class="ident">SplitSliceOverCudaThreadsDynamicStride::new</span>(
-                <span class="ident">cuda_repr</span>,
-                <span class="self">self</span>.<span class="ident">stride</span>,
+            DeviceAccessible::from(SplitSliceOverCudaThreadsDynamicStride::new(
+                cuda_repr,
+                <span class="self">self</span>.stride,
             )),
-            <span class="ident">alloc</span>,
+            alloc,
         ))
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">restore</span>&lt;<span class="ident">A</span>: <span class="ident"><span class="kw">crate</span>::host::CudaAlloc</span>&gt;(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">alloc</span>: <span class="ident"><span class="kw">crate</span>::host::CombinedCudaAlloc</span>&lt;<span class="ident"><span class="self">Self</span>::CudaAllocation</span>, <span class="ident">A</span>&gt;,
-    ) -&gt; <span class="ident">rustacuda::error::CudaResult</span>&lt;<span class="ident">A</span>&gt; {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">restore</span>(<span class="ident">alloc</span>)
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+    #[doc(cfg(feature = <span class="string">&quot;host&quot;</span>))]
+    </span><span class="kw">unsafe fn </span>restore&lt;A: <span class="kw">crate</span>::host::CudaAlloc&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        alloc: <span class="kw">crate</span>::host::CombinedCudaAlloc&lt;<span class="self">Self</span>::CudaAllocation, A&gt;,
+    ) -&gt; rustacuda::error::CudaResult&lt;A&gt; {
+        <span class="self">self</span>.inner.restore(alloc)
     }
 }
 
-<span class="kw">unsafe</span> <span class="kw">impl</span>&lt;<span class="ident">T</span>: <span class="ident">CudaAsRust</span>&gt; <span class="ident">CudaAsRust</span>
-    <span class="kw">for</span> <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">DeviceAccessible</span>&lt;<span class="ident">T</span>&gt;&gt;
+<span class="kw">unsafe impl</span>&lt;T: CudaAsRust&gt; CudaAsRust
+    <span class="kw">for </span>SplitSliceOverCudaThreadsDynamicStride&lt;DeviceAccessible&lt;T&gt;&gt;
 {
-    <span class="kw">type</span> <span class="ident">RustRepresentation</span> = <span class="ident">SplitSliceOverCudaThreadsDynamicStride</span>&lt;<span class="ident">T::RustRepresentation</span>&gt;;
+    <span class="kw">type </span>RustRepresentation = SplitSliceOverCudaThreadsDynamicStride&lt;T::RustRepresentation&gt;;
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>), <span class="ident">doc</span>))]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> = <span class="string">&quot;host&quot;</span>)))]</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_rust</span>(<span class="ident">this</span>: <span class="kw-2">&amp;</span><span class="ident">DeviceAccessible</span>&lt;<span class="self">Self</span>&gt;) -&gt; <span class="ident"><span class="self">Self</span>::RustRepresentation</span> {
-        <span class="ident">SplitSliceOverCudaThreadsDynamicStride::new</span>(<span class="ident">CudaAsRust::as_rust</span>(<span class="kw-2">&amp;</span><span class="ident">this</span>.<span class="ident">inner</span>), <span class="ident">this</span>.<span class="ident">stride</span>)
+    <span class="attribute">#[cfg(any(not(feature = <span class="string">&quot;host&quot;</span>), doc))]
+    #[doc(cfg(not(feature = <span class="string">&quot;host&quot;</span>)))]
+    </span><span class="kw">unsafe fn </span>as_rust(this: <span class="kw-2">&amp;</span>DeviceAccessible&lt;<span class="self">Self</span>&gt;) -&gt; <span class="self">Self</span>::RustRepresentation {
+        SplitSliceOverCudaThreadsDynamicStride::new(CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.inner), this.stride)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>

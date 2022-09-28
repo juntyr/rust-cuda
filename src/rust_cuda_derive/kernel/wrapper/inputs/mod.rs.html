@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/kernel/wrapper/inputs/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../storage.js"></script><script defer src="../../../../../source-script.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/kernel/wrapper/inputs/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../../normalize.css"><link rel="stylesheet" href="../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../../dark.css" disabled><link rel="stylesheet" href="../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../storage.js"></script><script defer src="../../../../../source-script.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -226,190 +226,190 @@
 <span id="226">226</span>
 <span id="227">227</span>
 <span id="228">228</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">syn::spanned::Spanned</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>syn::spanned::Spanned;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::kernel::utils::r2c_move_lifetime</span>;
+<span class="kw">use </span><span class="kw">crate</span>::kernel::utils::r2c_move_lifetime;
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">InputCudaType</span>, <span class="ident">InputPtxJit</span>};
+<span class="kw">use super</span>::{InputCudaType, InputPtxJit};
 
-<span class="kw">mod</span> <span class="ident">attribute</span>;
-<span class="kw">use</span> <span class="ident">attribute</span>::{<span class="ident">KernelInputAttribute</span>, <span class="ident">KernelInputAttributes</span>};
+<span class="kw">mod </span>attribute;
+<span class="kw">use </span>attribute::{KernelInputAttribute, KernelInputAttributes};
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">FunctionInputs</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">func_inputs</span>: <span class="ident">syn::punctuated::Punctuated</span>&lt;<span class="ident">syn::FnArg</span>, <span class="ident">syn::token::Comma</span>&gt;,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">func_input_cuda_types</span>: <span class="ident">Vec</span>&lt;(<span class="ident">InputCudaType</span>, <span class="ident">InputPtxJit</span>)&gt;,
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FunctionInputs {
+    <span class="kw">pub</span>(<span class="kw">super</span>) func_inputs: syn::punctuated::Punctuated&lt;syn::FnArg, syn::token::Comma&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) func_input_cuda_types: Vec&lt;(InputCudaType, InputPtxJit)&gt;,
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">parse_function_inputs</span>(
-    <span class="ident">func</span>: <span class="kw-2">&amp;</span><span class="ident">syn::ItemFn</span>,
-    <span class="ident">generic_params</span>: <span class="kw-2">&amp;mut</span> <span class="ident">syn::punctuated::Punctuated</span>&lt;<span class="ident">syn::GenericParam</span>, <span class="ident">syn::token::Comma</span>&gt;,
-) -&gt; <span class="ident">FunctionInputs</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">implicit_lifetime_id</span>: <span class="ident">usize</span> = <span class="number">0</span>;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>parse_function_inputs(
+    func: <span class="kw-2">&amp;</span>syn::ItemFn,
+    generic_params: <span class="kw-2">&amp;mut </span>syn::punctuated::Punctuated&lt;syn::GenericParam, syn::token::Comma&gt;,
+) -&gt; FunctionInputs {
+    <span class="kw">let </span><span class="kw-2">mut </span>implicit_lifetime_id: usize = <span class="number">0</span>;
 
-    <span class="kw">let</span> (<span class="ident">func_inputs</span>, <span class="ident">func_input_cuda_types</span>): (
-        <span class="ident">syn::punctuated::Punctuated</span>&lt;<span class="ident">syn::FnArg</span>, <span class="ident">syn::token::Comma</span>&gt;,
-        <span class="ident">Vec</span>&lt;(<span class="ident">InputCudaType</span>, <span class="ident">InputPtxJit</span>)&gt;,
-    ) = <span class="ident">func</span>
-        .<span class="ident">sig</span>
-        .<span class="ident">inputs</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">enumerate</span>()
-        .<span class="ident">map</span>(|(<span class="ident">i</span>, <span class="ident">arg</span>)| <span class="kw">match</span> <span class="ident">arg</span> {
-            <span class="ident">receiver</span> @ <span class="ident">syn::FnArg::Receiver</span>(<span class="kw">_</span>) =&gt; {
-                <span class="macro">abort!</span>(<span class="ident">receiver</span>.<span class="ident">span</span>(), <span class="string">&quot;Kernel function must not have a receiver.&quot;</span>)
+    <span class="kw">let </span>(func_inputs, func_input_cuda_types): (
+        syn::punctuated::Punctuated&lt;syn::FnArg, syn::token::Comma&gt;,
+        Vec&lt;(InputCudaType, InputPtxJit)&gt;,
+    ) = func
+        .sig
+        .inputs
+        .iter()
+        .enumerate()
+        .map(|(i, arg)| <span class="kw">match </span>arg {
+            receiver @ syn::FnArg::Receiver(<span class="kw">_</span>) =&gt; {
+                <span class="macro">abort!</span>(receiver.span(), <span class="string">&quot;Kernel function must not have a receiver.&quot;</span>)
             },
-            <span class="ident">syn::FnArg::Typed</span>(
-                <span class="ident">input</span> @ <span class="ident">syn::PatType</span> {
-                    <span class="ident">attrs</span>,
-                    <span class="ident">pat</span>,
-                    <span class="ident">colon_token</span>,
-                    <span class="ident">ty</span>,
+            syn::FnArg::Typed(
+                input @ syn::PatType {
+                    attrs,
+                    pat,
+                    colon_token,
+                    ty,
                 },
             ) =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cuda_type</span>: <span class="prelude-ty">Option</span>&lt;<span class="ident">InputCudaType</span>&gt; = <span class="prelude-val">None</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ptx_jit</span>: <span class="prelude-ty">Option</span>&lt;<span class="ident">InputPtxJit</span>&gt; = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>cuda_type: <span class="prelude-ty">Option</span>&lt;InputCudaType&gt; = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>ptx_jit: <span class="prelude-ty">Option</span>&lt;InputPtxJit&gt; = <span class="prelude-val">None</span>;
 
-                <span class="kw">let</span> <span class="ident">attrs</span> = <span class="ident">attrs</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">filter</span>(|<span class="ident">attr</span>| <span class="kw">match</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">get_ident</span>() {
-                        <span class="prelude-val">Some</span>(<span class="ident">ident</span>) <span class="kw">if</span> <span class="ident">ident</span> == <span class="string">&quot;kernel&quot;</span> =&gt; {
-                            <span class="kw">let</span> <span class="ident">attrs</span>: <span class="ident">KernelInputAttributes</span> =
-                                <span class="kw">match</span> <span class="ident">syn::parse_macro_input::parse</span>(<span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">clone</span>().<span class="ident">into</span>()) {
-                                    <span class="prelude-val">Ok</span>(<span class="ident">data</span>) =&gt; <span class="ident">data</span>,
-                                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">abort!</span>(<span class="ident">attr</span>.<span class="ident">span</span>(), <span class="ident">err</span>),
+                <span class="kw">let </span>attrs = attrs
+                    .iter()
+                    .filter(|attr| <span class="kw">match </span>attr.path.get_ident() {
+                        <span class="prelude-val">Some</span>(ident) <span class="kw">if </span>ident == <span class="string">&quot;kernel&quot; </span>=&gt; {
+                            <span class="kw">let </span>attrs: KernelInputAttributes =
+                                <span class="kw">match </span>syn::parse_macro_input::parse(attr.tokens.clone().into()) {
+                                    <span class="prelude-val">Ok</span>(data) =&gt; data,
+                                    <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">abort!</span>(attr.span(), err),
                                 };
 
-                            <span class="kw">for</span> <span class="ident">attr</span> <span class="kw">in</span> <span class="ident">attrs</span> {
-                                <span class="kw">match</span> <span class="ident">attr</span> {
-                                    <span class="ident">KernelInputAttribute::PassType</span>(<span class="ident">_span</span>, <span class="ident">pass_type</span>)
-                                        <span class="kw">if</span> <span class="ident">cuda_type</span>.<span class="ident">is_none</span>() =&gt;
+                            <span class="kw">for </span>attr <span class="kw">in </span>attrs {
+                                <span class="kw">match </span>attr {
+                                    KernelInputAttribute::PassType(_span, pass_type)
+                                        <span class="kw">if </span>cuda_type.is_none() =&gt;
                                     {
-                                        <span class="ident">cuda_type</span> = <span class="prelude-val">Some</span>(<span class="ident">pass_type</span>);
+                                        cuda_type = <span class="prelude-val">Some</span>(pass_type);
                                     },
-                                    <span class="ident">KernelInputAttribute::PassType</span>(<span class="ident">span</span>, <span class="ident">_pass_type</span>) =&gt; {
-                                        <span class="macro">abort!</span>(<span class="ident">span</span>, <span class="string">&quot;Duplicate CUDA transfer mode declaration.&quot;</span>);
+                                    KernelInputAttribute::PassType(span, _pass_type) =&gt; {
+                                        <span class="macro">abort!</span>(span, <span class="string">&quot;Duplicate CUDA transfer mode declaration.&quot;</span>);
                                     },
-                                    <span class="ident">KernelInputAttribute::PtxJit</span>(<span class="ident">span</span>, <span class="ident">jit</span>)
-                                        <span class="kw">if</span> <span class="ident">ptx_jit</span>.<span class="ident">is_none</span>() =&gt;
+                                    KernelInputAttribute::PtxJit(span, jit)
+                                        <span class="kw">if </span>ptx_jit.is_none() =&gt;
                                     {
-                                        <span class="kw">if</span> !<span class="macro">matches!</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">ty</span>, <span class="ident">syn::Type::Reference</span>(<span class="kw">_</span>)) &amp;&amp; <span class="ident">jit</span> {
+                                        <span class="kw">if </span>!<span class="macro">matches!</span>(<span class="kw-2">&amp;**</span>ty, syn::Type::Reference(<span class="kw">_</span>)) &amp;&amp; jit {
                                             <span class="macro">abort!</span>(
-                                                <span class="ident">span</span>,
-                                                <span class="string">&quot;Only reference types can be PTX JIT loaded.&quot;</span>
-                                            );
+                                                span,
+                                                <span class="string">&quot;Only reference types can be PTX JIT loaded.&quot;
+                                            </span>);
                                         }
 
-                                        <span class="ident">ptx_jit</span> = <span class="prelude-val">Some</span>(<span class="ident">InputPtxJit</span>(<span class="ident">jit</span>));
+                                        ptx_jit = <span class="prelude-val">Some</span>(InputPtxJit(jit));
                                     },
-                                    <span class="ident">KernelInputAttribute::PtxJit</span>(<span class="ident">span</span>, <span class="ident">_jit</span>) =&gt; {
-                                        <span class="macro">abort!</span>(<span class="ident">span</span>, <span class="string">&quot;Duplicate PTX JIT declaration.&quot;</span>);
+                                    KernelInputAttribute::PtxJit(span, _jit) =&gt; {
+                                        <span class="macro">abort!</span>(span, <span class="string">&quot;Duplicate PTX JIT declaration.&quot;</span>);
                                     },
                                 }
                             }
 
-                            <span class="bool-val">false</span>
-                        },
-                        <span class="kw">_</span> =&gt; <span class="bool-val">true</span>,
+                            <span class="bool-val">false
+                        </span>},
+                        <span class="kw">_ </span>=&gt; <span class="bool-val">true</span>,
                     })
-                    .<span class="ident">cloned</span>()
-                    .<span class="ident">collect</span>();
+                    .cloned()
+                    .collect();
 
-                <span class="kw">let</span> <span class="ident">cuda_type</span> = <span class="ident">cuda_type</span>.<span class="ident">unwrap_or_else</span>(|| {
+                <span class="kw">let </span>cuda_type = cuda_type.unwrap_or_else(|| {
                     <span class="macro">abort!</span>(
-                        <span class="ident">input</span>.<span class="ident">span</span>(),
+                        input.span(),
                         <span class="string">&quot;Kernel function input must specify its CUDA transfer mode using \
-                         #[kernel(pass = ...)].&quot;</span>
-                    );
+                         #[kernel(pass = ...)].&quot;
+                    </span>);
                 });
 
-                <span class="kw">let</span> <span class="ident">ty</span> = <span class="ident">ensure_reference_type_lifetime</span>(
-                    <span class="ident">i</span>,
-                    <span class="ident">ty</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">cuda_type</span>,
-                    <span class="kw-2">&amp;mut</span> <span class="ident">implicit_lifetime_id</span>,
-                    <span class="ident">generic_params</span>,
+                <span class="kw">let </span>ty = ensure_reference_type_lifetime(
+                    i,
+                    ty,
+                    <span class="kw-2">&amp;</span>cuda_type,
+                    <span class="kw-2">&amp;mut </span>implicit_lifetime_id,
+                    generic_params,
                 );
 
                 (
-                    <span class="ident">syn::FnArg::Typed</span>(<span class="ident">syn::PatType</span> {
-                        <span class="ident">attrs</span>,
-                        <span class="ident">pat</span>: <span class="ident">pat</span>.<span class="ident">clone</span>(),
-                        <span class="ident">colon_token</span>: <span class="kw-2">*</span><span class="ident">colon_token</span>,
-                        <span class="ident">ty</span>,
+                    syn::FnArg::Typed(syn::PatType {
+                        attrs,
+                        pat: pat.clone(),
+                        colon_token: <span class="kw-2">*</span>colon_token,
+                        ty,
                     }),
-                    (<span class="ident">cuda_type</span>, <span class="ident">ptx_jit</span>.<span class="ident">unwrap_or</span>(<span class="ident">InputPtxJit</span>(<span class="bool-val">false</span>))),
+                    (cuda_type, ptx_jit.unwrap_or(InputPtxJit(<span class="bool-val">false</span>))),
                 )
             },
         })
-        .<span class="ident">unzip</span>();
+        .unzip();
 
-    <span class="ident">FunctionInputs</span> {
-        <span class="ident">func_inputs</span>,
-        <span class="ident">func_input_cuda_types</span>,
+    FunctionInputs {
+        func_inputs,
+        func_input_cuda_types,
     }
 }
 
-<span class="kw">fn</span> <span class="ident">ensure_reference_type_lifetime</span>(
-    <span class="ident">i</span>: <span class="ident">usize</span>,
-    <span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">syn::Type</span>,
-    <span class="ident">cuda_type</span>: <span class="kw-2">&amp;</span><span class="ident">InputCudaType</span>,
-    <span class="ident">implicit_lifetime_id</span>: <span class="kw-2">&amp;mut</span> <span class="ident">usize</span>,
-    <span class="ident">generic_params</span>: <span class="kw-2">&amp;mut</span> <span class="ident">syn::punctuated::Punctuated</span>&lt;<span class="ident">syn::GenericParam</span>, <span class="ident">syn::token::Comma</span>&gt;,
-) -&gt; <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt; {
-    <span class="kw">match</span> <span class="ident">ty</span> {
-        <span class="ident">syn::Type::Reference</span>(<span class="ident">syn::TypeReference</span> {
-            <span class="ident">and_token</span>,
-            <span class="ident">lifetime</span>,
-            <span class="ident">mutability</span>,
-            <span class="ident">elem</span>,
+<span class="kw">fn </span>ensure_reference_type_lifetime(
+    i: usize,
+    ty: <span class="kw-2">&amp;</span>syn::Type,
+    cuda_type: <span class="kw-2">&amp;</span>InputCudaType,
+    implicit_lifetime_id: <span class="kw-2">&amp;mut </span>usize,
+    generic_params: <span class="kw-2">&amp;mut </span>syn::punctuated::Punctuated&lt;syn::GenericParam, syn::token::Comma&gt;,
+) -&gt; Box&lt;syn::Type&gt; {
+    <span class="kw">match </span>ty {
+        syn::Type::Reference(syn::TypeReference {
+            and_token,
+            lifetime,
+            mutability,
+            elem,
         }) =&gt; {
-            <span class="kw">let</span> <span class="ident">lifetime</span> = <span class="ident">lifetime</span>.<span class="ident">clone</span>().<span class="ident">unwrap_or_else</span>(|| {
-                <span class="kw">let</span> <span class="ident">lifetime</span> = <span class="ident">syn::Lifetime::new</span>(
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;&#39;__r2c_lt_{}&quot;</span>, <span class="ident">implicit_lifetime_id</span>),
-                    <span class="ident">lifetime</span>.<span class="ident">span</span>(),
+            <span class="kw">let </span>lifetime = lifetime.clone().unwrap_or_else(|| {
+                <span class="kw">let </span>lifetime = syn::Lifetime::new(
+                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;&#39;__r2c_lt_{}&quot;</span>, implicit_lifetime_id),
+                    lifetime.span(),
                 );
 
-                <span class="ident">generic_params</span>.<span class="ident">insert</span>(
-                    <span class="kw-2">*</span><span class="ident">implicit_lifetime_id</span>,
-                    <span class="ident">syn::GenericParam::Lifetime</span>(<span class="ident">syn::LifetimeDef</span> {
-                        <span class="ident">attrs</span>: <span class="ident">Vec::new</span>(),
-                        <span class="ident">lifetime</span>: <span class="ident">lifetime</span>.<span class="ident">clone</span>(),
-                        <span class="ident">colon_token</span>: <span class="prelude-val">None</span>,
-                        <span class="ident">bounds</span>: <span class="ident">syn::punctuated::Punctuated::new</span>(),
+                generic_params.insert(
+                    <span class="kw-2">*</span>implicit_lifetime_id,
+                    syn::GenericParam::Lifetime(syn::LifetimeDef {
+                        attrs: Vec::new(),
+                        lifetime: lifetime.clone(),
+                        colon_token: <span class="prelude-val">None</span>,
+                        bounds: syn::punctuated::Punctuated::new(),
                     }),
                 );
 
-                <span class="kw-2">*</span><span class="ident">implicit_lifetime_id</span> += <span class="number">1</span>;
+                <span class="kw-2">*</span>implicit_lifetime_id += <span class="number">1</span>;
 
-                <span class="ident">lifetime</span>
+                lifetime
             });
 
-            <span class="kw">let</span> <span class="ident">elem</span> = <span class="kw">if</span> <span class="macro">matches!</span>(<span class="ident">cuda_type</span>, <span class="ident">InputCudaType::LendRustToCuda</span>) {
+            <span class="kw">let </span>elem = <span class="kw">if </span><span class="macro">matches!</span>(cuda_type, InputCudaType::LendRustToCuda) {
                 (|| {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">syn::Type::Path</span>(<span class="ident">syn::TypePath</span> {
-                        <span class="ident">path</span>: <span class="ident">syn::Path</span> { <span class="ident">segments</span>, .. },
-                        <span class="ident">qself</span>: <span class="prelude-val">None</span>,
-                    }) = <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">elem</span>
+                    <span class="kw">if let </span>syn::Type::Path(syn::TypePath {
+                        path: syn::Path { segments, .. },
+                        qself: <span class="prelude-val">None</span>,
+                    }) = <span class="kw-2">&amp;**</span>elem
                     {
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">syn::PathSegment</span> {
-                            <span class="ident">ident</span>,
-                            <span class="ident">arguments</span>:
-                                <span class="ident">syn::PathArguments::AngleBracketed</span>(
-                                    <span class="ident">syn::AngleBracketedGenericArguments</span> { <span class="ident">args</span>, .. },
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(syn::PathSegment {
+                            ident,
+                            arguments:
+                                syn::PathArguments::AngleBracketed(
+                                    syn::AngleBracketedGenericArguments { args, .. },
                                 ),
-                        }) = <span class="ident">segments</span>.<span class="ident">last</span>()
+                        }) = segments.last()
                         {
-                            <span class="kw">if</span> <span class="ident">ident</span> == <span class="string">&quot;ShallowCopy&quot;</span> &amp;&amp; <span class="ident">segments</span>.<span class="ident">len</span>() == <span class="number">1</span> {
-                                <span class="kw">match</span> <span class="ident">args</span>.<span class="ident">last</span>() {
-                                    <span class="prelude-val">Some</span>(<span class="ident">syn::GenericArgument::Type</span>(<span class="ident">elem</span>)) <span class="kw">if</span> <span class="ident">args</span>.<span class="ident">len</span>() == <span class="number">1</span> =&gt; {
-                                        <span class="kw">return</span> <span class="ident">Box::new</span>(<span class="ident">elem</span>.<span class="ident">clone</span>());
+                            <span class="kw">if </span>ident == <span class="string">&quot;ShallowCopy&quot; </span>&amp;&amp; segments.len() == <span class="number">1 </span>{
+                                <span class="kw">match </span>args.last() {
+                                    <span class="prelude-val">Some</span>(syn::GenericArgument::Type(elem)) <span class="kw">if </span>args.len() == <span class="number">1 </span>=&gt; {
+                                        <span class="kw">return </span>Box::new(elem.clone());
                                     },
-                                    <span class="kw">_</span> =&gt; {
+                                    <span class="kw">_ </span>=&gt; {
                                         <span class="macro">abort!</span>(
-                                            <span class="ident">args</span>.<span class="ident">span</span>(),
+                                            args.span(),
                                             <span class="string">&quot;`ShallowCopy&lt;T&gt;` takes exactly one generic type \
-                                             argument.&quot;</span>
-                                        );
+                                             argument.&quot;
+                                        </span>);
                                     },
                                 }
                             }
@@ -417,42 +417,42 @@
                     }
 
                     <span class="macro">emit_warning!</span>(
-                        <span class="ident">elem</span>.<span class="ident">span</span>(),
+                        elem.span(),
                         <span class="string">&quot;RustToCuda kernel parameters should be explicitly wrapped with the \
-                         `ShallowCopy&lt;T&gt;` marker to communicate their aliasing behaviour.&quot;</span>
-                    );
+                         `ShallowCopy&lt;T&gt;` marker to communicate their aliasing behaviour.&quot;
+                    </span>);
 
-                    <span class="ident">elem</span>.<span class="ident">clone</span>()
+                    elem.clone()
                 })()
-            } <span class="kw">else</span> {
-                <span class="ident">elem</span>.<span class="ident">clone</span>()
+            } <span class="kw">else </span>{
+                elem.clone()
             };
 
-            <span class="ident">Box::new</span>(<span class="ident">syn::Type::Reference</span>(<span class="ident">syn::TypeReference</span> {
-                <span class="ident">and_token</span>: <span class="kw-2">*</span><span class="ident">and_token</span>,
-                <span class="ident">lifetime</span>: <span class="prelude-val">Some</span>(<span class="ident">lifetime</span>),
-                <span class="ident">mutability</span>: <span class="kw-2">*</span><span class="ident">mutability</span>,
-                <span class="ident">elem</span>,
+            Box::new(syn::Type::Reference(syn::TypeReference {
+                and_token: <span class="kw-2">*</span>and_token,
+                lifetime: <span class="prelude-val">Some</span>(lifetime),
+                mutability: <span class="kw-2">*</span>mutability,
+                elem,
             }))
         },
-        <span class="ident">ty</span> =&gt; {
-            <span class="kw">if</span> <span class="macro">matches!</span>(<span class="ident">cuda_type</span>, <span class="ident">InputCudaType::LendRustToCuda</span>) {
-                <span class="ident">generic_params</span>.<span class="ident">insert</span>(
-                    <span class="kw-2">*</span><span class="ident">implicit_lifetime_id</span>,
-                    <span class="ident">syn::GenericParam::Lifetime</span>(<span class="ident">syn::LifetimeDef</span> {
-                        <span class="ident">attrs</span>: <span class="ident">Vec::new</span>(),
-                        <span class="ident">lifetime</span>: <span class="ident">r2c_move_lifetime</span>(<span class="ident">i</span>, <span class="ident">ty</span>),
-                        <span class="ident">colon_token</span>: <span class="prelude-val">None</span>,
-                        <span class="ident">bounds</span>: <span class="ident">syn::punctuated::Punctuated::new</span>(),
+        ty =&gt; {
+            <span class="kw">if </span><span class="macro">matches!</span>(cuda_type, InputCudaType::LendRustToCuda) {
+                generic_params.insert(
+                    <span class="kw-2">*</span>implicit_lifetime_id,
+                    syn::GenericParam::Lifetime(syn::LifetimeDef {
+                        attrs: Vec::new(),
+                        lifetime: r2c_move_lifetime(i, ty),
+                        colon_token: <span class="prelude-val">None</span>,
+                        bounds: syn::punctuated::Punctuated::new(),
                     }),
                 );
 
-                <span class="kw-2">*</span><span class="ident">implicit_lifetime_id</span> += <span class="number">1</span>;
+                <span class="kw-2">*</span>implicit_lifetime_id += <span class="number">1</span>;
             }
 
-            <span class="ident">Box::new</span>(<span class="ident">ty</span>.<span class="ident">clone</span>())
+            Box::new(ty.clone())
         },
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>

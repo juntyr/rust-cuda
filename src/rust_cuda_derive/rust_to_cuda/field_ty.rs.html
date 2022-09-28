@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_ty.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>field_ty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_ty.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>field_ty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -91,98 +91,98 @@
 <span id="91">91</span>
 <span id="92">92</span>
 <span id="93">93</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">parse_quote</span>, <span class="ident">spanned::Spanned</span>};
+</pre><pre class="rust"><code><span class="kw">use </span>syn::{parse_quote, spanned::Spanned};
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::module_name_repetitions</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">CudaReprFieldTy</span> {
-    <span class="ident">SafeDeviceCopy</span>,
-    <span class="ident">RustToCuda</span> {
-        <span class="ident">field_ty</span>: <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt;,
+<span class="attribute">#[allow(clippy::module_name_repetitions)]
+</span><span class="kw">pub enum </span>CudaReprFieldTy {
+    SafeDeviceCopy,
+    RustToCuda {
+        field_ty: Box&lt;syn::Type&gt;,
     },
-    <span class="ident">RustToCudaProxy</span> {
-        <span class="ident">proxy_ty</span>: <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt;,
-        <span class="ident">field_ty</span>: <span class="ident">Box</span>&lt;<span class="ident">syn::Type</span>&gt;,
+    RustToCudaProxy {
+        proxy_ty: Box&lt;syn::Type&gt;,
+        field_ty: Box&lt;syn::Type&gt;,
     },
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">swap_field_type_and_filter_attrs</span>(<span class="ident">field</span>: <span class="kw-2">&amp;mut</span> <span class="ident">syn::Field</span>) -&gt; <span class="ident">CudaReprFieldTy</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cuda_repr_field_ty</span>: <span class="prelude-ty">Option</span>&lt;<span class="ident">CudaReprFieldTy</span>&gt; = <span class="prelude-val">None</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_ty</span> = <span class="ident">field</span>.<span class="ident">ty</span>.<span class="ident">clone</span>();
+<span class="kw">pub fn </span>swap_field_type_and_filter_attrs(field: <span class="kw-2">&amp;mut </span>syn::Field) -&gt; CudaReprFieldTy {
+    <span class="kw">let </span><span class="kw-2">mut </span>cuda_repr_field_ty: <span class="prelude-ty">Option</span>&lt;CudaReprFieldTy&gt; = <span class="prelude-val">None</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>field_ty = field.ty.clone();
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r2c_ignore</span> = <span class="bool-val">false</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>r2c_ignore = <span class="bool-val">false</span>;
 
-    <span class="comment">// Remove all attributes from the fields in the Cuda representation</span>
-    <span class="ident">field</span>.<span class="ident">attrs</span>.<span class="ident">retain</span>(|<span class="ident">attr</span>| {
-        <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">is_ident</span>(<span class="string">&quot;r2cEmbed&quot;</span>) {
-            <span class="kw">if</span> <span class="ident">cuda_repr_field_ty</span>.<span class="ident">is_none</span>() {
-                <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">is_empty</span>() {
-                    <span class="ident">cuda_repr_field_ty</span> = <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::RustToCuda</span> {
-                        <span class="ident">field_ty</span>: <span class="ident">Box::new</span>(<span class="ident">field_ty</span>.<span class="ident">clone</span>()),
+    <span class="comment">// Remove all attributes from the fields in the Cuda representation
+    </span>field.attrs.retain(|attr| {
+        <span class="kw">if </span>attr.path.is_ident(<span class="string">&quot;r2cEmbed&quot;</span>) {
+            <span class="kw">if </span>cuda_repr_field_ty.is_none() {
+                <span class="kw">if </span>attr.tokens.is_empty() {
+                    cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCuda {
+                        field_ty: Box::new(field_ty.clone()),
                     });
-                    <span class="ident">field_ty</span> = <span class="macro">parse_quote!</span> {
-                        <span class="ident">rust_cuda::common::DeviceAccessible</span>&lt;
-                            &lt;#<span class="ident">field_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>
+                    field_ty = <span class="macro">parse_quote! </span>{
+                        rust_cuda::common::DeviceAccessible&lt;
+                            &lt;#field_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaRepresentation
                         &gt;
                     };
-                } <span class="kw">else</span> {
-                    <span class="kw">let</span> <span class="ident">proxy_ty</span>: <span class="ident">syn::Type</span> = <span class="kw">match</span> <span class="ident">attr</span>.<span class="ident">parse_args</span>() {
-                        <span class="prelude-val">Ok</span>(<span class="ident">proxy_ty</span>) =&gt; <span class="ident">proxy_ty</span>,
+                } <span class="kw">else </span>{
+                    <span class="kw">let </span>proxy_ty: syn::Type = <span class="kw">match </span>attr.parse_args() {
+                        <span class="prelude-val">Ok</span>(proxy_ty) =&gt; proxy_ty,
                         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                             <span class="macro">abort!</span>(
-                                <span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">span</span>(),
+                                attr.tokens.span(),
                                 <span class="string">&quot;#[r2cEmbed] either takes no arguments, or the type of a proxy \
-                                 that implements `RustToCudaProxy`.&quot;</span>
-                            );
+                                 that implements `RustToCudaProxy`.&quot;
+                            </span>);
                         },
                     };
 
-                    <span class="kw">let</span> <span class="ident">old_field_ty</span> = <span class="ident">Box::new</span>(<span class="ident">field_ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">field_ty</span> = <span class="macro">parse_quote!</span> {
-                        <span class="ident">rust_cuda::common::DeviceAccessible</span>&lt;
-                            &lt;#<span class="ident">proxy_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span>&gt;<span class="ident">::CudaRepresentation</span>
+                    <span class="kw">let </span>old_field_ty = Box::new(field_ty.clone());
+                    field_ty = <span class="macro">parse_quote! </span>{
+                        rust_cuda::common::DeviceAccessible&lt;
+                            &lt;#proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaRepresentation
                         &gt;
                     };
-                    <span class="ident">cuda_repr_field_ty</span> = <span class="prelude-val">Some</span>(<span class="ident">CudaReprFieldTy::RustToCudaProxy</span> {
-                        <span class="ident">proxy_ty</span>: <span class="ident">Box::new</span>(<span class="ident">proxy_ty</span>),
-                        <span class="ident">field_ty</span>: <span class="ident">old_field_ty</span>,
+                    cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCudaProxy {
+                        proxy_ty: Box::new(proxy_ty),
+                        field_ty: old_field_ty,
                     });
                 }
-            } <span class="kw">else</span> {
-                <span class="macro">emit_error!</span>(<span class="ident">attr</span>.<span class="ident">span</span>(), <span class="string">&quot;Duplicate #[r2cEmbed] attribute definition.&quot;</span>);
+            } <span class="kw">else </span>{
+                <span class="macro">emit_error!</span>(attr.span(), <span class="string">&quot;Duplicate #[r2cEmbed] attribute definition.&quot;</span>);
             }
 
-            <span class="bool-val">false</span>
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">attr</span>.<span class="ident">path</span>.<span class="ident">is_ident</span>(<span class="string">&quot;r2cIgnore&quot;</span>) {
-            <span class="kw">if</span> !<span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">is_empty</span>() {
+            <span class="bool-val">false
+        </span>} <span class="kw">else if </span>attr.path.is_ident(<span class="string">&quot;r2cIgnore&quot;</span>) {
+            <span class="kw">if </span>!attr.tokens.is_empty() {
                 <span class="macro">emit_error!</span>(
-                    <span class="ident">attr</span>.<span class="ident">tokens</span>.<span class="ident">span</span>(),
-                    <span class="string">&quot;#[r2cIgnore] does not take any arguments.&quot;</span>
-                );
+                    attr.tokens.span(),
+                    <span class="string">&quot;#[r2cIgnore] does not take any arguments.&quot;
+                </span>);
             }
 
-            <span class="ident">r2c_ignore</span> = <span class="bool-val">true</span>;
+            r2c_ignore = <span class="bool-val">true</span>;
 
-            <span class="bool-val">false</span>
-        } <span class="kw">else</span> {
-            !<span class="ident">r2c_ignore</span>
+            <span class="bool-val">false
+        </span>} <span class="kw">else </span>{
+            !r2c_ignore
         }
     });
 
-    <span class="kw">let</span> <span class="ident">cuda_repr_field_ty</span> = <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cuda_repr_field_ty</span>) = <span class="ident">cuda_repr_field_ty</span> {
-        <span class="ident">cuda_repr_field_ty</span>
-    } <span class="kw">else</span> {
-        <span class="ident">field_ty</span> = <span class="macro">parse_quote!</span> {
-            <span class="ident">rust_cuda::common::DeviceAccessible</span>&lt;
-                <span class="ident">rust_cuda::utils::device_copy::SafeDeviceCopyWrapper</span>&lt;#<span class="ident">field_ty</span>&gt;
+    <span class="kw">let </span>cuda_repr_field_ty = <span class="kw">if let </span><span class="prelude-val">Some</span>(cuda_repr_field_ty) = cuda_repr_field_ty {
+        cuda_repr_field_ty
+    } <span class="kw">else </span>{
+        field_ty = <span class="macro">parse_quote! </span>{
+            rust_cuda::common::DeviceAccessible&lt;
+                rust_cuda::utils::device_copy::SafeDeviceCopyWrapper&lt;#field_ty&gt;
             &gt;
         };
 
-        <span class="ident">CudaReprFieldTy::SafeDeviceCopy</span>
+        CudaReprFieldTy::SafeDeviceCopy
     };
 
-    <span class="ident">field</span>.<span class="ident">ty</span> = <span class="ident">field_ty</span>;
+    field.ty = field_ty;
 
-    <span class="ident">cuda_repr_field_ty</span>
+    cuda_repr_field_ty
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>

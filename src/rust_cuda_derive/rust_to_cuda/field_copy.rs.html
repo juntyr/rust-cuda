@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_copy.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>field_copy.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_copy.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>field_copy.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -120,127 +120,127 @@
 <span id="120">120</span>
 <span id="121">121</span>
 <span id="122">122</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">proc_macro2::TokenStream</span>;
-<span class="kw">use</span> <span class="ident">quote</span>::{<span class="ident">format_ident</span>, <span class="ident">quote</span>, <span class="ident">ToTokens</span>};
+</pre><pre class="rust"><code><span class="kw">use </span>proc_macro2::TokenStream;
+<span class="kw">use </span>quote::{format_ident, quote, ToTokens};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::field_ty::CudaReprFieldTy</span>;
+<span class="kw">use </span><span class="kw">super</span>::field_ty::CudaReprFieldTy;
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>, <span class="ident">clippy::too_many_lines</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">impl_field_copy_init_and_expand_alloc_type</span>(
-    <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">syn::Field</span>,
-    <span class="ident">field_index</span>: <span class="ident">usize</span>,
+<span class="attribute">#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+</span><span class="kw">pub fn </span>impl_field_copy_init_and_expand_alloc_type(
+    field: <span class="kw-2">&amp;</span>syn::Field,
+    field_index: usize,
 
-    <span class="ident">cuda_repr_field_ty</span>: <span class="kw-2">&amp;</span><span class="ident">CudaReprFieldTy</span>,
+    cuda_repr_field_ty: <span class="kw-2">&amp;</span>CudaReprFieldTy,
 
-    <span class="kw-2">mut</span> <span class="ident">combined_cuda_alloc_type</span>: <span class="ident">TokenStream</span>,
+    <span class="kw-2">mut </span>combined_cuda_alloc_type: TokenStream,
 
-    <span class="ident">r2c_field_declarations</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span>&lt;<span class="ident">TokenStream</span>&gt;,
-    <span class="ident">r2c_field_initialisations</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span>&lt;<span class="ident">TokenStream</span>&gt;,
-    <span class="ident">r2c_field_destructors</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span>&lt;<span class="ident">TokenStream</span>&gt;,
+    r2c_field_declarations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+    r2c_field_initialisations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+    r2c_field_destructors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
 
-    <span class="ident">c2r_field_initialisations</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span>&lt;<span class="ident">TokenStream</span>&gt;,
-) -&gt; <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">field_accessor</span> = <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">ident</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">ident</span>) =&gt; <span class="macro">quote!</span> { #<span class="ident">ident</span> },
-        <span class="prelude-val">None</span> =&gt; <span class="ident">proc_macro2::Literal::usize_unsuffixed</span>(<span class="ident">field_index</span>).<span class="ident">to_token_stream</span>(),
+    c2r_field_initialisations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+) -&gt; TokenStream {
+    <span class="kw">let </span>field_accessor = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
+        <span class="prelude-val">Some</span>(ident) =&gt; <span class="macro">quote! </span>{ #ident },
+        <span class="prelude-val">None </span>=&gt; proc_macro2::Literal::usize_unsuffixed(field_index).to_token_stream(),
     };
-    <span class="kw">let</span> <span class="ident">field_repr_ident</span> = <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">ident</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">ident</span>) =&gt; <span class="macro">format_ident!</span>(<span class="string">&quot;field_{}_repr&quot;</span>, <span class="ident">ident</span>),
-        <span class="prelude-val">None</span> =&gt; <span class="macro">format_ident!</span>(<span class="string">&quot;field_{}_repr&quot;</span>, <span class="ident">field_index</span>),
+    <span class="kw">let </span>field_repr_ident = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
+        <span class="prelude-val">Some</span>(ident) =&gt; <span class="macro">format_ident!</span>(<span class="string">&quot;field_{}_repr&quot;</span>, ident),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">format_ident!</span>(<span class="string">&quot;field_{}_repr&quot;</span>, field_index),
     };
-    <span class="kw">let</span> <span class="ident">optional_field_ident</span> = <span class="ident">field</span>.<span class="ident">ident</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(|<span class="ident">ident</span>| <span class="macro">quote!</span> { #<span class="ident">ident</span>: });
+    <span class="kw">let </span>optional_field_ident = field.ident.as_ref().map(|ident| <span class="macro">quote! </span>{ #ident: });
 
-    <span class="kw">match</span> <span class="ident">cuda_repr_field_ty</span> {
-        <span class="ident">CudaReprFieldTy::SafeDeviceCopy</span> =&gt; {
-            <span class="ident">r2c_field_declarations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                <span class="kw">let</span> #<span class="ident">field_repr_ident</span> = <span class="ident">rust_cuda::common::DeviceAccessible::from</span>(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">field_accessor</span>,
+    <span class="kw">match </span>cuda_repr_field_ty {
+        CudaReprFieldTy::SafeDeviceCopy =&gt; {
+            r2c_field_declarations.push(<span class="macro">quote! </span>{
+                <span class="kw">let </span>#field_repr_ident = rust_cuda::common::DeviceAccessible::from(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor,
                 );
             });
 
-            <span class="ident">r2c_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                #<span class="ident">optional_field_ident</span> #<span class="ident">field_repr_ident</span>,
+            r2c_field_initialisations.push(<span class="macro">quote! </span>{
+                #optional_field_ident #field_repr_ident,
             });
 
-            <span class="ident">c2r_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                #<span class="ident">optional_field_ident</span> {
-                    <span class="ident">rust_cuda::common::CudaAsRust::as_rust</span>(<span class="kw-2">&amp;</span><span class="ident">this</span>.#<span class="ident">field_accessor</span>).<span class="ident">into_inner</span>()
+            c2r_field_initialisations.push(<span class="macro">quote! </span>{
+                #optional_field_ident {
+                    rust_cuda::common::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor).into_inner()
                 },
             });
         },
-        <span class="ident">CudaReprFieldTy::RustToCuda</span> { <span class="ident">field_ty</span> } =&gt; {
-            <span class="ident">combined_cuda_alloc_type</span> = <span class="macro">quote!</span> {
-                <span class="ident">rust_cuda::host::CombinedCudaAlloc</span>&lt;
-                    &lt;#<span class="ident">field_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span>&gt;<span class="ident">::CudaAllocation</span>,
-                    #<span class="ident">combined_cuda_alloc_type</span>
+        CudaReprFieldTy::RustToCuda { field_ty } =&gt; {
+            combined_cuda_alloc_type = <span class="macro">quote! </span>{
+                rust_cuda::host::CombinedCudaAlloc&lt;
+                    &lt;#field_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaAllocation,
+                    #combined_cuda_alloc_type
                 &gt;
             };
 
-            <span class="ident">r2c_field_declarations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                <span class="kw">let</span> (#<span class="ident">field_repr_ident</span>, <span class="ident">alloc_front</span>) = <span class="ident">rust_cuda::common::RustToCuda::borrow</span>(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">field_accessor</span>,
-                    <span class="ident">alloc_front</span>,
+            r2c_field_declarations.push(<span class="macro">quote! </span>{
+                <span class="kw">let </span>(#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor,
+                    alloc_front,
                 )<span class="question-mark">?</span>;
             });
 
-            <span class="ident">r2c_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                #<span class="ident">optional_field_ident</span> #<span class="ident">field_repr_ident</span>,
+            r2c_field_initialisations.push(<span class="macro">quote! </span>{
+                #optional_field_ident #field_repr_ident,
             });
 
-            <span class="ident">r2c_field_destructors</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                <span class="kw">let</span> <span class="ident">alloc_front</span> = <span class="ident">rust_cuda::common::RustToCuda::restore</span>(
-                    <span class="kw-2">&amp;mut</span> <span class="self">self</span>.#<span class="ident">field_accessor</span>,
-                    <span class="ident">alloc_front</span>,
+            r2c_field_destructors.push(<span class="macro">quote! </span>{
+                <span class="kw">let </span>alloc_front = rust_cuda::common::RustToCuda::restore(
+                    <span class="kw-2">&amp;mut </span><span class="self">self</span>.#field_accessor,
+                    alloc_front,
                 )<span class="question-mark">?</span>;
             });
 
-            <span class="ident">c2r_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                #<span class="ident">optional_field_ident</span> {
-                    <span class="ident">rust_cuda::common::CudaAsRust::as_rust</span>(<span class="kw-2">&amp;</span><span class="ident">this</span>.#<span class="ident">field_accessor</span>)
+            c2r_field_initialisations.push(<span class="macro">quote! </span>{
+                #optional_field_ident {
+                    rust_cuda::common::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor)
                 },
             });
         },
-        <span class="ident">CudaReprFieldTy::RustToCudaProxy</span> { <span class="ident">proxy_ty</span>, <span class="ident">field_ty</span> } =&gt; {
-            <span class="ident">combined_cuda_alloc_type</span> = <span class="macro">quote!</span> {
-                <span class="ident">rust_cuda::host::CombinedCudaAlloc</span>&lt;
-                    &lt;#<span class="ident">proxy_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCuda</span>&gt;<span class="ident">::CudaAllocation</span>,
-                    #<span class="ident">combined_cuda_alloc_type</span>
+        CudaReprFieldTy::RustToCudaProxy { proxy_ty, field_ty } =&gt; {
+            combined_cuda_alloc_type = <span class="macro">quote! </span>{
+                rust_cuda::host::CombinedCudaAlloc&lt;
+                    &lt;#proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaAllocation,
+                    #combined_cuda_alloc_type
                 &gt;
             };
 
-            <span class="ident">r2c_field_declarations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                <span class="kw">let</span> (#<span class="ident">field_repr_ident</span>, <span class="ident">alloc_front</span>) = <span class="ident">rust_cuda::common::RustToCuda::borrow</span>(
+            r2c_field_declarations.push(<span class="macro">quote! </span>{
+                <span class="kw">let </span>(#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
                     &lt;
-                        #<span class="ident">proxy_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCudaProxy</span>&lt;#<span class="ident">field_ty</span>&gt;
-                    &gt;<span class="ident">::from_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.#<span class="ident">field_accessor</span>),
-                    <span class="ident">alloc_front</span>,
+                        #proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCudaProxy&lt;#field_ty&gt;
+                    &gt;::from_ref(<span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor),
+                    alloc_front,
                 )<span class="question-mark">?</span>;
             });
 
-            <span class="ident">r2c_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                #<span class="ident">optional_field_ident</span> #<span class="ident">field_repr_ident</span>,
+            r2c_field_initialisations.push(<span class="macro">quote! </span>{
+                #optional_field_ident #field_repr_ident,
             });
 
-            <span class="ident">r2c_field_destructors</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                <span class="kw">let</span> <span class="ident">alloc_front</span> = <span class="ident">rust_cuda::common::RustToCuda::restore</span>(
+            r2c_field_destructors.push(<span class="macro">quote! </span>{
+                <span class="kw">let </span>alloc_front = rust_cuda::common::RustToCuda::restore(
                     &lt;
-                        #<span class="ident">proxy_ty</span> <span class="kw">as</span> <span class="ident">rust_cuda::common::RustToCudaProxy</span>&lt;#<span class="ident">field_ty</span>&gt;
-                    &gt;<span class="ident">::from_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.#<span class="ident">field_accessor</span>),
-                    <span class="ident">alloc_front</span>,
+                        #proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCudaProxy&lt;#field_ty&gt;
+                    &gt;::from_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field_accessor),
+                    alloc_front,
                 )<span class="question-mark">?</span>;
             });
 
-            <span class="ident">c2r_field_initialisations</span>.<span class="ident">push</span>(<span class="macro">quote!</span> {
-                #<span class="ident">optional_field_ident</span> {
-                    <span class="ident">rust_cuda::common::RustToCudaProxy</span>::&lt;#<span class="ident">field_ty</span>&gt;<span class="ident">::into</span>(
-                        <span class="ident">rust_cuda::common::CudaAsRust::as_rust</span>(<span class="kw-2">&amp;</span><span class="ident">this</span>.#<span class="ident">field_accessor</span>)
+            c2r_field_initialisations.push(<span class="macro">quote! </span>{
+                #optional_field_ident {
+                    rust_cuda::common::RustToCudaProxy::&lt;#field_ty&gt;::into(
+                        rust_cuda::common::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor)
                     )
                 },
             });
         },
     }
 
-    <span class="ident">combined_cuda_alloc_type</span>
+    combined_cuda_alloc_type
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (f22819bcc 2022-08-12)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>
