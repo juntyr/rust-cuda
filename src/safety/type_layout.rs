@@ -1,4 +1,4 @@
-use const_type_layout::{serialise_type_graph, serialised_type_graph_len, TypeGraph};
+use const_type_layout::{serialise_type_graph, serialised_type_graph_len, TypeGraphLayout};
 
 #[derive(PartialEq, Eq)]
 pub enum CpuAndGpuTypeLayouts {
@@ -9,7 +9,7 @@ pub enum CpuAndGpuTypeLayouts {
 pub struct Assert<const MATCH: CpuAndGpuTypeLayouts>;
 
 #[must_use]
-pub const fn check<T: ~const TypeGraph>(device: &'static [u8]) -> CpuAndGpuTypeLayouts
+pub const fn check<T: ~const TypeGraphLayout>(device: &'static [u8]) -> CpuAndGpuTypeLayouts
 where
     [u8; serialised_type_graph_len::<T>()]:,
 {

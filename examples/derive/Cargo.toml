@@ -8,5 +8,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", branch = "main" }
+const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", rev = "7be4521" }
 rust-cuda = { path = "../../", features = ["derive", "host"] }

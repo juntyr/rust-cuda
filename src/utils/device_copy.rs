@@ -1,3 +1,5 @@
+#![allow(clippy::trait_duplication_in_bounds)]
+
 use const_type_layout::TypeLayout;
 
 use crate::{
