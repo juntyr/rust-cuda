@@ -31,7 +31,7 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
-</pre><pre class="rust"><code><span class="kw">use </span>const_type_layout::{serialise_type_graph, serialised_type_graph_len, TypeGraph};
+</pre><pre class="rust"><code><span class="kw">use </span>const_type_layout::{serialise_type_graph, serialised_type_graph_len, TypeGraphLayout};
 
 <span class="attribute">#[derive(PartialEq, Eq)]
 </span><span class="kw">pub enum </span>CpuAndGpuTypeLayouts {
@@ -42,7 +42,7 @@
 <span class="kw">pub struct </span>Assert&lt;<span class="kw">const </span>MATCH: CpuAndGpuTypeLayouts&gt;;
 
 <span class="attribute">#[must_use]
-</span><span class="kw">pub const fn </span>check&lt;T: ~<span class="kw">const </span>TypeGraph&gt;(device: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8]) -&gt; CpuAndGpuTypeLayouts
+</span><span class="kw">pub const fn </span>check&lt;T: ~<span class="kw">const </span>TypeGraphLayout&gt;(device: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8]) -&gt; CpuAndGpuTypeLayouts
 <span class="kw">where
     </span>[u8; serialised_type_graph_len::&lt;T&gt;()]:,
 {
