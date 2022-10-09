@@ -79,7 +79,7 @@
 
     <span class="kw">match </span>proc_macro::tracked_env::var(<span class="kw-2">&amp;</span>specialisation_var) {
         <span class="prelude-val">Ok</span>(specialisation) =&gt; {
-            <span class="kw">match </span><span class="macro">format!</span>(<span class="string">&quot;&lt;() as {}{}&gt;::{}&quot;</span>, kernel, specialisation, typedef).parse() {
+            <span class="kw">match </span><span class="macro">format!</span>(<span class="string">&quot;&lt;() as {kernel}{specialisation}&gt;::{typedef}&quot;</span>).parse() {
                 <span class="prelude-val">Ok</span>(parsed_specialisation) =&gt; parsed_specialisation,
                 <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">abort_call_site!</span>(<span class="string">&quot;Failed to parse specialisation: {:?}&quot;</span>, err),
             }
@@ -107,4 +107,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8796e7a9c 2022-10-08)" ></div></body></html>

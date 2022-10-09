@@ -64,7 +64,6 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
-<span id="67">67</span>
 </pre><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 
 <span class="attribute">#[allow(clippy::module_name_repetitions)]
@@ -85,12 +84,11 @@
 
     <span class="kw">let </span>mangled_kernel_ident = <span class="kw">if let </span><span class="prelude-val">Some</span>(specialisation) = specialisation {
         <span class="macro">format!</span>(
-            <span class="string">&quot;{}_kernel_{:016x}&quot;</span>,
-            kernel,
+            <span class="string">&quot;{kernel}_kernel_{:016x}&quot;</span>,
             seahash::hash(specialisation.as_bytes())
         )
     } <span class="kw">else </span>{
-        <span class="macro">format!</span>(<span class="string">&quot;{}_kernel&quot;</span>, kernel)
+        <span class="macro">format!</span>(<span class="string">&quot;{kernel}_kernel&quot;</span>)
     };
 
     (<span class="macro">quote! </span>{ #mangled_kernel_ident }).into()
@@ -133,4 +131,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8796e7a9c 2022-10-08)" ></div></body></html>

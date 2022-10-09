@@ -367,8 +367,6 @@
 <span id="367">367</span>
 <span id="368">368</span>
 <span id="369">369</span>
-<span id="370">370</span>
-<span id="371">371</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     env, fs,
     io::{Read, Write},
@@ -471,20 +469,19 @@
     };
 
     <span class="kw">let </span>kernel_layout_name = <span class="kw">if </span>specialisation.is_empty() {
-        <span class="macro">format!</span>(<span class="string">&quot;{}_type_layout_kernel&quot;</span>, kernel)
+        <span class="macro">format!</span>(<span class="string">&quot;{kernel}_type_layout_kernel&quot;</span>)
     } <span class="kw">else </span>{
         <span class="macro">format!</span>(
-            <span class="string">&quot;{}_type_layout_kernel_{:016x}&quot;</span>,
-            kernel,
+            <span class="string">&quot;{kernel}_type_layout_kernel_{:016x}&quot;</span>,
             seahash::hash(specialisation.as_bytes())
         )
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>type_layouts = Vec::new();
 
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(start) = kernel_ptx.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;\n\t// .globl\t{}&quot;</span>, kernel_layout_name)) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(start) = kernel_ptx.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;\n\t// .globl\t{kernel_layout_name}&quot;</span>)) {
         <span class="kw">let </span>middle =
-            <span class="kw">match </span>kernel_ptx[start..].find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.visible .entry {}&quot;</span>, kernel_layout_name)) {
+            <span class="kw">match </span>kernel_ptx[start..].find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.visible .entry {kernel_layout_name}&quot;</span>)) {
                 <span class="prelude-val">Some</span>(middle) =&gt; middle,
                 <span class="prelude-val">None </span>=&gt; <span class="macro">abort_call_site!</span>(
                     <span class="string">&quot;Kernel compilation generated invalid PTX: incomplete type layout information.&quot;
@@ -699,25 +696,24 @@
 
                 <span class="kw">let </span><span class="kw-2">mut </span>specialised_ptx_path = ptx_path.clone();
 
-                specialised_ptx_path.set_extension(<span class="macro">format!</span>(<span class="string">&quot;{}.ptx&quot;</span>, specialisation_prefix));
+                specialised_ptx_path.set_extension(<span class="macro">format!</span>(<span class="string">&quot;{specialisation_prefix}.ptx&quot;</span>));
 
                 fs::copy(<span class="kw-2">&amp;</span>ptx_path, <span class="kw-2">&amp;</span>specialised_ptx_path).map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                        <span class="string">&quot;Failed to copy kernel from {:?} to {:?}: {}&quot;</span>,
-                        ptx_path, specialised_ptx_path, err,
-                    )]))
+                        <span class="string">&quot;Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: \
+                         {err}&quot;
+                    </span>)]))
                 })<span class="question-mark">?</span>;
 
                 <span class="kw">if let </span>Specialisation::Link(specialisation) = specialisation {
                     fs::OpenOptions::new()
                         .append(<span class="bool-val">true</span>)
                         .open(<span class="kw-2">&amp;</span>specialised_ptx_path)
-                        .and_then(|<span class="kw-2">mut </span>file| <span class="macro">writeln!</span>(file, <span class="string">&quot;\n// {}&quot;</span>, specialisation))
+                        .and_then(|<span class="kw-2">mut </span>file| <span class="macro">writeln!</span>(file, <span class="string">&quot;\n// {specialisation}&quot;</span>))
                         .map_err(|err| {
                             Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                                <span class="string">&quot;Failed to write specialisation to {:?}: {}&quot;</span>,
-                                specialised_ptx_path, err,
-                            )]))
+                                <span class="string">&quot;Failed to write specialisation to {specialised_ptx_path:?}: {err}&quot;
+                            </span>)]))
                         })<span class="question-mark">?</span>;
                 }
 
@@ -741,4 +737,4 @@
     Link(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str),
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (470e518c4 2022-09-27)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8796e7a9c 2022-10-08)" ></div></body></html>
