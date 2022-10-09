@@ -25,7 +25,7 @@ pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
 
     match proc_macro::tracked_env::var(&specialisation_var) {
         Ok(specialisation) => {
-            match format!("<() as {}{}>::{}", kernel, specialisation, typedef).parse() {
+            match format!("<() as {kernel}{specialisation}>::{typedef}").parse() {
                 Ok(parsed_specialisation) => parsed_specialisation,
                 Err(err) => abort_call_site!("Failed to parse specialisation: {:?}", err),
             }

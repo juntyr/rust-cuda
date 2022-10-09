@@ -18,12 +18,11 @@ pub fn specialise_kernel_call(tokens: TokenStream) -> TokenStream {
 
     let mangled_kernel_ident = if let Some(specialisation) = specialisation {
         format!(
-            "{}_kernel_{:016x}",
-            kernel,
+            "{kernel}_kernel_{:016x}",
             seahash::hash(specialisation.as_bytes())
         )
     } else {
-        format!("{}_kernel", kernel)
+        format!("{kernel}_kernel")
     };
 
     (quote! { #mangled_kernel_ident }).into()

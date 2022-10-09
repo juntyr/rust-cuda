@@ -100,20 +100,19 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     };
 
     let kernel_layout_name = if specialisation.is_empty() {
-        format!("{}_type_layout_kernel", kernel)
+        format!("{kernel}_type_layout_kernel")
     } else {
         format!(
-            "{}_type_layout_kernel_{:016x}",
-            kernel,
+            "{kernel}_type_layout_kernel_{:016x}",
             seahash::hash(specialisation.as_bytes())
         )
     };
 
     let mut type_layouts = Vec::new();
 
-    if let Some(start) = kernel_ptx.find(&format!("\n\t// .globl\t{}", kernel_layout_name)) {
+    if let Some(start) = kernel_ptx.find(&format!("\n\t// .globl\t{kernel_layout_name}")) {
         let middle =
-            match kernel_ptx[start..].find(&format!(".visible .entry {}", kernel_layout_name)) {
+            match kernel_ptx[start..].find(&format!(".visible .entry {kernel_layout_name}")) {
                 Some(middle) => middle,
                 None => abort_call_site!(
                     "Kernel compilation generated invalid PTX: incomplete type layout information."
@@ -328,12 +327,12 @@ fn build_kernel_with_specialisation(
 
                 let mut specialised_ptx_path = ptx_path.clone();
 
-                specialised_ptx_path.set_extension(format!("{}.ptx", specialisation_prefix));
+                specialised_ptx_path.set_extension(format!("{specialisation_prefix}.ptx"));
 
                 fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                        "Failed to copy kernel from {:?} to {:?}: {}",
-                        ptx_path, specialised_ptx_path, err,
+                        "Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: \
+                         {err}"
                     )]))
                 })?;
 
@@ -341,11 +340,10 @@ fn build_kernel_with_specialisation(
                     fs::OpenOptions::new()
                         .append(true)
                         .open(&specialised_ptx_path)
-                        .and_then(|mut file| writeln!(file, "\n// {}", specialisation))
+                        .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
                         .map_err(|err| {
                             Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                                "Failed to write specialisation to {:?}: {}",
-                                specialised_ptx_path, err,
+                                "Failed to write specialisation to {specialised_ptx_path:?}: {err}"
                             )]))
                         })?;
                 }

@@ -15,5 +15,5 @@ pub fn skip_kernel_compilation() -> bool {
 }
 
 pub fn r2c_move_lifetime(arg: usize, ty: &syn::Type) -> syn::Lifetime {
-    syn::Lifetime::new(&format!("'__r2c_move_lt_{}", arg), ty.span())
+    syn::Lifetime::new(&format!("'__r2c_move_lt_{arg}"), ty.span())
 }

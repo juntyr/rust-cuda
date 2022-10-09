@@ -59,7 +59,7 @@ pub(super) fn quote_get_ptx_str(
             .zip(func_params.iter())
             .map(|(ty, param)| {
                 let layout_param = syn::Ident::new(
-                    &format!("__{}_{}_layout", func_ident_hash, param).to_uppercase(),
+                    &format!("__{func_ident_hash}_{param}_layout").to_uppercase(),
                     param.span(),
                 );
 

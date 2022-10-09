@@ -26,7 +26,7 @@ pub(in super::super) fn quote_cuda_wrapper(
         .iter()
         .map(|ident| {
             syn::Ident::new(
-                &format!("__{}_{}_layout", func_ident_hash, ident).to_uppercase(),
+                &format!("__{func_ident_hash}_{ident}_layout").to_uppercase(),
                 ident.span(),
             )
         })

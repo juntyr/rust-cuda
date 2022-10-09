@@ -139,9 +139,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         .map(|(i, arg)| match arg {
             syn::FnArg::Typed(syn::PatType { pat, .. }) => match ident_from_pat(pat) {
                 Some(ident) => ident,
-                None => {
-                    syn::Ident::new(&format!("{}_arg_{}", func_ident.func_ident, i), pat.span())
-                },
+                None => syn::Ident::new(&format!("{}_arg_{i}", func_ident.func_ident), pat.span()),
             },
             syn::FnArg::Receiver(_) => unreachable!(),
         })

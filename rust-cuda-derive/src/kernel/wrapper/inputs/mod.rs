@@ -137,7 +137,7 @@ fn ensure_reference_type_lifetime(
         }) => {
             let lifetime = lifetime.clone().unwrap_or_else(|| {
                 let lifetime = syn::Lifetime::new(
-                    &format!("'__r2c_lt_{}", implicit_lifetime_id),
+                    &format!("'__r2c_lt_{implicit_lifetime_id}"),
                     lifetime.span(),
                 );
 
