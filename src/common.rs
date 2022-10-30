@@ -9,7 +9,7 @@ use core::ops::{Deref, DerefMut};
 #[cfg(feature = "host")]
 use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 
-use const_type_layout::TypeLayout;
+use const_type_layout::TypeGraphLayout;
 use rustacuda_core::DeviceCopy;
 
 #[cfg(feature = "derive")]
@@ -38,7 +38,9 @@ impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
 }
 
 #[cfg(feature = "host")]
-impl<T: SafeDeviceCopy + TypeLayout> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
+impl<T: SafeDeviceCopy + ~const TypeGraphLayout> From<&T>
+    for DeviceAccessible<SafeDeviceCopyWrapper<T>>
+{
     fn from(value: &T) -> Self {
         let value = unsafe {
             let mut uninit = MaybeUninit::uninit();
@@ -82,7 +84,7 @@ pub unsafe trait RustToCuda {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     type CudaAllocation: crate::host::CudaAlloc;
-    type CudaRepresentation: CudaAsRust<RustRepresentation = Self>;
+    type CudaRepresentation: CudaAsRust<RustRepresentation = Self> + ~const TypeGraphLayout;
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
@@ -123,7 +125,7 @@ pub unsafe trait RustToCuda {
 /// # Safety
 ///
 /// This is an internal trait and should NEVER be implemented manually
-pub unsafe trait CudaAsRust: DeviceCopy + TypeLayout {
+pub unsafe trait CudaAsRust: DeviceCopy + ~const TypeGraphLayout {
     type RustRepresentation: RustToCuda<CudaRepresentation = Self>;
 
     #[cfg(any(not(feature = "host"), doc))]

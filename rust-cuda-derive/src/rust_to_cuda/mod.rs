@@ -62,11 +62,12 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         syn::Fields::Unit => (),
     }
 
-    let (struct_attrs_cuda, struct_generics_cuda) =
+    let (struct_attrs_cuda, struct_generics_cuda, struct_layout_attrs) =
         generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
 
     let cuda_struct_declaration = r#impl::cuda_struct_declaration(
         &struct_attrs_cuda,
+        &struct_layout_attrs,
         &ast.vis,
         &struct_name_cuda,
         &struct_generics_cuda,

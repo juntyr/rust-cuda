@@ -20,54 +20,79 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
 
     // Remove all attributes from the fields in the Cuda representation
     field.attrs.retain(|attr| {
-        if attr.path.is_ident("r2cEmbed") {
-            if cuda_repr_field_ty.is_none() {
-                if attr.tokens.is_empty() {
-                    cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCuda {
-                        field_ty: Box::new(field_ty.clone()),
-                    });
-                    field_ty = parse_quote! {
-                        rust_cuda::common::DeviceAccessible<
-                            <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
-                        >
-                    };
-                } else {
-                    let proxy_ty: syn::Type = match attr.parse_args() {
-                        Ok(proxy_ty) => proxy_ty,
-                        Err(_) => {
-                            abort!(
-                                attr.tokens.span(),
-                                "#[r2cEmbed] either takes no arguments, or the type of a proxy \
-                                 that implements `RustToCudaProxy`."
-                            );
+        if attr.path.is_ident("cuda") {
+            if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
+                for meta in &list.nested {
+                    match meta {
+                        syn::NestedMeta::Meta(syn::Meta::Path(path)) if path.is_ident("ignore") => {
+                            r2c_ignore = true;
                         },
-                    };
-
-                    let old_field_ty = Box::new(field_ty.clone());
-                    field_ty = parse_quote! {
-                        rust_cuda::common::DeviceAccessible<
-                            <#proxy_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
-                        >
-                    };
-                    cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
-                        proxy_ty: Box::new(proxy_ty),
-                        field_ty: old_field_ty,
-                    });
+                        syn::NestedMeta::Meta(syn::Meta::Path(path)) if path.is_ident("embed") => {
+                            if cuda_repr_field_ty.is_none() {
+                                cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCuda {
+                                    field_ty: Box::new(field_ty.clone()),
+                                });
+                                field_ty = parse_quote! {
+                                    rust_cuda::common::DeviceAccessible<
+                                        <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                    >
+                                };
+                            } else {
+                                emit_error!(
+                                    attr.span(),
+                                    "[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
+                                );
+                            }
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path,
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) if path.is_ident("embed") => {
+                            if cuda_repr_field_ty.is_none() {
+                                match syn::parse_str(&s.value()) {
+                                    Ok(proxy_ty) => {
+                                        let old_field_ty = Box::new(field_ty.clone());
+                                        field_ty = parse_quote! {
+                                            rust_cuda::common::DeviceAccessible<
+                                                <#proxy_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                            >
+                                        };
+                                        cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
+                                            proxy_ty: Box::new(proxy_ty),
+                                            field_ty: old_field_ty,
+                                        });
+                                    },
+                                    Err(err) => emit_error!(
+                                        s.span(),
+                                        "[rust-cuda]: Invalid #[cuda(embed = \
+                                        \"<type>\")] field attribute: {}.",
+                                        err
+                                    ),
+                                }
+                            } else {
+                                emit_error!(
+                                    attr.span(),
+                                    "[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
+                                );
+                            }
+                        },
+                        _ => {
+                            emit_error!(
+                                meta.span(),
+                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
+                                #[cuda(embed = \"<type>\")] field attribute"
+                            );
+                        }
+                    }
                 }
             } else {
-                emit_error!(attr.span(), "Duplicate #[r2cEmbed] attribute definition.");
-            }
-
-            false
-        } else if attr.path.is_ident("r2cIgnore") {
-            if !attr.tokens.is_empty() {
                 emit_error!(
-                    attr.tokens.span(),
-                    "#[r2cIgnore] does not take any arguments."
+                    attr.span(),
+                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
+                    #[cuda(embed = \"<type>\")] field attribute."
                 );
             }
-
-            r2c_ignore = true;
 
             false
         } else {

@@ -1,6 +1,6 @@
 #![allow(clippy::trait_duplication_in_bounds)]
 
-use const_type_layout::TypeLayout;
+use const_type_layout::TypeGraphLayout;
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda},
@@ -9,20 +9,22 @@ use crate::{
 
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
-pub struct SafeDeviceCopyWrapper<T: SafeDeviceCopy + TypeLayout>(T);
+pub struct SafeDeviceCopyWrapper<T>(T)
+where
+    T: SafeDeviceCopy + ~const TypeGraphLayout;
 
-unsafe impl<T: SafeDeviceCopy + TypeLayout> rustacuda_core::DeviceCopy
+unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> rustacuda_core::DeviceCopy
     for SafeDeviceCopyWrapper<T>
 {
 }
 
-impl<T: SafeDeviceCopy + TypeLayout> From<T> for SafeDeviceCopyWrapper<T> {
+impl<T: SafeDeviceCopy + ~const TypeGraphLayout> From<T> for SafeDeviceCopyWrapper<T> {
     fn from(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T: SafeDeviceCopy + TypeLayout> SafeDeviceCopyWrapper<T> {
+impl<T: SafeDeviceCopy + ~const TypeGraphLayout> SafeDeviceCopyWrapper<T> {
     pub fn into_inner(self) -> T {
         self.0
     }
@@ -68,7 +70,7 @@ impl<T: SafeDeviceCopy + TypeLayout> SafeDeviceCopyWrapper<T> {
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
     #[cfg(feature = "host")]
     type CudaAllocation = crate::host::NullCudaAlloc;
     type CudaRepresentation = Self;
@@ -98,7 +100,7 @@ unsafe impl<T: SafeDeviceCopy + TypeLayout> RustToCuda for SafeDeviceCopyWrapper
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
     type RustRepresentation = Self;
 
     #[cfg(any(not(feature = "host"), doc))]

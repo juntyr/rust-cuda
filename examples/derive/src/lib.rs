@@ -7,19 +7,13 @@
 #![feature(const_mut_refs)]
 
 #[derive(rust_cuda::common::LendRustToCuda)]
-struct Inner<T>
-where
-    T: Copy + rust_cuda::common::RustToCuda,
-{
-    #[r2cEmbed]
+struct Inner<T: Copy> {
+    #[cuda(embed)]
     inner: T,
 }
 
 #[derive(rust_cuda::common::LendRustToCuda)]
-struct Outer<T>
-where
-    T: Copy + rust_cuda::common::RustToCuda,
-{
-    #[r2cEmbed]
+struct Outer<T: Copy> {
+    #[cuda(embed)]
     inner: Inner<T>,
 }

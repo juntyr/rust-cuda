@@ -1,6 +1,6 @@
 use core::mem::MaybeUninit;
 
-use const_type_layout::TypeLayout;
+use const_type_layout::TypeGraphLayout;
 
 use crate::{
     common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy},
@@ -97,7 +97,7 @@ unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     }
 }
 
-impl<T: SafeDeviceCopy + TypeLayout> RustToCudaProxy<Option<T>>
+impl<T: SafeDeviceCopy + ~const TypeGraphLayout> RustToCudaProxy<Option<T>>
     for Option<SafeDeviceCopyWrapper<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
