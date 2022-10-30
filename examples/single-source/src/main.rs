@@ -26,9 +26,8 @@ fn main() {}
 pub struct Dummy(i32);
 
 #[derive(rust_cuda::common::LendRustToCuda)]
-#[cuda(layout::free = "T")]
 #[allow(dead_code)]
-pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
+pub struct Wrapper<T> {
     #[cuda(embed)]
     inner: T,
 }

@@ -1,12 +1,26 @@
 use quote::quote_spanned;
 use syn::spanned::Spanned;
 
+#[allow(clippy::too_many_lines)]
 pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     ast: &syn::DeriveInput,
 ) -> (Vec<syn::Attribute>, syn::Generics, Vec<syn::Attribute>) {
+    let mut type_params = ast
+        .generics
+        .type_params()
+        .map(|param| &param.ident)
+        .collect::<Vec<_>>();
+
     let mut struct_attrs_cuda = ast.attrs.clone();
     let mut struct_generics_cuda = ast.generics.clone();
     let mut struct_layout_attrs = Vec::new();
+
+    for ty in &type_params {
+        let ty_str = ty.to_string();
+        struct_layout_attrs.push(syn::parse_quote_spanned! { ty.span() =>
+            #[layout(free = #ty_str)]
+        });
+    }
 
     let mut r2c_ignore = false;
 
@@ -31,6 +45,33 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                                 s.span(),
                                 "[rust-cuda]: Invalid #[cuda(bound = \
                                 \"<where-predicate>\")] struct attribute: {}.",
+                                err
+                            ),
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path,
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) if path.is_ident("free") => match syn::parse_str::<syn::Ident>(&s.value()) {
+                            Ok(param) => {
+                                if let Some(i) = type_params.iter().position(|ty| **ty == param)
+                                {
+                                    type_params.swap_remove(i);
+                                } else {
+                                    emit_error!(
+                                        s.span(),
+                                        "[rust-cuda]: Invalid #[cuda(free = \"{}\")] \
+                                         attribute: \"{}\" is either not a type parameter or \
+                                         has already been freed (duplicate attribute).",
+                                        param,
+                                        param,
+                                    );
+                                }
+                            },
+                            Err(err) => emit_error!(
+                                s.span(),
+                                "[rust-cuda]: Invalid #[cuda(free = \"<type>\")] \
+                                 attribute: {}.",
                                 err
                             ),
                         },
@@ -80,6 +121,15 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             !r2c_ignore
         }
     });
+
+    for ty in &type_params {
+        struct_generics_cuda
+            .make_where_clause()
+            .predicates
+            .push(syn::parse_quote! {
+                #ty: ::rust_cuda::common::RustToCuda
+            });
+    }
 
     (struct_attrs_cuda, struct_generics_cuda, struct_layout_attrs)
 }
