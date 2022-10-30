@@ -9,8 +9,9 @@ use crate::{
 
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
-#[layout(bound = "T: SafeDeviceCopy + ~const TypeGraphLayout")]
-pub struct SafeDeviceCopyWrapper<T: SafeDeviceCopy + ~const TypeGraphLayout>(T);
+pub struct SafeDeviceCopyWrapper<T>(T)
+where
+    T: SafeDeviceCopy + ~const TypeGraphLayout;
 
 unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> rustacuda_core::DeviceCopy
     for SafeDeviceCopyWrapper<T>

@@ -17,8 +17,9 @@ use crate::{
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, TypeLayout)]
 #[repr(C)]
-#[layout(bound = "T: SafeDeviceCopy + ~const TypeGraphLayout")]
-pub struct BoxedSliceCudaRepresentation<T: SafeDeviceCopy + ~const TypeGraphLayout>(*mut T, usize);
+pub struct BoxedSliceCudaRepresentation<T>(*mut T, usize)
+where
+    T: SafeDeviceCopy + ~const TypeGraphLayout;
 
 // Safety: This repr(C) struct only contains a device-owned pointer
 unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> rustacuda_core::DeviceCopy

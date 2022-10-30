@@ -9,15 +9,12 @@ use super::{CudaExchangeBuffer, CudaExchangeItem};
 #[doc(hidden)]
 #[derive(TypeLayout)]
 #[repr(C)]
-#[layout(bound = "T: SafeDeviceCopy + ~const TypeGraphLayout")]
-pub struct CudaExchangeBufferCudaRepresentation<
-    T: SafeDeviceCopy + ~const TypeGraphLayout,
-    const M2D: bool,
-    const M2H: bool,
->(
+pub struct CudaExchangeBufferCudaRepresentation<T, const M2D: bool, const M2H: bool>(
     pub(super) *mut CudaExchangeItem<T, M2D, M2H>,
     pub(super) usize,
-);
+)
+where
+    T: SafeDeviceCopy + ~const TypeGraphLayout;
 
 // Safety: `CudaExchangeBufferCudaRepresentation<T>` is `DeviceCopy`
 //         iff `T` is `SafeDeviceCopy`
