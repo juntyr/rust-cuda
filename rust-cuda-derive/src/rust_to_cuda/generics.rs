@@ -24,6 +24,10 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                 .make_where_clause()
                 .predicates
                 .push(bound);
+            struct_generics_cuda
+                .make_where_clause()
+                .predicates
+                .push_punct(syn::token::Comma::default());
 
             false
         } else if attr.path.is_ident("r2cIgnore") {
