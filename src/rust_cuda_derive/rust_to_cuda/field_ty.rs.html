@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_ty.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>field_ty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../rust_cuda_derive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_ty.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>field_ty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -91,6 +91,31 @@
 <span id="91">91</span>
 <span id="92">92</span>
 <span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
 </pre><pre class="rust"><code><span class="kw">use </span>syn::{parse_quote, spanned::Spanned};
 
 <span class="attribute">#[allow(clippy::module_name_repetitions)]
@@ -113,54 +138,79 @@
 
     <span class="comment">// Remove all attributes from the fields in the Cuda representation
     </span>field.attrs.retain(|attr| {
-        <span class="kw">if </span>attr.path.is_ident(<span class="string">&quot;r2cEmbed&quot;</span>) {
-            <span class="kw">if </span>cuda_repr_field_ty.is_none() {
-                <span class="kw">if </span>attr.tokens.is_empty() {
-                    cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCuda {
-                        field_ty: Box::new(field_ty.clone()),
-                    });
-                    field_ty = <span class="macro">parse_quote! </span>{
-                        rust_cuda::common::DeviceAccessible&lt;
-                            &lt;#field_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaRepresentation
-                        &gt;
-                    };
-                } <span class="kw">else </span>{
-                    <span class="kw">let </span>proxy_ty: syn::Type = <span class="kw">match </span>attr.parse_args() {
-                        <span class="prelude-val">Ok</span>(proxy_ty) =&gt; proxy_ty,
-                        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                            <span class="macro">abort!</span>(
-                                attr.tokens.span(),
-                                <span class="string">&quot;#[r2cEmbed] either takes no arguments, or the type of a proxy \
-                                 that implements `RustToCudaProxy`.&quot;
-                            </span>);
+        <span class="kw">if </span>attr.path.is_ident(<span class="string">&quot;cuda&quot;</span>) {
+            <span class="kw">if let </span><span class="prelude-val">Ok</span>(syn::Meta::List(list)) = attr.parse_meta() {
+                <span class="kw">for </span>meta <span class="kw">in </span><span class="kw-2">&amp;</span>list.nested {
+                    <span class="kw">match </span>meta {
+                        syn::NestedMeta::Meta(syn::Meta::Path(path)) <span class="kw">if </span>path.is_ident(<span class="string">&quot;ignore&quot;</span>) =&gt; {
+                            r2c_ignore = <span class="bool-val">true</span>;
                         },
-                    };
-
-                    <span class="kw">let </span>old_field_ty = Box::new(field_ty.clone());
-                    field_ty = <span class="macro">parse_quote! </span>{
-                        rust_cuda::common::DeviceAccessible&lt;
-                            &lt;#proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaRepresentation
-                        &gt;
-                    };
-                    cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCudaProxy {
-                        proxy_ty: Box::new(proxy_ty),
-                        field_ty: old_field_ty,
-                    });
+                        syn::NestedMeta::Meta(syn::Meta::Path(path)) <span class="kw">if </span>path.is_ident(<span class="string">&quot;embed&quot;</span>) =&gt; {
+                            <span class="kw">if </span>cuda_repr_field_ty.is_none() {
+                                cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCuda {
+                                    field_ty: Box::new(field_ty.clone()),
+                                });
+                                field_ty = <span class="macro">parse_quote! </span>{
+                                    rust_cuda::common::DeviceAccessible&lt;
+                                        &lt;#field_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaRepresentation
+                                    &gt;
+                                };
+                            } <span class="kw">else </span>{
+                                <span class="macro">emit_error!</span>(
+                                    attr.span(),
+                                    <span class="string">&quot;[rust-cuda]: Duplicate #[cuda(embed)] field attribute.&quot;
+                                </span>);
+                            }
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path,
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) <span class="kw">if </span>path.is_ident(<span class="string">&quot;embed&quot;</span>) =&gt; {
+                            <span class="kw">if </span>cuda_repr_field_ty.is_none() {
+                                <span class="kw">match </span>syn::parse_str(<span class="kw-2">&amp;</span>s.value()) {
+                                    <span class="prelude-val">Ok</span>(proxy_ty) =&gt; {
+                                        <span class="kw">let </span>old_field_ty = Box::new(field_ty.clone());
+                                        field_ty = <span class="macro">parse_quote! </span>{
+                                            rust_cuda::common::DeviceAccessible&lt;
+                                                &lt;#proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaRepresentation
+                                            &gt;
+                                        };
+                                        cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCudaProxy {
+                                            proxy_ty: Box::new(proxy_ty),
+                                            field_ty: old_field_ty,
+                                        });
+                                    },
+                                    <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">emit_error!</span>(
+                                        s.span(),
+                                        <span class="string">&quot;[rust-cuda]: Invalid #[cuda(embed = \
+                                        \&quot;&lt;type&gt;\&quot;)] field attribute: {}.&quot;</span>,
+                                        err
+                                    ),
+                                }
+                            } <span class="kw">else </span>{
+                                <span class="macro">emit_error!</span>(
+                                    attr.span(),
+                                    <span class="string">&quot;[rust-cuda]: Duplicate #[cuda(embed)] field attribute.&quot;
+                                </span>);
+                            }
+                        },
+                        <span class="kw">_ </span>=&gt; {
+                            <span class="macro">emit_error!</span>(
+                                meta.span(),
+                                <span class="string">&quot;[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
+                                #[cuda(embed = \&quot;&lt;type&gt;\&quot;)] field attribute&quot;
+                            </span>);
+                        }
+                    }
                 }
             } <span class="kw">else </span>{
-                <span class="macro">emit_error!</span>(attr.span(), <span class="string">&quot;Duplicate #[r2cEmbed] attribute definition.&quot;</span>);
-            }
-
-            <span class="bool-val">false
-        </span>} <span class="kw">else if </span>attr.path.is_ident(<span class="string">&quot;r2cIgnore&quot;</span>) {
-            <span class="kw">if </span>!attr.tokens.is_empty() {
                 <span class="macro">emit_error!</span>(
-                    attr.tokens.span(),
-                    <span class="string">&quot;#[r2cIgnore] does not take any arguments.&quot;
+                    attr.span(),
+                    <span class="string">&quot;[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
+                    #[cuda(embed = \&quot;&lt;type&gt;\&quot;)] field attribute.&quot;
                 </span>);
             }
-
-            r2c_ignore = <span class="bool-val">true</span>;
 
             <span class="bool-val">false
         </span>} <span class="kw">else </span>{
@@ -185,4 +235,4 @@
     cuda_repr_field_ty
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8796e7a9c 2022-10-08)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="rust_cuda_derive" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (5e9772042 2022-10-29)" ></div></body></html>
