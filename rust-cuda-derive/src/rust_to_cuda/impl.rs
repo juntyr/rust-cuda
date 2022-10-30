@@ -21,6 +21,12 @@ pub fn cuda_struct_declaration(
         quote! { #[repr(C)] }
     };
 
+    let struct_fields_where_clause = if let Some(struct_semi_cuda) = struct_semi_cuda {
+        quote!(#struct_fields_cuda #where_clause #struct_semi_cuda)
+    } else {
+        quote!(#where_clause #struct_fields_cuda)
+    };
+
     quote! {
         #[allow(dead_code)]
         #[doc(hidden)]
@@ -28,8 +34,7 @@ pub fn cuda_struct_declaration(
         #[derive(rust_cuda::const_type_layout::TypeLayout)]
         #struct_repr
         #(#struct_layout_attrs)*
-        #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda #where_clause
-            #struct_fields_cuda #struct_semi_cuda
+        #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda #struct_fields_where_clause
 
         // #[derive(DeviceCopy)] can interfer with type parameters
         unsafe impl #impl_generics rust_cuda::rustacuda_core::DeviceCopy
