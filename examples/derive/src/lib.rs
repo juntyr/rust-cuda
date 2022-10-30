@@ -7,21 +7,21 @@
 #![feature(const_mut_refs)]
 
 #[derive(rust_cuda::common::LendRustToCuda)]
-#[r2cLayout(free = "T")]
+#[cuda(layout::free = "T")]
 struct Inner<T>
 where
     T: Copy + rust_cuda::common::RustToCuda,
 {
-    #[r2cEmbed]
+    #[cuda(embed)]
     inner: T,
 }
 
 #[derive(rust_cuda::common::LendRustToCuda)]
-#[r2cLayout(free = "T")]
+#[cuda(layout::free = "T")]
 struct Outer<T>
 where
     T: Copy + rust_cuda::common::RustToCuda,
 {
-    #[r2cEmbed]
+    #[cuda(embed)]
     inner: Inner<T>,
 }

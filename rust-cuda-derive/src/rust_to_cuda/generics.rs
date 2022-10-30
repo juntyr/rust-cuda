@@ -1,3 +1,4 @@
+use quote::quote_spanned;
 use syn::spanned::Spanned;
 
 pub fn expand_cuda_struct_generics_where_requested_in_attrs(
@@ -10,41 +11,69 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     let mut r2c_ignore = false;
 
     struct_attrs_cuda.retain(|attr| {
-        if attr.path.is_ident("r2cBound") {
-            let bound: syn::WherePredicate = match attr.parse_args() {
-                Ok(bound) => bound,
-                Err(err) => {
-                    emit_error!(err);
-
-                    return false;
-                },
-            };
-
-            struct_generics_cuda
-                .make_where_clause()
-                .predicates
-                .push(bound);
-
-            false
-        } else if attr.path.is_ident("r2cIgnore") {
-            if !attr.tokens.is_empty() {
+        if attr.path.is_ident("cuda") {
+            if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
+                for meta in &list.nested {
+                    match meta {
+                        syn::NestedMeta::Meta(syn::Meta::Path(path)) if path.is_ident("ignore") => {
+                            r2c_ignore = true;
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path,
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) if path.is_ident("bound") => match syn::parse_str(&s.value()) {
+                            Ok(bound) => struct_generics_cuda
+                                .make_where_clause()
+                                .predicates
+                                .push(bound),
+                            Err(err) => emit_error!(
+                                s.span(),
+                                "[rust-cuda]: Invalid #[cuda(bound = \
+                                \"<where-predicate>\")] struct attribute: {}.",
+                                err
+                            ),
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path: syn::Path {
+                                leading_colon: None,
+                                segments,
+                            },
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) if segments.len() == 2 && let syn::PathSegment {
+                            ident: layout_ident,
+                            arguments: syn::PathArguments::None,
+                        } = &segments[0] && let syn::PathSegment {
+                            ident: attr_ident,
+                            arguments: syn::PathArguments::None,
+                        } = &segments[1] && layout_ident == "layout" && !segments.trailing_punct() => {
+                            struct_layout_attrs.push(syn::Attribute {
+                                pound_token: attr.pound_token,
+                                style: attr.style,
+                                bracket_token: attr.bracket_token,
+                                path: proc_macro2::Ident::new("layout", attr.path.span()).into(),
+                                tokens: quote_spanned!(s.span() => (#attr_ident = #s)),
+                            });
+                        }
+                        _ => {
+                            emit_error!(
+                                meta.span(),
+                                "[rust-cuda]: Expected #[cuda(ignore)] / \
+                                #[cuda(bound = \"<where-predicate>\")] / \
+                                #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
+                            );
+                        }
+                    }
+                }
+            } else {
                 emit_error!(
-                    attr.tokens.span(),
-                    "#[r2cIgnore] does not take any arguments."
+                    attr.span(),
+                    "[rust-cuda]: Expected #[cuda(ignore)] / \
+                    #[cuda(bound = \"<where-predicate>\")] / \
+                    #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
                 );
             }
-
-            r2c_ignore = true;
-
-            false
-        } else if attr.path.is_ident("r2cLayout") {
-            struct_layout_attrs.push(syn::Attribute {
-                pound_token: attr.pound_token,
-                style: attr.style,
-                bracket_token: attr.bracket_token,
-                path: proc_macro2::Ident::new("layout", attr.path.span()).into(),
-                tokens: attr.tokens.clone(),
-            });
 
             false
         } else {

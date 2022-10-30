@@ -26,10 +26,10 @@ fn main() {}
 pub struct Dummy(i32);
 
 #[derive(rust_cuda::common::LendRustToCuda)]
-#[r2cLayout(free = "T")]
+#[cuda(layout::free = "T")]
 #[allow(dead_code)]
 pub struct Wrapper<T: rust_cuda::common::RustToCuda> {
-    #[r2cEmbed]
+    #[cuda(embed)]
     inner: T,
 }
 

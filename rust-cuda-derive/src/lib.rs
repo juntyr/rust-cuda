@@ -3,6 +3,8 @@
 #![feature(proc_macro_tracked_env)]
 #![feature(proc_macro_span)]
 #![feature(non_exhaustive_omitted_patterns_lint)]
+#![feature(if_let_guard)]
+#![feature(let_chains)]
 #![doc(html_root_url = "https://momolangenstein.github.io/rust-cuda/")]
 
 extern crate proc_macro;
@@ -21,7 +23,7 @@ mod rust_to_cuda;
 //  | rustfmt --config max_width=160 > out.rs
 
 #[proc_macro_error]
-#[proc_macro_derive(LendRustToCuda, attributes(r2cBound, r2cIgnore, r2cEmbed, r2cLayout))]
+#[proc_macro_derive(LendRustToCuda, attributes(cuda))]
 pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
     // Note: We cannot report a more precise span yet
     let ast = match syn::parse(input) {
