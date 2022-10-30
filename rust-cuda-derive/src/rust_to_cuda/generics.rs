@@ -11,8 +11,8 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
 
     struct_attrs_cuda.retain(|attr| {
         if attr.path.is_ident("r2cBound") {
-            let type_param: syn::TypeParam = match attr.parse_args() {
-                Ok(type_param) => type_param,
+            let bound: syn::WherePredicate = match attr.parse_args() {
+                Ok(bound) => bound,
                 Err(err) => {
                     emit_error!(err);
 
@@ -20,25 +20,10 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                 },
             };
 
-            let mut type_param_has_been_inserted = false;
-
-            // Append the additional trait bounds if the generic type is already bounded
-            if let Some(matching_param) = struct_generics_cuda
-                .type_params_mut()
-                .find(|tp| tp.ident == type_param.ident)
-            {
-                for bound in &type_param.bounds {
-                    matching_param.bounds.push(bound.clone());
-                }
-
-                type_param_has_been_inserted = true;
-            }
-
-            if !type_param_has_been_inserted {
-                struct_generics_cuda
-                    .params
-                    .push(syn::GenericParam::Type(type_param));
-            }
+            struct_generics_cuda
+                .make_where_clause()
+                .predicates
+                .push(bound);
 
             false
         } else if attr.path.is_ident("r2cIgnore") {
