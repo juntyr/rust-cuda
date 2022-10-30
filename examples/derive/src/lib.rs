@@ -7,6 +7,7 @@
 #![feature(const_mut_refs)]
 
 #[derive(rust_cuda::common::LendRustToCuda)]
+#[r2cLayout(free = "T")]
 struct Inner<T>
 where
     T: Copy + rust_cuda::common::RustToCuda,
@@ -16,6 +17,7 @@ where
 }
 
 #[derive(rust_cuda::common::LendRustToCuda)]
+#[r2cLayout(free = "T")]
 struct Outer<T>
 where
     T: Copy + rust_cuda::common::RustToCuda,

@@ -21,7 +21,7 @@ mod rust_to_cuda;
 //  | rustfmt --config max_width=160 > out.rs
 
 #[proc_macro_error]
-#[proc_macro_derive(LendRustToCuda, attributes(r2cBound, r2cIgnore, r2cEmbed))]
+#[proc_macro_derive(LendRustToCuda, attributes(r2cBound, r2cIgnore, r2cEmbed, r2cLayout))]
 pub fn rust_to_cuda_derive(input: TokenStream) -> TokenStream {
     // Note: We cannot report a more precise span yet
     let ast = match syn::parse(input) {

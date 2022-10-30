@@ -3,6 +3,7 @@ use quote::quote;
 
 pub fn cuda_struct_declaration(
     struct_attrs_cuda: &[syn::Attribute],
+    struct_layout_attrs: &[syn::Attribute],
     struct_vis_cuda: &syn::Visibility,
     struct_name_cuda: &syn::Ident,
     struct_generics_cuda: &syn::Generics,
@@ -24,8 +25,9 @@ pub fn cuda_struct_declaration(
         #[allow(dead_code)]
         #[doc(hidden)]
         #(#struct_attrs_cuda)*
-        #struct_repr
         #[derive(rust_cuda::const_type_layout::TypeLayout)]
+        #struct_repr
+        #(#struct_layout_attrs)*
         #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda #where_clause
             #struct_fields_cuda #struct_semi_cuda
 
