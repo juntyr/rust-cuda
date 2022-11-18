@@ -16,8 +16,8 @@ pub struct CudaExchangeBufferCudaRepresentation<T, const M2D: bool, const M2H: b
 where
     T: SafeDeviceCopy + TypeGraphLayout;
 
-// Safety: `CudaExchangeBufferCudaRepresentation<T>` is `DeviceCopy`
-//         iff `T` is `SafeDeviceCopy`
+// Safety: [`CudaExchangeBufferCudaRepresentation<T>`] is [`DeviceCopy`]
+//         iff [`T`] is [`SafeDeviceCopy`]
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> DeviceCopy
     for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
 {

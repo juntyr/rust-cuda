@@ -20,8 +20,8 @@ use crate::safety::SafeDeviceCopy;
 #[derive(Clone, Copy, TypeLayout)]
 pub struct CudaExchangeItem<T: SafeDeviceCopy, const M2D: bool, const M2H: bool>(T);
 
-// Safety: Transparent newtype wrapper around `SafeDeviceCopy`
-//          is `DeviceCopy`
+// Safety: Transparent newtype wrapper around [`SafeDeviceCopy`]
+//          is [`DeviceCopy`]
 unsafe impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> rustacuda_core::DeviceCopy
     for CudaExchangeItem<T, M2D, M2H>
 {

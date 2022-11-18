@@ -3,7 +3,7 @@
 use const_type_layout::TypeGraphLayout;
 
 use crate::{
-    common::{CudaAsRust, DeviceAccessible, RustToCuda},
+    common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync},
     safety::SafeDeviceCopy,
 };
 
@@ -30,42 +30,42 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
     }
 
     pub fn from_ref(reference: &T) -> &Self {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &*(reference as *const T).cast() }
     }
 
     pub fn into_ref(&self) -> &T {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &*(self as *const Self).cast() }
     }
 
     pub fn from_mut(reference: &mut T) -> &mut Self {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &mut *(reference as *mut T).cast() }
     }
 
     pub fn into_mut(&mut self) -> &mut T {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &mut *(self as *mut Self).cast() }
     }
 
     pub fn from_slice(slice: &[T]) -> &[Self] {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts(slice.as_ptr().cast(), slice.len()) }
     }
 
     pub fn into_slice(slice: &[Self]) -> &[T] {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts(slice.as_ptr().cast(), slice.len()) }
     }
 
     pub fn from_mut_slice(slice: &mut [T]) -> &mut [Self] {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().cast(), slice.len()) }
     }
 
     pub fn into_mut_slice(slice: &mut [Self]) -> &mut [T] {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().cast(), slice.len()) }
     }
 }
@@ -93,6 +93,36 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWr
     unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    ) -> rustacuda::error::CudaResult<A> {
+        let (_alloc_front, alloc_tail): (crate::host::NullCudaAlloc, A) = alloc.split();
+
+        Ok(alloc_tail)
+    }
+}
+
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync
+    for SafeDeviceCopyWrapper<T>
+{
+    #[cfg(feature = "host")]
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+        &self,
+        alloc: A,
+        _stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )> {
+        let alloc = crate::host::CombinedCudaAlloc::new(crate::host::NullCudaAlloc, alloc);
+        Ok((DeviceAccessible::from(&self.0), alloc))
+    }
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        _stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A> {
         let (_alloc_front, alloc_tail): (crate::host::NullCudaAlloc, A) = alloc.split();
 

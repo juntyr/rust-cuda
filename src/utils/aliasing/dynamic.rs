@@ -6,7 +6,7 @@ use core::{
 
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
+use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
 
 #[repr(C)]
 #[derive(Clone, TypeLayout)]
@@ -22,7 +22,8 @@ impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
     }
 }
 
-// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`
+// Safety: If [`T`] is [`DeviceCopy`], then the newtype struct also is
+// [`DeviceCopy`]
 unsafe impl<T: DeviceCopy> DeviceCopy for SplitSliceOverCudaThreadsDynamicStride<T> {}
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
@@ -164,6 +165,40 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         self.inner.restore(alloc)
+    }
+}
+
+unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDynamicStride<T> {
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )> {
+        let (cuda_repr, alloc) = self.inner.borrow_async(alloc, stream)?;
+
+        Ok((
+            DeviceAccessible::from(SplitSliceOverCudaThreadsDynamicStride::new(
+                cuda_repr,
+                self.stride,
+            )),
+            alloc,
+        ))
+    }
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<A> {
+        self.inner.restore_async(alloc, stream)
     }
 }
 

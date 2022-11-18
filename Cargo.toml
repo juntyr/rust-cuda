@@ -24,10 +24,10 @@ host = ["rustacuda", "rust-cuda-ptx-jit/host"]
 derive = ["rustacuda_derive", "rust-cuda-derive"]
 
 [dependencies]
-rustacuda_core = "0.1.2"
+rustacuda_core = { git = "https://github.com/MomoLangenstein/RustaCUDA", rev = "fa4bf52" }
 
-rustacuda = { version = "0.1.3", optional = true }
-rustacuda_derive = { version = "0.1.2", optional = true }
+rustacuda = { git = "https://github.com/MomoLangenstein/RustaCUDA", rev = "fa4bf52", optional = true }
+rustacuda_derive = { git = "https://github.com/MomoLangenstein/RustaCUDA", rev = "fa4bf52", optional = true }
 
 const-type-layout = { version = "0.2.0", features = ["derive"] }
 

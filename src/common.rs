@@ -88,12 +88,13 @@ pub unsafe trait RustToCuda {
     #[doc(cfg(feature = "host"))]
     /// # Errors
     ///
-    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
     ///
     /// # Safety
     ///
     /// This is an internal function and should NEVER be called manually
-    /// The returned `Self::CudaRepresentation` must NEVER be accessed on the
+    /// The returned [`Self::CudaRepresentation`] must NEVER be accessed on the
     ///  CPU  as it contains a GPU-resident copy of `self`.
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: crate::host::CudaAlloc>(
@@ -108,7 +109,8 @@ pub unsafe trait RustToCuda {
     #[doc(cfg(feature = "host"))]
     /// # Errors
     ///
-    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
     ///
     /// # Safety
     ///
@@ -117,6 +119,53 @@ pub unsafe trait RustToCuda {
     unsafe fn restore<A: crate::host::CudaAlloc>(
         &mut self,
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    ) -> rustacuda::error::CudaResult<A>;
+}
+
+/// # Safety
+///
+/// This is an internal trait and should ONLY be derived automatically using
+/// `#[derive(LendRustToCuda)]`
+pub unsafe trait RustToCudaAsync: RustToCuda {
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    /// # Errors
+    ///
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
+    ///
+    /// # Safety
+    ///
+    /// This is an internal function and should NEVER be called manually
+    /// The returned
+    /// [`Self::CudaRepresentation`](RustToCuda::CudaRepresentation) must NEVER
+    /// be accessed on the  CPU  as it contains a GPU-resident copy of
+    /// `self`.
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )>;
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    /// # Errors
+    ///
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
+    ///
+    /// # Safety
+    ///
+    /// This is an internal function and should NEVER be called manually
+    #[allow(clippy::type_complexity)]
+    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A>;
 }
 
@@ -135,6 +184,13 @@ pub unsafe trait CudaAsRust: DeviceCopy + TypeGraphLayout {
 }
 
 pub trait RustToCudaProxy<T>: RustToCuda {
+    fn from_ref(val: &T) -> &Self;
+    fn from_mut(val: &mut T) -> &mut Self;
+
+    fn into(self) -> T;
+}
+
+pub trait RustToCudaAsyncProxy<T>: RustToCudaAsync {
     fn from_ref(val: &T) -> &Self;
     fn from_mut(val: &mut T) -> &mut Self;
 

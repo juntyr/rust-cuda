@@ -18,8 +18,8 @@ pub trait BorrowFromRust: RustToCuda {
     /// # Safety
     ///
     /// This function is only safe to call iff `cuda_repr` is the
-    ///  `DeviceConstRef` borrowed on the CPU using the corresponding
-    ///  `LendToCuda::lend_to_cuda`.
+    ///  [`DeviceConstRef`] borrowed on the CPU using the corresponding
+    ///  [`LendToCuda::lend_to_cuda`](crate::host::LendToCuda::lend_to_cuda).
     unsafe fn with_borrow_from_rust<O, F: FnOnce(&ShallowCopy<Self>) -> O>(
         cuda_repr: DeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         inner: F,
@@ -28,8 +28,8 @@ pub trait BorrowFromRust: RustToCuda {
     /// # Safety
     ///
     /// This function is only safe to call iff `cuda_repr_mut` is the
-    ///  `DeviceMutRef` borrowed on the CPU using the corresponding
-    ///  `LendToCuda::lend_to_cuda_mut`.
+    ///  [`DeviceMutRef`] borrowed on the CPU using the corresponding
+    ///  [`LendToCuda::lend_to_cuda_mut`](crate::host::LendToCuda::lend_to_cuda_mut).
     /// Furthermore, since different GPU threads can access heap storage
     ///  mutably inside the safe `inner` scope, there must not be any
     ///  aliasing between concurrently running threads.
@@ -41,8 +41,8 @@ pub trait BorrowFromRust: RustToCuda {
     /// # Safety
     ///
     /// This function is only safe to call iff `cuda_repr` is the
-    ///  `DeviceMutRef` borrowed on the CPU using the corresponding
-    ///  `LendToCuda::move_to_cuda`.
+    ///  [`DeviceMutRef`] borrowed on the CPU using the corresponding
+    ///  [`LendToCuda::move_to_cuda`](crate::host::LendToCuda::move_to_cuda).
     unsafe fn with_moved_from_rust<O, F: FnOnce(Self) -> O>(
         cuda_repr_mut: DeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         inner: F,

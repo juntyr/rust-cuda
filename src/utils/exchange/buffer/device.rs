@@ -2,7 +2,10 @@ use core::ops::{Deref, DerefMut};
 
 use const_type_layout::TypeGraphLayout;
 
-use crate::{common::RustToCuda, safety::SafeDeviceCopy};
+use crate::{
+    common::{RustToCuda, RustToCudaAsync},
+    safety::SafeDeviceCopy,
+};
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
@@ -41,4 +44,10 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
     for CudaExchangeBufferDevice<T, M2D, M2H>
 {
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
+}
+
+#[cfg(not(all(doc, feature = "host")))]
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    RustToCudaAsync for CudaExchangeBufferDevice<T, M2D, M2H>
+{
 }

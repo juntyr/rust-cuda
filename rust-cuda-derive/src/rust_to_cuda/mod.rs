@@ -25,8 +25,10 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         rust_cuda::host::NullCudaAlloc
     };
     let mut r2c_field_declarations: Vec<TokenStream> = Vec::new();
+    let mut r2c_field_async_declarations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_initialisations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_destructors: Vec<TokenStream> = Vec::new();
+    let mut r2c_field_async_destructors: Vec<TokenStream> = Vec::new();
 
     let mut c2r_field_initialisations: Vec<TokenStream> = Vec::new();
 
@@ -40,6 +42,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
             ..
         }) => {
             let mut r2c_field_destructors_reverse: Vec<TokenStream> = Vec::new();
+            let mut r2c_field_async_destructors_reverse: Vec<TokenStream> = Vec::new();
 
             for (field_index, field) in fields.iter_mut().enumerate() {
                 let cuda_repr_field_ty = field_ty::swap_field_type_and_filter_attrs(field);
@@ -50,14 +53,18 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
                     &cuda_repr_field_ty,
                     combined_cuda_alloc_type,
                     &mut r2c_field_declarations,
+                    &mut r2c_field_async_declarations,
                     &mut r2c_field_initialisations,
                     &mut r2c_field_destructors_reverse,
+                    &mut r2c_field_async_destructors_reverse,
                     &mut c2r_field_initialisations,
                 );
             }
 
             // The fields must be deallocated in the reverse order of their allocation
             r2c_field_destructors.extend(r2c_field_destructors_reverse.into_iter().rev());
+            r2c_field_async_destructors
+                .extend(r2c_field_async_destructors_reverse.into_iter().rev());
         },
         syn::Fields::Unit => (),
     }

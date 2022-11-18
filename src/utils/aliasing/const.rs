@@ -6,7 +6,7 @@ use core::{
 
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
+use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
 
 #[repr(transparent)]
 #[derive(Clone, TypeLayout)]
@@ -19,7 +19,8 @@ impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     }
 }
 
-// Safety: If `T` is `DeviceCopy`, then the newtype struct also is `DeviceCopy`
+// Safety: If [`T`] is [`DeviceCopy`], then the newtype struct also is
+// [`DeviceCopy`]
 unsafe impl<T: DeviceCopy, const STRIDE: usize> DeviceCopy
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -187,6 +188,39 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         self.0.restore(alloc)
+    }
+}
+
+unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
+    for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
+{
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )> {
+        let (cuda_repr, alloc) = self.0.borrow_async(alloc, stream)?;
+
+        Ok((
+            DeviceAccessible::from(SplitSliceOverCudaThreadsConstStride::new(cuda_repr)),
+            alloc,
+        ))
+    }
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+        &mut self,
+        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<A> {
+        self.0.restore_async(alloc, stream)
     }
 }
 

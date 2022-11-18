@@ -3,7 +3,10 @@ use core::mem::MaybeUninit;
 use const_type_layout::TypeGraphLayout;
 
 use crate::{
-    common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaProxy},
+    common::{
+        CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync, RustToCudaAsyncProxy,
+        RustToCudaProxy,
+    },
     safety::SafeDeviceCopy,
     utils::device_copy::SafeDeviceCopyWrapper,
 };
@@ -83,6 +86,62 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     }
 }
 
+unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    #[allow(clippy::type_complexity)]
+    unsafe fn borrow_async<A: CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: &rustacuda::stream::Stream,
+    ) -> CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        CombinedCudaAlloc<Self::CudaAllocation, A>,
+    )> {
+        let (cuda_repr, alloc) = match self {
+            None => (
+                OptionCudaRepresentation {
+                    maybe: MaybeUninit::uninit(),
+                    present: false,
+                },
+                CombinedCudaAlloc::new(None, alloc),
+            ),
+            Some(value) => {
+                let (cuda_repr, alloc) = value.borrow_async(alloc, stream)?;
+
+                let (alloc_front, alloc_tail) = alloc.split();
+
+                (
+                    OptionCudaRepresentation {
+                        maybe: MaybeUninit::new(cuda_repr),
+                        present: true,
+                    },
+                    CombinedCudaAlloc::new(Some(alloc_front), alloc_tail),
+                )
+            },
+        };
+
+        Ok((DeviceAccessible::from(cuda_repr), alloc))
+    }
+
+    #[cfg(feature = "host")]
+    #[doc(cfg(feature = "host"))]
+    unsafe fn restore_async<A: CudaAlloc>(
+        &mut self,
+        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        stream: &rustacuda::stream::Stream,
+    ) -> CudaResult<A> {
+        let (alloc_front, alloc_tail) = alloc.split();
+
+        match (self, alloc_front) {
+            (Some(value), Some(alloc_front)) => {
+                value.restore_async(CombinedCudaAlloc::new(alloc_front, alloc_tail), stream)
+            },
+            _ => Ok(alloc_tail),
+        }
+    }
+}
+
 unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     type RustRepresentation = Option<<T as CudaAsRust>::RustRepresentation>;
 
@@ -101,12 +160,30 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaProxy<Option<T>>
     for Option<SafeDeviceCopyWrapper<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
         unsafe { &*(val as *const Option<T>).cast() }
     }
 
     fn from_mut(val: &mut Option<T>) -> &mut Self {
-        // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
+        unsafe { &mut *(val as *mut Option<T>).cast() }
+    }
+
+    fn into(self) -> Option<T> {
+        self.map(SafeDeviceCopyWrapper::into_inner)
+    }
+}
+
+impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
+    for Option<SafeDeviceCopyWrapper<T>>
+{
+    fn from_ref(val: &Option<T>) -> &Self {
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
+        unsafe { &*(val as *const Option<T>).cast() }
+    }
+
+    fn from_mut(val: &mut Option<T>) -> &mut Self {
+        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
         unsafe { &mut *(val as *mut Option<T>).cast() }
     }
 
