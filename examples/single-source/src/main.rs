@@ -3,85 +3,117 @@
 #![cfg_attr(target_os = "cuda", no_main)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
-#![cfg_attr(target_os = "cuda", feature(stdarch_nvptx))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(const_type_name)]
+#![feature(cfg_version)]
+#![feature(type_alias_impl_trait)]
+#![feature(associated_type_bounds)]
+#![feature(decl_macro)]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
-
-#[macro_use]
-extern crate const_type_layout;
 
 #[cfg(not(target_os = "cuda"))]
 fn main() {}
 
 #[repr(C)]
-#[derive(TypeLayout)]
+#[derive(rc::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::deps::const_type_layout")]
 pub struct Dummy(i32);
 
-#[derive(rust_cuda::common::LendRustToCuda)]
+#[derive(Clone, rc::lend::LendRustToCuda)]
+#[cuda(crate = "rc")]
 #[allow(dead_code)]
 pub struct Wrapper<T> {
     #[cuda(embed)]
     inner: T,
 }
 
-#[derive(rust_cuda::common::LendRustToCuda)]
+#[derive(Clone, rc::lend::LendRustToCuda)]
+#[cuda(crate = "rc")]
 pub struct Empty([u8; 0]);
 
 #[repr(C)]
-#[derive(TypeLayout)]
+#[derive(rc::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::deps::const_type_layout")]
 pub struct Tuple(u32, i32);
 
-#[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
-pub fn kernel<'a, T: rust_cuda::common::RustToCuda>(
-    #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
-    #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
-    #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
-    #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,
-) where
-    <T as rust_cuda::common::RustToCuda>::CudaRepresentation: rust_cuda::safety::StackOnly,
-{
-}
+#[repr(C)]
+#[derive(Copy, Clone, rc::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::deps::const_type_layout")]
+pub struct Triple(i32, i32, i32);
 
-#[cfg(not(target_os = "cuda"))]
-mod host {
-    use super::{Kernel, KernelArgs};
+#[rc::kernel::kernel(pub use link! for impl)]
+#[kernel(crate = "rc")]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_use, ptx::register_spills)
+)]
+pub fn kernel<
+    'a,
+    T: 'static
+        + Send
+        + Sync
+        + Clone
+        + rc::lend::RustToCuda<
+            CudaRepresentation: rc::safety::StackOnly,
+            CudaAllocation: rc::alloc::EmptyCudaAlloc,
+        >
+        + rc::safety::StackOnly,
+>(
+    _x: &rc::kernel::param::PerThreadShallowCopy<Dummy>,
+    _z: &rc::kernel::param::DeepPerThreadBorrow<Wrapper<T>>,
+    _v @ _w: &'a rc::kernel::param::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
+    _: rc::kernel::param::DeepPerThreadBorrow<Wrapper<T>>,
+    q @ Triple(s, mut __t, _u): rc::kernel::param::PerThreadShallowCopy<Triple>,
+    shared3: &mut rc::utils::shared::ThreadBlockShared<u32>,
+    dynamic: &mut rc::utils::shared::ThreadBlockSharedSlice<Dummy>,
+) {
+    let shared = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
+    let shared2 = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
 
-    #[allow(dead_code)]
-    struct Launcher<T: rust_cuda::common::RustToCuda>(core::marker::PhantomData<T>);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    unsafe {
+        (*shared.index_mut_unchecked(1)).0 = (f64::from(s) * 2.0) as u32;
+    }
+    unsafe {
+        (*shared2.index_mut_unchecked(2)).1 = q.0 + q.1 + q.2;
+    }
 
-    link_kernel!(crate::Empty);
-    link_kernel!(rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<u64>);
+    unsafe {
+        *shared3.as_mut_ptr() = 12;
+    }
 
-    impl<T: rust_cuda::common::RustToCuda> rust_cuda::host::Launcher for Launcher<T> {
-        type CompilationWatcher = ();
-        type KernelTraitObject = dyn Kernel<T>;
-
-        fn get_launch_package(&mut self) -> rust_cuda::host::LaunchPackage<Self> {
-            unimplemented!()
+    let index = rc::device::thread::Thread::this().index();
+    if index < dynamic.len() {
+        unsafe {
+            *dynamic.index_mut_unchecked(index) = Dummy(42);
         }
     }
 }
 
+#[cfg(not(target_os = "cuda"))]
+mod host {
+    // Link several instances of the generic CUDA kernel
+    struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
+    crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
+    crate::link! { impl kernel<'a, rc::utils::adapter::RustToCudaWithPortableBitCopySemantics<u64>> for KernelPtx }
+}
+
 #[cfg(target_os = "cuda")]
 mod cuda_prelude {
-    use core::arch::nvptx;
-
-    use rust_cuda::device::utils;
+    use rc::device::alloc::PTXAllocator;
 
     #[global_allocator]
-    static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
+    static _GLOBAL_ALLOCATOR: PTXAllocator = PTXAllocator;
 
     #[panic_handler]
     fn panic(_: &::core::panic::PanicInfo) -> ! {
-        unsafe { nvptx::trap() }
+        rc::device::utils::abort()
     }
 
     #[alloc_error_handler]
     fn alloc_error_handler(_: core::alloc::Layout) -> ! {
-        unsafe { nvptx::trap() }
+        rc::device::utils::abort()
     }
 }

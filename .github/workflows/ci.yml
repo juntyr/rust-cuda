@@ -23,6 +23,16 @@ jobs:
         rust: [nightly]
 
     steps:
+      - name: Install CUDA
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+          curl -L -O https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-keyring_1.0-1_all.deb
+          sudo dpkg -i cuda-keyring_1.0-1_all.deb
+          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
+          sudo apt-get update -q
+          sudo apt-get install cuda -y --no-install-recommends
+
       - name: Checkout the Repository
         uses: actions/checkout@v2
       
@@ -40,53 +50,26 @@ jobs:
           sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
           rm llvm.sh
           cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
+      
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
 
-      - name: Check without features on CPU
+      - name: Check feature powerset on the CPU
         run: |
-          cargo check
+          cargo hack check --feature-powerset --optional-deps \
+            --skip device \
+            --keep-going
 
-      - name: Check with alloc feature on CPU
+      - name: Check feature powerset on CUDA
         run: |
-          cargo check \
-            --features alloc
-
-      - name: Check with derive feature on CPU
-        run: |
-          cargo check \
-            --features derive
-
-      - name: Check with host feature on CPU
-        run: |
-          cargo check \
-            --features host
-
-      - name: Check with host,derive,alloc features on CPU
-        run: |
-          cargo check \
-            --features host,derive,alloc
-
-      - name: Check without features on CUDA
-        run: |
-          cargo check \
+          cargo hack check --feature-powerset --optional-deps \
+            --skip host \
+            --keep-going \
             --target nvptx64-nvidia-cuda
-
-      - name: Check with alloc feature on CUDA
-        run: |
-          cargo check \
-            --target nvptx64-nvidia-cuda \
-            --features alloc
-
-      - name: Check with derive feature on CUDA
-        run: |
-          cargo check \
-            --target nvptx64-nvidia-cuda \
-            --features derive
 
       - name: Check all workspace targets
         run: |
-          cargo check \
-            --workspace \
-            --all-targets
+          cargo check --workspace --all-targets
 
   test:
     name: Test Suite
@@ -154,6 +137,16 @@ jobs:
         rust: [nightly]
 
     steps:
+      - name: Install CUDA
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
+          curl -L -O https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-keyring_1.0-1_all.deb
+          sudo dpkg -i cuda-keyring_1.0-1_all.deb
+          sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
+          sudo apt-get update -q
+          sudo apt-get install cuda -y --no-install-recommends
+
       - name: Checkout the Repository
         uses: actions/checkout@v2
       
@@ -173,58 +166,24 @@ jobs:
           rm llvm.sh
           cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
 
-      - name: Check the code style without features on CPU
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
+      
+      - name: Check feature powerset on the CPU
         run: |
-          cargo clippy \
-            -- -D warnings
-
-      - name: Check the code style with alloc feature on CPU
-        run: |
-          cargo clippy \
-            --features alloc \
-            -- -D warnings
-
-      - name: Check the code style with derive feature on CPU
-        run: |
-          cargo clippy \
-            --features derive \
-            -- -D warnings
-
-      - name: Check the code style with host feature on CPU
-        run: |
-          cargo clippy \
-            --features host \
-            -- -D warnings
-
-      - name: Check the code style with host,derive,alloc features on CPU
-        run: |
-          cargo clippy \
-            --features host,derive,alloc \
-            -- -D warnings
-
-      - name: Check the code style without features on CUDA
-        run: |
-          cargo clippy \
-            --target nvptx64-nvidia-cuda \
+          cargo hack clippy --feature-powerset --optional-deps \
+            --skip device \
+            --keep-going \
             -- -D warnings
       
-      - name: Check the code style with alloc feature on CUDA
+      - name: Check feature powerset on CUDA
         run: |
-          cargo clippy \
+          cargo hack clippy --feature-powerset --optional-deps \
+            --skip host \
+            --keep-going \
             --target nvptx64-nvidia-cuda \
-            --features alloc \
             -- -D warnings
 
-      - name: Check the code style with derive feature on CUDA
+      - name: Check all workspace targets
         run: |
-          cargo clippy \
-            --target nvptx64-nvidia-cuda \
-            --features derive \
-            -- -D warnings
-
-      - name: Check the code style for all workspace targets
-        run: |
-          cargo clippy \
-            --workspace \
-            --all-targets \
-            -- -D warnings
+          cargo clippy --workspace --all-targets -- -D warnings
