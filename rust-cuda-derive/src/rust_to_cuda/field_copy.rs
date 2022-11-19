@@ -143,6 +143,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                         #proxy_ty as rust_cuda::common::RustToCudaAsyncProxy<#field_ty>
                     >::from_mut(&mut self.#field_accessor),
                     alloc_front,
+                    stream,
                 )?;
             });
 

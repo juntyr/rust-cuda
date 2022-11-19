@@ -9,6 +9,7 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     syn::Generics,
     syn::Generics,
     Vec<syn::Attribute>,
+    bool,
 ) {
     let mut type_params = ast
         .generics
@@ -29,6 +30,8 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     }
 
     let mut r2c_ignore = false;
+
+    let mut r2c_async_impl = None;
 
     struct_attrs_cuda.retain(|attr| {
         if attr.path.is_ident("cuda") {
@@ -90,11 +93,22 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                             }
                         },
                         syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path:
-                                syn::Path {
-                                    leading_colon: None,
-                                    segments,
-                                },
+                            path,
+                            lit: syn::Lit::Bool(b),
+                            ..
+                        })) if path.is_ident("async") => if r2c_async_impl.is_none() {
+                            r2c_async_impl = Some(b.value());
+                        } else {
+                            emit_error!(
+                                b.span(),
+                                "[rust-cuda]: Duplicate #[cuda(async)] attribute.",
+                            );
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path: syn::Path {
+                                leading_colon: None,
+                                segments,
+                            },
                             lit: syn::Lit::Str(s),
                             ..
                         })) if segments.len() == 2
@@ -161,5 +175,6 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
         struct_generics_cuda,
         struct_generics_cuda_async,
         struct_layout_attrs,
+        r2c_async_impl.unwrap_or(true),
     )
 }

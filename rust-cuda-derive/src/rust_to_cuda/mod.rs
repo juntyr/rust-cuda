@@ -10,7 +10,7 @@ fn get_cuda_repr_ident(rust_repr_ident: &proc_macro2::Ident) -> proc_macro2::Ide
     format_ident!("{}CudaRepresentation", rust_repr_ident)
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
 pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     let (mut struct_fields_cuda, struct_semi_cuda) = if let syn::Data::Struct(s) = &ast.data {
         (s.fields.clone(), s.semi_token)
@@ -69,8 +69,13 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         syn::Fields::Unit => (),
     }
 
-    let (struct_attrs_cuda, struct_generics_cuda, struct_generics_cuda_async, struct_layout_attrs) =
-        generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
+    let (
+        struct_attrs_cuda,
+        struct_generics_cuda,
+        struct_generics_cuda_async,
+        struct_layout_attrs,
+        r2c_async_impl,
+    ) = generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
 
     let cuda_struct_declaration = r#impl::cuda_struct_declaration(
         &struct_attrs_cuda,
@@ -93,15 +98,19 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         &r2c_field_destructors,
     );
 
-    let rust_to_cuda_async_trait_impl = r#impl::rust_to_cuda_async_trait(
-        struct_name,
-        &struct_name_cuda,
-        &struct_generics_cuda_async,
-        &struct_fields_cuda,
-        &r2c_field_async_declarations,
-        &r2c_field_initialisations,
-        &r2c_field_async_destructors,
-    );
+    let rust_to_cuda_async_trait_impl = if r2c_async_impl {
+        r#impl::rust_to_cuda_async_trait(
+            struct_name,
+            &struct_name_cuda,
+            &struct_generics_cuda_async,
+            &struct_fields_cuda,
+            &r2c_field_async_declarations,
+            &r2c_field_initialisations,
+            &r2c_field_async_destructors,
+        )
+    } else {
+        TokenStream::new()
+    };
 
     let cuda_as_rust_trait_impl = r#impl::cuda_as_rust_trait(
         struct_name,
