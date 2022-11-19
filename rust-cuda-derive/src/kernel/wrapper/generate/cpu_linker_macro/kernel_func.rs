@@ -57,8 +57,10 @@ pub(super) fn quote_kernel_func(
     quote! {
         #(#func_attrs)*
         #[allow(clippy::needless_lifetimes)]
-        fn #func_ident #generic_start_token #generic_wrapper_params #generic_close_token (
-            &mut self, #(#new_func_inputs),*
+        fn #func_ident <'stream, #generic_wrapper_params>(
+            &mut self,
+            stream: &'stream rust_cuda::rustacuda::stream::Stream,
+            #(#new_func_inputs),*
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
@@ -101,10 +103,7 @@ fn generate_raw_func_input_wrap(
         .rev()
         .fold(
             quote! {
-                self.#func_ident_async(#(#func_params),*)?;
-                let rust_cuda::host::LaunchPackage {
-                    stream, ..
-                } = rust_cuda::host::Launcher::get_launch_package(self);
+                self.#func_ident_async(stream, #(#func_params),*)?;
                 stream.synchronize()
             },
             |inner, ((arg, param), (cuda_mode, _ptx_jit))| match arg {

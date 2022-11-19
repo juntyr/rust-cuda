@@ -70,14 +70,20 @@ pub(in super::super) fn quote_cpu_wrapper(
             > where #launcher_predicate;
 
             #(#func_attrs)*
-            fn #func_ident #generic_start_token #generic_wrapper_params #generic_close_token (
-                &mut self, #(#new_func_inputs_decl),*
+            #[allow(clippy::too_many_arguments)]
+            fn #func_ident <'stream, #generic_wrapper_params>(
+                &mut self,
+                stream: &'stream rust_cuda::rustacuda::stream::Stream,
+                #(#new_func_inputs_decl),*
             ) -> rust_cuda::rustacuda::error::CudaResult<()>
                 #generic_wrapper_where_clause;
 
             #(#func_attrs)*
-            fn #func_ident_async <'stream, #generic_wrapper_params> (
-                &'stream mut self, #(#new_func_inputs_async_decl),*
+            #[allow(clippy::too_many_arguments)]
+            fn #func_ident_async <'stream, #generic_wrapper_params>(
+                &mut self,
+                stream: &'stream rust_cuda::rustacuda::stream::Stream,
+                #(#new_func_inputs_async_decl),*
             ) -> rust_cuda::rustacuda::error::CudaResult<()>
                 #generic_wrapper_where_clause;
         }

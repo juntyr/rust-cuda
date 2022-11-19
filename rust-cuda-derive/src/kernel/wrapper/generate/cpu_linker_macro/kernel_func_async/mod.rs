@@ -36,13 +36,15 @@ pub(super) fn quote_kernel_func_async(
     quote! {
         #(#func_attrs)*
         #[allow(clippy::extra_unused_type_parameters)]
-        fn #func_ident_async <'stream, #generic_wrapper_params> (
-            &'stream mut self, #(#new_func_inputs_async),*
+        fn #func_ident_async <'stream, #generic_wrapper_params>(
+            &mut self,
+            stream: &'stream rust_cuda::rustacuda::stream::Stream,
+            #(#new_func_inputs_async),*
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
             let rust_cuda::host::LaunchPackage {
-                kernel, watcher, config, stream
+                kernel, watcher, config
             } = rust_cuda::host::Launcher::get_launch_package(self);
 
             let kernel_jit_result = if config.ptx_jit {

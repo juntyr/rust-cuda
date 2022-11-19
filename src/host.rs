@@ -51,10 +51,7 @@ pub struct LaunchConfig {
 
 pub struct LaunchPackage<'l, L: ?Sized + Launcher> {
     pub config: LaunchConfig,
-
     pub kernel: &'l mut TypedKernel<L::KernelTraitObject>,
-    pub stream: &'l Stream,
-
     pub watcher: &'l mut L::CompilationWatcher,
 }
 
