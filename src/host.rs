@@ -297,19 +297,29 @@ impl<A: CudaAlloc, B: CudaAlloc> CombinedCudaAlloc<A, B> {
     }
 }
 
-pub struct CudaDropWrapper<C: private::drop::Sealed>(Option<C>);
+#[repr(transparent)]
+pub struct CudaDropWrapper<C: private::drop::Sealed>(ManuallyDrop<C>);
 impl<C: private::drop::Sealed> private::alloc::Sealed for CudaDropWrapper<C> {}
 impl<C: private::drop::Sealed> From<C> for CudaDropWrapper<C> {
     fn from(val: C) -> Self {
-        Self(Some(val))
+        Self(ManuallyDrop::new(val))
+    }
+}
+impl<C: private::drop::Sealed> CudaDropWrapper<C> {
+    pub fn into_inner(self) -> C {
+        let this = ManuallyDrop::new(self);
+
+        // Safety: move out of drop, caller now has to deal with CUDA drop again
+        unsafe { core::ptr::read(&*this.0) }
     }
 }
 impl<C: private::drop::Sealed> Drop for CudaDropWrapper<C> {
     fn drop(&mut self) {
-        if let Some(val) = self.0.take() {
-            if let Err((_err, val)) = C::drop(val) {
-                core::mem::forget(val);
-            }
+        // Safety: drop is only ever called once
+        let val = unsafe { ManuallyDrop::take(&mut self.0) };
+
+        if let Err((_err, val)) = C::drop(val) {
+            core::mem::forget(val);
         }
     }
 }
@@ -317,12 +327,12 @@ impl<C: private::drop::Sealed> Deref for CudaDropWrapper<C> {
     type Target = C;
 
     fn deref(&self) -> &Self::Target {
-        self.0.as_ref().unwrap()
+        &self.0
     }
 }
 impl<C: private::drop::Sealed> DerefMut for CudaDropWrapper<C> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut().unwrap()
+        &mut self.0
     }
 }
 

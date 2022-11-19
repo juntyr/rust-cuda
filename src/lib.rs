@@ -14,6 +14,7 @@
 #![feature(const_type_name)]
 #![feature(offset_of)]
 #![feature(adt_const_params)]
+#![feature(impl_trait_in_assoc_type)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
