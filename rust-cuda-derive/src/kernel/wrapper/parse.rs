@@ -23,7 +23,7 @@ pub(super) fn parse_kernel_fn(tokens: TokenStream) -> syn::ItemFn {
     if func.sig.asyncness.is_some() {
         abort!(
             func.sig.asyncness.span(),
-            "Kernel function must not (yet) be async."
+            "Kernel function must not be async."
         );
     }
 

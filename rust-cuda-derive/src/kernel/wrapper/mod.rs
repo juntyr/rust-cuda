@@ -128,7 +128,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_ident = FuncIdent {
         func_ident: &func.sig.ident,
-        func_ident_raw: quote::format_ident!("{}_raw", &func.sig.ident),
+        func_ident_async: quote::format_ident!("{}_async", &func.sig.ident),
         func_ident_hash: quote::format_ident!("{}_{:016x}", &func.sig.ident, kernel_hash),
     };
 
@@ -251,7 +251,7 @@ struct ImplGenerics<'f> {
 #[allow(clippy::struct_field_names)]
 struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
-    func_ident_raw: syn::Ident,
+    func_ident_async: syn::Ident,
     func_ident_hash: syn::Ident,
 }
 

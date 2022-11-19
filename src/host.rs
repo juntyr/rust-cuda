@@ -618,6 +618,18 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
             host_ref: self.host_ref,
         }
     }
+
+    #[must_use]
+    pub fn as_async<'stream, 'b>(&'b mut self) -> HostAndDeviceMutRefAsync<'stream, 'b, T>
+    where
+        'a: 'b,
+    {
+        HostAndDeviceMutRefAsync {
+            device_box: self.device_box,
+            host_ref: self.host_ref,
+            stream: PhantomData::<&'stream Stream>,
+        }
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -693,6 +705,18 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     {
         *self
     }
+
+    #[must_use]
+    pub fn as_async<'stream, 'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
+    where
+        'a: 'b,
+    {
+        HostAndDeviceConstRefAsync {
+            device_box: self.device_box,
+            host_ref: self.host_ref,
+            stream: PhantomData::<&'stream Stream>,
+        }
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -739,6 +763,18 @@ impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
     #[must_use]
     pub fn for_host(&'a mut self) -> &'a T {
         self.host_val
+    }
+
+    #[must_use]
+    pub fn as_async<'stream, 'b>(&'b mut self) -> HostAndDeviceOwnedAsync<'stream, 'b, T>
+    where
+        'a: 'b,
+    {
+        HostAndDeviceOwnedAsync {
+            device_box: self.device_box,
+            host_val: self.host_val,
+            stream: PhantomData::<&'stream Stream>,
+        }
     }
 }
 
@@ -882,34 +918,12 @@ pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> 
 }
 
 impl<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'stream, 'a, T> {
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] iff `value` cannot be moved
-    ///  to CUDA or an error occurs inside `inner`.
-    pub fn with_new<
-        O,
-        E: From<CudaError>,
-        F: for<'b> FnOnce(HostAndDeviceOwned<'b, T>) -> Result<O, E>,
-    >(
-        mut value: T,
-        inner: F,
-    ) -> Result<O, E> {
-        let mut device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
-
-        // Safety: `device_box` contains exactly the device copy of `value`
-        let result = inner(HostAndDeviceOwned {
-            device_box: &mut device_box,
-            host_val: &mut value,
-        });
-
-        core::mem::drop(device_box);
-        core::mem::drop(value);
-
-        result
-    }
-
     #[must_use]
-    pub fn for_device(self) -> DeviceMutRef<'a, T> {
+    /// # Safety
+    ///
+    /// The returned [`DeviceConstRef`] must only be used on the
+    /// constructed-with [`Stream`]
+    pub unsafe fn for_device_async(self) -> DeviceMutRef<'a, T> {
         DeviceMutRef {
             pointer: self.device_box.0.as_raw_mut(),
             reference: PhantomData,

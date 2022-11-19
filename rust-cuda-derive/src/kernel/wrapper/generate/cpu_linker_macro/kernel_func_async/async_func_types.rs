@@ -5,7 +5,7 @@ use crate::kernel::utils::r2c_move_lifetime;
 
 use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
 
-pub(super) fn generate_raw_func_types(
+pub(super) fn generate_async_func_types(
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
@@ -62,11 +62,11 @@ pub(super) fn generate_raw_func_types(
                         }
 
                         quote!(
-                            rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
+                            rust_cuda::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
                         )
                     } else {
                         quote!(
-                            rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
+                            rust_cuda::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
                         )
                     };
 
@@ -77,7 +77,7 @@ pub(super) fn generate_raw_func_types(
                     let lifetime = r2c_move_lifetime(i, ty);
 
                     let wrapped_type = quote! {
-                        rust_cuda::host::HostAndDeviceOwned<#lifetime, #cuda_type>
+                        rust_cuda::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
                     };
 
                     quote! {

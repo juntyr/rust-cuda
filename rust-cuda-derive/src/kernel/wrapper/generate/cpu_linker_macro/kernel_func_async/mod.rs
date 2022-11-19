@@ -2,32 +2,32 @@ use proc_macro2::TokenStream;
 
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
 
+mod async_func_types;
 mod launch_types;
-mod raw_func_types;
 mod type_wrap;
 
+use async_func_types::generate_async_func_types;
 pub(super) use launch_types::generate_launch_types;
-use raw_func_types::generate_raw_func_types;
 use type_wrap::generate_func_input_and_ptx_jit_wraps;
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn quote_kernel_func_raw(
+pub(super) fn quote_kernel_func_async(
     config @ KernelConfig { args, .. }: &KernelConfig,
     decl_generics @ DeclGenerics {
-        generic_start_token,
         generic_wrapper_params,
-        generic_close_token,
         generic_wrapper_where_clause,
         ..
     }: &DeclGenerics,
     func_inputs: &FunctionInputs,
-    FuncIdent { func_ident_raw, .. }: &FuncIdent,
+    FuncIdent {
+        func_ident_async, ..
+    }: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
-    let new_func_inputs_raw =
-        generate_raw_func_types(config, decl_generics, func_inputs, macro_type_ids);
+    let new_func_inputs_async =
+        generate_async_func_types(config, decl_generics, func_inputs, macro_type_ids);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
         generate_func_input_and_ptx_jit_wraps(func_inputs);
     let (cpu_func_types_launch, cpu_func_lifetime_erased_types, cpu_func_unboxed_types) =
@@ -36,8 +36,8 @@ pub(super) fn quote_kernel_func_raw(
     quote! {
         #(#func_attrs)*
         #[allow(clippy::extra_unused_type_parameters)]
-        fn #func_ident_raw #generic_start_token #generic_wrapper_params #generic_close_token (
-            &mut self, #(#new_func_inputs_raw),*
+        fn #func_ident_async <'stream, #generic_wrapper_params> (
+            &'stream mut self, #(#new_func_inputs_async),*
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
@@ -102,9 +102,7 @@ pub(super) fn quote_kernel_func_raw(
                             &#func_params as *const _ as *mut ::std::ffi::c_void
                         ),*
                     ]
-                ) }?;
-
-                stream.synchronize()
+                ) }
             })(#(#func_input_wrap),*)
         }
     }

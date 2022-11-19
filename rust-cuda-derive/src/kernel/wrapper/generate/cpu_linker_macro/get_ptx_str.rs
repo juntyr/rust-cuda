@@ -30,7 +30,7 @@ pub(super) fn quote_get_ptx_str(
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
 
     let cpu_func_lifetime_erased_types =
-        super::kernel_func_raw::generate_launch_types(config, generics, inputs, macro_type_ids).1;
+        super::kernel_func_async::generate_launch_types(config, generics, inputs, macro_type_ids).1;
 
     let matching_kernel_assert = if skip_kernel_compilation() {
         quote!()

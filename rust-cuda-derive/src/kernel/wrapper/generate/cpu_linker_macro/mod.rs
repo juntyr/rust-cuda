@@ -4,12 +4,12 @@ use super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
 
 mod get_ptx_str;
 mod kernel_func;
-mod kernel_func_raw;
+mod kernel_func_async;
 mod new_kernel;
 
 use get_ptx_str::quote_get_ptx_str;
 use kernel_func::quote_kernel_func;
-use kernel_func_raw::quote_kernel_func_raw;
+use kernel_func_async::quote_kernel_func_async;
 use new_kernel::quote_new_kernel;
 
 pub(in super::super) fn quote_cpu_linker_macro(
@@ -73,7 +73,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
         func_attrs,
         &macro_type_ids,
     );
-    let kernel_func_raw = quote_kernel_func_raw(
+    let kernel_func_async = quote_kernel_func_async(
         config,
         decl_generics,
         func_inputs,
@@ -97,7 +97,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
 
                     #kernel_func
 
-                    #kernel_func_raw
+                    #kernel_func_async
                 }
             };
         }

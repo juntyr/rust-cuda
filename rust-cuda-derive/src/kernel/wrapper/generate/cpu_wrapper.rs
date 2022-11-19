@@ -23,7 +23,7 @@ pub(in super::super) fn quote_cpu_wrapper(
     func_inputs: &FunctionInputs,
     FuncIdent {
         func_ident,
-        func_ident_raw,
+        func_ident_async,
         ..
     }: &FuncIdent,
     func_attrs: &[syn::Attribute],
@@ -54,7 +54,7 @@ pub(in super::super) fn quote_cpu_wrapper(
         },
     };
 
-    let (new_func_inputs_decl, new_func_inputs_raw_decl) =
+    let (new_func_inputs_decl, new_func_inputs_async_decl) =
         generate_new_func_inputs_decl(config, impl_generics, func_inputs);
 
     quote! {
@@ -76,8 +76,8 @@ pub(in super::super) fn quote_cpu_wrapper(
                 #generic_wrapper_where_clause;
 
             #(#func_attrs)*
-            fn #func_ident_raw #generic_start_token #generic_wrapper_params #generic_close_token (
-                &mut self, #(#new_func_inputs_raw_decl),*
+            fn #func_ident_async <'stream, #generic_wrapper_params> (
+                &'stream mut self, #(#new_func_inputs_async_decl),*
             ) -> rust_cuda::rustacuda::error::CudaResult<()>
                 #generic_wrapper_where_clause;
         }
@@ -157,11 +157,11 @@ fn generate_new_func_inputs_decl(
                         {
                             let wrapped_type = if mutability.is_some() {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostAndDeviceMutRef<#lifetime, #cuda_type>
+                                    rust_cuda::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
                                 )
                             } else {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostAndDeviceConstRef<#lifetime, #cuda_type>
+                                    rust_cuda::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
                                 )
                             };
 
@@ -170,7 +170,7 @@ fn generate_new_func_inputs_decl(
                             let lifetime = r2c_move_lifetime(i, ty);
 
                             let wrapped_type = syn::parse_quote!(
-                                rust_cuda::host::HostAndDeviceOwned<#lifetime, #cuda_type>
+                                rust_cuda::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
                             );
 
                             Box::new(wrapped_type)
@@ -178,9 +178,8 @@ fn generate_new_func_inputs_decl(
                             cuda_type
                         }
                     },
-                }),
+                })
             ),
             syn::FnArg::Receiver(_) => unreachable!(),
-        })
-        .unzip()
+        }).unzip()
 }

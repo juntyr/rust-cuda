@@ -89,7 +89,9 @@ fn generate_raw_func_input_wrap(
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
-    FuncIdent { func_ident_raw, .. }: &FuncIdent,
+    FuncIdent {
+        func_ident_async, ..
+    }: &FuncIdent,
     func_params: &[syn::Ident],
 ) -> TokenStream {
     func_inputs
@@ -99,7 +101,11 @@ fn generate_raw_func_input_wrap(
         .rev()
         .fold(
             quote! {
-                self.#func_ident_raw(#(#func_params),*)
+                self.#func_ident_async(#(#func_params),*)?;
+                let rust_cuda::host::LaunchPackage {
+                    stream, ..
+                } = rust_cuda::host::Launcher::get_launch_package(self);
+                stream.synchronize()
             },
             |inner, ((arg, param), (cuda_mode, _ptx_jit))| match arg {
                 syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => match cuda_mode {
@@ -119,7 +125,7 @@ fn generate_raw_func_input_wrap(
                                 let __result = (|#pat| { #inner })(unsafe {
                                     rust_cuda::host::HostAndDeviceConstRef::new(
                                         &#pat_box,  rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
-                                    )
+                                    ).as_async()
                                 });
 
                                 #[allow(invalid_reference_casting)]
@@ -149,16 +155,16 @@ fn generate_raw_func_input_wrap(
                         if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                             if mutability.is_some() {
                                 quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(
-                                    #pat, |#pat| { #inner }
+                                    #pat, |mut #pat| { (|#pat| { #inner })(#pat.as_async()) }
                                 ) }
                             } else {
                                 quote! { rust_cuda::host::LendToCuda::lend_to_cuda(
-                                    #pat, |#pat| { #inner }
+                                    #pat, |#pat| { (|#pat| { #inner })(#pat.as_async()) }
                                 ) }
                             }
                         } else {
                             quote! { rust_cuda::host::LendToCuda::move_to_cuda(
-                                #pat, |#pat| { #inner }
+                                #pat, |mut #pat| { (|#pat| { #inner })(#pat.as_async()) }
                             ) }
                         }
                     },
