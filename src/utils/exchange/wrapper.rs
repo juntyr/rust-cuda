@@ -38,6 +38,7 @@ pub struct ExchangeWrapperOnHostAsync<'stream, T: RustToCuda<CudaAllocation: Emp
     locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
     move_event: CudaDropWrapper<Event>,
     stream: PhantomData<&'stream Stream>,
+    waker: Arc<Mutex<Option<Waker>>>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -185,22 +186,64 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA
-    pub fn move_to_stream<'stream2>(
-        self,
-        stream: &'stream2 Stream,
-    ) -> CudaResult<ExchangeWrapperOnHostAsync<'stream2, T>> {
+    pub fn move_to_stream(self, stream: &Stream) -> CudaResult<ExchangeWrapperOnHostAsync<'_, T>> {
         let old_event = self.move_event.into_inner();
         let new_event: CudaDropWrapper<Event> = Event::new(EventFlags::DISABLE_TIMING)?.into();
 
         stream.wait_event(old_event, StreamWaitEventFlags::DEFAULT)?;
         new_event.record(stream)?;
 
+        let waker_callback = self.waker.clone();
+        stream.add_callback(Box::new(move |_| {
+            if let Ok(mut w) = waker_callback.lock() {
+                if let Some(w) = w.take() {
+                    w.wake();
+                }
+            }
+        }))?;
+
         Ok(ExchangeWrapperOnHostAsync {
             value: self.value,
             device_box: self.device_box,
             locked_cuda_repr: self.locked_cuda_repr,
             move_event: new_event,
-            stream: PhantomData::<&'stream2 Stream>,
+            stream: PhantomData::<&Stream>,
+            waker: self.waker,
+        })
+    }
+}
+
+impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> IntoFuture
+    for ExchangeWrapperOnHostAsync<'stream, T>
+{
+    type Output = CudaResult<ExchangeWrapperOnHost<T>>;
+
+    type IntoFuture = impl Future<Output = Self::Output>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        let mut wrapper = Some(self);
+
+        core::future::poll_fn(move |cx| match &wrapper {
+            Some(inner) => match inner.move_event.query() {
+                Ok(EventStatus::NotReady) => match inner.waker.lock() {
+                    Ok(mut w) => {
+                        *w = Some(cx.waker().clone());
+                        Poll::Pending
+                    },
+                    Err(_) => Poll::Ready(Err(CudaError::OperatingSystemError)),
+                },
+                Ok(EventStatus::Ready) => match wrapper.take() {
+                    Some(inner) => Poll::Ready(Ok(ExchangeWrapperOnHost {
+                        value: inner.value,
+                        device_box: inner.device_box,
+                        locked_cuda_repr: inner.locked_cuda_repr,
+                        move_event: inner.move_event,
+                    })),
+                    None => Poll::Ready(Err(CudaError::AlreadyAcquired)),
+                },
+                Err(err) => Poll::Ready(Err(err)),
+            },
+            None => Poll::Ready(Err(CudaError::AlreadyAcquired)),
         })
     }
 }
@@ -295,6 +338,77 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
             )
         }
     }
+
+    /// Moves the data synchronously back to the host CPU device.
+    ///
+    /// To avoid aliasing, each CUDA thread only got access to its own shallow
+    /// copy of the data. Hence,
+    /// - any shallow changes to the data will NOT be reflected back to the CPU
+    /// - any deep changes to the data WILL be reflected back to the CPU
+    ///
+    /// # Errors
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
+    pub fn move_to_host(mut self) -> CudaResult<ExchangeWrapperOnHost<T>> {
+        // Reflect deep changes back to the CPU
+        let _null_alloc: NullCudaAlloc = unsafe { self.value.restore(self.null_alloc) }?;
+
+        // Note: Shallow changes are not reflected back to the CPU
+
+        Ok(ExchangeWrapperOnHost {
+            value: self.value,
+            device_box: self.device_box,
+            locked_cuda_repr: self.locked_cuda_repr,
+            move_event: self.move_event,
+        })
+    }
+}
+
+impl<'stream, T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>>
+    ExchangeWrapperOnDeviceAsync<'stream, T>
+{
+    /// Moves the data asynchronously back to the host CPU device.
+    ///
+    /// To avoid aliasing, each CUDA thread only got access to its own shallow
+    /// copy of the data. Hence,
+    /// - any shallow changes to the data will NOT be reflected back to the CPU
+    /// - any deep changes to the data WILL be reflected back to the CPU
+    ///
+    /// # Errors
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
+    pub fn move_to_host_async(
+        mut self,
+        stream: &'stream Stream,
+    ) -> CudaResult<ExchangeWrapperOnHostAsync<'stream, T>> {
+        // Reflect deep changes back to the CPU
+        let _null_alloc: NullCudaAlloc =
+            unsafe { self.value.restore_async(self.null_alloc, stream) }?;
+
+        // Note: Shallow changes are not reflected back to the CPU
+
+        self.move_event.record(stream)?;
+
+        let waker: Arc<Mutex<Option<Waker>>> = Arc::new(Mutex::new(None));
+
+        let waker_callback = waker.clone();
+        stream.add_callback(Box::new(move |_| {
+            if let Ok(mut w) = waker_callback.lock() {
+                if let Some(w) = w.take() {
+                    w.wake();
+                }
+            }
+        }))?;
+
+        Ok(ExchangeWrapperOnHostAsync {
+            value: self.value,
+            device_box: self.device_box,
+            locked_cuda_repr: self.locked_cuda_repr,
+            move_event: self.move_event,
+            stream: PhantomData::<&'stream Stream>,
+            waker,
+        })
+    }
 }
 
 impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> IntoFuture
@@ -384,10 +498,10 @@ impl<T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA
-    pub fn move_to_host_async<'stream>(
+    pub fn move_to_host_async(
         mut self,
-        stream: &'stream Stream,
-    ) -> CudaResult<ExchangeWrapperOnHostAsync<'stream, T>> {
+        stream: &Stream,
+    ) -> CudaResult<ExchangeWrapperOnHostAsync<'_, T>> {
         // Reflect deep changes back to the CPU
         let _null_alloc: NullCudaAlloc =
             unsafe { self.value.restore_async(self.null_alloc, stream) }?;
@@ -396,12 +510,24 @@ impl<T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice
 
         self.move_event.record(stream)?;
 
+        let waker: Arc<Mutex<Option<Waker>>> = Arc::new(Mutex::new(None));
+
+        let waker_callback = waker.clone();
+        stream.add_callback(Box::new(move |_| {
+            if let Ok(mut w) = waker_callback.lock() {
+                if let Some(w) = w.take() {
+                    w.wake();
+                }
+            }
+        }))?;
+
         Ok(ExchangeWrapperOnHostAsync {
             value: self.value,
             device_box: self.device_box,
             locked_cuda_repr: self.locked_cuda_repr,
             move_event: self.move_event,
-            stream: PhantomData::<&'stream Stream>,
+            stream: PhantomData::<&Stream>,
+            waker,
         })
     }
 }

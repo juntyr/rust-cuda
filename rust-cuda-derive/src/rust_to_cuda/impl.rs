@@ -82,7 +82,8 @@ pub fn rust_to_cuda_trait(
 
             #[cfg(not(target_os = "cuda"))]
             unsafe fn borrow<CudaAllocType: rust_cuda::host::CudaAlloc>(
-                &self, alloc: CudaAllocType
+                &self,
+                alloc: CudaAllocType,
             ) -> rust_cuda::rustacuda::error::CudaResult<(
                 rust_cuda::common::DeviceAccessible<Self::CudaRepresentation>,
                 rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
@@ -110,6 +111,76 @@ pub fn rust_to_cuda_trait(
                 let (alloc_front, alloc_tail) = alloc.split();
 
                 #(#r2c_field_destructors)*
+
+                Ok(alloc_tail)
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn rust_to_cuda_async_trait(
+    struct_name: &syn::Ident,
+    struct_name_cuda: &syn::Ident,
+    struct_generics_cuda_async: &syn::Generics,
+    struct_fields_cuda: &syn::Fields,
+    r2c_field_async_declarations: &[TokenStream],
+    r2c_field_initialisations: &[TokenStream],
+    r2c_field_async_destructors: &[TokenStream],
+) -> TokenStream {
+    let rust_to_cuda_struct_construction = match struct_fields_cuda {
+        syn::Fields::Named(_) => quote! {
+            #struct_name_cuda {
+                #(#r2c_field_initialisations)*
+            }
+        },
+        syn::Fields::Unnamed(_) => quote! {
+            #struct_name_cuda (
+                #(#r2c_field_initialisations)*
+            )
+        },
+        syn::Fields::Unit => quote! { #struct_name_cuda },
+    };
+
+    let (impl_generics, ty_generics, where_clause) = struct_generics_cuda_async.split_for_impl();
+
+    quote! {
+        unsafe impl #impl_generics rust_cuda::common::RustToCudaAsync for #struct_name #ty_generics
+            #where_clause
+        {
+            #[cfg(not(target_os = "cuda"))]
+            unsafe fn borrow_async<CudaAllocType: rust_cuda::host::CudaAlloc>(
+                &self,
+                alloc: CudaAllocType,
+                stream: &rust_cuda::rustacuda::stream::Stream,
+            ) -> rust_cuda::rustacuda::error::CudaResult<(
+                rust_cuda::common::DeviceAccessible<Self::CudaRepresentation>,
+                rust_cuda::host::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
+            )> {
+                let alloc_front = rust_cuda::host::NullCudaAlloc;
+                let alloc_tail = alloc;
+
+                #(#r2c_field_async_declarations)*
+
+                let borrow = #rust_to_cuda_struct_construction;
+
+                Ok((
+                    rust_cuda::common::DeviceAccessible::from(borrow),
+                    rust_cuda::host::CombinedCudaAlloc::new(alloc_front, alloc_tail)
+                ))
+            }
+
+            #[cfg(not(target_os = "cuda"))]
+            unsafe fn restore_async<CudaAllocType: rust_cuda::host::CudaAlloc>(
+                &mut self,
+                alloc: rust_cuda::host::CombinedCudaAlloc<
+                    Self::CudaAllocation, CudaAllocType
+                >,
+                stream: &rust_cuda::rustacuda::stream::Stream,
+            ) -> rust_cuda::rustacuda::error::CudaResult<CudaAllocType> {
+                let (alloc_front, alloc_tail) = alloc.split();
+
+                #(#r2c_field_async_destructors)*
 
                 Ok(alloc_tail)
             }

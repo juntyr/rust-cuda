@@ -4,7 +4,12 @@ use syn::spanned::Spanned;
 #[allow(clippy::too_many_lines)]
 pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     ast: &syn::DeriveInput,
-) -> (Vec<syn::Attribute>, syn::Generics, Vec<syn::Attribute>) {
+) -> (
+    Vec<syn::Attribute>,
+    syn::Generics,
+    syn::Generics,
+    Vec<syn::Attribute>,
+) {
     let mut type_params = ast
         .generics
         .type_params()
@@ -13,6 +18,7 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
 
     let mut struct_attrs_cuda = ast.attrs.clone();
     let mut struct_generics_cuda = ast.generics.clone();
+    let mut struct_generics_cuda_async = ast.generics.clone();
     let mut struct_layout_attrs = Vec::new();
 
     for ty in &type_params {
@@ -36,11 +42,17 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                             path,
                             lit: syn::Lit::Str(s),
                             ..
-                        })) if path.is_ident("bound") => match syn::parse_str(&s.value()) {
-                            Ok(bound) => struct_generics_cuda
-                                .make_where_clause()
-                                .predicates
-                                .push(bound),
+                        })) if path.is_ident("bound") => match syn::parse_str::<syn::WherePredicate>(&s.value()) {
+                            Ok(bound) => {
+                                struct_generics_cuda
+                                    .make_where_clause()
+                                    .predicates
+                                    .push(bound.clone());
+                                struct_generics_cuda_async
+                                    .make_where_clause()
+                                    .predicates
+                                    .push(bound);
+                            },
                             Err(err) => emit_error!(
                                 s.span(),
                                 "[rust-cuda]: Invalid #[cuda(bound = \"<where-predicate>\")] \
@@ -136,7 +148,18 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             .push(syn::parse_quote! {
                 #ty: ::rust_cuda::common::RustToCuda
             });
+        struct_generics_cuda_async
+            .make_where_clause()
+            .predicates
+            .push(syn::parse_quote! {
+                #ty: ::rust_cuda::common::RustToCudaAsync
+            });
     }
 
-    (struct_attrs_cuda, struct_generics_cuda, struct_layout_attrs)
+    (
+        struct_attrs_cuda,
+        struct_generics_cuda,
+        struct_generics_cuda_async,
+        struct_layout_attrs,
+    )
 }

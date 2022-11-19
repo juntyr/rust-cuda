@@ -69,7 +69,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         syn::Fields::Unit => (),
     }
 
-    let (struct_attrs_cuda, struct_generics_cuda, struct_layout_attrs) =
+    let (struct_attrs_cuda, struct_generics_cuda, struct_generics_cuda_async, struct_layout_attrs) =
         generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
 
     let cuda_struct_declaration = r#impl::cuda_struct_declaration(
@@ -93,6 +93,16 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         &r2c_field_destructors,
     );
 
+    let rust_to_cuda_async_trait_impl = r#impl::rust_to_cuda_async_trait(
+        struct_name,
+        &struct_name_cuda,
+        &struct_generics_cuda_async,
+        &struct_fields_cuda,
+        &r2c_field_async_declarations,
+        &r2c_field_initialisations,
+        &r2c_field_async_destructors,
+    );
+
     let cuda_as_rust_trait_impl = r#impl::cuda_as_rust_trait(
         struct_name,
         &struct_name_cuda,
@@ -105,6 +115,8 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
         #cuda_struct_declaration
 
         #rust_to_cuda_trait_impl
+
+        #rust_to_cuda_async_trait_impl
 
         #cuda_as_rust_trait_impl
     })
