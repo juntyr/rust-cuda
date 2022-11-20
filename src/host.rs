@@ -302,14 +302,6 @@ impl<C: private::drop::Sealed> From<C> for CudaDropWrapper<C> {
         Self(ManuallyDrop::new(val))
     }
 }
-impl<C: private::drop::Sealed> CudaDropWrapper<C> {
-    pub fn into_inner(self) -> C {
-        let this = ManuallyDrop::new(self);
-
-        // Safety: move out of drop, caller now has to deal with CUDA drop again
-        unsafe { core::ptr::read(&*this.0) }
-    }
-}
 impl<C: private::drop::Sealed> Drop for CudaDropWrapper<C> {
     fn drop(&mut self) {
         // Safety: drop is only ever called once

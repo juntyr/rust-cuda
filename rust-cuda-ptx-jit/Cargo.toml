@@ -12,6 +12,6 @@ default = []
 host = ["regex", "rustacuda", "lazy_static"]
 
 [dependencies]
-rustacuda = { git = "https://github.com/MomoLangenstein/RustaCUDA", rev = "bc2c42d", optional = true }
+rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", optional = true }
 regex = { version = "1.5", optional = true }
 lazy_static = { version = "1.4", optional = true }
