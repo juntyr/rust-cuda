@@ -187,11 +187,8 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_stream(self, stream: &Stream) -> CudaResult<ExchangeWrapperOnHostAsync<'_, T>> {
-        let old_event = self.move_event.into_inner();
-        let new_event: CudaDropWrapper<Event> = Event::new(EventFlags::DISABLE_TIMING)?.into();
-
-        stream.wait_event(old_event, StreamWaitEventFlags::DEFAULT)?;
-        new_event.record(stream)?;
+        stream.wait_event(&self.move_event, StreamWaitEventFlags::DEFAULT)?;
+        self.move_event.record(stream)?;
 
         let waker_callback = self.waker.clone();
         stream.add_callback(Box::new(move |_| {
@@ -206,7 +203,7 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
             value: self.value,
             device_box: self.device_box,
             locked_cuda_repr: self.locked_cuda_repr,
-            move_event: new_event,
+            move_event: self.move_event,
             stream: PhantomData::<&Stream>,
             waker: self.waker,
         })
@@ -291,11 +288,8 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
         self,
         stream: &Stream,
     ) -> CudaResult<ExchangeWrapperOnDeviceAsync<'_, T>> {
-        let old_event = self.move_event.into_inner();
-        let new_event: CudaDropWrapper<Event> = Event::new(EventFlags::DISABLE_TIMING)?.into();
-
-        stream.wait_event(old_event, StreamWaitEventFlags::DEFAULT)?;
-        new_event.record(stream)?;
+        stream.wait_event(&self.move_event, StreamWaitEventFlags::DEFAULT)?;
+        self.move_event.record(stream)?;
 
         let waker_callback = self.waker.clone();
         stream.add_callback(Box::new(move |_| {
@@ -311,7 +305,7 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
             device_box: self.device_box,
             locked_cuda_repr: self.locked_cuda_repr,
             null_alloc: self.null_alloc,
-            move_event: new_event,
+            move_event: self.move_event,
             stream,
             waker: self.waker,
         })

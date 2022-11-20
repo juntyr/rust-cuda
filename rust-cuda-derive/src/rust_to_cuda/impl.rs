@@ -42,8 +42,6 @@ pub fn cuda_struct_declaration(
     }
 }
 
-// TODO: derive async impl as well -> need different trait bounds
-
 #[allow(clippy::too_many_arguments)]
 pub fn rust_to_cuda_trait(
     struct_name: &syn::Ident,
