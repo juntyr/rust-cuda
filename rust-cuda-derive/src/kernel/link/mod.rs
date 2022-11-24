@@ -84,19 +84,16 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     }
 
-    let mut kernel_ptx = match compile_kernel(
+    let Some(mut kernel_ptx) = compile_kernel(
         &args,
         &crate_name,
         &crate_path,
         Specialisation::Link(&specialisation),
-    ) {
-        Some(kernel_ptx) => kernel_ptx,
-        None => {
-            return (quote! {
-                const PTX_STR: &'static str = "ERROR in this PTX compilation";
-            })
-            .into()
-        },
+    ) else {
+        return (quote! {
+            const PTX_STR: &'static str = "ERROR in this PTX compilation";
+        })
+        .into()
     };
 
     let kernel_layout_name = if specialisation.is_empty() {
@@ -111,13 +108,11 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     let mut type_layouts = Vec::new();
 
     if let Some(start) = kernel_ptx.find(&format!("\n\t// .globl\t{kernel_layout_name}")) {
-        let middle =
-            match kernel_ptx[start..].find(&format!(".visible .entry {kernel_layout_name}")) {
-                Some(middle) => middle,
-                None => abort_call_site!(
-                    "Kernel compilation generated invalid PTX: incomplete type layout information."
-                ),
-            };
+        let Some(middle) = kernel_ptx[start..].find(&format!(".visible .entry {kernel_layout_name}")) else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: incomplete type layout information."
+            )
+        };
 
         for capture in CONST_LAYOUT_REGEX.captures_iter(&kernel_ptx[start..(start + middle)]) {
             match (
@@ -158,9 +153,8 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
             };
         }
 
-        let stop = match kernel_ptx[(start + middle)..].find('}') {
-            Some(stop) => stop,
-            None => abort_call_site!("Kernel compilation generated invalid PTX"),
+        let Some(stop) = kernel_ptx[(start + middle)..].find('}') else {
+            abort_call_site!("Kernel compilation generated invalid PTX")
         };
 
         kernel_ptx.replace_range(start..(start + middle + stop + '}'.len_utf8()), "");

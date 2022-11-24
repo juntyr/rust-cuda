@@ -101,26 +101,18 @@ impl<KernelTraitObject: ?Sized> TypedKernel<KernelTraitObject> {
     ) -> CudaResult<KernelJITResult> {
         let ptx_jit = self.compiler.with_arguments(arguments);
 
-        let kernel_jit = if self.kernel.is_none() || matches!(ptx_jit, PtxJITResult::Recomputed(_))
-        {
-            let ptx_cstr = match ptx_jit {
-                PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr) => ptx_cstr,
-            };
+        let kernel_jit = match (&mut self.kernel, ptx_jit) {
+            (Some(kernel), PtxJITResult::Cached(_)) => {
+                KernelJITResult::Cached(kernel.get_function())
+            },
+            (kernel, PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr)) => {
+                let recomputed_kernel = CudaKernel::new(ptx_cstr, &self.entry_point)?;
 
-            let recomputed_kernel = CudaKernel::new(ptx_cstr, &self.entry_point)?;
+                // Replace the existing compiled kernel, drop the old one
+                let kernel = kernel.insert(recomputed_kernel);
 
-            // Replace the existing compiled kernel, drop the old one
-            let kernel = self.kernel.insert(recomputed_kernel);
-
-            KernelJITResult::Recompiled(kernel.get_function())
-        } else {
-            // Safety: if tells us that kernel is some and ptx_jit is cached
-            let kernel = match &self.kernel {
-                Some(kernel) => kernel,
-                None => unsafe { core::hint::unreachable_unchecked() },
-            };
-
-            KernelJITResult::Cached(kernel.get_function())
+                KernelJITResult::Recompiled(kernel.get_function())
+            },
         };
 
         Ok(kernel_jit)

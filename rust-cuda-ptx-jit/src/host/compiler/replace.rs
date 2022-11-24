@@ -54,9 +54,8 @@ impl PtxJITCompiler {
                             let mut byte_offset = *byte_offset;
                             let mut registers_iter = registers.iter();
 
-                            let mut register = match registers_iter.next() {
-                                Some(register) => register,
-                                None => continue,
+                            let Some(mut register) = registers_iter.next() else {
+                                continue
                             };
 
                             loop {
