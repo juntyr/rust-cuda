@@ -43,6 +43,27 @@ fn split_slice_dynamic_stride_mut<E>(slice: &mut [E], stride: usize) -> &mut [E]
 }
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
+impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
+    /// # Safety
+    ///
+    /// All cross-CUDA-thread aliasing guarantees are lost with this method.
+    /// Instead, the caller must ensure that no two threads in a kernel launch
+    /// access the same underlying elements.
+    pub unsafe fn get_unchecked(&self) -> &T {
+        &self.inner
+    }
+
+    /// # Safety
+    ///
+    /// All cross-CUDA-thread aliasing guarantees are lost with this method.
+    /// Instead, the caller must ensure that no two threads in a kernel launch
+    /// access the same underlying elements.
+    pub unsafe fn get_mut_unchecked(&mut self) -> &mut T {
+        &mut self.inner
+    }
+}
+
+#[cfg(all(not(feature = "host"), target_os = "cuda"))]
 impl<E, T: Deref<Target = [E]>> Deref for SplitSliceOverCudaThreadsDynamicStride<T> {
     type Target = [E];
 
