@@ -49,7 +49,7 @@ impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     /// All cross-CUDA-thread aliasing guarantees are lost with this method.
     /// Instead, the caller must ensure that no two threads in a kernel launch
     /// access the same underlying elements.
-    pub unsafe fn get_unchecked(&self) -> &T {
+    pub unsafe fn alias_unchecked(&self) -> &T {
         &self.0
     }
 
@@ -58,7 +58,7 @@ impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     /// All cross-CUDA-thread aliasing guarantees are lost with this method.
     /// Instead, the caller must ensure that no two threads in a kernel launch
     /// access the same underlying elements.
-    pub unsafe fn get_mut_unchecked(&mut self) -> &mut T {
+    pub unsafe fn alias_mut_unchecked(&mut self) -> &mut T {
         &mut self.0
     }
 }
