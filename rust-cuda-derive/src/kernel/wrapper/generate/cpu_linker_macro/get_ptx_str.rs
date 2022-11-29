@@ -6,6 +6,7 @@ use crate::kernel::utils::skip_kernel_compilation;
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
 
 pub(super) fn quote_get_ptx_str(
+    crate_path: &syn::Path,
     FuncIdent {
         func_ident,
         func_ident_hash,
@@ -29,19 +30,25 @@ pub(super) fn quote_get_ptx_str(
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
 
-    let cpu_func_lifetime_erased_types =
-        super::kernel_func_async::generate_launch_types(config, generics, inputs, macro_type_ids).1;
+    let cpu_func_lifetime_erased_types = super::kernel_func_async::generate_launch_types(
+        crate_path,
+        config,
+        generics,
+        inputs,
+        macro_type_ids,
+    )
+    .1;
 
     let matching_kernel_assert = if skip_kernel_compilation() {
         quote!()
     } else {
         quote::quote_spanned! { func_ident.span()=>
-            const _: ::rust_cuda::safety::kernel_signature::Assert<{
-                ::rust_cuda::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
-            }> = ::rust_cuda::safety::kernel_signature::Assert::<{
-                ::rust_cuda::safety::kernel_signature::check(
+            const _: #crate_path::safety::kernel_signature::Assert<{
+                #crate_path::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
+            }> = #crate_path::safety::kernel_signature::Assert::<{
+                #crate_path::safety::kernel_signature::check(
                     PTX_STR.as_bytes(),
-                    concat!(".visible .entry ", rust_cuda::host::specialise_kernel_call!(
+                    concat!(".visible .entry ", #crate_path::host::specialise_kernel_call!(
                         #func_ident_hash #generic_start_token
                             #($#macro_type_ids),*
                         #generic_close_token
@@ -64,10 +71,10 @@ pub(super) fn quote_get_ptx_str(
                 );
 
                 quote::quote_spanned! { ty.span()=>
-                    const _: ::rust_cuda::safety::type_layout::Assert<{
-                        ::rust_cuda::safety::type_layout::CpuAndGpuTypeLayouts::Match
-                    }> = ::rust_cuda::safety::type_layout::Assert::<{
-                        ::rust_cuda::safety::type_layout::check::<#ty>(#layout_param)
+                    const _: #crate_path::safety::type_layout::Assert<{
+                        #crate_path::safety::type_layout::CpuAndGpuTypeLayouts::Match
+                    }> = #crate_path::safety::type_layout::Assert::<{
+                        #crate_path::safety::type_layout::check::<#ty>(#layout_param)
                     }>;
                 }
             })
@@ -76,7 +83,7 @@ pub(super) fn quote_get_ptx_str(
 
     quote! {
         fn get_ptx_str() -> &'static str {
-            rust_cuda::host::link_kernel!{
+            #crate_path::host::link_kernel!{
                 #func_ident #args #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token

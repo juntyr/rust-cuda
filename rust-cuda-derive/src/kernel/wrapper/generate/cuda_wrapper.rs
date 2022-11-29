@@ -6,6 +6,7 @@ use super::super::{FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
 #[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
+    crate_path: &syn::Path,
     config @ KernelConfig { args, .. }: &KernelConfig,
     inputs @ FunctionInputs {
         func_inputs,
@@ -19,8 +20,8 @@ pub(in super::super) fn quote_cuda_wrapper(
     func_attrs: &[syn::Attribute],
     func_params: &[syn::Ident],
 ) -> TokenStream {
-    let (ptx_func_inputs, ptx_func_types) = specialise_ptx_func_inputs(config, inputs);
-    let ptx_func_unboxed_types = specialise_ptx_unboxed_types(config, inputs);
+    let (ptx_func_inputs, ptx_func_types) = specialise_ptx_func_inputs(crate_path, config, inputs);
+    let ptx_func_unboxed_types = specialise_ptx_unboxed_types(crate_path, config, inputs);
 
     let func_layout_params = func_params
         .iter()
@@ -46,13 +47,13 @@ pub(in super::super) fn quote_cuda_wrapper(
                 // Emit PTX JIT load markers
                 let ptx_jit_load = if ptx_jit.0 {
                     quote! {
-                        rust_cuda::ptx_jit::PtxJITConstLoad!([#i] => #pat.as_ref())
+                        #crate_path::ptx_jit::PtxJITConstLoad!([#i] => #pat.as_ref())
                     }
                 } else { quote! {} };
 
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#args :: #type_ident)
                 };
 
                 match cuda_mode {
@@ -70,22 +71,22 @@ pub(in super::super) fn quote_cuda_wrapper(
                         if mutability.is_some() {
                             quote! {
                                 #ptx_jit_load;
-                                rust_cuda::device::BorrowFromRust::with_borrow_from_rust_mut(
-                                    #pat, |#pat: #and_token #mutability rust_cuda::device::ShallowCopy<#syn_type>| { #inner },
+                                #crate_path::device::BorrowFromRust::with_borrow_from_rust_mut(
+                                    #pat, |#pat: #and_token #mutability #crate_path::device::ShallowCopy<#syn_type>| { #inner },
                                 )
                             }
                         } else {
                             quote! {
                                 #ptx_jit_load;
-                                rust_cuda::device::BorrowFromRust::with_borrow_from_rust(
-                                    #pat, |#pat: #and_token rust_cuda::device::ShallowCopy<#syn_type>| { #inner },
+                                #crate_path::device::BorrowFromRust::with_borrow_from_rust(
+                                    #pat, |#pat: #and_token #crate_path::device::ShallowCopy<#syn_type>| { #inner },
                                 )
                             }
                         }
                     } else {
                         quote! {
                             #ptx_jit_load;
-                            rust_cuda::device::BorrowFromRust::with_moved_from_rust(
+                            #crate_path::device::BorrowFromRust::with_moved_from_rust(
                                 #pat, |#pat: #syn_type| { #inner },
                             )
                         }
@@ -99,22 +100,22 @@ pub(in super::super) fn quote_cuda_wrapper(
 
     quote! {
         #[cfg(target_os = "cuda")]
-        #[rust_cuda::device::specialise_kernel_entry(#args)]
+        #[#crate_path::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_type_layout_ident(#(#func_params: &mut &[u8]),*) {
             #(
                 #[no_mangle]
                 static #func_layout_params: [
-                    u8; rust_cuda::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()
-                ] = rust_cuda::const_type_layout::serialise_type_graph::<#ptx_func_types>();
+                    u8; #crate_path::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()
+                ] = #crate_path::const_type_layout::serialise_type_graph::<#ptx_func_types>();
 
                 *#func_params = &#func_layout_params;
             )*
         }
 
         #[cfg(target_os = "cuda")]
-        #[rust_cuda::device::specialise_kernel_entry(#args)]
+        #[#crate_path::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
@@ -130,14 +131,14 @@ pub(in super::super) fn quote_cuda_wrapper(
 
             if false {
                 #[allow(dead_code)]
-                fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
+                fn assert_impl_devicecopy<T: #crate_path::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                 #[allow(dead_code)]
-                fn assert_impl_no_aliasing<T: rust_cuda::safety::NoAliasing>() {}
+                fn assert_impl_no_aliasing<T: #crate_path::safety::NoAliasing>() {}
 
                 #[allow(dead_code)]
                 fn assert_impl_fits_into_device_register<
-                    T: rust_cuda::safety::FitsIntoDeviceRegister,
+                    T: #crate_path::safety::FitsIntoDeviceRegister,
                 >(_val: &T) {}
 
                 #(assert_impl_devicecopy(&#func_params);)*
@@ -151,6 +152,7 @@ pub(in super::super) fn quote_cuda_wrapper(
 }
 
 fn specialise_ptx_func_inputs(
+    crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
     FunctionInputs {
         func_inputs,
@@ -172,16 +174,16 @@ fn specialise_ptx_func_inputs(
             ) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#args :: #type_ident)
                 };
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
-                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
+                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                     },
                     InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
-                        rust_cuda::common::DeviceAccessible<
-                            <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        #crate_path::common::DeviceAccessible<
+                            <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                         >
                     },
                 };
@@ -198,11 +200,11 @@ fn specialise_ptx_func_inputs(
 
                     if mutability.is_some() {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                            #crate_path::common::DeviceMutRef<#lifetime, #cuda_type>
                         }
                     } else {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceConstRef<#lifetime, #cuda_type>
+                            #crate_path::common::DeviceConstRef<#lifetime, #cuda_type>
                         }
                     }
                 } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
@@ -211,7 +213,7 @@ fn specialise_ptx_func_inputs(
                     };
 
                     quote::quote_spanned! { ty.span()=>
-                        rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                        #crate_path::common::DeviceMutRef<#lifetime, #cuda_type>
                     }
                 } else {
                     cuda_type
@@ -229,6 +231,7 @@ fn specialise_ptx_func_inputs(
 }
 
 fn specialise_ptx_unboxed_types(
+    crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
     FunctionInputs { func_inputs, .. }: &FunctionInputs,
 ) -> Vec<TokenStream> {
@@ -240,7 +243,7 @@ fn specialise_ptx_unboxed_types(
                 let type_ident = quote::format_ident!("__T_{}", i);
 
                 quote::quote_spanned! { ty.span()=>
-                    rust_cuda::device::specialise_kernel_type!(#args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#args :: #type_ident)
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),

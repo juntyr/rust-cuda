@@ -5,6 +5,7 @@ use super::field_ty::CudaReprFieldTy;
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn impl_field_copy_init_and_expand_alloc_type(
+    crate_path: &syn::Path,
     field: &syn::Field,
     field_index: usize,
 
@@ -33,12 +34,12 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     match cuda_repr_field_ty {
         CudaReprFieldTy::SafeDeviceCopy => {
             r2c_field_declarations.push(quote! {
-                let #field_repr_ident = rust_cuda::common::DeviceAccessible::from(
+                let #field_repr_ident = #crate_path::common::DeviceAccessible::from(
                     &self.#field_accessor,
                 );
             });
             r2c_field_async_declarations.push(quote! {
-                let #field_repr_ident = rust_cuda::common::DeviceAccessible::from(
+                let #field_repr_ident = #crate_path::common::DeviceAccessible::from(
                     &self.#field_accessor,
                 );
             });
@@ -49,26 +50,26 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident {
-                    rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor).into_inner()
+                    #crate_path::common::CudaAsRust::as_rust(&this.#field_accessor).into_inner()
                 },
             });
         },
         CudaReprFieldTy::RustToCuda { field_ty } => {
             combined_cuda_alloc_type = quote! {
-                rust_cuda::host::CombinedCudaAlloc<
-                    <#field_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+                #crate_path::host::CombinedCudaAlloc<
+                    <#field_ty as #crate_path::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >
             };
 
             r2c_field_declarations.push(quote! {
-                let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                let (#field_repr_ident, alloc_front) = #crate_path::common::RustToCuda::borrow(
                     &self.#field_accessor,
                     alloc_front,
                 )?;
             });
             r2c_field_async_declarations.push(quote! {
-                let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCudaAsync::borrow_async(
+                let (#field_repr_ident, alloc_front) = #crate_path::common::RustToCudaAsync::borrow_async(
                     &self.#field_accessor,
                     alloc_front,
                     stream,
@@ -80,13 +81,13 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             });
 
             r2c_field_destructors.push(quote! {
-                let alloc_front = rust_cuda::common::RustToCuda::restore(
+                let alloc_front = #crate_path::common::RustToCuda::restore(
                     &mut self.#field_accessor,
                     alloc_front,
                 )?;
             });
             r2c_field_async_destructors.push(quote! {
-                let alloc_front = rust_cuda::common::RustToCudaAsync::restore_async(
+                let alloc_front = #crate_path::common::RustToCudaAsync::restore_async(
                     &mut self.#field_accessor,
                     alloc_front,
                     stream,
@@ -95,30 +96,30 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident {
-                    rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor)
+                    #crate_path::common::CudaAsRust::as_rust(&this.#field_accessor)
                 },
             });
         },
         CudaReprFieldTy::RustToCudaProxy { proxy_ty, field_ty } => {
             combined_cuda_alloc_type = quote! {
-                rust_cuda::host::CombinedCudaAlloc<
-                    <#proxy_ty as rust_cuda::common::RustToCuda>::CudaAllocation,
+                #crate_path::host::CombinedCudaAlloc<
+                    <#proxy_ty as #crate_path::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >
             };
 
             r2c_field_declarations.push(quote! {
-                let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                let (#field_repr_ident, alloc_front) = #crate_path::common::RustToCuda::borrow(
                     <
-                        #proxy_ty as rust_cuda::common::RustToCudaProxy<#field_ty>
+                        #proxy_ty as #crate_path::common::RustToCudaProxy<#field_ty>
                     >::from_ref(&self.#field_accessor),
                     alloc_front,
                 )?;
             });
             r2c_field_async_declarations.push(quote! {
-                let (#field_repr_ident, alloc_front) = rust_cuda::common::RustToCudaAsync::borrow_async(
+                let (#field_repr_ident, alloc_front) = #crate_path::common::RustToCudaAsync::borrow_async(
                     <
-                        #proxy_ty as rust_cuda::common::RustToCudaAsyncProxy<#field_ty>
+                        #proxy_ty as #crate_path::common::RustToCudaAsyncProxy<#field_ty>
                     >::from_ref(&self.#field_accessor),
                     alloc_front,
                     stream,
@@ -130,17 +131,17 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             });
 
             r2c_field_destructors.push(quote! {
-                let alloc_front = rust_cuda::common::RustToCuda::restore(
+                let alloc_front = #crate_path::common::RustToCuda::restore(
                     <
-                        #proxy_ty as rust_cuda::common::RustToCudaProxy<#field_ty>
+                        #proxy_ty as #crate_path::common::RustToCudaProxy<#field_ty>
                     >::from_mut(&mut self.#field_accessor),
                     alloc_front,
                 )?;
             });
             r2c_field_async_destructors.push(quote! {
-                let alloc_front = rust_cuda::common::RustToCudaAsync::restore_async(
+                let alloc_front = #crate_path::common::RustToCudaAsync::restore_async(
                     <
-                        #proxy_ty as rust_cuda::common::RustToCudaAsyncProxy<#field_ty>
+                        #proxy_ty as #crate_path::common::RustToCudaAsyncProxy<#field_ty>
                     >::from_mut(&mut self.#field_accessor),
                     alloc_front,
                     stream,
@@ -149,8 +150,8 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident {
-                    rust_cuda::common::RustToCudaProxy::<#field_ty>::into(
-                        rust_cuda::common::CudaAsRust::as_rust(&this.#field_accessor)
+                    #crate_path::common::RustToCudaProxy::<#field_ty>::into(
+                        #crate_path::common::CudaAsRust::as_rust(&this.#field_accessor)
                     )
                 },
             });

@@ -2,7 +2,9 @@ use proc_macro2::TokenStream;
 
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func(
+    crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
@@ -52,16 +54,17 @@ pub(super) fn quote_kernel_func(
         })
         .collect::<Vec<_>>();
 
-    let raw_func_input_wrap = generate_raw_func_input_wrap(inputs, fn_ident, func_params);
+    let raw_func_input_wrap =
+        generate_raw_func_input_wrap(crate_path, inputs, fn_ident, func_params);
 
     quote! {
         #(#func_attrs)*
         #[allow(clippy::needless_lifetimes)]
         fn #func_ident <'stream, #generic_wrapper_params>(
             &mut self,
-            stream: &'stream rust_cuda::rustacuda::stream::Stream,
+            stream: &'stream #crate_path::rustacuda::stream::Stream,
             #(#new_func_inputs),*
-        ) -> rust_cuda::rustacuda::error::CudaResult<()>
+        ) -> #crate_path::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
             // impls check adapted from Nikolai Vazquez's `impls` crate:
@@ -87,6 +90,7 @@ pub(super) fn quote_kernel_func(
 
 #[allow(clippy::too_many_lines)]
 fn generate_raw_func_input_wrap(
+    crate_path: &syn::Path,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
@@ -114,16 +118,16 @@ fn generate_raw_func_input_wrap(
 
                             // DeviceCopy mode only supports immutable references
                             quote! {
-                                let mut #pat_box = rust_cuda::host::HostDeviceBox::from(
-                                    rust_cuda::rustacuda::memory::DeviceBox::new(
-                                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
+                                let mut #pat_box = #crate_path::host::HostDeviceBox::from(
+                                    #crate_path::rustacuda::memory::DeviceBox::new(
+                                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
                                     )?
                                 );
                                 #[allow(clippy::redundant_closure_call)]
                                 // Safety: `#pat_box` contains exactly the device copy of `#pat`
                                 let __result = (|#pat| { #inner })(unsafe {
-                                    rust_cuda::host::HostAndDeviceConstRef::new(
-                                        &#pat_box,  rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
+                                    #crate_path::host::HostAndDeviceConstRef::new(
+                                        &#pat_box,  #crate_path::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
                                     ).as_async()
                                 });
 
@@ -145,7 +149,7 @@ fn generate_raw_func_input_wrap(
                             }
                         } else {
                             quote! { {
-                                let #pat = rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from(#pat);
+                                let #pat = #crate_path::utils::device_copy::SafeDeviceCopyWrapper::from(#pat);
                                 #inner
                             } }
                         }
@@ -153,16 +157,16 @@ fn generate_raw_func_input_wrap(
                     InputCudaType::LendRustToCuda => {
                         if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                             if mutability.is_some() {
-                                quote! { rust_cuda::host::LendToCuda::lend_to_cuda_mut(
+                                quote! { #crate_path::host::LendToCuda::lend_to_cuda_mut(
                                     #pat, |mut #pat| { (|#pat| { #inner })(#pat.as_async()) }
                                 ) }
                             } else {
-                                quote! { rust_cuda::host::LendToCuda::lend_to_cuda(
+                                quote! { #crate_path::host::LendToCuda::lend_to_cuda(
                                     #pat, |#pat| { (|#pat| { #inner })(#pat.as_async()) }
                                 ) }
                             }
                         } else {
-                            quote! { rust_cuda::host::LendToCuda::move_to_cuda(
+                            quote! { #crate_path::host::LendToCuda::move_to_cuda(
                                 #pat, |mut #pat| { (|#pat| { #inner })(#pat.as_async()) }
                             ) }
                         }

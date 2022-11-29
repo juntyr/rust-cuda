@@ -6,6 +6,7 @@ use crate::kernel::utils::r2c_move_lifetime;
 use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
 
 pub(super) fn generate_async_func_types(
+    crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
@@ -38,11 +39,11 @@ pub(super) fn generate_async_func_types(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::SafeDeviceCopy => quote! {
-                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
+                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                     },
                     InputCudaType::LendRustToCuda => quote! {
-                        rust_cuda::common::DeviceAccessible<
-                            <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        #crate_path::common::DeviceAccessible<
+                            <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                         >
                     },
                 };
@@ -62,11 +63,11 @@ pub(super) fn generate_async_func_types(
                         }
 
                         quote!(
-                            rust_cuda::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
+                            #crate_path::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
                         )
                     } else {
                         quote!(
-                            rust_cuda::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
+                            #crate_path::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
                         )
                     };
 
@@ -77,7 +78,7 @@ pub(super) fn generate_async_func_types(
                     let lifetime = r2c_move_lifetime(i, ty);
 
                     let wrapped_type = quote! {
-                        rust_cuda::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
+                        #crate_path::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
                     };
 
                     quote! {

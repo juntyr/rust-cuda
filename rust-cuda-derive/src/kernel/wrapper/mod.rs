@@ -38,7 +38,63 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         },
     };
 
-    let func = parse_kernel_fn(func);
+    let mut func = parse_kernel_fn(func);
+
+    let mut crate_path = None;
+
+    func.attrs.retain(|attr| {
+        if attr.path.is_ident("kernel") {
+            if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
+                for meta in &list.nested {
+                    match meta {
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path,
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) if path.is_ident("crate") => match syn::parse_str::<syn::Path>(&s.value()) {
+                            Ok(new_crate_path) => {
+                                if crate_path.is_none() {
+                                    crate_path = Some(
+                                        syn::parse_quote_spanned! { s.span() => #new_crate_path },
+                                    );
+
+                                    return false;
+                                }
+
+                                emit_error!(
+                                    s.span(),
+                                    "[rust-cuda]: Duplicate #[kernel(crate)] attribute.",
+                                );
+                            },
+                            Err(err) => emit_error!(
+                                s.span(),
+                                "[rust-cuda]: Invalid #[kernel(crate = \
+                                 \"<crate-path>\")] attribute: {}.",
+                                err
+                            ),
+                        },
+                        _ => {
+                            emit_error!(
+                                meta.span(),
+                                "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] function attribute."
+                            );
+                        }
+                    }
+                }
+            } else {
+                emit_error!(
+                    attr.span(),
+                    "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] function attribute."
+                );
+            }
+
+            false
+        } else {
+            true
+        }
+    });
+
+    let crate_path = crate_path.unwrap_or_else(|| syn::parse_quote!(::rust_cuda));
 
     let mut generic_kernel_params = func.sig.generics.params.clone();
     let mut func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
@@ -177,6 +233,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let args_trait = quote_args_trait(&config, &decl_generics, &impl_generics, &func_inputs);
     let cpu_wrapper = quote_cpu_wrapper(
+        &crate_path,
         &config,
         &decl_generics,
         &impl_generics,
@@ -184,8 +241,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_ident,
         &func.attrs,
     );
-    let cpu_cuda_check = quote_generic_check(&func_ident, &config);
+    let cpu_cuda_check = quote_generic_check(&crate_path, &func_ident, &config);
     let cpu_linker_macro = quote_cpu_linker_macro(
+        &crate_path,
         &config,
         &decl_generics,
         &func_inputs,
@@ -194,6 +252,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func.attrs,
     );
     let cuda_wrapper = quote_cuda_wrapper(
+        &crate_path,
         &config,
         &func_inputs,
         &func_ident,
@@ -298,6 +357,7 @@ fn ident_from_pat_iter<'p, I: Iterator<Item = &'p syn::Pat>>(iter: I) -> Option<
 }
 
 fn quote_generic_check(
+    crate_path: &syn::Path,
     FuncIdent {
         func_ident_hash, ..
     }: &FuncIdent,
@@ -313,11 +373,11 @@ fn quote_generic_check(
 
     quote::quote_spanned! { func_ident_hash.span()=>
         #[cfg(not(target_os = "cuda"))]
-        const _: ::rust_cuda::safety::kernel_signature::Assert<{
-            ::rust_cuda::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
-        }> = ::rust_cuda::safety::kernel_signature::Assert::<{
-            ::rust_cuda::safety::kernel_signature::check(
-                rust_cuda::host::check_kernel!(#args #crate_name #crate_manifest_dir).as_bytes(),
+        const _: #crate_path::safety::kernel_signature::Assert<{
+            #crate_path::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
+        }> = #crate_path::safety::kernel_signature::Assert::<{
+            #crate_path::safety::kernel_signature::check(
+                #crate_path::host::check_kernel!(#args #crate_name #crate_manifest_dir).as_bytes(),
                 concat!(".visible .entry ", stringify!(#func_ident_hash)).as_bytes()
             )
         }>;

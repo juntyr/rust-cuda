@@ -13,6 +13,7 @@ use kernel_func_async::quote_kernel_func_async;
 use new_kernel::quote_new_kernel;
 
 pub(in super::super) fn quote_cpu_linker_macro(
+    crate_path: &syn::Path,
     config @ KernelConfig {
         visibility,
         kernel,
@@ -56,6 +57,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
     };
 
     let get_ptx_str = quote_get_ptx_str(
+        crate_path,
         func_ident,
         config,
         decl_generics,
@@ -63,8 +65,15 @@ pub(in super::super) fn quote_cpu_linker_macro(
         func_params,
         &macro_type_ids,
     );
-    let new_kernel = quote_new_kernel(config, decl_generics, func_ident, &macro_type_ids);
+    let new_kernel = quote_new_kernel(
+        crate_path,
+        config,
+        decl_generics,
+        func_ident,
+        &macro_type_ids,
+    );
     let kernel_func = quote_kernel_func(
+        crate_path,
         config,
         decl_generics,
         func_inputs,
@@ -74,6 +83,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
         &macro_type_ids,
     );
     let kernel_func_async = quote_kernel_func_async(
+        crate_path,
         config,
         decl_generics,
         func_inputs,

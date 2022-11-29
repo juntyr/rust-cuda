@@ -10,6 +10,7 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     syn::Generics,
     Vec<syn::Attribute>,
     bool,
+    syn::Path,
 ) {
     let mut type_params = ast
         .generics
@@ -30,8 +31,8 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     }
 
     let mut r2c_ignore = false;
-
     let mut r2c_async_impl = None;
+    let mut crate_path = None;
 
     struct_attrs_cuda.retain(|attr| {
         if attr.path.is_ident("cuda") {
@@ -105,6 +106,30 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                             );
                         },
                         syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                            path,
+                            lit: syn::Lit::Str(s),
+                            ..
+                        })) if path.is_ident("crate") => match syn::parse_str::<syn::Path>(&s.value()) {
+                            Ok(new_crate_path) => {
+                                if crate_path.is_none() {
+                                    crate_path = Some(
+                                        syn::parse_quote_spanned! { s.span() => #new_crate_path },
+                                    );
+                                } else {
+                                    emit_error!(
+                                        s.span(),
+                                        "[rust-cuda]: Duplicate #[cuda(crate)] attribute.",
+                                    );
+                                }
+                            },
+                            Err(err) => emit_error!(
+                                s.span(),
+                                "[rust-cuda]: Invalid #[cuda(crate = \
+                                 \"<crate-path>\")] attribute: {}.",
+                                err
+                            ),
+                        },
+                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
                             path: syn::Path {
                                 leading_colon: None,
                                 segments,
@@ -134,9 +159,10 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                         _ => {
                             emit_error!(
                                 meta.span(),
-                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(bound = \
-                                 \"<where-predicate>\")] / #[cuda(layout::ATTR = \"VALUE\")] \
-                                 struct attribute."
+                                "[rust-cuda]: Expected #[cuda(ignore)] / \
+                                #[cuda(bound = \"<where-predicate>\")] / \
+                                #[cuda(crate = \"<crate-path>\")] / \
+                                #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
                             );
                         },
                     }
@@ -144,8 +170,10 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             } else {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(bound = \
-                     \"<where-predicate>\")] / #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
+                    "[rust-cuda]: Expected #[cuda(ignore)] / \
+                    #[cuda(bound = \"<where-predicate>\")] / \
+                    #[cuda(crate = \"<crate-path>\")] / \
+                    #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
                 );
             }
 
@@ -155,18 +183,20 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
         }
     });
 
+    let crate_path = crate_path.unwrap_or_else(|| syn::parse_quote!(::rust_cuda));
+
     for ty in &type_params {
         struct_generics_cuda
             .make_where_clause()
             .predicates
             .push(syn::parse_quote! {
-                #ty: ::rust_cuda::common::RustToCuda
+                #ty: #crate_path::common::RustToCuda
             });
         struct_generics_cuda_async
             .make_where_clause()
             .predicates
             .push(syn::parse_quote! {
-                #ty: ::rust_cuda::common::RustToCudaAsync
+                #ty: #crate_path::common::RustToCudaAsync
             });
     }
 
@@ -176,5 +206,6 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
         struct_generics_cuda_async,
         struct_layout_attrs,
         r2c_async_impl.unwrap_or(true),
+        crate_path,
     )
 }

@@ -6,6 +6,7 @@ use crate::kernel::utils::r2c_move_lifetime;
 use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
 
 pub(in super::super) fn generate_launch_types(
+    crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
     DeclGenerics {
         generic_start_token,
@@ -39,11 +40,11 @@ pub(in super::super) fn generate_launch_types(
 
                 let cuda_type = match cuda_mode {
                     InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
-                        rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
+                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                     },
                     InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
-                        rust_cuda::common::DeviceAccessible<
-                            <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                        #crate_path::common::DeviceAccessible<
+                            <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                         >
                     },
                 };
@@ -57,18 +58,18 @@ pub(in super::super) fn generate_launch_types(
                     {
                         if mutability.is_some() {
                             quote::quote_spanned! { ty.span()=>
-                                rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                                #crate_path::common::DeviceMutRef<#lifetime, #cuda_type>
                             }
                         } else {
                             quote::quote_spanned! { ty.span()=>
-                                rust_cuda::common::DeviceConstRef<#lifetime, #cuda_type>
+                                #crate_path::common::DeviceConstRef<#lifetime, #cuda_type>
                             }
                         }
                     } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                         let lifetime = r2c_move_lifetime(i, ty);
 
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceMutRef<#lifetime, #cuda_type>
+                            #crate_path::common::DeviceMutRef<#lifetime, #cuda_type>
                         }
                     } else {
                         quote! { #cuda_type }
@@ -79,16 +80,16 @@ pub(in super::super) fn generate_launch_types(
                     if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
                         if mutability.is_some() {
                             quote::quote_spanned! { ty.span()=>
-                                rust_cuda::common::DeviceMutRef<'static, #cuda_type>
+                                #crate_path::common::DeviceMutRef<'static, #cuda_type>
                             }
                         } else {
                             quote::quote_spanned! { ty.span()=>
-                                rust_cuda::common::DeviceConstRef<'static, #cuda_type>
+                                #crate_path::common::DeviceConstRef<'static, #cuda_type>
                             }
                         }
                     } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
                         quote::quote_spanned! { ty.span()=>
-                            rust_cuda::common::DeviceMutRef<'static, #cuda_type>
+                            #crate_path::common::DeviceMutRef<'static, #cuda_type>
                         }
                     } else {
                         cuda_type

@@ -12,6 +12,7 @@ use type_wrap::generate_func_input_and_ptx_jit_wraps;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_async(
+    crate_path: &syn::Path,
     config @ KernelConfig { args, .. }: &KernelConfig,
     decl_generics @ DeclGenerics {
         generic_wrapper_params,
@@ -26,29 +27,40 @@ pub(super) fn quote_kernel_func_async(
     func_attrs: &[syn::Attribute],
     macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
-    let new_func_inputs_async =
-        generate_async_func_types(config, decl_generics, func_inputs, macro_type_ids);
+    let new_func_inputs_async = generate_async_func_types(
+        crate_path,
+        config,
+        decl_generics,
+        func_inputs,
+        macro_type_ids,
+    );
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
         generate_func_input_and_ptx_jit_wraps(func_inputs);
     let (cpu_func_types_launch, cpu_func_lifetime_erased_types, cpu_func_unboxed_types) =
-        generate_launch_types(config, decl_generics, func_inputs, macro_type_ids);
+        generate_launch_types(
+            crate_path,
+            config,
+            decl_generics,
+            func_inputs,
+            macro_type_ids,
+        );
 
     quote! {
         #(#func_attrs)*
         #[allow(clippy::extra_unused_type_parameters)]
         fn #func_ident_async <'stream, #generic_wrapper_params>(
             &mut self,
-            stream: &'stream rust_cuda::rustacuda::stream::Stream,
+            stream: &'stream #crate_path::rustacuda::stream::Stream,
             #(#new_func_inputs_async),*
-        ) -> rust_cuda::rustacuda::error::CudaResult<()>
+        ) -> #crate_path::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
-            let rust_cuda::host::LaunchPackage {
+            let #crate_path::host::LaunchPackage {
                 kernel, watcher, config
-            } = rust_cuda::host::Launcher::get_launch_package(self);
+            } = #crate_path::host::Launcher::get_launch_package(self);
 
             let kernel_jit_result = if config.ptx_jit {
-                rust_cuda::ptx_jit::compilePtxJITwithArguments! {
+                #crate_path::ptx_jit::compilePtxJITwithArguments! {
                     kernel.compile_with_ptx_jit_args(#(#func_cpu_ptx_jit_wrap),*)
                 }?
             } else {
@@ -56,13 +68,13 @@ pub(super) fn quote_kernel_func_async(
             };
 
             let function = match kernel_jit_result {
-                rust_cuda::host::KernelJITResult::Recompiled(function) => {
+                #crate_path::host::KernelJITResult::Recompiled(function) => {
                     // Call launcher hook on kernel compilation
-                    <Self as rust_cuda::host::Launcher>::on_compile(function, watcher)?;
+                    <Self as #crate_path::host::Launcher>::on_compile(function, watcher)?;
 
                     function
                 },
-                rust_cuda::host::KernelJITResult::Cached(function) => function,
+                #crate_path::host::KernelJITResult::Cached(function) => function,
             };
 
             #[allow(clippy::redundant_closure_call)]
@@ -79,14 +91,14 @@ pub(super) fn quote_kernel_func_async(
 
                 if false {
                     #[allow(dead_code)]
-                    fn assert_impl_devicecopy<T: rust_cuda::rustacuda_core::DeviceCopy>(_val: &T) {}
+                    fn assert_impl_devicecopy<T: #crate_path::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                     #[allow(dead_code)]
-                    fn assert_impl_no_aliasing<T: rust_cuda::safety::NoAliasing>() {}
+                    fn assert_impl_no_aliasing<T: #crate_path::safety::NoAliasing>() {}
 
                     #[allow(dead_code)]
                     fn assert_impl_fits_into_device_register<
-                        T: rust_cuda::safety::FitsIntoDeviceRegister,
+                        T: #crate_path::safety::FitsIntoDeviceRegister,
                     >(_val: &T) {}
 
                     #(assert_impl_devicecopy(&#func_params);)*
@@ -94,7 +106,7 @@ pub(super) fn quote_kernel_func_async(
                     #(assert_impl_fits_into_device_register(&#func_params);)*
                 }
 
-                let rust_cuda::host::LaunchConfig {
+                let #crate_path::host::LaunchConfig {
                     grid, block, shared_memory_size, ptx_jit: _,
                 } = config;
 

@@ -12,7 +12,10 @@ pub enum CudaReprFieldTy {
     },
 }
 
-pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprFieldTy {
+pub fn swap_field_type_and_filter_attrs(
+    crate_path: &syn::Path,
+    field: &mut syn::Field,
+) -> CudaReprFieldTy {
     let mut cuda_repr_field_ty: Option<CudaReprFieldTy> = None;
     let mut field_ty = field.ty.clone();
 
@@ -33,8 +36,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
                                     field_ty: Box::new(field_ty.clone()),
                                 });
                                 field_ty = parse_quote! {
-                                    rust_cuda::common::DeviceAccessible<
-                                        <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                    #crate_path::common::DeviceAccessible<
+                                        <#field_ty as #crate_path::common::RustToCuda>::CudaRepresentation
                                     >
                                 };
                             } else {
@@ -54,8 +57,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
                                     Ok(proxy_ty) => {
                                         let old_field_ty = Box::new(field_ty.clone());
                                         field_ty = parse_quote! {
-                                            rust_cuda::common::DeviceAccessible<
-                                                <#proxy_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                            #crate_path::common::DeviceAccessible<
+                                                <#proxy_ty as #crate_path::common::RustToCuda>::CudaRepresentation
                                             >
                                         };
                                         cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
@@ -104,8 +107,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
         cuda_repr_field_ty
     } else {
         field_ty = parse_quote! {
-            rust_cuda::common::DeviceAccessible<
-                rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#field_ty>
+            #crate_path::common::DeviceAccessible<
+                #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#field_ty>
             >
         };
 

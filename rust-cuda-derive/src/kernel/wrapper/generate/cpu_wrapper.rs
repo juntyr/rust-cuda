@@ -7,6 +7,7 @@ use super::super::{
 };
 
 pub(in super::super) fn quote_cpu_wrapper(
+    crate_path: &syn::Path,
     config @ KernelConfig {
         visibility, kernel, ..
     }: &KernelConfig,
@@ -29,7 +30,7 @@ pub(in super::super) fn quote_cpu_wrapper(
     func_attrs: &[syn::Attribute],
 ) -> TokenStream {
     let launcher_predicate = quote! {
-        Self: Sized + rust_cuda::host::Launcher<
+        Self: Sized + #crate_path::host::Launcher<
             KernelTraitObject = dyn #kernel #ty_generics
         >
     };
@@ -55,7 +56,7 @@ pub(in super::super) fn quote_cpu_wrapper(
     };
 
     let (new_func_inputs_decl, new_func_inputs_async_decl) =
-        generate_new_func_inputs_decl(config, impl_generics, func_inputs);
+        generate_new_func_inputs_decl(crate_path, config, impl_generics, func_inputs);
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
@@ -65,32 +66,33 @@ pub(in super::super) fn quote_cpu_wrapper(
         {
             fn get_ptx_str() -> &'static str where #launcher_predicate;
 
-            fn new_kernel() -> rust_cuda::rustacuda::error::CudaResult<
-                rust_cuda::host::TypedKernel<dyn #kernel #ty_generics>
+            fn new_kernel() -> #crate_path::rustacuda::error::CudaResult<
+                #crate_path::host::TypedKernel<dyn #kernel #ty_generics>
             > where #launcher_predicate;
 
             #(#func_attrs)*
             #[allow(clippy::too_many_arguments)]
             fn #func_ident <'stream, #generic_wrapper_params>(
                 &mut self,
-                stream: &'stream rust_cuda::rustacuda::stream::Stream,
+                stream: &'stream #crate_path::rustacuda::stream::Stream,
                 #(#new_func_inputs_decl),*
-            ) -> rust_cuda::rustacuda::error::CudaResult<()>
+            ) -> #crate_path::rustacuda::error::CudaResult<()>
                 #generic_wrapper_where_clause;
 
             #(#func_attrs)*
             #[allow(clippy::too_many_arguments)]
             fn #func_ident_async <'stream, #generic_wrapper_params>(
                 &mut self,
-                stream: &'stream rust_cuda::rustacuda::stream::Stream,
+                stream: &'stream #crate_path::rustacuda::stream::Stream,
                 #(#new_func_inputs_async_decl),*
-            ) -> rust_cuda::rustacuda::error::CudaResult<()>
+            ) -> #crate_path::rustacuda::error::CudaResult<()>
                 #generic_wrapper_where_clause;
         }
     }
 }
 
 fn generate_new_func_inputs_decl(
+    crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
     ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs {
@@ -146,11 +148,11 @@ fn generate_new_func_inputs_decl(
 
                         let cuda_type = match cuda_mode {
                             InputCudaType::SafeDeviceCopy => syn::parse_quote!(
-                                rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
+                                #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
                             ),
                             InputCudaType::LendRustToCuda => syn::parse_quote!(
-                                rust_cuda::common::DeviceAccessible<
-                                    <#syn_type as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                #crate_path::common::DeviceAccessible<
+                                    <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                                 >
                             ),
                         };
@@ -163,11 +165,11 @@ fn generate_new_func_inputs_decl(
                         {
                             let wrapped_type = if mutability.is_some() {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
+                                    #crate_path::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
                                 )
                             } else {
                                 syn::parse_quote!(
-                                    rust_cuda::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
+                                    #crate_path::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
                                 )
                             };
 
@@ -176,7 +178,7 @@ fn generate_new_func_inputs_decl(
                             let lifetime = r2c_move_lifetime(i, ty);
 
                             let wrapped_type = syn::parse_quote!(
-                                rust_cuda::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
+                                #crate_path::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
                             );
 
                             Box::new(wrapped_type)
