@@ -47,6 +47,17 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
 ) where
     <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
 {
+    use rc::device::ThreadBlockShared;
+
+    let shared: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
+    let shared2: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
+
+    unsafe {
+        (*shared.get().cast::<Tuple>().add(1)).0 = 42;
+    }
+    unsafe {
+        (*shared2.get().cast::<Tuple>().add(2)).1 = 24;
+    }
 }
 
 #[cfg(not(target_os = "cuda"))]

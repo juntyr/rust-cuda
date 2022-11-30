@@ -113,3 +113,32 @@ impl<T> DerefMut for ShallowCopy<T> {
         &mut self.0
     }
 }
+
+#[repr(transparent)]
+pub struct ThreadBlockShared<T: 'static> {
+    shared: *mut T,
+}
+
+impl<T: 'static> ThreadBlockShared<T> {
+    #[must_use]
+    pub fn new_uninit() -> Self {
+        let shared: *mut T;
+
+        unsafe {
+            core::arch::asm!(
+                ".shared .align {align} .b8 {reg}_rust_cuda_shared[{size}];",
+                "mov.u64 {reg}, {reg}_rust_cuda_shared;",
+                reg = out(reg64) shared,
+                align = const(core::mem::align_of::<T>()),
+                size = const(core::mem::size_of::<T>()),
+            );
+        }
+
+        Self { shared }
+    }
+
+    #[must_use]
+    pub fn get(&self) -> *mut T {
+        self.shared
+    }
+}

@@ -8,6 +8,14 @@
     any(all(not(feature = "host"), target_os = "cuda"), doc),
     feature(stdsimd)
 )]
+#![cfg_attr(
+    any(all(not(feature = "host"), target_os = "cuda"), doc),
+    feature(asm_experimental_arch)
+)]
+#![cfg_attr(
+    any(all(not(feature = "host"), target_os = "cuda"), doc),
+    feature(asm_const)
+)]
 #![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
