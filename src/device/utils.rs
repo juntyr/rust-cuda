@@ -1,4 +1,5 @@
 use alloc::alloc::{GlobalAlloc, Layout};
+#[cfg(target_os = "cuda")]
 use core::arch::nvptx;
 
 /// Memory allocator using CUDA malloc/free
