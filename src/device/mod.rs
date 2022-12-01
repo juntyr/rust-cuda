@@ -127,7 +127,7 @@ impl<T: 'static> ThreadBlockShared<T> {
         unsafe {
             core::arch::asm!(
                 ".shared .align {align} .b8 {reg}_rust_cuda_shared[{size}];",
-                "mov.u64 {reg}, {reg}_rust_cuda_shared;",
+                "cvta.shared.u64 {reg}, {reg}_rust_cuda_shared;",
                 reg = out(reg64) shared,
                 align = const(core::mem::align_of::<T>()),
                 size = const(core::mem::size_of::<T>()),
