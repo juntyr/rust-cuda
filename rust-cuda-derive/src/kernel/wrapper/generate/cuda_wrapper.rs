@@ -33,6 +33,8 @@ pub(in super::super) fn quote_cuda_wrapper(
         })
         .collect::<Vec<_>>();
 
+    let mut shared_slice = Vec::new();
+
     let ptx_func_input_unwrap = func_inputs
         .iter().zip(func_input_cuda_types.iter()).enumerate()
         .rev()
@@ -90,7 +92,24 @@ pub(in super::super) fn quote_cuda_wrapper(
                                 #pat, |#pat: #syn_type| { #inner },
                             )
                         }
-                    }
+                    },
+                    InputCudaType::ThreadBlockShared => if let syn::Type::Slice(syn::TypeSlice { elem, .. }) = &**ty {
+                        shared_slice.push(elem);
+
+                        quote! {
+                            #ptx_jit_load;
+                            #crate_path::utils::shared::slice::ThreadBlockSharedSlice::with_uninit(
+                                #pat, |#pat: #syn_type| { #inner },
+                            )
+                        }
+                    } else {
+                        quote! {
+                            #ptx_jit_load;
+                            #crate_path::utils::shared::r#static::ThreadBlockShared::with_uninit(
+                                #pat, |#pat: #syn_type| { #inner },
+                            )
+                        }
+                    },
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),
@@ -185,6 +204,17 @@ fn specialise_ptx_func_inputs(
                         #crate_path::common::DeviceAccessible<
                             <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                         >
+                    },
+                    InputCudaType::ThreadBlockShared => {
+                        if let syn::Type::Slice(_) = &**ty {
+                            quote::quote_spanned! { ty.span()=>
+                                #crate_path::utils::shared::slice::ThreadBlockSharedSlice<#syn_type>
+                            }
+                        } else {
+                            quote::quote_spanned! { ty.span()=>
+                                #crate_path::utils::shared::r#static::ThreadBlockShared<#syn_type>
+                            }
+                        }
                     },
                 };
 

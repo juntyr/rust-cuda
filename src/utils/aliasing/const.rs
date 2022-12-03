@@ -28,7 +28,7 @@ unsafe impl<T: DeviceCopy, const STRIDE: usize> DeviceCopy
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
 fn split_slice_const_stride<E, const STRIDE: usize>(slice: &[E]) -> &[E] {
-    let offset: usize = crate::device::utils::index() * STRIDE;
+    let offset: usize = crate::device::thread::Thread::this().index() * STRIDE;
     let len = slice.len().min(offset + STRIDE).saturating_sub(offset);
 
     unsafe { core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
@@ -36,7 +36,7 @@ fn split_slice_const_stride<E, const STRIDE: usize>(slice: &[E]) -> &[E] {
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
 fn split_slice_const_stride_mut<E, const STRIDE: usize>(slice: &mut [E]) -> &mut [E] {
-    let offset: usize = crate::device::utils::index() * STRIDE;
+    let offset: usize = crate::device::thread::Thread::this().index() * STRIDE;
     let len = slice.len().min(offset + STRIDE).saturating_sub(offset);
 
     unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }

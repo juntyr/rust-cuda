@@ -28,7 +28,7 @@ unsafe impl<T: DeviceCopy> DeviceCopy for SplitSliceOverCudaThreadsDynamicStride
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
 fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {
-    let offset: usize = crate::device::utils::index() * stride;
+    let offset: usize = crate::device::thread::Thread::this().index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
 
     unsafe { core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
@@ -36,7 +36,7 @@ fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {
 
 #[cfg(all(not(feature = "host"), target_os = "cuda"))]
 fn split_slice_dynamic_stride_mut<E>(slice: &mut [E], stride: usize) -> &mut [E] {
-    let offset: usize = crate::device::utils::index() * stride;
+    let offset: usize = crate::device::thread::Thread::this().index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
 
     unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }

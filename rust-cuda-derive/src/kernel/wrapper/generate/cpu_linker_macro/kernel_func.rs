@@ -13,7 +13,10 @@ pub(super) fn quote_kernel_func(
         generic_wrapper_where_clause,
         ..
     }: &DeclGenerics,
-    inputs @ FunctionInputs { func_inputs, .. }: &FunctionInputs,
+    inputs @ FunctionInputs {
+        func_inputs,
+        func_input_cuda_types,
+    }: &FunctionInputs,
     fn_ident @ FuncIdent { func_ident, .. }: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
@@ -21,8 +24,9 @@ pub(super) fn quote_kernel_func(
 ) -> TokenStream {
     let new_func_inputs = func_inputs
         .iter()
+        .zip(func_input_cuda_types.iter())
         .enumerate()
-        .map(|(i, arg)| match arg {
+        .map(|(i, (arg, (cuda_type, _)))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs,
                 pat,
@@ -45,6 +49,16 @@ pub(super) fn quote_kernel_func(
                 {
                     quote! {
                         #(#attrs)* #pat #colon_token #and_token #lifetime #mutability #syn_type
+                    }
+                } else if matches!(cuda_type, InputCudaType::ThreadBlockShared) {
+                    if let syn::Type::Slice(_) = &**ty {
+                        quote! { #(#attrs)* #pat #colon_token
+                            #crate_path::utils::shared::slice::ThreadBlockSharedSlice<#syn_type>
+                        }
+                    } else {
+                        quote! { #(#attrs)* #pat #colon_token
+                            #crate_path::utils::shared::r#static::ThreadBlockShared<#syn_type>
+                        }
                     }
                 } else {
                     quote! { #(#attrs)* #pat #colon_token #syn_type }
@@ -171,6 +185,7 @@ fn generate_raw_func_input_wrap(
                             ) }
                         }
                     },
+                    InputCudaType::ThreadBlockShared => inner,
                 },
                 syn::FnArg::Receiver(_) => unreachable!(),
             },
