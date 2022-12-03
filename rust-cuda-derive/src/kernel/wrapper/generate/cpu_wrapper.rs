@@ -91,7 +91,6 @@ pub(in super::super) fn quote_cpu_wrapper(
     }
 }
 
-#[allow(clippy::too_many_lines)]
 fn generate_new_func_inputs_decl(
     crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
@@ -133,16 +132,6 @@ fn generate_new_func_inputs_decl(
                                 mutability: *mutability,
                                 elem: syn_type,
                             }))
-                        } else if matches!(cuda_mode, InputCudaType::ThreadBlockShared) {
-                            if let syn::Type::Slice(_) = &**ty {
-                                syn::parse_quote!(
-                                    #crate_path::utils::shared::slice::ThreadBlockSharedSlice<#syn_type>
-                                )
-                            } else {
-                                syn::parse_quote!(
-                                    #crate_path::utils::shared::r#static::ThreadBlockShared<#syn_type>
-                                )
-                            }
                         } else {
                             syn_type
                         }
@@ -166,15 +155,6 @@ fn generate_new_func_inputs_decl(
                                     <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                                 >
                             ),
-                            InputCudaType::ThreadBlockShared => if let syn::Type::Slice(_) = &**ty {
-                                syn::parse_quote!(
-                                    #crate_path::utils::shared::slice::ThreadBlockSharedSlice<#syn_type>
-                                )
-                            } else {
-                                syn::parse_quote!(
-                                    #crate_path::utils::shared::r#static::ThreadBlockShared<#syn_type>
-                                )
-                            },
                         };
 
                         if let syn::Type::Reference(syn::TypeReference {

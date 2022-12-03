@@ -46,15 +46,6 @@ pub(super) fn generate_async_func_types(
                             <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                         >
                     },
-                    InputCudaType::ThreadBlockShared => if let syn::Type::Slice(_) = &**ty {
-                        quote! {
-                            #crate_path::utils::shared::slice::ThreadBlockSharedSlice<#syn_type>
-                        }
-                    } else {
-                        quote! {
-                            #crate_path::utils::shared::r#static::ThreadBlockShared<#syn_type>
-                        }
-                    },
                 };
 
                 if let syn::Type::Reference(syn::TypeReference {

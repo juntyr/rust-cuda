@@ -19,11 +19,10 @@ impl syn::parse::Parse for KernelInputAttribute {
                 let cuda_type = match &*mode.to_string() {
                     "SafeDeviceCopy" => InputCudaType::SafeDeviceCopy,
                     "LendRustToCuda" => InputCudaType::LendRustToCuda,
-                    "ThreadBlockShared" => InputCudaType::ThreadBlockShared,
                     _ => abort!(
                         mode.span(),
-                        "Unexpected CUDA transfer mode `{}`: Expected `SafeDeviceCopy`, \
-                         `LendRustToCuda`, or `ThreadBlockShared`.",
+                        "Unexpected CUDA transfer mode `{:?}`: Expected `SafeDeviceCopy` or \
+                         `LendRustToCuda`.",
                         mode
                     ),
                 };
@@ -62,7 +61,7 @@ impl syn::parse::Parse for KernelInputAttribute {
             },
             _ => abort!(
                 ident.span(),
-                "Unexpected kernel attribute `{}`: Expected `pass` or `jit`.",
+                "Unexpected kernel attribute `{:?}`: Expected `pass` or `jit`.",
                 ident
             ),
         }

@@ -47,17 +47,6 @@ pub(in super::super) fn generate_launch_types(
                             <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
                         >
                     },
-                    InputCudaType::ThreadBlockShared => {
-                        if let syn::Type::Slice(_) = &**ty {
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::utils::shared::slice::ThreadBlockSharedSlice<#syn_type>
-                            }
-                        } else {
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::utils::shared::r#static::ThreadBlockShared<#syn_type>
-                            }
-                        }
-                    },
                 };
 
                 cpu_func_types_launch.push(

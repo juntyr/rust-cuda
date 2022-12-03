@@ -36,5 +36,9 @@ mod sealed {
     impl<T> !StackOnly for &T {}
     impl<T> !StackOnly for &mut T {}
 
+    impl<T: 'static> !StackOnly for crate::utils::shared::r#static::ThreadBlockShared<T> {}
+    // impl<T: 'static> !StackOnly for
+    // crate::utils::shared::slice::ThreadBlockSharedSlice<T> {}
+
     impl<T> StackOnly for core::marker::PhantomData<T> {}
 }

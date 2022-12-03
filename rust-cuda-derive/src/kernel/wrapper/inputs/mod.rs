@@ -12,7 +12,6 @@ pub(super) struct FunctionInputs {
     pub(super) func_input_cuda_types: Vec<(InputCudaType, InputPtxJit)>,
 }
 
-#[allow(clippy::too_many_lines)]
 pub(super) fn parse_function_inputs(
     func: &syn::ItemFn,
     generic_params: &mut syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
@@ -54,25 +53,9 @@ pub(super) fn parse_function_inputs(
 
                             for attr in attrs {
                                 match attr {
-                                    KernelInputAttribute::PassType(span, pass_type)
+                                    KernelInputAttribute::PassType(_span, pass_type)
                                         if cuda_type.is_none() =>
                                     {
-                                        if matches!(pass_type, InputCudaType::ThreadBlockShared)
-                                            && !matches!(
-                                                &**ty,
-                                                syn::Type::Ptr(syn::TypePtr {
-                                                    mutability: Some(_),
-                                                    ..
-                                                })
-                                            )
-                                        {
-                                            abort!(
-                                                span,
-                                                "Only mutable pointer types can be shared in a \
-                                                 thread block."
-                                            );
-                                        }
-
                                         cuda_type = Some(pass_type);
                                     },
                                     KernelInputAttribute::PassType(span, _pass_type) => {
@@ -224,17 +207,6 @@ fn ensure_reference_type_lifetime(
                 mutability: *mutability,
                 elem,
             }))
-        },
-        ty @ syn::Type::Ptr(syn::TypePtr { elem, .. }) => {
-            if matches!(cuda_type, InputCudaType::ThreadBlockShared) {
-                if let syn::Type::Slice(syn::TypeSlice { elem, .. }) = &**elem {
-                    elem.clone()
-                } else {
-                    elem.clone()
-                }
-            } else {
-                Box::new(ty.clone())
-            }
         },
         ty => {
             if matches!(cuda_type, InputCudaType::LendRustToCuda) {

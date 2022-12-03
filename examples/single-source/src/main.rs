@@ -10,6 +10,8 @@
 
 extern crate alloc;
 
+use rc::utils::shared::r#static::ThreadBlockShared;
+
 #[cfg(not(target_os = "cuda"))]
 fn main() {}
 
@@ -44,19 +46,21 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(_s, mut __t): Tuple,
+    #[kernel(pass = LendRustToCuda)] shared3: ThreadBlockShared<u32>,
 ) where
     <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
 {
-    use rc::device::ThreadBlockShared;
-
     let shared: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
     let shared2: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
 
     unsafe {
-        (*shared.get().cast::<Tuple>().add(1)).0 = 42;
+        (*shared.as_mut_ptr().cast::<Tuple>().add(1)).0 = 42;
     }
     unsafe {
-        (*shared2.get().cast::<Tuple>().add(2)).1 = 24;
+        (*shared2.as_mut_ptr().cast::<Tuple>().add(2)).1 = 24;
+    }
+    unsafe {
+        *shared3.as_mut_ptr() = 12;
     }
 }
 
@@ -84,10 +88,10 @@ mod host {
 mod cuda_prelude {
     use core::arch::nvptx;
 
-    use rc::device::utils;
+    use rc::device::alloc::PTXAllocator;
 
     #[global_allocator]
-    static _GLOBAL_ALLOCATOR: utils::PTXAllocator = utils::PTXAllocator;
+    static _GLOBAL_ALLOCATOR: PTXAllocator = PTXAllocator;
 
     #[panic_handler]
     fn panic(_: &::core::panic::PanicInfo) -> ! {

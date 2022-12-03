@@ -205,9 +205,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         .func_inputs
         .iter_mut()
         .zip(&func_params)
-        .zip(&func_inputs.func_input_cuda_types)
-        .zip(&func.sig.inputs)
-        .map(|(((arg, ident), (cuda_type, _)), arg_orig)| match arg {
+        .map(|(arg, ident)| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs,
                 colon_token,
@@ -226,12 +224,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                     colon_token: *colon_token,
                     ty: ty.clone(),
                 });
-
-                if matches!(cuda_type, InputCudaType::ThreadBlockShared) {
-                    if let syn::FnArg::Typed(syn::PatType { ty: ty_orig, .. }) = arg_orig {
-                        *ty = ty_orig.clone();
-                    }
-                }
 
                 std::mem::replace(arg, ident_fn_arg)
             },
@@ -292,7 +284,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 enum InputCudaType {
     SafeDeviceCopy,
     LendRustToCuda,
-    ThreadBlockShared,
 }
 
 struct InputPtxJit(bool);
