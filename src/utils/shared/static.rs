@@ -29,6 +29,41 @@ pub struct ThreadBlockSharedCudaRepresentation<T: 'static> {
 
 unsafe impl<T: 'static> DeviceCopy for ThreadBlockSharedCudaRepresentation<T> {}
 
+impl<T: 'static> ThreadBlockShared<T> {
+    #[cfg(not(target_os = "cuda"))]
+    #[must_use]
+    pub fn new_uninit() -> Self {
+        Self {
+            marker: PhantomData::<T>,
+        }
+    }
+
+    #[cfg(target_os = "cuda")]
+    #[must_use]
+    pub fn new_uninit() -> Self {
+        let shared: *mut T;
+
+        unsafe {
+            core::arch::asm!(
+                ".shared .align {align} .b8 {reg}_rust_cuda_static_shared[{size}];",
+                "cvta.shared.u64 {reg}, {reg}_rust_cuda_static_shared;",
+                reg = out(reg64) shared,
+                align = const(core::mem::align_of::<T>()),
+                size = const(core::mem::size_of::<T>()),
+            );
+        }
+
+        Self { shared }
+    }
+
+    #[cfg(any(target_os = "cuda", doc))]
+    #[doc(cfg(target_os = "cuda"))]
+    #[must_use]
+    pub fn as_mut_ptr(&self) -> *mut T {
+        self.shared
+    }
+}
+
 unsafe impl<T: 'static + ~const TypeGraphLayout> RustToCuda for ThreadBlockShared<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
@@ -71,42 +106,5 @@ unsafe impl<T: 'static + ~const TypeGraphLayout> CudaAsRust
     #[doc(cfg(not(feature = "host")))]
     unsafe fn as_rust(_this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         ThreadBlockShared::new_uninit()
-    }
-}
-
-#[cfg(not(any(all(not(feature = "host"), target_os = "cuda"), doc)))]
-#[doc(cfg(not(all(not(feature = "host"), target_os = "cuda"))))]
-impl<T: 'static> ThreadBlockShared<T> {
-    #[must_use]
-    pub fn new_uninit() -> Self {
-        Self {
-            marker: PhantomData::<T>,
-        }
-    }
-}
-
-#[cfg(any(all(not(feature = "host"), target_os = "cuda"), doc))]
-#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
-impl<T: 'static> ThreadBlockShared<T> {
-    #[must_use]
-    pub fn new_uninit() -> Self {
-        let shared: *mut T;
-
-        unsafe {
-            core::arch::asm!(
-                ".shared .align {align} .b8 {reg}_rust_cuda_static_shared[{size}];",
-                "cvta.shared.u64 {reg}, {reg}_rust_cuda_static_shared;",
-                reg = out(reg64) shared,
-                align = const(core::mem::align_of::<T>()),
-                size = const(core::mem::size_of::<T>()),
-            );
-        }
-
-        Self { shared }
-    }
-
-    #[must_use]
-    pub fn as_mut_ptr(&self) -> *mut T {
-        self.shared
     }
 }
