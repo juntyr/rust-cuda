@@ -3,7 +3,7 @@ version: 2
 cli:
   server: https://app.fossa.com
   fetcher: git
-  project: https://github.com/MomoLangenstein/rust-cuda.git
+  project: https://github.com/juntyr/rust-cuda.git
 
 analyze:
   modules:

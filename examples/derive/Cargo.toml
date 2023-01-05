@@ -1,12 +1,12 @@
 [package]
 name = "derive"
 version = "0.1.0"
-authors = ["Momo Langenstein <momo.langenstein@helsinki.fi>"]
+authors = ["Juniper Tyree <juniper.langenstein@helsinki.fi>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-const-type-layout = { git = "https://github.com/MomoLangenstein/const-type-layout", rev = "49aa113" }
+const-type-layout = { git = "https://github.com/juntyr/const-type-layout", rev = "e163b36" }
 rust-cuda = { path = "../../", features = ["derive", "host"] }

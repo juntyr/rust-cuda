@@ -5,7 +5,7 @@
 #![feature(non_exhaustive_omitted_patterns_lint)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
-#![doc(html_root_url = "https://momolangenstein.github.io/rust-cuda/")]
+#![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 extern crate proc_macro;
 
