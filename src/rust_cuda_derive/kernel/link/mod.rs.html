@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/kernel/link/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/kernel/link/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-a67221f24dabeddb.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-bc1b32400f872ddb.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rust_cuda_derive/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -361,6 +361,38 @@
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     env, fs,
     io::{Read, Write},
@@ -411,13 +443,7 @@
     }
 }
 
-<span class="macro">lazy_static::lazy_static! </span>{
-    <span class="kw">pub static </span><span class="kw-2">ref </span>CONST_LAYOUT_REGEX: regex::Regex = {
-        regex::Regex::new(<span class="string">r&quot;(?m)^\.global \.align 1 \.b8 (?P&lt;param&gt;[A-Z_0-9]+)\[(?P&lt;len&gt;\d+)\] = \{(?P&lt;bytes&gt;\d+(?:, \d+)*)\};$&quot;</span>).unwrap()
-    };
-}
-
-<span class="attr">#[allow(clippy::module_name_repetitions)]
+<span class="attr">#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
 </span><span class="kw">pub fn </span>link_kernel(tokens: TokenStream) -&gt; TokenStream {
     proc_macro_error::set_dummy(<span class="macro">quote! </span>{
         <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;ERROR in this PTX compilation&quot;</span>;
@@ -470,57 +496,95 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>type_layouts = Vec::new();
 
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(start) = kernel_ptx.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;\n\t// .globl\t{kernel_layout_name}&quot;</span>)) {
-        <span class="kw">let </span><span class="prelude-val">Some</span>(middle) = kernel_ptx[start..].find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.visible .entry {kernel_layout_name}&quot;</span>)) <span class="kw">else </span>{
+    <span class="kw">let </span>type_layout_start_pattern = <span class="macro">format!</span>(<span class="string">&quot;\n\t// .globl\t{kernel_layout_name}&quot;</span>);
+
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(type_layout_start) = kernel_ptx.find(<span class="kw-2">&amp;</span>type_layout_start_pattern) {
+        <span class="kw">const </span>BEFORE_PARAM_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;\n.global .align 1 .b8 &quot;</span>;
+        <span class="kw">const </span>PARAM_LEN_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;[&quot;</span>;
+        <span class="kw">const </span>LEN_BYTES_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;] = {&quot;</span>;
+        <span class="kw">const </span>AFTER_BYTES_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;};\n&quot;</span>;
+        <span class="kw">const </span>BYTES_PARAM_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;};&quot;</span>;
+
+        <span class="kw">let </span>after_type_layout_start = type_layout_start + type_layout_start_pattern.len();
+
+        <span class="kw">let </span><span class="prelude-val">Some</span>(type_layout_middle) = kernel_ptx[after_type_layout_start..]
+            .find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.visible .entry {kernel_layout_name}&quot;</span>)).map(|i| after_type_layout_start + i)
+        <span class="kw">else </span>{
             <span class="macro">abort_call_site!</span>(
-                <span class="string">&quot;Kernel compilation generated invalid PTX: incomplete type layout information.&quot;
+                <span class="string">&quot;Kernel compilation generated invalid PTX: incomplete type layout information&quot;
             </span>)
         };
 
-        <span class="kw">for </span>capture <span class="kw">in </span>CONST_LAYOUT_REGEX.captures_iter(<span class="kw-2">&amp;</span>kernel_ptx[start..(start + middle)]) {
-            <span class="kw">match </span>(
-                capture.name(<span class="string">&quot;param&quot;</span>),
-                capture.name(<span class="string">&quot;len&quot;</span>),
-                capture.name(<span class="string">&quot;bytes&quot;</span>),
-            ) {
-                (<span class="prelude-val">Some</span>(param), <span class="prelude-val">Some</span>(len), <span class="prelude-val">Some</span>(bytes)) =&gt; {
-                    <span class="kw">let </span>param = <span class="macro">quote::format_ident!</span>(<span class="string">&quot;{}&quot;</span>, param.as_str());
+        <span class="kw">let </span><span class="kw-2">mut </span>next_type_layout = after_type_layout_start;
 
-                    <span class="kw">let </span>len = <span class="kw">match </span>len.as_str().parse::&lt;usize&gt;() {
-                        <span class="prelude-val">Ok</span>(len) =&gt; len,
-                        <span class="prelude-val">Err</span>(err) =&gt; {
-                            <span class="macro">abort_call_site!</span>(<span class="string">&quot;Kernel compilation generated invalid PTX: {}&quot;</span>, err)
-                        },
-                    };
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(param_start_offset) =
+            kernel_ptx[next_type_layout..type_layout_middle].find(BEFORE_PARAM_PATTERN)
+        {
+            <span class="kw">let </span>param_start = next_type_layout + param_start_offset + BEFORE_PARAM_PATTERN.len();
 
-                    <span class="kw">let </span>bytes: Vec&lt;u8&gt; = <span class="kw">match </span>bytes
-                        .as_str()
-                        .split(<span class="string">&quot;, &quot;</span>)
-                        .map(std::str::FromStr::from_str)
-                        .collect()
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(len_start_offset) =
+                kernel_ptx[param_start..type_layout_middle].find(PARAM_LEN_PATTERN)
+            {
+                <span class="kw">let </span>len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(bytes_start_offset) =
+                    kernel_ptx[len_start..type_layout_middle].find(LEN_BYTES_PATTERN)
+                {
+                    <span class="kw">let </span>bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
+
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(bytes_end_offset) =
+                        kernel_ptx[bytes_start..type_layout_middle].find(AFTER_BYTES_PATTERN)
                     {
-                        <span class="prelude-val">Ok</span>(len) =&gt; len,
-                        <span class="prelude-val">Err</span>(err) =&gt; {
-                            <span class="macro">abort_call_site!</span>(<span class="string">&quot;Kernel compilation generated invalid PTX: {}&quot;</span>, err)
-                        },
-                    };
-                    <span class="kw">let </span>byte_str = syn::LitByteStr::new(<span class="kw-2">&amp;</span>bytes, proc_macro2::Span::call_site());
+                        <span class="kw">let </span>param = <span class="kw-2">&amp;</span>kernel_ptx[param_start..(param_start + len_start_offset)];
+                        <span class="kw">let </span>len = <span class="kw-2">&amp;</span>kernel_ptx[len_start..(len_start + bytes_start_offset)];
+                        <span class="kw">let </span>bytes = <span class="kw-2">&amp;</span>kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
 
-                    type_layouts.push(<span class="macro">quote! </span>{
-                        <span class="kw">const </span>#param: <span class="kw-2">&amp;</span>[u8; #len] = #byte_str;
-                    });
-                },
-                <span class="kw">_ </span>=&gt; <span class="macro">abort_call_site!</span>(
-                    <span class="string">&quot;Kernel compilation generated invalid PTX: invalid type layout.&quot;
-                </span>),
-            };
+                        <span class="kw">let </span>param = <span class="macro">quote::format_ident!</span>(<span class="string">&quot;{}&quot;</span>, param);
+
+                        <span class="kw">let </span><span class="prelude-val">Ok</span>(len) = len.parse::&lt;usize&gt;() <span class="kw">else </span>{
+                            <span class="macro">abort_call_site!</span>(
+                                <span class="string">&quot;Kernel compilation generated invalid PTX: invalid type layout length&quot;
+                            </span>)
+                        };
+                        <span class="kw">let </span><span class="prelude-val">Ok</span>(bytes) = bytes.split(<span class="string">&quot;, &quot;</span>).map(std::str::FromStr::from_str).collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw">_</span>&gt;&gt;() <span class="kw">else </span>{
+                            <span class="macro">abort_call_site!</span>(
+                                <span class="string">&quot;Kernel compilation generated invalid PTX: invalid type layout byte&quot;
+                            </span>)
+                        };
+
+                        <span class="kw">if </span>bytes.len() != len {
+                            <span class="macro">abort_call_site!</span>(
+                                <span class="string">&quot;Kernel compilation generated invalid PTX: type layout length \
+                                 mismatch&quot;
+                            </span>);
+                        }
+
+                        <span class="kw">let </span>byte_str = syn::LitByteStr::new(<span class="kw-2">&amp;</span>bytes, proc_macro2::Span::call_site());
+
+                        type_layouts.push(<span class="macro">quote! </span>{
+                            <span class="kw">const </span>#param: <span class="kw-2">&amp;</span>[u8; #len] = #byte_str;
+                        });
+
+                        next_type_layout =
+                            bytes_start + bytes_end_offset + BYTES_PARAM_PATTERN.len();
+                    } <span class="kw">else </span>{
+                        next_type_layout = bytes_start;
+                    }
+                } <span class="kw">else </span>{
+                    next_type_layout = len_start;
+                }
+            } <span class="kw">else </span>{
+                next_type_layout = param_start;
+            }
         }
 
-        <span class="kw">let </span><span class="prelude-val">Some</span>(stop) = kernel_ptx[(start + middle)..].find(<span class="string">&#39;}&#39;</span>) <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(type_layout_end) = kernel_ptx[type_layout_middle..].find(<span class="string">&#39;}&#39;</span>).map(|i| {
+            type_layout_middle + i + <span class="string">&#39;}&#39;</span>.len_utf8()
+        }) <span class="kw">else </span>{
             <span class="macro">abort_call_site!</span>(<span class="string">&quot;Kernel compilation generated invalid PTX&quot;</span>)
         };
 
-        kernel_ptx.replace_range(start..(start + middle + stop + <span class="string">&#39;}&#39;</span>.len_utf8()), <span class="string">&quot;&quot;</span>);
+        kernel_ptx.replace_range(type_layout_start..type_layout_end, <span class="string">&quot;&quot;</span>);
     }
 
     (<span class="macro">quote! </span>{ <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #kernel_ptx; #(#type_layouts)* }).into()
@@ -725,4 +789,4 @@
     Link(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str),
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (0fb8b72ce 2023-01-06)" data-search-js="search-181581080540673f.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
