@@ -48,13 +48,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     }
 }
 
-lazy_static::lazy_static! {
-    pub static ref CONST_LAYOUT_REGEX: regex::Regex = {
-        regex::Regex::new(r"(?m)^\.global \.align 1 \.b8 (?P<param>[A-Z_0-9]+)\[(?P<len>\d+)\] = \{(?P<bytes>\d+(?:, \d+)*)\};$").unwrap()
-    };
-}
-
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {
         const PTX_STR: &'static str = "ERROR in this PTX compilation";
@@ -107,57 +101,95 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
     let mut type_layouts = Vec::new();
 
-    if let Some(start) = kernel_ptx.find(&format!("\n\t// .globl\t{kernel_layout_name}")) {
-        let Some(middle) = kernel_ptx[start..].find(&format!(".visible .entry {kernel_layout_name}")) else {
+    let type_layout_start_pattern = format!("\n\t// .globl\t{kernel_layout_name}");
+
+    if let Some(type_layout_start) = kernel_ptx.find(&type_layout_start_pattern) {
+        const BEFORE_PARAM_PATTERN: &str = "\n.global .align 1 .b8 ";
+        const PARAM_LEN_PATTERN: &str = "[";
+        const LEN_BYTES_PATTERN: &str = "] = {";
+        const AFTER_BYTES_PATTERN: &str = "};\n";
+        const BYTES_PARAM_PATTERN: &str = "};";
+
+        let after_type_layout_start = type_layout_start + type_layout_start_pattern.len();
+
+        let Some(type_layout_middle) = kernel_ptx[after_type_layout_start..]
+            .find(&format!(".visible .entry {kernel_layout_name}")).map(|i| after_type_layout_start + i)
+        else {
             abort_call_site!(
-                "Kernel compilation generated invalid PTX: incomplete type layout information."
+                "Kernel compilation generated invalid PTX: incomplete type layout information"
             )
         };
 
-        for capture in CONST_LAYOUT_REGEX.captures_iter(&kernel_ptx[start..(start + middle)]) {
-            match (
-                capture.name("param"),
-                capture.name("len"),
-                capture.name("bytes"),
-            ) {
-                (Some(param), Some(len), Some(bytes)) => {
-                    let param = quote::format_ident!("{}", param.as_str());
+        let mut next_type_layout = after_type_layout_start;
 
-                    let len = match len.as_str().parse::<usize>() {
-                        Ok(len) => len,
-                        Err(err) => {
-                            abort_call_site!("Kernel compilation generated invalid PTX: {}", err)
-                        },
-                    };
+        while let Some(param_start_offset) =
+            kernel_ptx[next_type_layout..type_layout_middle].find(BEFORE_PARAM_PATTERN)
+        {
+            let param_start = next_type_layout + param_start_offset + BEFORE_PARAM_PATTERN.len();
 
-                    let bytes: Vec<u8> = match bytes
-                        .as_str()
-                        .split(", ")
-                        .map(std::str::FromStr::from_str)
-                        .collect()
+            if let Some(len_start_offset) =
+                kernel_ptx[param_start..type_layout_middle].find(PARAM_LEN_PATTERN)
+            {
+                let len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
+
+                if let Some(bytes_start_offset) =
+                    kernel_ptx[len_start..type_layout_middle].find(LEN_BYTES_PATTERN)
+                {
+                    let bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
+
+                    if let Some(bytes_end_offset) =
+                        kernel_ptx[bytes_start..type_layout_middle].find(AFTER_BYTES_PATTERN)
                     {
-                        Ok(len) => len,
-                        Err(err) => {
-                            abort_call_site!("Kernel compilation generated invalid PTX: {}", err)
-                        },
-                    };
-                    let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
+                        let param = &kernel_ptx[param_start..(param_start + len_start_offset)];
+                        let len = &kernel_ptx[len_start..(len_start + bytes_start_offset)];
+                        let bytes = &kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
 
-                    type_layouts.push(quote! {
-                        const #param: &[u8; #len] = #byte_str;
-                    });
-                },
-                _ => abort_call_site!(
-                    "Kernel compilation generated invalid PTX: invalid type layout."
-                ),
-            };
+                        let param = quote::format_ident!("{}", param);
+
+                        let Ok(len) = len.parse::<usize>() else {
+                            abort_call_site!(
+                                "Kernel compilation generated invalid PTX: invalid type layout length"
+                            )
+                        };
+                        let Ok(bytes) = bytes.split(", ").map(std::str::FromStr::from_str).collect::<Result<Vec<u8>, _>>() else {
+                            abort_call_site!(
+                                "Kernel compilation generated invalid PTX: invalid type layout byte"
+                            )
+                        };
+
+                        if bytes.len() != len {
+                            abort_call_site!(
+                                "Kernel compilation generated invalid PTX: type layout length \
+                                 mismatch"
+                            );
+                        }
+
+                        let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
+
+                        type_layouts.push(quote! {
+                            const #param: &[u8; #len] = #byte_str;
+                        });
+
+                        next_type_layout =
+                            bytes_start + bytes_end_offset + BYTES_PARAM_PATTERN.len();
+                    } else {
+                        next_type_layout = bytes_start;
+                    }
+                } else {
+                    next_type_layout = len_start;
+                }
+            } else {
+                next_type_layout = param_start;
+            }
         }
 
-        let Some(stop) = kernel_ptx[(start + middle)..].find('}') else {
+        let Some(type_layout_end) = kernel_ptx[type_layout_middle..].find('}').map(|i| {
+            type_layout_middle + i + '}'.len_utf8()
+        }) else {
             abort_call_site!("Kernel compilation generated invalid PTX")
         };
 
-        kernel_ptx.replace_range(start..(start + middle + stop + '}'.len_utf8()), "");
+        kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
     }
 
     (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
