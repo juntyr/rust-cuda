@@ -84,7 +84,7 @@ pub(super) fn quote_get_ptx_str(
     quote! {
         fn get_ptx_str() -> &'static str {
             #crate_path::host::link_kernel!{
-                #func_ident #args #crate_name #crate_manifest_dir #generic_start_token
+                #func_ident #func_ident_hash #args #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token
             }

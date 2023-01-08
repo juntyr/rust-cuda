@@ -3,6 +3,7 @@ use std::path::PathBuf;
 #[allow(clippy::module_name_repetitions)]
 pub(super) struct LinkKernelConfig {
     pub(super) kernel: syn::Ident,
+    pub(super) kernel_hash: syn::Ident,
     pub(super) args: syn::Ident,
     pub(super) crate_name: String,
     pub(super) crate_path: PathBuf,
@@ -12,6 +13,7 @@ pub(super) struct LinkKernelConfig {
 impl syn::parse::Parse for LinkKernelConfig {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let kernel: syn::Ident = input.parse()?;
+        let kernel_hash: syn::Ident = input.parse()?;
         let args: syn::Ident = input.parse()?;
         let name: syn::LitStr = input.parse()?;
         let path: syn::LitStr = input.parse()?;
@@ -37,6 +39,7 @@ impl syn::parse::Parse for LinkKernelConfig {
 
         Ok(Self {
             kernel,
+            kernel_hash,
             args,
             crate_name: name.value(),
             crate_path: PathBuf::from(path.value()),

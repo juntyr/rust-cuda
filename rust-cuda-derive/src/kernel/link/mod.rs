@@ -1,7 +1,12 @@
 use std::{
-    env, fs,
+    env,
+    ffi::CString,
+    fs,
     io::{Read, Write},
+    mem::MaybeUninit,
+    os::raw::c_int,
     path::{Path, PathBuf},
+    ptr::addr_of_mut,
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -11,6 +16,7 @@ use ptx_builder::{
     builder::{BuildStatus, Builder, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
 };
+use ptx_compiler::sys::size_t;
 
 use super::utils::skip_kernel_compilation;
 
@@ -56,6 +62,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
     let LinkKernelConfig {
         kernel,
+        kernel_hash,
         args,
         crate_name,
         crate_path,
@@ -197,6 +204,119 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         };
 
         kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
+    }
+
+    let mut compiler = MaybeUninit::uninit();
+    let r = unsafe {
+        ptx_compiler::sys::nvPTXCompilerCreate(
+            compiler.as_mut_ptr(),
+            kernel_ptx.len() as size_t,
+            kernel_ptx.as_ptr().cast(),
+        )
+    };
+    emit_call_site_warning!("PTX compiler create result {}", r);
+    let compiler = unsafe { compiler.assume_init() };
+
+    let mut major = 0;
+    let mut minor = 0;
+    let r = unsafe {
+        ptx_compiler::sys::nvPTXCompilerGetVersion(addr_of_mut!(major), addr_of_mut!(minor))
+    };
+    emit_call_site_warning!("PTX version result {}", r);
+    emit_call_site_warning!("PTX compiler version {}.{}", major, minor);
+
+    let kernel_name = if specialisation.is_empty() {
+        format!("{kernel_hash}_kernel")
+    } else {
+        format!(
+            "{kernel_hash}_kernel_{:016x}",
+            seahash::hash(specialisation.as_bytes())
+        )
+    };
+
+    let options = vec![
+        CString::new("--entry").unwrap(),
+        CString::new(kernel_name).unwrap(),
+        CString::new("--verbose").unwrap(),
+        CString::new("--warn-on-double-precision-use").unwrap(),
+        CString::new("--warn-on-local-memory-usage").unwrap(),
+        CString::new("--warn-on-spills").unwrap(),
+    ];
+    let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
+
+    let r = unsafe {
+        ptx_compiler::sys::nvPTXCompilerCompile(
+            compiler,
+            options_ptrs.len() as c_int,
+            options_ptrs.as_ptr().cast(),
+        )
+    };
+    emit_call_site_warning!("PTX compile result {}", r);
+
+    let mut info_log_size = 0;
+    let r = unsafe {
+        ptx_compiler::sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
+    };
+    emit_call_site_warning!("PTX info log size result {}", r);
+    #[allow(clippy::cast_possible_truncation)]
+    let mut info_log: Vec<u8> = Vec::with_capacity(info_log_size as usize);
+    if info_log_size > 0 {
+        let r = unsafe {
+            ptx_compiler::sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
+        };
+        emit_call_site_warning!("PTX info log content result {}", r);
+        #[allow(clippy::cast_possible_truncation)]
+        unsafe {
+            info_log.set_len(info_log_size as usize);
+        }
+    }
+    let info_log = String::from_utf8_lossy(&info_log);
+
+    let mut error_log_size = 0;
+    let r = unsafe {
+        ptx_compiler::sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
+    };
+    emit_call_site_warning!("PTX error log size result {}", r);
+    #[allow(clippy::cast_possible_truncation)]
+    let mut error_log: Vec<u8> = Vec::with_capacity(error_log_size as usize);
+    if error_log_size > 0 {
+        let r = unsafe {
+            ptx_compiler::sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
+        };
+        emit_call_site_warning!("PTX error log content result {}", r);
+        #[allow(clippy::cast_possible_truncation)]
+        unsafe {
+            error_log.set_len(error_log_size as usize);
+        }
+    }
+    let error_log = String::from_utf8_lossy(&error_log);
+
+    // Ensure the compiler is not dropped
+    let mut compiler = MaybeUninit::new(compiler);
+    let r = unsafe { ptx_compiler::sys::nvPTXCompilerDestroy(compiler.as_mut_ptr()) };
+    emit_call_site_warning!("PTX compiler destroy result {}", r);
+
+    if !info_log.is_empty() {
+        emit_call_site_warning!("PTX compiler info log:\n{}", info_log);
+    }
+    if !error_log.is_empty() {
+        let mut max_lines = kernel_ptx.chars().filter(|c| *c == '\n').count() + 1;
+        let mut indent = 0;
+        while max_lines > 0 {
+            max_lines /= 10;
+            indent += 1;
+        }
+
+        abort_call_site!(
+            "PTX compiler error log:\n{}\nPTX source:\n{}",
+            error_log,
+            kernel_ptx
+                .lines()
+                .enumerate()
+                .map(|(i, l)| format!("{:indent$}| {l}", i + 1))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
     }
 
     (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
