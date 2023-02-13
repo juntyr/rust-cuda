@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ExchangeWrapperOnDevice",""],["ExchangeWrapperOnHost",""]]};
+window.SIDEBAR_ITEMS = {"struct":["ExchangeWrapperOnDevice","ExchangeWrapperOnHost"]};

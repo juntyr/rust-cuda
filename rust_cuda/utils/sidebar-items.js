@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["aliasing",""],["alloc",""],["device_copy",""],["exchange",""]]};
+window.SIDEBAR_ITEMS = {"mod":["aliasing","alloc","device_copy","exchange"]};

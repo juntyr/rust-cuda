@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["block_dim",""],["block_idx",""],["grid_dim",""],["index",""],["thread_idx",""]],"struct":[["Dim3","Dimension specified in kernel launching"],["Idx3","Indices that the kernel code is running on"],["PTXAllocator","Memory allocator using CUDA malloc/free"]]};
+window.SIDEBAR_ITEMS = {"fn":["block_dim","block_idx","grid_dim","index","thread_idx"],"struct":["Dim3","Idx3","PTXAllocator"]};

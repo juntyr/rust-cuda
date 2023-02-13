@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["UnifiedAllocator",""]]};
+window.SIDEBAR_ITEMS = {"struct":["UnifiedAllocator"]};
