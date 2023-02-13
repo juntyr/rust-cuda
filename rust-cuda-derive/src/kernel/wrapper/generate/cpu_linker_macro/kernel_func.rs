@@ -56,6 +56,7 @@ pub(super) fn quote_kernel_func(
 
     quote! {
         #(#func_attrs)*
+        #[allow(clippy::needless_lifetimes)]
         fn #func_ident #generic_start_token #generic_wrapper_params #generic_close_token (
             &mut self, #(#new_func_inputs),*
         ) -> rust_cuda::rustacuda::error::CudaResult<()>

@@ -35,6 +35,7 @@ pub(super) fn quote_kernel_func_raw(
 
     quote! {
         #(#func_attrs)*
+        #[allow(clippy::extra_unused_type_parameters)]
         fn #func_ident_raw #generic_start_token #generic_wrapper_params #generic_close_token (
             &mut self, #(#new_func_inputs_raw),*
         ) -> rust_cuda::rustacuda::error::CudaResult<()>
