@@ -27,13 +27,16 @@ unsafe impl Allocator for UnifiedAllocator {
 
     #[cfg(feature = "host")]
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        use rustacuda::memory::{cuda_free_unified, UnifiedPointer};
+        use rustacuda::{
+            error::CudaResult,
+            memory::{cuda_free_unified, UnifiedPointer},
+        };
 
         if layout.size() == 0 {
             return;
         }
 
-        let _ = cuda_free_unified(UnifiedPointer::wrap(ptr.as_ptr()));
+        let _: CudaResult<()> = cuda_free_unified(UnifiedPointer::wrap(ptr.as_ptr()));
     }
 
     #[cfg(not(feature = "host"))]
