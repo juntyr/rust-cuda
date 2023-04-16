@@ -121,6 +121,7 @@ pub(super) fn parse_function_inputs(
     }
 }
 
+#[allow(clippy::unnecessary_box_returns)]
 fn ensure_reference_type_lifetime(
     i: usize,
     ty: &syn::Type,
