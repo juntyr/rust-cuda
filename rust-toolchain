@@ -1,4 +1,5 @@
 [toolchain]
-channel = "nightly"
+# Pin version pin until const traits are back
+channel = "nightly-2023-04-19"
 components = [ "cargo", "rustfmt", "clippy" ]
 targets = [ "x86_64-unknown-linux-gnu", "nvptx64-nvidia-cuda" ]
