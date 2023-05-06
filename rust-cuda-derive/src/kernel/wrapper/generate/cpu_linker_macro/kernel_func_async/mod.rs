@@ -35,7 +35,7 @@ pub(super) fn quote_kernel_func_async(
         macro_type_ids,
     );
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
-        generate_func_input_and_ptx_jit_wraps(func_inputs);
+        generate_func_input_and_ptx_jit_wraps(crate_path, func_inputs);
     let (cpu_func_types_launch, cpu_func_lifetime_erased_types, cpu_func_unboxed_types) =
         generate_launch_types(
             crate_path,
@@ -60,11 +60,9 @@ pub(super) fn quote_kernel_func_async(
             } = #crate_path::host::Launcher::get_launch_package(self);
 
             let kernel_jit_result = if config.ptx_jit {
-                #crate_path::ptx_jit::compilePtxJITwithArguments! {
-                    kernel.compile_with_ptx_jit_args(#(#func_cpu_ptx_jit_wrap),*)
-                }?
+                kernel.compile_with_ptx_jit_args(#func_cpu_ptx_jit_wrap)?
             } else {
-                 kernel.compile_with_ptx_jit_args(None)?
+                kernel.compile_with_ptx_jit_args(None)?
             };
 
             let function = match kernel_jit_result {

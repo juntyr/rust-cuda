@@ -95,7 +95,7 @@ impl<KernelTraitObject: ?Sized> TypedKernel<KernelTraitObject> {
     ///  (from [`Self::new`]).
     pub fn compile_with_ptx_jit_args(
         &mut self,
-        arguments: Option<&[Option<&[u8]>]>,
+        arguments: Option<&[Option<*const [u8]>]>,
     ) -> CudaResult<KernelJITResult> {
         let ptx_jit = self.compiler.with_arguments(arguments);
 

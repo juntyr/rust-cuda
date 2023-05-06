@@ -4,7 +4,7 @@ use super::{PtxElement, PtxJITCompiler, PtxJITResult, PtxLoadWidth};
 
 impl PtxJITCompiler {
     #[allow(clippy::too_many_lines)]
-    pub fn with_arguments(&mut self, arguments: Option<&[Option<&[u8]>]>) -> PtxJITResult {
+    pub fn with_arguments(&mut self, arguments: Option<&[Option<*const [u8]>]>) -> PtxJITResult {
         // Check if the arguments, cast as byte slices, are the same as the last cached
         //  ones
         #[allow(clippy::explicit_deref_methods)]
@@ -16,7 +16,7 @@ impl PtxJITCompiler {
                     .zip(last_arguments.iter())
                     .all(|(a, b)| match (a, b) {
                         (None, None) => false,
-                        (Some(a), Some(b)) => *a != b.deref(),
+                        (Some(a), Some(b)) => (unsafe { &**a }) != b.deref(),
                         _ => true,
                     })
             },
@@ -30,7 +30,7 @@ impl PtxJITCompiler {
             self.last_arguments = arguments.map(|arguments| {
                 arguments
                     .iter()
-                    .map(|arg| arg.map(|bytes| bytes.to_owned().into_boxed_slice()))
+                    .map(|arg| arg.map(|bytes| unsafe { &*bytes }.to_owned().into_boxed_slice()))
                     .collect::<Vec<Option<Box<[u8]>>>>()
                     .into_boxed_slice()
             });
