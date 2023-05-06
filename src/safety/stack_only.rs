@@ -36,6 +36,7 @@ mod sealed {
     impl<T> !StackOnly for &T {}
     impl<T> !StackOnly for &mut T {}
 
+    // Thread-block-shared data contains data not on the stack
     impl<T: 'static> !StackOnly for crate::utils::shared::r#static::ThreadBlockShared<T> {}
     impl<T: 'static + const_type_layout::TypeGraphLayout> !StackOnly
         for crate::utils::shared::slice::ThreadBlockSharedSlice<T>

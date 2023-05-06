@@ -7,6 +7,14 @@ mod sealed {
     #[marker]
     pub trait SafeDeviceCopy {}
 
+    // Thread-block-shared data cannot be copied since information is added inside
+    //  CUDA
+    impl<T: 'static> !SafeDeviceCopy for crate::utils::shared::r#static::ThreadBlockShared<T> {}
+    impl<T: 'static + const_type_layout::TypeGraphLayout> !SafeDeviceCopy
+        for crate::utils::shared::slice::ThreadBlockSharedSlice<T>
+    {
+    }
+
     impl<T: crate::safety::StackOnly> SafeDeviceCopy for T {}
     #[cfg(any(feature = "alloc", doc))]
     impl<T: crate::safety::UnifiedHeapOnly> SafeDeviceCopy for T {}
@@ -19,7 +27,4 @@ mod sealed {
         for crate::utils::device_copy::SafeDeviceCopyWrapper<T>
     {
     }
-
-    // No data is actually copied to the device
-    impl<T: 'static> SafeDeviceCopy for crate::utils::shared::r#static::ThreadBlockShared<T> {}
 }

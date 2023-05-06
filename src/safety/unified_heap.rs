@@ -38,6 +38,13 @@ mod sealed {
     impl<T> !UnifiedHeapOnly for &T {}
     impl<T> !UnifiedHeapOnly for &mut T {}
 
+    // Thread-block-shared data contains CUDA-only data
+    impl<T: 'static> !UnifiedHeapOnly for crate::utils::shared::r#static::ThreadBlockShared<T> {}
+    impl<T: 'static + const_type_layout::TypeGraphLayout> !UnifiedHeapOnly
+        for crate::utils::shared::slice::ThreadBlockSharedSlice<T>
+    {
+    }
+
     impl<T> UnifiedHeapOnly for core::marker::PhantomData<T> {}
 
     impl<T> UnifiedHeapOnly for alloc::boxed::Box<T, UnifiedAllocator> {}

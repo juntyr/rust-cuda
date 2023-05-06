@@ -10,6 +10,7 @@
 
 extern crate alloc;
 
+#[cfg(target_os = "cuda")]
 use rc::utils::shared::r#static::ThreadBlockShared;
 
 #[cfg(not(target_os = "cuda"))]
@@ -46,7 +47,7 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(s, mut __t): Tuple,
-    #[kernel(pass = LendRustToCuda)] shared3: ThreadBlockShared<u32>,
+    // #[kernel(pass = SafeDeviceCopy)] shared3: ThreadBlockShared<u32>,
 ) where
     <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
 {
@@ -61,9 +62,9 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
         (*shared2.index_mut_unchecked(2)).1 = 24;
     }
     // unsafe { core::arch::asm!("hi") }
-    unsafe {
-        *shared3.as_mut_ptr() = 12;
-    }
+    // unsafe {
+    //     *shared3.as_mut_ptr() = 12;
+    // }
 }
 
 #[cfg(not(target_os = "cuda"))]

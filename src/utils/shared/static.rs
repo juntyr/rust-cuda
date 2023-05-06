@@ -1,35 +1,17 @@
 #[cfg(not(target_os = "cuda"))]
 use core::marker::PhantomData;
 
-use const_type_layout::TypeGraphLayout;
-use rustacuda_core::DeviceCopy;
-
-use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
-
 #[cfg(not(target_os = "cuda"))]
-#[derive(TypeLayout)]
 #[repr(transparent)]
 pub struct ThreadBlockShared<T: 'static> {
     marker: PhantomData<T>,
 }
 
 #[cfg(target_os = "cuda")]
-#[derive(TypeLayout)]
 #[repr(transparent)]
 pub struct ThreadBlockShared<T: 'static> {
     shared: *mut T,
 }
-
-#[doc(hidden)]
-#[derive(TypeLayout)]
-#[repr(transparent)]
-pub struct ThreadBlockSharedCudaRepresentation<T: 'static> {
-    // Note: uses a zero-element array instead of PhantomData here so that
-    //       TypeLayout can still observe T's layout
-    marker: [T; 0],
-}
-
-unsafe impl<T: 'static> DeviceCopy for ThreadBlockSharedCudaRepresentation<T> {}
 
 impl<T: 'static> ThreadBlockShared<T> {
     #[cfg(not(target_os = "cuda"))]
@@ -79,50 +61,5 @@ impl<T: 'static, const N: usize> ThreadBlockShared<[T; N]> {
         index: I,
     ) -> *mut <I as core::slice::SliceIndex<[T]>>::Output {
         core::ptr::slice_from_raw_parts_mut(self.shared.cast::<T>(), N).get_unchecked_mut(index)
-    }
-}
-
-unsafe impl<T: 'static + TypeGraphLayout> RustToCuda for ThreadBlockShared<T> {
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
-    type CudaAllocation = crate::host::NullCudaAlloc;
-    type CudaRepresentation = ThreadBlockSharedCudaRepresentation<T>;
-
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
-    unsafe fn borrow<A: crate::host::CudaAlloc>(
-        &self,
-        alloc: A,
-    ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
-    )> {
-        Ok((
-            DeviceAccessible::from(ThreadBlockSharedCudaRepresentation { marker: [] }),
-            crate::host::CombinedCudaAlloc::new(crate::host::NullCudaAlloc, alloc),
-        ))
-    }
-
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
-    unsafe fn restore<A: crate::host::CudaAlloc>(
-        &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A> {
-        let (_null, alloc): (crate::host::NullCudaAlloc, A) = alloc.split();
-
-        Ok(alloc)
-    }
-}
-
-unsafe impl<T: 'static + TypeGraphLayout> CudaAsRust
-    for ThreadBlockSharedCudaRepresentation<T>
-{
-    type RustRepresentation = ThreadBlockShared<T>;
-
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
-    unsafe fn as_rust(_this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        ThreadBlockShared::new_uninit()
     }
 }
