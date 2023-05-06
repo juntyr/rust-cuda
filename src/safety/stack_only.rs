@@ -37,7 +37,7 @@ mod sealed {
     impl<T> !StackOnly for &mut T {}
 
     impl<T: 'static> !StackOnly for crate::utils::shared::r#static::ThreadBlockShared<T> {}
-    impl<T: 'static + ~const const_type_layout::TypeGraphLayout> !StackOnly
+    impl<T: 'static + const_type_layout::TypeGraphLayout> !StackOnly
         for crate::utils::shared::slice::ThreadBlockSharedSlice<T>
     {
     }

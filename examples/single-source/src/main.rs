@@ -55,10 +55,10 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     unsafe {
-        (*shared.index_mut(1)).0 = (f64::from(s) * 2.0) as u32;
+        (*shared.index_mut_unchecked(1)).0 = (f64::from(s) * 2.0) as u32;
     }
     unsafe {
-        (*shared2.index_mut(2)).1 = 24;
+        (*shared2.index_mut_unchecked(2)).1 = 24;
     }
     // unsafe { core::arch::asm!("hi") }
     unsafe {

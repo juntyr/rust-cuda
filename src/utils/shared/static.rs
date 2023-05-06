@@ -69,25 +69,20 @@ impl<T: 'static> ThreadBlockShared<T> {
 impl<T: 'static, const N: usize> ThreadBlockShared<[T; N]> {
     #[cfg(any(target_os = "cuda", doc))]
     #[doc(cfg(target_os = "cuda"))]
+    /// Safety:
+    ///
+    /// The provided `index` must not be out of bounds.
     #[inline]
     #[must_use]
-    pub fn index(&self, index: usize) -> *const T {
-        self.index_mut(index)
-    }
-
-    #[cfg(any(target_os = "cuda", doc))]
-    #[doc(cfg(target_os = "cuda"))]
-    #[inline]
-    #[must_use]
-    pub fn index_mut(&self, index: usize) -> *mut T {
-        assert!(index < N);
-
-        // Safety: Since *[T; N] is valid, *T is valid iff index < N
-        unsafe { self.shared.cast::<T>().add(index) }
+    pub unsafe fn index_mut_unchecked<I: core::slice::SliceIndex<[T]>>(
+        &self,
+        index: I,
+    ) -> *mut <I as core::slice::SliceIndex<[T]>>::Output {
+        core::ptr::slice_from_raw_parts_mut(self.shared.cast::<T>(), N).get_unchecked_mut(index)
     }
 }
 
-unsafe impl<T: 'static + ~const TypeGraphLayout> RustToCuda for ThreadBlockShared<T> {
+unsafe impl<T: 'static + TypeGraphLayout> RustToCuda for ThreadBlockShared<T> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     type CudaAllocation = crate::host::NullCudaAlloc;
@@ -120,7 +115,7 @@ unsafe impl<T: 'static + ~const TypeGraphLayout> RustToCuda for ThreadBlockShare
     }
 }
 
-unsafe impl<T: 'static + ~const TypeGraphLayout> CudaAsRust
+unsafe impl<T: 'static + TypeGraphLayout> CudaAsRust
     for ThreadBlockSharedCudaRepresentation<T>
 {
     type RustRepresentation = ThreadBlockShared<T>;

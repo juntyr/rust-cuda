@@ -26,6 +26,7 @@
 #![feature(impl_trait_in_assoc_type)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+#![cfg_attr(target_os = "cuda", feature(slice_ptr_get))]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 #[doc(hidden)]

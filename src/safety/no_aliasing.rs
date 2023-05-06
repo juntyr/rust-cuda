@@ -24,8 +24,5 @@ mod private {
     impl<T> NoAliasing for crate::utils::aliasing::SplitSliceOverCudaThreadsDynamicStride<T> {}
 
     // Only unsafe aliasing is possible since both only expose raw pointers
-    // impl<T: 'static> NoAliasing for
-    // crate::utils::shared::r#static::ThreadBlockShared<T> {}
-    // impl<T: 'static + ~const const_type_layout::TypeGraphLayout> NoAliasing
-    // for crate::utils::shared::slice::ThreadBlockSharedSlice<T> {}
+    impl<T: 'static> NoAliasing for crate::utils::shared::r#static::ThreadBlockShared<T> {}
 }

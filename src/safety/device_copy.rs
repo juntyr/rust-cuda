@@ -20,10 +20,6 @@ mod sealed {
     {
     }
 
-    // Only unsafe aliasing is possible since both only expose raw pointers
-    // impl<T: 'static> SafeDeviceCopy for
-    // crate::utils::shared::r#static::ThreadBlockShared<T> {}
-    // impl<T: 'static + ~const const_type_layout::TypeGraphLayout>
-    // SafeDeviceCopy for crate::utils::shared::slice::ThreadBlockSharedSlice<T>
-    // {}
+    // No data is actually copied to the device
+    impl<T: 'static> SafeDeviceCopy for crate::utils::shared::r#static::ThreadBlockShared<T> {}
 }
