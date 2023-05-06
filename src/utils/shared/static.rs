@@ -7,12 +7,14 @@ use rustacuda_core::DeviceCopy;
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda};
 
 #[cfg(not(target_os = "cuda"))]
+#[derive(TypeLayout)]
 #[repr(transparent)]
 pub struct ThreadBlockShared<T: 'static> {
     marker: PhantomData<T>,
 }
 
 #[cfg(target_os = "cuda")]
+#[derive(TypeLayout)]
 #[repr(transparent)]
 pub struct ThreadBlockShared<T: 'static> {
     shared: *mut T,
@@ -61,6 +63,27 @@ impl<T: 'static> ThreadBlockShared<T> {
     #[must_use]
     pub fn as_mut_ptr(&self) -> *mut T {
         self.shared
+    }
+}
+
+impl<T: 'static, const N: usize> ThreadBlockShared<[T; N]> {
+    #[cfg(any(target_os = "cuda", doc))]
+    #[doc(cfg(target_os = "cuda"))]
+    #[inline]
+    #[must_use]
+    pub fn index(&self, index: usize) -> *const T {
+        self.index_mut(index)
+    }
+
+    #[cfg(any(target_os = "cuda", doc))]
+    #[doc(cfg(target_os = "cuda"))]
+    #[inline]
+    #[must_use]
+    pub fn index_mut(&self, index: usize) -> *mut T {
+        assert!(index < N);
+
+        // Safety: Since *[T; N] is valid, *T is valid iff index < N
+        unsafe { self.shared.cast::<T>().add(index) }
     }
 }
 

@@ -10,7 +10,6 @@
 
 extern crate alloc;
 
-#[cfg(target_os = "cuda")]
 use rc::utils::shared::r#static::ThreadBlockShared;
 
 #[cfg(not(target_os = "cuda"))]
@@ -47,7 +46,7 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(s, mut __t): Tuple,
-    // #[kernel(pass = LendRustToCuda)] shared3: ThreadBlockShared<u32>,
+    #[kernel(pass = LendRustToCuda)] shared3: ThreadBlockShared<u32>,
 ) where
     <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
 {
@@ -56,15 +55,15 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     unsafe {
-        (*shared.as_mut_ptr().cast::<Tuple>().add(1)).0 = (f64::from(s) * 2.0) as u32;
+        (*shared.index_mut(1)).0 = (f64::from(s) * 2.0) as u32;
     }
     unsafe {
-        (*shared2.as_mut_ptr().cast::<Tuple>().add(2)).1 = 24;
+        (*shared2.index_mut(2)).1 = 24;
     }
-    unsafe { core::arch::asm!("hi") }
-    // unsafe {
-    //     *shared3.as_mut_ptr() = 12;
-    // }
+    // unsafe { core::arch::asm!("hi") }
+    unsafe {
+        *shared3.as_mut_ptr() = 12;
+    }
 }
 
 #[cfg(not(target_os = "cuda"))]
