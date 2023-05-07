@@ -16,7 +16,7 @@ use rustacuda::{
 
 use crate::{
     common::{
-        CombinedCudaAlloc, DeviceAccessible, EmptyCudaAlloc, NullCudaAlloc, RustToCuda,
+        CombinedCudaAlloc, DeviceAccessible, EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
         RustToCudaAsync,
     },
     host::{
@@ -48,7 +48,7 @@ pub struct ExchangeWrapperOnDevice<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>
     value: T,
     device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
     locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NullCudaAlloc>,
+    null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NoCudaAlloc>,
     move_event: CudaDropWrapper<Event>,
 }
 
@@ -57,7 +57,7 @@ pub struct ExchangeWrapperOnDeviceAsync<'stream, T: RustToCuda<CudaAllocation: E
     value: T,
     device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
     locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NullCudaAlloc>,
+    null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NoCudaAlloc>,
     move_event: CudaDropWrapper<Event>,
     stream: &'stream Stream,
     waker: Arc<Mutex<Option<Waker>>>,
@@ -73,7 +73,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
         // called first,           which initialised the memory.
         let device_box = unsafe { DeviceBox::uninitialized() }?.into();
 
-        let (cuda_repr, _null_alloc) = unsafe { value.borrow(NullCudaAlloc) }?;
+        let (cuda_repr, _null_alloc) = unsafe { value.borrow(NoCudaAlloc) }?;
         let locked_cuda_repr = HostLockedBox::new(cuda_repr)?;
 
         let move_event = Event::new(EventFlags::DISABLE_TIMING)?.into();
@@ -99,7 +99,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_device(mut self) -> CudaResult<ExchangeWrapperOnDevice<T>> {
-        let (cuda_repr, null_alloc) = unsafe { self.value.borrow(NullCudaAlloc) }?;
+        let (cuda_repr, null_alloc) = unsafe { self.value.borrow(NoCudaAlloc) }?;
         *self.locked_cuda_repr = cuda_repr;
 
         self.device_box.copy_from(&self.locked_cuda_repr)?;
@@ -129,7 +129,7 @@ impl<T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T
         mut self,
         stream: &Stream,
     ) -> CudaResult<ExchangeWrapperOnDeviceAsync<'_, T>> {
-        let (cuda_repr, null_alloc) = unsafe { self.value.borrow_async(NullCudaAlloc, stream) }?;
+        let (cuda_repr, null_alloc) = unsafe { self.value.borrow_async(NoCudaAlloc, stream) }?;
         *self.locked_cuda_repr = cuda_repr;
 
         // Safety: The device value is not safely exposed until either
@@ -347,7 +347,7 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
     /// CUDA
     pub fn move_to_host(mut self) -> CudaResult<ExchangeWrapperOnHost<T>> {
         // Reflect deep changes back to the CPU
-        let _null_alloc: NullCudaAlloc = unsafe { self.value.restore(self.null_alloc) }?;
+        let _null_alloc: NoCudaAlloc = unsafe { self.value.restore(self.null_alloc) }?;
 
         // Note: Shallow changes are not reflected back to the CPU
 
@@ -378,7 +378,7 @@ impl<'stream, T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>>
         stream: &'stream Stream,
     ) -> CudaResult<ExchangeWrapperOnHostAsync<'stream, T>> {
         // Reflect deep changes back to the CPU
-        let _null_alloc: NullCudaAlloc =
+        let _null_alloc: NoCudaAlloc =
             unsafe { self.value.restore_async(self.null_alloc, stream) }?;
 
         // Note: Shallow changes are not reflected back to the CPU
@@ -456,7 +456,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
     /// CUDA
     pub fn move_to_host(mut self) -> CudaResult<ExchangeWrapperOnHost<T>> {
         // Reflect deep changes back to the CPU
-        let _null_alloc: NullCudaAlloc = unsafe { self.value.restore(self.null_alloc) }?;
+        let _null_alloc: NoCudaAlloc = unsafe { self.value.restore(self.null_alloc) }?;
 
         // Note: Shallow changes are not reflected back to the CPU
 
@@ -499,7 +499,7 @@ impl<T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice
         stream: &Stream,
     ) -> CudaResult<ExchangeWrapperOnHostAsync<'_, T>> {
         // Reflect deep changes back to the CPU
-        let _null_alloc: NullCudaAlloc =
+        let _null_alloc: NoCudaAlloc =
             unsafe { self.value.restore_async(self.null_alloc, stream) }?;
 
         // Note: Shallow changes are not reflected back to the CPU

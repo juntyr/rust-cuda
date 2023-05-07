@@ -34,7 +34,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<[T]> {
     #[cfg(feature = "host")]
     type CudaAllocation = crate::host::CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
     #[cfg(not(feature = "host"))]
-    type CudaAllocation = crate::device::SomeCudaAlloc;
+    type CudaAllocation = crate::common::SomeCudaAlloc;
     type CudaRepresentation = BoxedSliceCudaRepresentation<T>;
 
     #[cfg(feature = "host")]

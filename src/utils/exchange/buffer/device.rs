@@ -3,7 +3,7 @@ use core::ops::{Deref, DerefMut};
 use const_type_layout::TypeGraphLayout;
 
 use crate::{
-    common::{NullCudaAlloc, RustToCuda, RustToCudaAsync},
+    common::{NoCudaAlloc, RustToCuda, RustToCudaAsync},
     safety::SafeDeviceCopy,
 };
 
@@ -43,7 +43,7 @@ impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> DerefMut
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
     for CudaExchangeBufferDevice<T, M2D, M2H>
 {
-    type CudaAllocation = NullCudaAlloc;
+    type CudaAllocation = NoCudaAlloc;
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
 }
 

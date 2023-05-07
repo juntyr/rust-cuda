@@ -259,9 +259,13 @@ impl<T: crate_private::alloc::Sealed> CudaAlloc for T {}
 
 impl<T: CudaAlloc> crate_private::alloc::Sealed for Option<T> {}
 
-pub struct NullCudaAlloc;
-impl crate_private::alloc::Sealed for NullCudaAlloc {}
-impl private::empty::Sealed for NullCudaAlloc {}
+pub struct NoCudaAlloc;
+impl crate_private::alloc::Sealed for NoCudaAlloc {}
+impl private::empty::Sealed for NoCudaAlloc {}
+
+pub struct SomeCudaAlloc(());
+impl crate_private::alloc::Sealed for SomeCudaAlloc {}
+impl !private::empty::Sealed for SomeCudaAlloc {}
 
 pub struct CombinedCudaAlloc<A: CudaAlloc, B: CudaAlloc>(A, B);
 impl<A: CudaAlloc, B: CudaAlloc> crate_private::alloc::Sealed for CombinedCudaAlloc<A, B> {}

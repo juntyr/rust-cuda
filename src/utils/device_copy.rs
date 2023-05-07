@@ -3,7 +3,7 @@
 use const_type_layout::TypeGraphLayout;
 
 use crate::{
-    common::{CudaAsRust, DeviceAccessible, NullCudaAlloc, RustToCuda, RustToCudaAsync},
+    common::{CudaAsRust, DeviceAccessible, NoCudaAlloc, RustToCuda, RustToCudaAsync},
     safety::SafeDeviceCopy,
 };
 
@@ -74,7 +74,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
 }
 
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
-    type CudaAllocation = NullCudaAlloc;
+    type CudaAllocation = NoCudaAlloc;
     type CudaRepresentation = Self;
 
     #[cfg(feature = "host")]
@@ -86,7 +86,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWr
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let alloc = CombinedCudaAlloc::new(NullCudaAlloc, alloc);
+        let alloc = CombinedCudaAlloc::new(NoCudaAlloc, alloc);
         Ok((DeviceAccessible::from(&self.0), alloc))
     }
 
@@ -96,7 +96,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWr
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
-        let (_alloc_front, alloc_tail): (NullCudaAlloc, A) = alloc.split();
+        let (_alloc_front, alloc_tail): (NoCudaAlloc, A) = alloc.split();
 
         Ok(alloc_tail)
     }
@@ -115,7 +115,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let alloc = CombinedCudaAlloc::new(NullCudaAlloc, alloc);
+        let alloc = CombinedCudaAlloc::new(NoCudaAlloc, alloc);
         Ok((DeviceAccessible::from(&self.0), alloc))
     }
 
@@ -126,7 +126,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
         _stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A> {
-        let (_alloc_front, alloc_tail): (NullCudaAlloc, A) = alloc.split();
+        let (_alloc_front, alloc_tail): (NoCudaAlloc, A) = alloc.split();
 
         Ok(alloc_tail)
     }

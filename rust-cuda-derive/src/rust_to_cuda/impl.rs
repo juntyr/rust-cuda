@@ -91,7 +91,7 @@ pub fn rust_to_cuda_trait(
                 #crate_path::common::DeviceAccessible<Self::CudaRepresentation>,
                 #crate_path::common::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
-                let alloc_front = #crate_path::common::NullCudaAlloc;
+                let alloc_front = #crate_path::common::NoCudaAlloc;
                 let alloc_tail = alloc;
 
                 #(#r2c_field_declarations)*
@@ -161,7 +161,7 @@ pub fn rust_to_cuda_async_trait(
                 #crate_path::common::DeviceAccessible<Self::CudaRepresentation>,
                 #crate_path::common::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
-                let alloc_front = #crate_path::common::NullCudaAlloc;
+                let alloc_front = #crate_path::common::NoCudaAlloc;
                 let alloc_tail = alloc;
 
                 #(#r2c_field_async_declarations)*

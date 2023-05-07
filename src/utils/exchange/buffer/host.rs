@@ -12,7 +12,7 @@ use rustacuda::{
 
 use crate::{
     common::{
-        CombinedCudaAlloc, CudaAlloc, DeviceAccessible, NullCudaAlloc, RustToCuda, RustToCudaAsync,
+        CombinedCudaAlloc, CudaAlloc, DeviceAccessible, NoCudaAlloc, RustToCuda, RustToCudaAsync,
     },
     host::CudaDropWrapper,
     safety::SafeDeviceCopy,
@@ -107,7 +107,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Dere
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
-    type CudaAllocation = NullCudaAlloc;
+    type CudaAllocation = NoCudaAlloc;
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
 
     #[allow(clippy::type_complexity)]
@@ -136,7 +136,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
                 device_buffer.as_mut_ptr(),
                 device_buffer.len(),
             )),
-            CombinedCudaAlloc::new(NullCudaAlloc, alloc),
+            CombinedCudaAlloc::new(NoCudaAlloc, alloc),
         ))
     }
 
@@ -191,7 +191,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
                 device_buffer.as_mut_ptr(),
                 device_buffer.len(),
             )),
-            CombinedCudaAlloc::new(NullCudaAlloc, alloc),
+            CombinedCudaAlloc::new(NoCudaAlloc, alloc),
         ))
     }
 

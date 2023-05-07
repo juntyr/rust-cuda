@@ -21,7 +21,7 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_call};
 
 use crate::{
     common::{
-        DeviceAccessible, DeviceConstRef, DeviceMutRef, EmptyCudaAlloc, NullCudaAlloc, RustToCuda,
+        DeviceAccessible, DeviceConstRef, DeviceMutRef, EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
     },
     ptx_jit::{CudaKernel, PtxJITCompiler, PtxJITResult},
     safety::SafeDeviceCopy,
@@ -196,7 +196,7 @@ impl<T: RustToCuda> LendToCuda for T {
         &self,
         inner: F,
     ) -> Result<O, E> {
-        let (cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+        let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, inner);
 
@@ -216,13 +216,13 @@ impl<T: RustToCuda> LendToCuda for T {
         &mut self,
         inner: F,
     ) -> Result<O, E> {
-        let (mut cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+        let (mut cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
         let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, inner);
 
         core::mem::drop(cuda_repr);
 
-        let _: NullCudaAlloc = unsafe { self.restore(alloc) }?;
+        let _: NoCudaAlloc = unsafe { self.restore(alloc) }?;
 
         result
     }
@@ -242,7 +242,7 @@ impl<T: RustToCuda> LendToCuda for T {
         <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
     {
-        let (cuda_repr, alloc) = unsafe { self.borrow(NullCudaAlloc) }?;
+        let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
         let result = HostAndDeviceOwned::with_new(cuda_repr, inner);
 
