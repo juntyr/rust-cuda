@@ -20,7 +20,9 @@ use rustacuda_core::{DeviceCopy, DevicePointer};
 pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_call};
 
 use crate::{
-    common::{DeviceAccessible, DeviceConstRef, DeviceMutRef, RustToCuda},
+    common::{
+        DeviceAccessible, DeviceConstRef, DeviceMutRef, EmptyCudaAlloc, NullCudaAlloc, RustToCuda,
+    },
     ptx_jit::{CudaKernel, PtxJITCompiler, PtxJITResult},
     safety::SafeDeviceCopy,
 };
@@ -250,53 +252,17 @@ impl<T: RustToCuda> LendToCuda for T {
     }
 }
 
-pub(crate) mod private {
-    pub mod alloc {
-        pub trait Sealed {}
-    }
-
+mod private {
     pub mod drop {
         pub trait Sealed: Sized {
             fn drop(val: Self) -> Result<(), (rustacuda::error::CudaError, Self)>;
         }
     }
-
-    pub mod empty {
-        pub trait Sealed {}
-    }
-}
-
-pub trait EmptyCudaAlloc: private::empty::Sealed {}
-impl<T: private::empty::Sealed> EmptyCudaAlloc for T {}
-
-pub trait CudaAlloc: private::alloc::Sealed {}
-impl<T: private::alloc::Sealed> CudaAlloc for T {}
-
-impl<T: CudaAlloc> private::alloc::Sealed for Option<T> {}
-
-pub struct NullCudaAlloc;
-impl private::alloc::Sealed for NullCudaAlloc {}
-impl private::empty::Sealed for NullCudaAlloc {}
-
-pub struct CombinedCudaAlloc<A: CudaAlloc, B: CudaAlloc>(A, B);
-impl<A: CudaAlloc, B: CudaAlloc> private::alloc::Sealed for CombinedCudaAlloc<A, B> {}
-impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> private::empty::Sealed
-    for CombinedCudaAlloc<A, B>
-{
-}
-impl<A: CudaAlloc, B: CudaAlloc> CombinedCudaAlloc<A, B> {
-    pub fn new(front: A, tail: B) -> Self {
-        Self(front, tail)
-    }
-
-    pub fn split(self) -> (A, B) {
-        (self.0, self.1)
-    }
 }
 
 #[repr(transparent)]
 pub struct CudaDropWrapper<C: private::drop::Sealed>(ManuallyDrop<C>);
-impl<C: private::drop::Sealed> private::alloc::Sealed for CudaDropWrapper<C> {}
+impl<C: private::drop::Sealed> crate::common::crate_private::alloc::Sealed for CudaDropWrapper<C> {}
 impl<C: private::drop::Sealed> From<C> for CudaDropWrapper<C> {
     fn from(val: C) -> Self {
         Self(ManuallyDrop::new(val))
@@ -416,7 +382,7 @@ impl<T: DeviceCopy> Drop for HostLockedBox<T> {
 #[allow(clippy::module_name_repetitions)]
 pub struct HostDeviceBox<T: DeviceCopy>(DevicePointer<T>);
 
-impl<T: DeviceCopy> private::alloc::Sealed for HostDeviceBox<T> {}
+impl<T: DeviceCopy> crate::common::crate_private::alloc::Sealed for HostDeviceBox<T> {}
 
 impl<T: DeviceCopy> HostDeviceBox<T> {
     /// # Errors

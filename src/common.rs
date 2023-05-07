@@ -79,9 +79,7 @@ impl<T: ?Sized + DeviceCopy> DerefMut for DeviceAccessible<T> {
 /// This is an internal trait and should ONLY be derived automatically using
 /// `#[derive(LendRustToCuda)]`
 pub unsafe trait RustToCuda {
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
-    type CudaAllocation: crate::host::CudaAlloc;
+    type CudaAllocation: CudaAlloc;
     type CudaRepresentation: CudaAsRust<RustRepresentation = Self> + TypeGraphLayout;
 
     #[cfg(feature = "host")]
@@ -97,12 +95,12 @@ pub unsafe trait RustToCuda {
     /// The returned [`Self::CudaRepresentation`] must NEVER be accessed on the
     ///  CPU  as it contains a GPU-resident copy of `self`.
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: crate::host::CudaAlloc>(
+    unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
 
     #[cfg(feature = "host")]
@@ -116,9 +114,9 @@ pub unsafe trait RustToCuda {
     ///
     /// This is an internal function and should NEVER be called manually
     #[allow(clippy::type_complexity)]
-    unsafe fn restore<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A>;
 }
 
@@ -142,13 +140,13 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     /// be accessed on the  CPU  as it contains a GPU-resident copy of
     /// `self`.
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+    unsafe fn borrow_async<A: CudaAlloc>(
         &self,
         alloc: A,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
 
     #[cfg(feature = "host")]
@@ -162,9 +160,9 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     ///
     /// This is an internal function and should NEVER be called manually
     #[allow(clippy::type_complexity)]
-    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+    unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A>;
 }
@@ -238,5 +236,45 @@ impl<'r, T: DeviceCopy> AsRef<T> for DeviceMutRef<'r, T> {
 impl<'r, T: DeviceCopy> AsMut<T> for DeviceMutRef<'r, T> {
     fn as_mut(&mut self) -> &mut T {
         unsafe { &mut *self.pointer }
+    }
+}
+
+pub(crate) mod crate_private {
+    pub mod alloc {
+        pub trait Sealed {}
+    }
+}
+
+mod private {
+    pub mod empty {
+        pub trait Sealed {}
+    }
+}
+
+pub trait EmptyCudaAlloc: private::empty::Sealed {}
+impl<T: private::empty::Sealed> EmptyCudaAlloc for T {}
+
+pub trait CudaAlloc: crate_private::alloc::Sealed {}
+impl<T: crate_private::alloc::Sealed> CudaAlloc for T {}
+
+impl<T: CudaAlloc> crate_private::alloc::Sealed for Option<T> {}
+
+pub struct NullCudaAlloc;
+impl crate_private::alloc::Sealed for NullCudaAlloc {}
+impl private::empty::Sealed for NullCudaAlloc {}
+
+pub struct CombinedCudaAlloc<A: CudaAlloc, B: CudaAlloc>(A, B);
+impl<A: CudaAlloc, B: CudaAlloc> crate_private::alloc::Sealed for CombinedCudaAlloc<A, B> {}
+impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> private::empty::Sealed
+    for CombinedCudaAlloc<A, B>
+{
+}
+impl<A: CudaAlloc, B: CudaAlloc> CombinedCudaAlloc<A, B> {
+    pub fn new(front: A, tail: B) -> Self {
+        Self(front, tail)
+    }
+
+    pub fn split(self) -> (A, B) {
+        (self.0, self.1)
     }
 }

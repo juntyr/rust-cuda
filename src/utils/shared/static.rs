@@ -51,7 +51,7 @@ impl<T: 'static> ThreadBlockShared<T> {
 impl<T: 'static, const N: usize> ThreadBlockShared<[T; N]> {
     #[cfg(any(target_os = "cuda", doc))]
     #[doc(cfg(target_os = "cuda"))]
-    /// Safety:
+    /// # Safety
     ///
     /// The provided `index` must not be out of bounds.
     #[inline]

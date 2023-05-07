@@ -1,20 +1,21 @@
 use proc_macro2::TokenStream;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, KernelConfig};
 
 mod async_func_types;
 mod launch_types;
 mod type_wrap;
 
 use async_func_types::generate_async_func_types;
-pub(super) use launch_types::generate_launch_types;
+use launch_types::generate_launch_types;
 use type_wrap::generate_func_input_and_ptx_jit_wraps;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_async(
     crate_path: &syn::Path,
-    config @ KernelConfig { args, .. }: &KernelConfig,
-    decl_generics @ DeclGenerics {
+    config @ KernelConfig { kernel, .. }: &KernelConfig,
+    impl_generics @ ImplGenerics { ty_generics, .. }: &ImplGenerics,
+    DeclGenerics {
         generic_wrapper_params,
         generic_wrapper_where_clause,
         ..
@@ -25,33 +26,50 @@ pub(super) fn quote_kernel_func_async(
     }: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
-    macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
-    let new_func_inputs_async = generate_async_func_types(
-        crate_path,
-        config,
-        decl_generics,
-        func_inputs,
-        macro_type_ids,
-    );
+    let launcher_predicate = quote! {
+        Self: Sized + #crate_path::host::Launcher<
+            KernelTraitObject = dyn #kernel #ty_generics
+        >
+    };
+
+    let generic_wrapper_where_clause = match generic_wrapper_where_clause {
+        Some(syn::WhereClause {
+            where_token,
+            predicates,
+        }) if !predicates.is_empty() => {
+            let comma = if predicates.empty_or_trailing() {
+                quote!()
+            } else {
+                quote!(,)
+            };
+
+            quote! {
+                #where_token #predicates #comma #launcher_predicate
+            }
+        },
+        _ => quote! {
+            where #launcher_predicate
+        },
+    };
+
+    let kernel_func_async_inputs =
+        generate_async_func_types(crate_path, config, impl_generics, func_inputs);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
         generate_func_input_and_ptx_jit_wraps(crate_path, func_inputs);
-    let (cpu_func_types_launch, cpu_func_lifetime_erased_types, cpu_func_unboxed_types) =
-        generate_launch_types(
-            crate_path,
-            config,
-            decl_generics,
-            func_inputs,
-            macro_type_ids,
-        );
+    let (cpu_func_types_launch, cpu_func_unboxed_types) =
+        generate_launch_types(crate_path, config, impl_generics, func_inputs);
 
     quote! {
         #(#func_attrs)*
         #[allow(clippy::extra_unused_type_parameters)]
+        #[allow(clippy::too_many_arguments)]
+        #[allow(clippy::used_underscore_binding)]
+        #[allow(unused_variables)]
         fn #func_ident_async <'stream, #generic_wrapper_params>(
             &mut self,
             stream: &'stream #crate_path::rustacuda::stream::Stream,
-            #(#new_func_inputs_async),*
+            #(#kernel_func_async_inputs),*
         ) -> #crate_path::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {
@@ -77,16 +95,6 @@ pub(super) fn quote_kernel_func_async(
 
             #[allow(clippy::redundant_closure_call)]
             (|#(#func_params: #cpu_func_types_launch),*| {
-                #[deny(improper_ctypes)]
-                mod __rust_cuda_ffi_safe_assert {
-                    use super::#args;
-
-                    extern "C" { #(
-                        #[allow(dead_code)]
-                        static #func_params: #cpu_func_lifetime_erased_types;
-                    )* }
-                }
-
                 if false {
                     #[allow(dead_code)]
                     fn assert_impl_devicecopy<T: #crate_path::rustacuda_core::DeviceCopy>(_val: &T) {}

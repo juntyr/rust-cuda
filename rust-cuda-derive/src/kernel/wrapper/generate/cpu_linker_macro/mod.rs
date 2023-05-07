@@ -3,22 +3,18 @@ use proc_macro2::TokenStream;
 use super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
 
 mod get_ptx_str;
-mod kernel_func;
-mod kernel_func_async;
 mod new_kernel;
 
 use get_ptx_str::quote_get_ptx_str;
-use kernel_func::quote_kernel_func;
-use kernel_func_async::quote_kernel_func_async;
 use new_kernel::quote_new_kernel;
 
 pub(in super::super) fn quote_cpu_linker_macro(
     crate_path: &syn::Path,
     config @ KernelConfig {
         visibility,
-        kernel,
         linker,
         launcher,
+        ptx,
         ..
     }: &KernelConfig,
     decl_generics @ DeclGenerics {
@@ -30,7 +26,6 @@ pub(in super::super) fn quote_cpu_linker_macro(
     func_inputs: &FunctionInputs,
     func_ident: &FuncIdent,
     func_params: &[syn::Ident],
-    func_attrs: &[syn::Attribute],
 ) -> TokenStream {
     let macro_types = generic_params
         .iter()
@@ -72,42 +67,18 @@ pub(in super::super) fn quote_cpu_linker_macro(
         func_ident,
         &macro_type_ids,
     );
-    let kernel_func = quote_kernel_func(
-        crate_path,
-        config,
-        decl_generics,
-        func_inputs,
-        func_ident,
-        func_params,
-        func_attrs,
-        &macro_type_ids,
-    );
-    let kernel_func_async = quote_kernel_func_async(
-        crate_path,
-        config,
-        decl_generics,
-        func_inputs,
-        func_ident,
-        func_params,
-        func_attrs,
-        &macro_type_ids,
-    );
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
         #cpu_linker_macro_visibility
         macro_rules! #linker {
             (#(#macro_types),* $(,)?) => {
-                unsafe impl #kernel #generic_start_token #($#macro_type_ids),* #generic_close_token
+                unsafe impl #ptx #generic_start_token #($#macro_type_ids),* #generic_close_token
                     for #launcher #generic_start_token #($#macro_type_ids),* #generic_close_token
                 {
                     #get_ptx_str
 
                     #new_kernel
-
-                    #kernel_func
-
-                    #kernel_func_async
                 }
             };
         }

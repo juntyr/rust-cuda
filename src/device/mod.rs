@@ -116,3 +116,7 @@ impl<T> DerefMut for ShallowCopy<T> {
         &mut self.0
     }
 }
+
+pub struct SomeCudaAlloc(());
+
+impl crate::common::crate_private::alloc::Sealed for SomeCudaAlloc {}

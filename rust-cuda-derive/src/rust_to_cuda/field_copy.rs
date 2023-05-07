@@ -56,7 +56,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
         },
         CudaReprFieldTy::RustToCuda { field_ty } => {
             combined_cuda_alloc_type = quote! {
-                #crate_path::host::CombinedCudaAlloc<
+                #crate_path::common::CombinedCudaAlloc<
                     <#field_ty as #crate_path::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >
@@ -102,7 +102,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
         },
         CudaReprFieldTy::RustToCudaProxy { proxy_ty, field_ty } => {
             combined_cuda_alloc_type = quote! {
-                #crate_path::host::CombinedCudaAlloc<
+                #crate_path::common::CombinedCudaAlloc<
                     <#proxy_ty as #crate_path::common::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
                 >

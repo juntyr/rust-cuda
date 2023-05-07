@@ -31,8 +31,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "#[kernel(pub? use LINKER! as impl KERNEL<ARGS> for LAUNCHER)] expects LINKER, \
-                 KERNEL, ARGS and LAUNCHER identifiers: {:?}",
+                "#[kernel(pub? use LINKER! as impl KERNEL<ARGS, PTX> for LAUNCHER)] expects \
+                 LINKER, KERNEL, ARGS, PTX, and LAUNCHER identifiers: {:?}",
                 err
             )
         },
@@ -172,14 +172,34 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         gt_token: generic_close_token,
         where_clause: generic_trait_where_clause.clone(),
     };
-    let impl_generics = {
-        let (impl_generics, ty_generics, where_clause) = trait_generics.split_for_impl();
-
-        ImplGenerics {
-            impl_generics,
-            ty_generics,
-            where_clause,
-        }
+    let (impl_generics, ty_generics, where_clause) = trait_generics.split_for_impl();
+    let blanket_ty = syn::Ident::new("K", Span::mixed_site());
+    let mut blanket_params = generic_trait_params.clone();
+    let ptx = &config.ptx;
+    blanket_params.push(syn::GenericParam::Type(syn::TypeParam {
+        attrs: Vec::new(),
+        ident: blanket_ty.clone(),
+        colon_token: syn::parse_quote!(:),
+        bounds: syn::parse_quote!(#ptx #ty_generics),
+        eq_token: None,
+        default: None,
+    }));
+    let trait_blanket_generics = syn::Generics {
+        lt_token: Some(generic_start_token.unwrap_or(syn::parse_quote!(<))),
+        params: blanket_params,
+        gt_token: Some(generic_close_token.unwrap_or(syn::parse_quote!(>))),
+        where_clause: generic_trait_where_clause.clone(),
+    };
+    let (blanket_impl_generics, _, blanket_where_clause) = trait_blanket_generics.split_for_impl();
+    let blanket_generics = BlanketGenerics {
+        blanket_ty,
+        impl_generics: blanket_impl_generics,
+        where_clause: blanket_where_clause,
+    };
+    let impl_generics = ImplGenerics {
+        impl_generics,
+        ty_generics,
+        where_clause,
     };
 
     let func_ident = FuncIdent {
@@ -237,8 +257,10 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &config,
         &decl_generics,
         &impl_generics,
+        &blanket_generics,
         &func_inputs,
         &func_ident,
+        &func_params,
         &func.attrs,
     );
     let cpu_cuda_check = quote_generic_check(&crate_path, &func_ident, &config);
@@ -249,7 +271,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_inputs,
         &func_ident,
         &func_params,
-        &func.attrs,
     );
     let cuda_wrapper = quote_cuda_wrapper(
         &crate_path,
@@ -304,6 +325,12 @@ struct ImplGenerics<'f> {
     #[allow(clippy::struct_field_names)]
     impl_generics: syn::ImplGenerics<'f>,
     ty_generics: syn::TypeGenerics<'f>,
+    where_clause: Option<&'f syn::WhereClause>,
+}
+
+struct BlanketGenerics<'f> {
+    blanket_ty: syn::Ident,
+    impl_generics: syn::ImplGenerics<'f>,
     where_clause: Option<&'f syn::WhereClause>,
 }
 

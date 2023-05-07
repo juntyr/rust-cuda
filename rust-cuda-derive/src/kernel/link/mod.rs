@@ -247,7 +247,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     let r = unsafe {
         ptx_compiler::sys::nvPTXCompilerCompile(
             compiler,
-            options_ptrs.len() as c_int,
+            c_int::try_from(options_ptrs.len()).unwrap(),
             options_ptrs.as_ptr().cast(),
         )
     };

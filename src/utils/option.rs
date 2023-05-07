@@ -12,7 +12,10 @@ use crate::{
 };
 
 #[cfg(feature = "host")]
-use crate::{host::CombinedCudaAlloc, host::CudaAlloc, rustacuda::error::CudaResult};
+use crate::{
+    common::{CombinedCudaAlloc, CudaAlloc},
+    rustacuda::error::CudaResult,
+};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
@@ -28,8 +31,6 @@ pub struct OptionCudaRepresentation<T: CudaAsRust> {
 unsafe impl<T: CudaAsRust> rustacuda_core::DeviceCopy for OptionCudaRepresentation<T> {}
 
 unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     type CudaAllocation = Option<<T as RustToCuda>::CudaAllocation>;
     type CudaRepresentation = OptionCudaRepresentation<<T as RustToCuda>::CudaRepresentation>;
 

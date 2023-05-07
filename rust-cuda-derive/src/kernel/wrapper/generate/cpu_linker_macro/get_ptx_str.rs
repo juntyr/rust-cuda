@@ -3,7 +3,7 @@ use syn::spanned::Spanned;
 
 use crate::kernel::utils::skip_kernel_compilation;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, KernelConfig};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
 pub(super) fn quote_get_ptx_str(
     crate_path: &syn::Path,
@@ -30,14 +30,8 @@ pub(super) fn quote_get_ptx_str(
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
 
-    let cpu_func_lifetime_erased_types = super::kernel_func_async::generate_launch_types(
-        crate_path,
-        config,
-        generics,
-        inputs,
-        macro_type_ids,
-    )
-    .1;
+    let cpu_func_lifetime_erased_types =
+        generate_lifetime_erased_types(crate_path, config, generics, inputs, macro_type_ids);
 
     let matching_kernel_assert = if skip_kernel_compilation() {
         quote!()
@@ -93,7 +87,83 @@ pub(super) fn quote_get_ptx_str(
 
             #(#type_layout_asserts)*
 
+            #[deny(improper_ctypes)]
+            mod __rust_cuda_ffi_safe_assert {
+                use super::#args;
+
+                extern "C" { #(
+                    #[allow(dead_code)]
+                    static #func_params: #cpu_func_lifetime_erased_types;
+                )* }
+            }
+
             PTX_STR
         }
     }
+}
+
+fn generate_lifetime_erased_types(
+    crate_path: &syn::Path,
+    KernelConfig { args, .. }: &KernelConfig,
+    DeclGenerics {
+        generic_start_token,
+        generic_close_token,
+        ..
+    }: &DeclGenerics,
+    FunctionInputs {
+        func_inputs,
+        func_input_cuda_types,
+    }: &FunctionInputs,
+    macro_type_ids: &[syn::Ident],
+) -> Vec<TokenStream> {
+    let mut cpu_func_lifetime_erased_types = Vec::with_capacity(func_inputs.len());
+
+    func_inputs
+        .iter()
+        .zip(func_input_cuda_types.iter())
+        .enumerate()
+        .for_each(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+            syn::FnArg::Typed(syn::PatType { ty, .. }) => {
+                let type_ident = quote::format_ident!("__T_{}", i);
+                let syn_type = quote::quote_spanned! { ty.span()=>
+                    <() as #args #generic_start_token
+                        #($#macro_type_ids),*
+                    #generic_close_token>::#type_ident
+                };
+
+                let cuda_type = match cuda_mode {
+                    InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
+                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
+                    },
+                    InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
+                        #crate_path::common::DeviceAccessible<
+                            <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
+                        >
+                    },
+                };
+
+                cpu_func_lifetime_erased_types.push(
+                    if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
+                        if mutability.is_some() {
+                            quote::quote_spanned! { ty.span()=>
+                                #crate_path::common::DeviceMutRef<'static, #cuda_type>
+                            }
+                        } else {
+                            quote::quote_spanned! { ty.span()=>
+                                #crate_path::common::DeviceConstRef<'static, #cuda_type>
+                            }
+                        }
+                    } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
+                        quote::quote_spanned! { ty.span()=>
+                            #crate_path::common::DeviceMutRef<'static, #cuda_type>
+                        }
+                    } else {
+                        cuda_type
+                    },
+                );
+            },
+            syn::FnArg::Receiver(_) => unreachable!(),
+        });
+
+    cpu_func_lifetime_erased_types
 }

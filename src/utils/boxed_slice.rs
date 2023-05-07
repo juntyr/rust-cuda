@@ -9,8 +9,11 @@ use crate::{
 
 #[cfg(feature = "host")]
 use crate::{
-    host::CombinedCudaAlloc, host::CudaAlloc, host::CudaDropWrapper, rustacuda::error::CudaResult,
-    rustacuda::memory::DeviceBuffer, utils::device_copy::SafeDeviceCopyWrapper,
+    common::{CombinedCudaAlloc, CudaAlloc},
+    host::CudaDropWrapper,
+    rustacuda::error::CudaResult,
+    rustacuda::memory::DeviceBuffer,
+    utils::device_copy::SafeDeviceCopyWrapper,
 };
 
 #[doc(hidden)]
@@ -29,8 +32,9 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
 
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<[T]> {
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
-    type CudaAllocation = CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
+    type CudaAllocation = crate::host::CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
+    #[cfg(not(feature = "host"))]
+    type CudaAllocation = crate::device::SomeCudaAlloc;
     type CudaRepresentation = BoxedSliceCudaRepresentation<T>;
 
     #[cfg(feature = "host")]

@@ -3,21 +3,16 @@ use syn::spanned::Spanned;
 
 use crate::kernel::utils::r2c_move_lifetime;
 
-use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
+use super::super::super::super::{FunctionInputs, ImplGenerics, InputCudaType, KernelConfig};
 
 pub(super) fn generate_async_func_types(
     crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
-    DeclGenerics {
-        generic_start_token,
-        generic_close_token,
-        ..
-    }: &DeclGenerics,
+    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
-    macro_type_ids: &[syn::Ident],
 ) -> Vec<TokenStream> {
     func_inputs
         .iter()
@@ -32,9 +27,7 @@ pub(super) fn generate_async_func_types(
             }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote! {
-                    <() as #args #generic_start_token
-                        #($#macro_type_ids),*
-                    #generic_close_token>::#type_ident
+                    <() as #args #ty_generics>::#type_ident
                 };
 
                 let cuda_type = match cuda_mode {

@@ -15,11 +15,13 @@ use rustacuda::{
 };
 
 use crate::{
-    common::{DeviceAccessible, RustToCuda, RustToCudaAsync},
+    common::{
+        CombinedCudaAlloc, DeviceAccessible, EmptyCudaAlloc, NullCudaAlloc, RustToCuda,
+        RustToCudaAsync,
+    },
     host::{
-        CombinedCudaAlloc, CudaDropWrapper, EmptyCudaAlloc, HostAndDeviceConstRef,
-        HostAndDeviceConstRefAsync, HostAndDeviceMutRef, HostAndDeviceMutRefAsync, HostDeviceBox,
-        HostLockedBox, NullCudaAlloc,
+        CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceConstRefAsync, HostAndDeviceMutRef,
+        HostAndDeviceMutRefAsync, HostDeviceBox, HostLockedBox,
     },
 };
 

@@ -1,15 +1,16 @@
 use proc_macro2::TokenStream;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
+use super::super::super::{
+    DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
+};
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn quote_kernel_func(
+pub(super) fn quote_kernel_func_inputs(
     crate_path: &syn::Path,
-    KernelConfig { args, .. }: &KernelConfig,
+    KernelConfig { kernel, args, .. }: &KernelConfig,
+    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     DeclGenerics {
-        generic_start_token,
         generic_wrapper_params,
-        generic_close_token,
         generic_wrapper_where_clause,
         ..
     }: &DeclGenerics,
@@ -17,9 +18,34 @@ pub(super) fn quote_kernel_func(
     fn_ident @ FuncIdent { func_ident, .. }: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
-    macro_type_ids: &[syn::Ident],
 ) -> TokenStream {
-    let new_func_inputs = func_inputs
+    let launcher_predicate = quote! {
+        Self: Sized + #crate_path::host::Launcher<
+            KernelTraitObject = dyn #kernel #ty_generics
+        >
+    };
+
+    let generic_wrapper_where_clause = match generic_wrapper_where_clause {
+        Some(syn::WhereClause {
+            where_token,
+            predicates,
+        }) if !predicates.is_empty() => {
+            let comma = if predicates.empty_or_trailing() {
+                quote!()
+            } else {
+                quote!(,)
+            };
+
+            quote! {
+                #where_token #predicates #comma #launcher_predicate
+            }
+        },
+        _ => quote! {
+            where #launcher_predicate
+        },
+    };
+
+    let kernel_func_inputs = func_inputs
         .iter()
         .enumerate()
         .map(|(i, arg)| match arg {
@@ -31,9 +57,7 @@ pub(super) fn quote_kernel_func(
             }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote! {
-                    <() as #args #generic_start_token
-                        #($#macro_type_ids),*
-                    #generic_close_token>::#type_ident
+                    <() as #args #ty_generics>::#type_ident
                 };
 
                 if let syn::Type::Reference(syn::TypeReference {
@@ -60,10 +84,13 @@ pub(super) fn quote_kernel_func(
     quote! {
         #(#func_attrs)*
         #[allow(clippy::needless_lifetimes)]
+        #[allow(clippy::too_many_arguments)]
+        #[allow(clippy::used_underscore_binding)]
+        #[allow(unused_variables)]
         fn #func_ident <'stream, #generic_wrapper_params>(
             &mut self,
             stream: &'stream #crate_path::rustacuda::stream::Stream,
-            #(#new_func_inputs),*
+            #(#kernel_func_inputs),*
         ) -> #crate_path::rustacuda::error::CudaResult<()>
             #generic_wrapper_where_clause
         {

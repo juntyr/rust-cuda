@@ -3,9 +3,12 @@
 use const_type_layout::TypeGraphLayout;
 
 use crate::{
-    common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync},
+    common::{CudaAsRust, DeviceAccessible, NullCudaAlloc, RustToCuda, RustToCudaAsync},
     safety::SafeDeviceCopy,
 };
+
+#[cfg(feature = "host")]
+use crate::common::{CombinedCudaAlloc, CudaAlloc};
 
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
@@ -71,30 +74,29 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
 }
 
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
-    #[cfg(feature = "host")]
-    type CudaAllocation = crate::host::NullCudaAlloc;
+    type CudaAllocation = NullCudaAlloc;
     type CudaRepresentation = Self;
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: crate::host::CudaAlloc>(
+    unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let alloc = crate::host::CombinedCudaAlloc::new(crate::host::NullCudaAlloc, alloc);
+        let alloc = CombinedCudaAlloc::new(NullCudaAlloc, alloc);
         Ok((DeviceAccessible::from(&self.0), alloc))
     }
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
-        let (_alloc_front, alloc_tail): (crate::host::NullCudaAlloc, A) = alloc.split();
+        let (_alloc_front, alloc_tail): (NullCudaAlloc, A) = alloc.split();
 
         Ok(alloc_tail)
     }
@@ -105,26 +107,26 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync
 {
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+    unsafe fn borrow_async<A: CudaAlloc>(
         &self,
         alloc: A,
         _stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let alloc = crate::host::CombinedCudaAlloc::new(crate::host::NullCudaAlloc, alloc);
+        let alloc = CombinedCudaAlloc::new(NullCudaAlloc, alloc);
         Ok((DeviceAccessible::from(&self.0), alloc))
     }
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+    unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
         _stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A> {
-        let (_alloc_front, alloc_tail): (crate::host::NullCudaAlloc, A) = alloc.split();
+        let (_alloc_front, alloc_tail): (NullCudaAlloc, A) = alloc.split();
 
         Ok(alloc_tail)
     }

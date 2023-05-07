@@ -3,24 +3,18 @@ use syn::spanned::Spanned;
 
 use crate::kernel::utils::r2c_move_lifetime;
 
-use super::super::super::super::{DeclGenerics, FunctionInputs, InputCudaType, KernelConfig};
+use super::super::super::super::{FunctionInputs, ImplGenerics, InputCudaType, KernelConfig};
 
 pub(in super::super) fn generate_launch_types(
     crate_path: &syn::Path,
     KernelConfig { args, .. }: &KernelConfig,
-    DeclGenerics {
-        generic_start_token,
-        generic_close_token,
-        ..
-    }: &DeclGenerics,
+    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
-    macro_type_ids: &[syn::Ident],
-) -> (Vec<TokenStream>, Vec<TokenStream>, Vec<TokenStream>) {
+) -> (Vec<TokenStream>, Vec<TokenStream>) {
     let mut cpu_func_types_launch = Vec::with_capacity(func_inputs.len());
-    let mut cpu_func_lifetime_erased_types = Vec::with_capacity(func_inputs.len());
     let mut cpu_func_unboxed_types = Vec::with_capacity(func_inputs.len());
 
     func_inputs
@@ -31,9 +25,7 @@ pub(in super::super) fn generate_launch_types(
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    <() as #args #generic_start_token
-                        #($#macro_type_ids),*
-                    #generic_close_token>::#type_ident
+                    <() as #args #ty_generics>::#type_ident
                 };
 
                 cpu_func_unboxed_types.push(syn_type.clone());
@@ -75,33 +67,9 @@ pub(in super::super) fn generate_launch_types(
                         quote! { #cuda_type }
                     },
                 );
-
-                cpu_func_lifetime_erased_types.push(
-                    if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
-                        if mutability.is_some() {
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceMutRef<'static, #cuda_type>
-                            }
-                        } else {
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceConstRef<'static, #cuda_type>
-                            }
-                        }
-                    } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
-                        quote::quote_spanned! { ty.span()=>
-                            #crate_path::common::DeviceMutRef<'static, #cuda_type>
-                        }
-                    } else {
-                        cuda_type
-                    },
-                );
             },
             syn::FnArg::Receiver(_) => unreachable!(),
         });
 
-    (
-        cpu_func_types_launch,
-        cpu_func_lifetime_erased_types,
-        cpu_func_unboxed_types,
-    )
+    (cpu_func_types_launch, cpu_func_unboxed_types)
 }

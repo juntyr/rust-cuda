@@ -11,8 +11,10 @@ use rustacuda::{
 };
 
 use crate::{
-    common::{DeviceAccessible, RustToCuda, RustToCudaAsync},
-    host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
+    common::{
+        CombinedCudaAlloc, CudaAlloc, DeviceAccessible, NullCudaAlloc, RustToCuda, RustToCudaAsync,
+    },
+    host::CudaDropWrapper,
     safety::SafeDeviceCopy,
 };
 

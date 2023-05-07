@@ -38,7 +38,7 @@ pub struct Empty([u8; 0]);
 #[layout(crate = "rc::const_type_layout")]
 pub struct Tuple(u32, i32);
 
-#[rc::common::kernel(use link_kernel! as impl Kernel<KernelArgs> for Launcher)]
+#[rc::common::kernel(use link_kernel! as impl Kernel<KernelArgs, KernelPtx> for Launcher)]
 #[kernel(crate = "rc")]
 pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
@@ -49,7 +49,9 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy)] Tuple(s, mut __t): Tuple,
     // #[kernel(pass = SafeDeviceCopy)] shared3: ThreadBlockShared<u32>,
 ) where
+    T: rc::safety::StackOnly + rc::safety::NoAliasing,
     <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
+    <T as rc::common::RustToCuda>::CudaAllocation: rc::common::EmptyCudaAlloc,
 {
     let shared: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
     let shared2: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
@@ -69,7 +71,9 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
 
 #[cfg(not(target_os = "cuda"))]
 mod host {
-    use super::{Kernel, KernelArgs};
+    #[allow(unused_imports)]
+    use super::KernelArgs;
+    use super::{Kernel, KernelPtx};
 
     #[allow(dead_code)]
     struct Launcher<T: rc::common::RustToCuda>(core::marker::PhantomData<T>);

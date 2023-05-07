@@ -152,8 +152,6 @@ impl<E, T: BorrowMut<[E]>> BorrowMut<[E]> for SplitSliceOverCudaThreadsDynamicSt
 }
 
 unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride<T> {
-    #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     type CudaAllocation = T::CudaAllocation;
     type CudaRepresentation =
         SplitSliceOverCudaThreadsDynamicStride<DeviceAccessible<T::CudaRepresentation>>;
@@ -161,12 +159,12 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: crate::host::CudaAlloc>(
+    unsafe fn borrow<A: crate::common::CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let (cuda_repr, alloc) = self.inner.borrow(alloc)?;
 
@@ -181,9 +179,9 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore<A: crate::host::CudaAlloc>(
+    unsafe fn restore<A: crate::common::CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         self.inner.restore(alloc)
     }
@@ -193,13 +191,13 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDyn
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: crate::host::CudaAlloc>(
+    unsafe fn borrow_async<A: crate::common::CudaAlloc>(
         &self,
         alloc: A,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let (cuda_repr, alloc) = self.inner.borrow_async(alloc, stream)?;
 
@@ -214,9 +212,9 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDyn
 
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
-    unsafe fn restore_async<A: crate::host::CudaAlloc>(
+    unsafe fn restore_async<A: crate::common::CudaAlloc>(
         &mut self,
-        alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A> {
         self.inner.restore_async(alloc, stream)
