@@ -4,6 +4,7 @@
 #![feature(proc_macro_span)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
+#![feature(map_try_insert)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 extern crate proc_macro;

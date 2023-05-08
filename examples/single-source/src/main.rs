@@ -40,6 +40,10 @@ pub struct Tuple(u32, i32);
 
 #[rc::common::kernel(use link_kernel! as impl Kernel<KernelArgs, KernelPtx> for Launcher)]
 #[kernel(crate = "rc")]
+#[kernel(
+    allow(ptx::double_precision_use),
+    forbid(ptx::local_memory_usage, ptx::register_spills)
+)]
 pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
     #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,

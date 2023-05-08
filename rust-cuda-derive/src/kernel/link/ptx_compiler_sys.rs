@@ -74,15 +74,15 @@ pub type NvptxCompileResult = ::std::os::raw::c_int;
 
 extern "C" {
     /// Queries the current major and minor version of PTX Compiler APIs being
-    /// used
+    ///  used.
     ///
     /// # Parameters
     /// - [out] `major`: Major version of the PTX Compiler APIs
     /// - [out] `minor`: Minor version of the PTX Compiler APIs
     ///
-    /// # Return
-    /// - [`NvptxCompileResult`]::`NVPTXCOMPILE_SUCCESS`
-    /// - [`NvptxCompileResult`]::`NVPTXCOMPILE_ERROR_INTERNAL`
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
     ///
     /// # Note
     /// The version of PTX Compiler APIs follows the CUDA Toolkit versioning.
@@ -93,42 +93,38 @@ extern "C" {
         minor: *mut ::std::os::raw::c_uint,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Obtains the handle to an instance of the PTX compiler"]
-    #[doc = "                   initialized with the given PTX program \\p ptxCode"]
-    #[doc = ""]
-    #[doc = " \\param            [out] compiler  Returns a handle to PTX compiler initialized"]
-    #[doc = "                                   with the PTX program \\p ptxCode"]
-    #[doc = " \\param            [in] ptxCodeLen Size of the PTX program \\p ptxCode passed as \
-             string"]
-    #[doc = " \\param            [in] ptxCode    The PTX program which is to be compiled passed as \
-             string."]
-    #[doc = ""]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_OUT_OF_MEMORY \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
+    /// Obtains the handle to an instance of the PTX compiler
+    ///  initialized with the given PTX program `ptxCode`.
+    ///
+    /// # Parameters
+    /// - [out] `compiler`: Returns a handle to PTX compiler initialized with
+    ///   the PTX program `ptxCode`
+    /// - [in] `ptxCodeLen`: Size of the PTX program `ptxCode` passed as a
+    ///   string
+    /// - [in] `ptxCode`: The PTX program which is to be compiled passed as a
+    ///   string
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_OUT_OF_MEMORY`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
     pub fn nvPTXCompilerCreate(
         compiler: *mut NvptxCompilerHandle,
         ptxCodeLen: size_t,
         ptxCode: *const ::std::os::raw::c_char,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Destroys and cleans the already created PTX compiler"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler  A handle to the PTX compiler which is to be \
-             destroyed"]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_OUT_OF_MEMORY \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = ""]
+    /// Destroys and cleans the already created PTX compiler.
+    ///
+    /// # Parameters
+    /// - [in] `compiler`: A handle to the PTX compiler which is to be
+    ///   destroyed.
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_OUT_OF_MEMORY`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
     pub fn nvPTXCompilerDestroy(compiler: *mut NvptxCompilerHandle) -> NvptxCompileResult;
 
     #[doc = " \\ingroup compilation"]

@@ -1,4 +1,8 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    collections::HashMap,
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use proc_macro::TokenStream;
 
@@ -41,6 +45,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut func = parse_kernel_fn(func);
 
     let mut crate_path = None;
+    let mut lint_levels = HashMap::new();
 
     func.attrs.retain(|attr| {
         if attr.path.is_ident("kernel") {
@@ -58,7 +63,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                                         syn::parse_quote_spanned! { s.span() => #new_crate_path },
                                     );
 
-                                    return false;
+                                    continue;
                                 }
 
                                 emit_error!(
@@ -73,10 +78,106 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
                                 err
                             ),
                         },
+                        syn::NestedMeta::Meta(syn::Meta::List(syn::MetaList {
+                            path,
+                            nested,
+                            ..
+                        })) if path.is_ident("allow") || path.is_ident("warn") || path.is_ident("deny") || path.is_ident("forbid") => {
+                            let level = match path.get_ident() {
+                                Some(ident) if ident == "allow" => LintLevel::Allow,
+                                Some(ident) if ident == "warn" => LintLevel::Warn,
+                                Some(ident) if ident == "deny" => LintLevel::Deny,
+                                Some(ident) if ident == "forbid" => LintLevel::Forbid,
+                                _ => unreachable!(),
+                            };
+
+                            for meta in nested {
+                                let syn::NestedMeta::Meta(syn::Meta::Path(path)) = meta else {
+                                    emit_error!(
+                                        meta.span(),
+                                        "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute.",
+                                        level,
+                                    );
+                                    continue;
+                                };
+
+                                if path.leading_colon.is_some() || path.segments.empty_or_trailing() || path.segments.len() != 2 {
+                                    emit_error!(
+                                        meta.span(),
+                                        "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form `ptx::lint`.",
+                                        level,
+                                    );
+                                    continue;
+                                }
+
+                                let Some(syn::PathSegment { ident: namespace, arguments: syn::PathArguments::None }) = path.segments.first() else {
+                                    emit_error!(
+                                        meta.span(),
+                                        "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form `ptx::lint`.",
+                                        level,
+                                    );
+                                    continue;
+                                };
+
+                                if namespace != "ptx" {
+                                    emit_error!(
+                                        meta.span(),
+                                        "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form `ptx::lint`.",
+                                        level,
+                                    );
+                                    continue;
+                                }
+
+                                let Some(syn::PathSegment { ident: lint, arguments: syn::PathArguments::None }) = path.segments.last() else {
+                                    emit_error!(
+                                        meta.span(),
+                                        "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form `ptx::lint`.",
+                                        level,
+                                    );
+                                    continue;
+                                };
+
+                                let lint = match lint {
+                                    l if l == "verbose" => PtxLint::Verbose,
+                                    l if l == "double_precision_use" => PtxLint::DoublePrecisionUse,
+                                    l if l == "local_memory_usage" => PtxLint::LocalMemoryUsage,
+                                    l if l == "register_spills" => PtxLint::RegisterSpills,
+                                    _ => {
+                                        emit_error!(
+                                            meta.span(),
+                                            "[rust-cuda]: Unknown PTX kernel lint `ptx::{}`.",
+                                            lint,
+                                        );
+                                        continue;
+                                    }
+                                };
+
+                                match lint_levels.get(&lint) {
+                                    None => (),
+                                    Some(LintLevel::Forbid) if level < LintLevel::Forbid => {
+                                        emit_error!(
+                                            meta.span(),
+                                            "[rust-cuda]: {}(ptx::{}) incompatible with previous forbid.",
+                                            level, lint,
+                                        );
+                                        continue;
+                                    },
+                                    Some(previous) => {
+                                        emit_warning!(
+                                            meta.span(),
+                                            "[rust-cuda]: {}(ptx::{}) overwrites previous {}.",
+                                            level, lint, previous,
+                                        );
+                                    }
+                                }
+
+                                lint_levels.insert(lint, level);
+                            }
+                        },
                         _ => {
                             emit_error!(
                                 meta.span(),
-                                "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] function attribute."
+                                "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] or #[kernel(allow/warn/deny/forbid(<lint>))] function attribute."
                             );
                         }
                     }
@@ -84,7 +185,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             } else {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] function attribute."
+                    "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] or or #[kernel(allow/warn/deny/forbid(<lint>))] function attribute."
                 );
             }
 
@@ -95,6 +196,10 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     });
 
     let crate_path = crate_path.unwrap_or_else(|| syn::parse_quote!(::rust_cuda));
+
+    let _ = lint_levels.try_insert(PtxLint::DoublePrecisionUse, LintLevel::Warn);
+    let _ = lint_levels.try_insert(PtxLint::LocalMemoryUsage, LintLevel::Warn);
+    let _ = lint_levels.try_insert(PtxLint::RegisterSpills, LintLevel::Warn);
 
     let mut generic_kernel_params = func.sig.generics.params.clone();
     let mut func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
@@ -339,6 +444,44 @@ struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
     func_ident_async: syn::Ident,
     func_ident_hash: syn::Ident,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+enum LintLevel {
+    Allow,
+    Warn,
+    Deny,
+    Forbid,
+}
+
+impl fmt::Display for LintLevel {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Allow => fmt.write_str("allow"),
+            Self::Warn => fmt.write_str("warn"),
+            Self::Deny => fmt.write_str("deny"),
+            Self::Forbid => fmt.write_str("forbid"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+enum PtxLint {
+    Verbose,
+    DoublePrecisionUse,
+    LocalMemoryUsage,
+    RegisterSpills,
+}
+
+impl fmt::Display for PtxLint {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Verbose => fmt.write_str("verbose"),
+            Self::DoublePrecisionUse => fmt.write_str("double_precision_use"),
+            Self::LocalMemoryUsage => fmt.write_str("local_memory_usage"),
+            Self::RegisterSpills => fmt.write_str("register_spills"),
+        }
+    }
 }
 
 fn ident_from_pat(pat: &syn::Pat) -> Option<syn::Ident> {
