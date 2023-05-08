@@ -5,6 +5,7 @@ use crate::kernel::utils::skip_kernel_compilation;
 
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx_str(
     crate_path: &syn::Path,
     FuncIdent {
@@ -21,6 +22,7 @@ pub(super) fn quote_get_ptx_str(
     inputs: &FunctionInputs,
     func_params: &[syn::Ident],
     macro_type_ids: &[syn::Ident],
+    ptx_lint_levels: &TokenStream,
 ) -> TokenStream {
     let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
@@ -80,7 +82,7 @@ pub(super) fn quote_get_ptx_str(
             #crate_path::host::link_kernel!{
                 #func_ident #func_ident_hash #args #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
-                #generic_close_token
+                #generic_close_token #ptx_lint_levels
             }
 
             #matching_kernel_assert

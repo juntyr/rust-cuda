@@ -1,4 +1,6 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
+
+use super::super::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 
 #[allow(clippy::module_name_repetitions)]
 pub(super) struct LinkKernelConfig {
@@ -8,6 +10,7 @@ pub(super) struct LinkKernelConfig {
     pub(super) crate_name: String,
     pub(super) crate_path: PathBuf,
     pub(super) specialisation: String,
+    pub(super) ptx_lint_levels: HashMap<PtxLint, LintLevel>,
 }
 
 impl syn::parse::Parse for LinkKernelConfig {
@@ -37,6 +40,19 @@ impl syn::parse::Parse for LinkKernelConfig {
             String::new()
         };
 
+        let attrs = syn::punctuated::Punctuated::<
+            syn::MetaList,
+            syn::token::Comma,
+        >::parse_separated_nonempty(input)?;
+
+        let mut ptx_lint_levels = HashMap::new();
+
+        for syn::MetaList { path, nested, .. } in attrs {
+            parse_ptx_lint_level(&path, &nested, &mut ptx_lint_levels);
+        }
+
+        proc_macro_error::abort_if_dirty();
+
         Ok(Self {
             kernel,
             kernel_hash,
@@ -44,6 +60,7 @@ impl syn::parse::Parse for LinkKernelConfig {
             crate_name: name.value(),
             crate_path: PathBuf::from(path.value()),
             specialisation,
+            ptx_lint_levels,
         })
     }
 }

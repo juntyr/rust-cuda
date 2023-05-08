@@ -26,6 +26,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
     func_inputs: &FunctionInputs,
     func_ident: &FuncIdent,
     func_params: &[syn::Ident],
+    ptx_lint_levels: &TokenStream,
 ) -> TokenStream {
     let macro_types = generic_params
         .iter()
@@ -59,6 +60,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
         func_inputs,
         func_params,
         &macro_type_ids,
+        ptx_lint_levels,
     );
     let new_kernel = quote_new_kernel(
         crate_path,

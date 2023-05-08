@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env,
     ffi::CString,
     fmt::Write as FmtWrite,
@@ -17,7 +18,10 @@ use ptx_builder::{
     error::{BuildErrorKind, Error, Result},
 };
 
-use super::utils::skip_kernel_compilation;
+use super::{
+    lints::{LintLevel, PtxLint},
+    utils::skip_kernel_compilation,
+};
 
 mod config;
 mod error;
@@ -68,12 +72,14 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         crate_name,
         crate_path,
         specialisation,
+        ptx_lint_levels,
     } = match syn::parse_macro_input::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "link_kernel!(KERNEL ARGS NAME PATH SPECIALISATION) expects KERNEL and ARGS \
-                 identifiers, NAME and PATH string literals, and SPECIALISATION tokens: {:?}",
+                "link_kernel!(KERNEL ARGS NAME PATH SPECIALISATION LINTS,*) expects KERNEL and \
+                 ARGS identifiers, NAME and PATH string literals, SPECIALISATION and LINTS \
+                 tokens: {:?}",
                 err
             )
         },
@@ -208,7 +214,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     }
 
     let (result, error_log, info_log, version, drop) =
-        check_kernel_ptx(&kernel_ptx, &specialisation, &kernel_hash);
+        check_kernel_ptx(&kernel_ptx, &specialisation, &kernel_hash, &ptx_lint_levels);
 
     let ptx_compiler = match &version {
         Ok((major, minor)) => format!("PTX compiler v{major}.{minor}"),
@@ -279,10 +285,12 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 }
 
 #[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_lines)]
 fn check_kernel_ptx(
     kernel_ptx: &str,
     specialisation: &str,
     kernel_hash: &proc_macro2::Ident,
+    ptx_lint_levels: &HashMap<PtxLint, LintLevel>,
 ) -> (
     Result<(), NvptxError>,
     Result<Option<String>, NvptxError>,
@@ -304,7 +312,7 @@ fn check_kernel_ptx(
         compiler
     };
 
-    let result = {
+    let result = (|| {
         let kernel_name = if specialisation.is_empty() {
             format!("{kernel_hash}_kernel")
         } else {
@@ -313,15 +321,79 @@ fn check_kernel_ptx(
                 seahash::hash(specialisation.as_bytes())
             )
         };
-
-        let options = vec![
+        let mut options = vec![
             CString::new("--entry").unwrap(),
             CString::new(kernel_name).unwrap(),
-            CString::new("--verbose").unwrap(),
-            CString::new("--warn-on-double-precision-use").unwrap(),
-            CString::new("--warn-on-local-memory-usage").unwrap(),
-            CString::new("--warn-on-spills").unwrap(),
         ];
+
+        if ptx_lint_levels
+            .values()
+            .any(|level| *level > LintLevel::Warn)
+        {
+            let mut options = options.clone();
+
+            if ptx_lint_levels
+                .get(&PtxLint::Verbose)
+                .map_or(false, |level| *level > LintLevel::Warn)
+            {
+                options.push(CString::new("--verbose").unwrap());
+            }
+            if ptx_lint_levels
+                .get(&PtxLint::DoublePrecisionUse)
+                .map_or(false, |level| *level > LintLevel::Warn)
+            {
+                options.push(CString::new("--warn-on-double-precision-use").unwrap());
+            }
+            if ptx_lint_levels
+                .get(&PtxLint::LocalMemoryUsage)
+                .map_or(false, |level| *level > LintLevel::Warn)
+            {
+                options.push(CString::new("--warn-on-local-memory-usage").unwrap());
+            }
+            if ptx_lint_levels
+                .get(&PtxLint::RegisterSpills)
+                .map_or(false, |level| *level > LintLevel::Warn)
+            {
+                options.push(CString::new("--warn-on-spills").unwrap());
+            }
+            options.push(CString::new("--warning-as-error").unwrap());
+
+            let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
+
+            NvptxError::try_err_from(unsafe {
+                ptx_compiler_sys::nvPTXCompilerCompile(
+                    compiler,
+                    options_ptrs.len() as c_int,
+                    options_ptrs.as_ptr().cast(),
+                )
+            })?;
+        };
+
+        if ptx_lint_levels
+            .get(&PtxLint::Verbose)
+            .map_or(false, |level| *level > LintLevel::Allow)
+        {
+            options.push(CString::new("--verbose").unwrap());
+        }
+        if ptx_lint_levels
+            .get(&PtxLint::DoublePrecisionUse)
+            .map_or(false, |level| *level > LintLevel::Allow)
+        {
+            options.push(CString::new("--warn-on-double-precision-use").unwrap());
+        }
+        if ptx_lint_levels
+            .get(&PtxLint::LocalMemoryUsage)
+            .map_or(false, |level| *level > LintLevel::Allow)
+        {
+            options.push(CString::new("--warn-on-local-memory-usage").unwrap());
+        }
+        if ptx_lint_levels
+            .get(&PtxLint::RegisterSpills)
+            .map_or(false, |level| *level > LintLevel::Allow)
+        {
+            options.push(CString::new("--warn-on-spills").unwrap());
+        }
+
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
         NvptxError::try_err_from(unsafe {
@@ -331,7 +403,7 @@ fn check_kernel_ptx(
                 options_ptrs.as_ptr().cast(),
             )
         })
-    };
+    })();
 
     let error_log = (|| {
         let mut error_log_size = 0;
