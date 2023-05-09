@@ -20,7 +20,7 @@ impl syn::parse::Parse for KernelConfig {
         let args: syn::Ident = input.parse()?;
         let _comma: syn::token::Comma = input.parse()?;
         let ptx: syn::Ident = input.parse()?;
-        let _comma: Option<syn::Ident> = input.parse()?;
+        let _comma: Option<syn::token::Comma> = input.parse()?;
         let _gt_token: syn::token::Gt = input.parse()?;
         let _for: syn::token::For = input.parse()?;
         let launcher: syn::Ident = input.parse()?;
