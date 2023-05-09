@@ -79,6 +79,7 @@ pub fn parse_ptx_lint_level(
             l if l == "double_precision_use" => PtxLint::DoublePrecisionUse,
             l if l == "local_memory_usage" => PtxLint::LocalMemoryUsage,
             l if l == "register_spills" => PtxLint::RegisterSpills,
+            l if l == "dump_binary" => PtxLint::DumpBinary,
             _ => {
                 emit_error!(
                     meta.span(),
@@ -140,6 +141,7 @@ pub enum PtxLint {
     DoublePrecisionUse,
     LocalMemoryUsage,
     RegisterSpills,
+    DumpBinary,
 }
 
 impl fmt::Display for PtxLint {
@@ -149,6 +151,7 @@ impl fmt::Display for PtxLint {
             Self::DoublePrecisionUse => fmt.write_str("double_precision_use"),
             Self::LocalMemoryUsage => fmt.write_str("local_memory_usage"),
             Self::RegisterSpills => fmt.write_str("register_spills"),
+            Self::DumpBinary => fmt.write_str("dump_binary"),
         }
     }
 }

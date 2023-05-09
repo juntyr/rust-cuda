@@ -32,11 +32,10 @@ use error::emit_ptx_build_error;
 use ptx_compiler_sys::NvptxError;
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
-    proc_macro_error::set_dummy(quote! {
-        "ERROR in this PTX compilation"
-    });
+    proc_macro_error::set_dummy(quote! {::core::result::Result::Err(())});
 
     let CheckKernelConfig {
+        kernel_hash,
         args,
         crate_name,
         crate_path,
@@ -44,8 +43,8 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "check_kernel!(ARGS NAME PATH) expects ARGS identifier, NAME and PATH string \
-                 literals: {:?}",
+                "check_kernel!(HASH ARGS NAME PATH) expects HASH and ARGS identifiers, annd NAME \
+                 and PATH string literals: {:?}",
                 err
             )
         },
@@ -53,10 +52,18 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
 
     let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Specialisation::Check);
 
-    match kernel_ptx {
-        Some(kernel_ptx) => quote!(#kernel_ptx).into(),
-        None => quote!("ERROR in this PTX compilation").into(),
-    }
+    let Some(kernel_ptx) = kernel_ptx else {
+        return quote!(::core::result::Result::Err(())).into()
+    };
+
+    check_kernel_ptx_and_report(
+        &kernel_ptx,
+        Specialisation::Check,
+        &kernel_hash,
+        &HashMap::new(),
+    );
+
+    quote!(::core::result::Result::Ok(())).into()
 }
 
 #[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
@@ -77,9 +84,9 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "link_kernel!(KERNEL ARGS NAME PATH SPECIALISATION LINTS,*) expects KERNEL and \
-                 ARGS identifiers, NAME and PATH string literals, SPECIALISATION and LINTS \
-                 tokens: {:?}",
+                "link_kernel!(KERNEL HASH ARGS NAME PATH SPECIALISATION LINTS,*) expects KERNEL, \
+                 HASH, and ARGS identifiers, NAME and PATH string literals, and SPECIALISATION \
+                 and LINTS tokens: {:?}",
                 err
             )
         },
@@ -213,32 +220,44 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
     }
 
-    let (result, error_log, info_log, version, drop) =
-        check_kernel_ptx(&kernel_ptx, &specialisation, &kernel_hash, &ptx_lint_levels);
+    check_kernel_ptx_and_report(
+        &kernel_ptx,
+        Specialisation::Link(&specialisation),
+        &kernel_hash,
+        &ptx_lint_levels,
+    );
+
+    (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
+}
+
+#[allow(clippy::too_many_lines)]
+fn check_kernel_ptx_and_report(
+    kernel_ptx: &str,
+    specialisation: Specialisation,
+    kernel_hash: &proc_macro2::Ident,
+    ptx_lint_levels: &HashMap<PtxLint, LintLevel>,
+) {
+    let (result, error_log, info_log, binary, version, drop) =
+        check_kernel_ptx(kernel_ptx, specialisation, kernel_hash, ptx_lint_levels);
 
     let ptx_compiler = match &version {
         Ok((major, minor)) => format!("PTX compiler v{major}.{minor}"),
         Err(_) => String::from("PTX compiler"),
     };
 
-    // TODO: allow user to select
-    // - warn on double
-    // - warn on float
-    // - warn on spills
-    // - verbose warn
-    // - warnings as errors
-    // - show PTX source if warning or error
-
     let mut errors = String::new();
+
     if let Err(err) = drop {
         let _ = errors.write_fmt(format_args!("Error dropping the {ptx_compiler}: {err}\n"));
     }
+
     if let Err(err) = version {
         let _ = errors.write_fmt(format_args!(
             "Error fetching the version of the {ptx_compiler}: {err}\n"
         ));
     }
-    if let (Ok(Some(_)), _) | (_, Ok(Some(_))) = (&info_log, &error_log) {
+
+    let ptx_source_code = {
         let mut max_lines = kernel_ptx.chars().filter(|c| *c == '\n').count() + 1;
         let mut indent = 0;
         while max_lines > 0 {
@@ -246,7 +265,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
             indent += 1;
         }
 
-        emit_call_site_warning!(
+        format!(
             "PTX source code:\n{}",
             kernel_ptx
                 .lines()
@@ -254,47 +273,109 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
                 .map(|(i, l)| format!("{:indent$}| {l}", i + 1))
                 .collect::<Vec<_>>()
                 .join("\n")
-        );
+        )
+    };
+
+    match binary {
+        Ok(None) => (),
+        Ok(Some(binary)) => {
+            if ptx_lint_levels
+                .get(&PtxLint::DumpBinary)
+                .map_or(false, |level| *level > LintLevel::Allow)
+            {
+                const HEX: [char; 16] = [
+                    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
+                ];
+
+                let mut binary_hex = String::with_capacity(binary.len() * 2);
+                for byte in binary {
+                    binary_hex.push(HEX[usize::from(byte >> 4)]);
+                    binary_hex.push(HEX[usize::from(byte & 0x0F)]);
+                }
+
+                if ptx_lint_levels
+                    .get(&PtxLint::DumpBinary)
+                    .map_or(false, |level| *level > LintLevel::Warn)
+                {
+                    emit_call_site_error!(
+                        "{} compiled binary:\n{}\n\n{}",
+                        ptx_compiler,
+                        binary_hex,
+                        ptx_source_code
+                    );
+                } else {
+                    emit_call_site_warning!(
+                        "{} compiled binary:\n{}\n\n{}",
+                        ptx_compiler,
+                        binary_hex,
+                        ptx_source_code
+                    );
+                }
+            }
+        },
+        Err(err) => {
+            let _ = errors.write_fmt(format_args!(
+                "Error fetching the compiled binary from {ptx_compiler}: {err}\n"
+            ));
+        },
     }
+
     match info_log {
         Ok(None) => (),
-        Ok(Some(info_log)) => emit_call_site_warning!("{ptx_compiler} info log:\n{}", info_log),
+        Ok(Some(info_log)) => emit_call_site_warning!(
+            "{} info log:\n{}\n{}",
+            ptx_compiler,
+            info_log,
+            ptx_source_code
+        ),
         Err(err) => {
             let _ = errors.write_fmt(format_args!(
                 "Error fetching the info log of the {ptx_compiler}: {err}\n"
             ));
         },
     };
-    match error_log {
-        Ok(None) => (),
-        Ok(Some(error_log)) => emit_call_site_error!("{ptx_compiler} error log:\n{}", error_log),
+
+    let error_log = match error_log {
+        Ok(None) => String::new(),
+        Ok(Some(error_log)) => {
+            format!("{ptx_compiler} error log:\n{error_log}\n{ptx_source_code}")
+        },
         Err(err) => {
             let _ = errors.write_fmt(format_args!(
                 "Error fetching the error log of the {ptx_compiler}: {err}\n"
             ));
+            String::new()
         },
     };
+
     if let Err(err) = result {
         let _ = errors.write_fmt(format_args!("Error compiling the PTX source code: {err}\n"));
     }
-    if !errors.is_empty() {
-        abort_call_site!("{}", errors);
-    }
 
-    (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
+    if !error_log.is_empty() || !errors.is_empty() {
+        abort_call_site!(
+            "{error_log}{}{errors}",
+            if !error_log.is_empty() && !errors.is_empty() {
+                "\n\n"
+            } else {
+                ""
+            }
+        );
+    }
 }
 
 #[allow(clippy::type_complexity)]
 #[allow(clippy::too_many_lines)]
 fn check_kernel_ptx(
     kernel_ptx: &str,
-    specialisation: &str,
+    specialisation: Specialisation,
     kernel_hash: &proc_macro2::Ident,
     ptx_lint_levels: &HashMap<PtxLint, LintLevel>,
 ) -> (
     Result<(), NvptxError>,
     Result<Option<String>, NvptxError>,
     Result<Option<String>, NvptxError>,
+    Result<Option<Vec<u8>>, NvptxError>,
     Result<(u32, u32), NvptxError>,
     Result<(), NvptxError>,
 ) {
@@ -313,14 +394,15 @@ fn check_kernel_ptx(
     };
 
     let result = (|| {
-        let kernel_name = if specialisation.is_empty() {
-            format!("{kernel_hash}_kernel")
-        } else {
-            format!(
+        let kernel_name = match specialisation {
+            Specialisation::Check => format!("{kernel_hash}_chECK"),
+            Specialisation::Link("") => format!("{kernel_hash}_kernel"),
+            Specialisation::Link(specialisation) => format!(
                 "{kernel_hash}_kernel_{:016x}",
                 seahash::hash(specialisation.as_bytes())
-            )
+            ),
         };
+
         let mut options = vec![
             CString::new("--entry").unwrap(),
             CString::new(kernel_name).unwrap(),
@@ -457,6 +539,39 @@ fn check_kernel_ptx(
         Ok(Some(String::from_utf8_lossy(&info_log).into_owned()))
     })();
 
+    let binary = (|| {
+        if result.is_err() {
+            return Ok(None);
+        }
+
+        let mut binary_size = 0;
+
+        NvptxError::try_err_from(unsafe {
+            ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
+                compiler,
+                addr_of_mut!(binary_size),
+            )
+        })?;
+
+        if binary_size == 0 {
+            return Ok(None);
+        }
+
+        #[allow(clippy::cast_possible_truncation)]
+        let mut binary: Vec<u8> = Vec::with_capacity(binary_size as usize);
+
+        NvptxError::try_err_from(unsafe {
+            ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
+        })?;
+
+        #[allow(clippy::cast_possible_truncation)]
+        unsafe {
+            binary.set_len(binary_size as usize);
+        }
+
+        Ok(Some(binary))
+    })();
+
     let version = (|| {
         let mut major = 0;
         let mut minor = 0;
@@ -475,7 +590,7 @@ fn check_kernel_ptx(
         })
     };
 
-    (result, error_log, info_log, version, drop)
+    (result, error_log, info_log, binary, version, drop)
 }
 
 fn compile_kernel(

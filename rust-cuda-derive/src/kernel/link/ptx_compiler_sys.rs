@@ -74,7 +74,7 @@ pub type NvptxCompileResult = ::std::os::raw::c_int;
 
 extern "C" {
     /// Queries the current major and minor version of PTX Compiler APIs being
-    ///  used.
+    /// used.
     ///
     /// # Parameters
     /// - [out] `major`: Major version of the PTX Compiler APIs
@@ -94,7 +94,7 @@ extern "C" {
     ) -> NvptxCompileResult;
 
     /// Obtains the handle to an instance of the PTX compiler
-    ///  initialized with the given PTX program `ptxCode`.
+    /// initialized with the given PTX program `ptxCode`.
     ///
     /// # Parameters
     /// - [out] `compiler`: Returns a handle to PTX compiler initialized with
@@ -127,169 +127,147 @@ extern "C" {
     /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
     pub fn nvPTXCompilerDestroy(compiler: *mut NvptxCompilerHandle) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief          Compile a PTX program with the given compiler options"]
-    #[doc = ""]
-    #[doc = " \\param            [in,out] compiler      A handle to PTX compiler initialized with \
-             the"]
-    #[doc = "                                          PTX program which is to be compiled."]
-    #[doc = "                                          The compiled program can be accessed using \
-             the handle"]
-    #[doc = " \\param            [in] numCompileOptions Length of the array \\p compileOptions"]
-    #[doc = " \\param            [in] compileOptions   Compiler options with which compilation \
-             should be done."]
-    #[doc = "                                         The compiler options string is a null \
-             terminated character array."]
-    #[doc = "                                         A valid list of compiler options is at"]
-    #[doc = "                                         <a href=\"http://docs.nvidia.com/cuda/ptx-compiler-api/index.html#compile-options\">link</a>."]
-    #[doc = " \\note                                   --gpu-name (-arch) is a mandatory option."]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_OUT_OF_MEMORY \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_COMPILATION_FAILURE  \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_UNSUPPORTED_PTX_VERSION  \\endlink"]
-    #[doc = ""]
+    /// Compile a PTX program with the given compiler options.
+    ///
+    /// # Parameters
+    /// - [in, out] `compiler`: A handle to PTX compiler initialized with the
+    ///   PTX program which is to be compiled. The compiled program can be
+    ///   accessed using the handle.
+    /// - [in] `numCompileOptions`: Length of the array `compileOptions`
+    /// - [in] `compileOptions`: Compiler options with which compilation should
+    ///   be done. The compiler options string is a null terminated character
+    ///   array. A valid list of compiler options is available at
+    ///   [link](http://docs.nvidia.com/cuda/ptx-compiler-api/index.html#compile-options).
+    ///
+    /// # Note
+    /// `--gpu-name` (`-arch`) is a mandatory option.
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_OUT_OF_MEMORY`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_COMPILATION_FAILURE`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_UNSUPPORTED_PTX_VERSION`]
     pub fn nvPTXCompilerCompile(
         compiler: NvptxCompilerHandle,
         numCompileOptions: ::std::os::raw::c_int,
         compileOptions: *const *const ::std::os::raw::c_char,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Obtains the size of the image of the compiled program"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler          A handle to PTX compiler on which \
-             nvPTXCompilerCompile() has been performed."]
-    #[doc = " \\param            [out] binaryImageSize  The size of the image of the compiled \
-             program"]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE \
-             \\endlink"]
-    #[doc = ""]
-    #[doc = " \\note             nvPTXCompilerCompile() API should be invoked for the handle \
-             before calling this API."]
-    #[doc = "                   Otherwise, NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE is \
-             returned."]
+    /// Obtains the size of the image of the compiled program.
+    ///
+    /// # Parameters
+    /// - [in] `compiler`: A handle to PTX compiler on which
+    ///   [`nvPTXCompilerCompile`] has been performed.
+    /// - [out] `binaryImageSize`: The size of the image of the compiled program
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE`]
+    ///
+    /// # Note
+    /// The [`nvPTXCompilerCompile`] function should be invoked for the handle
+    /// before calling this API. Otherwise,
+    /// [`NvptxCompileResult::NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE`]
+    /// is returned.
     pub fn nvPTXCompilerGetCompiledProgramSize(
         compiler: NvptxCompilerHandle,
         binaryImageSize: *mut size_t,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Obtains the image of the compiled program"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler          A handle to PTX compiler on which \
-             nvPTXCompilerCompile() has been performed."]
-    #[doc = " \\param            [out] binaryImage      The image of the compiled program."]
-    #[doc = "                                         Client should allocate memory for \\p \
-             binaryImage"]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE \
-             \\endlink"]
-    #[doc = ""]
-    #[doc = " \\note             nvPTXCompilerCompile() API should be invoked for the handle \
-             before calling this API."]
-    #[doc = "                   Otherwise, NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE is \
-             returned."]
-    #[doc = ""]
+    /// Obtains the image of the compiled program.
+    ///
+    /// # Parameters
+    /// - [in] `compiler`: A handle to PTX compiler on which
+    ///   [`nvPTXCompilerCompile`] has been performed.
+    /// - [out] `binaryImage`: The image of the compiled program. The caller
+    ///   should allocate memory for `binaryImage`.
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE`]
+    ///
+    /// # Note
+    /// The [`nvPTXCompilerCompile`] function should be invoked for the handle
+    /// before calling this API. Otherwise,
+    /// [`NvptxCompileResult::NVPTXCOMPILE_ERROR_COMPILER_INVOCATION_INCOMPLETE`]
+    /// is returned.
     pub fn nvPTXCompilerGetCompiledProgram(
         compiler: NvptxCompilerHandle,
         binaryImage: *mut ::std::os::raw::c_void,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Query the size of the error message that was seen previously for \
-             the handle"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler          A handle to PTX compiler on which \
-             nvPTXCompilerCompile() has been performed."]
-    #[doc = " \\param            [out] errorLogSize     The size of the error log in bytes which \
-             was produced"]
-    #[doc = "                                          in previous call to nvPTXCompilerCompiler()."]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = ""]
+    /// Query the size of the error message that was seen previously for the
+    /// handle.
+    ///
+    /// - [in] `compiler`: A handle to PTX compiler on which
+    ///   [`nvPTXCompilerCompile`] has been performed.
+    /// - [out] `errorLogSize`: The size of the error log in bytes which was
+    ///   produced in previous call to [`nvPTXCompilerCompile`].
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
     pub fn nvPTXCompilerGetErrorLogSize(
         compiler: NvptxCompilerHandle,
         errorLogSize: *mut size_t,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Query the error message that was seen previously for the handle"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler         A handle to PTX compiler on which \
-             nvPTXCompilerCompile() has been performed."]
-    #[doc = " \\param            [out] errorLog        The error log which was produced in \
-             previous call to nvPTXCompilerCompiler()."]
-    #[doc = "                                         Clients should allocate memory for \\p \
-             errorLog"]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = ""]
+    /// Query the error message that was seen previously for the handle.
+    ///
+    /// # Parameters
+    /// - [in] `compiler`: A handle to PTX compiler on which
+    ///   [`nvPTXCompilerCompile`] has been performed.
+    /// - [out] `errorLog`: The error log which was produced in previous call to
+    ///   [`nvPTXCompilerCompile`]. The caller should allocate memory for
+    ///   `errorLog`.
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
     pub fn nvPTXCompilerGetErrorLog(
         compiler: NvptxCompilerHandle,
         errorLog: *mut ::std::os::raw::c_char,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief            Query the size of the information message that was seen \
-             previously for the handle"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler        A handle to PTX compiler on which \
-             nvPTXCompilerCompile() has been performed."]
-    #[doc = " \\param            [out] infoLogSize    The size of the information log in bytes \
-             which was produced"]
-    #[doc = "                                         in previous call to nvPTXCompilerCompiler()."]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = ""]
+    /// Query the size of the information message that was seen previously for
+    /// the handle.
+    ///
+    /// # Parameters
+    /// - [in] `compiler`: A handle to PTX compiler on which
+    ///   [`nvPTXCompilerCompile`] has been performed.
+    /// - [out] `infoLogSize`: The size of the information log in bytes which
+    ///   was produced in previous call to [`nvPTXCompilerCompile`].
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
     pub fn nvPTXCompilerGetInfoLogSize(
         compiler: NvptxCompilerHandle,
         infoLogSize: *mut size_t,
     ) -> NvptxCompileResult;
 
-    #[doc = " \\ingroup compilation"]
-    #[doc = ""]
-    #[doc = " \\brief           Query the information message that was seen previously for the \
-             handle"]
-    #[doc = ""]
-    #[doc = " \\param            [in] compiler        A handle to PTX compiler on which \
-             nvPTXCompilerCompile() has been performed."]
-    #[doc = " \\param            [out] infoLog        The information log which was produced in \
-             previous call to nvPTXCompilerCompiler()."]
-    #[doc = "                                        Clients should allocate memory for \\p infoLog"]
-    #[doc = ""]
-    #[doc = " \\return"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_SUCCESS \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INTERNAL \\endlink"]
-    #[doc = "   - \\link #nvPTXCompileResult NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE \\endlink"]
-    #[doc = ""]
+    /// Query the information message that was seen previously for the handle.
+    ///
+    /// # Parameters
+    /// - [in] `compiler`: A handle to PTX compiler on which
+    ///   [`nvPTXCompilerCompile`] has been performed.
+    /// - [out] `infoLog`: The information log which was produced in previous
+    ///   call to [`nvPTXCompilerCompile`]. The caller should allocate memory
+    ///   for `infoLog`.
+    ///
+    /// # Returns
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_SUCCESS`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INTERNAL`]
+    /// - [`NvptxCompileResult::NVPTXCOMPILE_ERROR_INVALID_PROGRAM_HANDLE`]
     pub fn nvPTXCompilerGetInfoLog(
         compiler: NvptxCompilerHandle,
         infoLog: *mut ::std::os::raw::c_char,

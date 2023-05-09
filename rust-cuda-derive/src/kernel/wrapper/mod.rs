@@ -113,6 +113,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let _ = ptx_lint_levels.try_insert(PtxLint::DoublePrecisionUse, LintLevel::Warn);
     let _ = ptx_lint_levels.try_insert(PtxLint::LocalMemoryUsage, LintLevel::Warn);
     let _ = ptx_lint_levels.try_insert(PtxLint::RegisterSpills, LintLevel::Warn);
+    let _ = ptx_lint_levels.try_insert(PtxLint::DumpBinary, LintLevel::Allow);
 
     let ptx_lint_levels = {
         let (lints, levels): (Vec<Ident>, Vec<Ident>) = ptx_lint_levels
@@ -435,15 +436,8 @@ fn quote_generic_check(
 
     quote::quote_spanned! { func_ident_hash.span()=>
         #[cfg(not(target_os = "cuda"))]
-        const _: #crate_path::safety::kernel_signature::Assert<{
-            #crate_path::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
-        }> = #crate_path::safety::kernel_signature::Assert::<{
-            #crate_path::safety::kernel_signature::check(
-                #crate_path::host::check_kernel!(
-                    #args #crate_name #crate_manifest_dir
-                ).as_bytes(),
-                concat!(".visible .entry ", stringify!(#func_ident_hash)).as_bytes()
-            )
-        }>;
+        const _: ::core::result::Result<(), ()> = #crate_path::host::check_kernel!(
+            #func_ident_hash #args #crate_name #crate_manifest_dir
+        );
     }
 }
