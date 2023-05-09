@@ -119,7 +119,7 @@ pub(super) fn quote_kernel_func_async(
                 unsafe { stream.launch(function, grid, block, shared_memory_size,
                     &[
                         #(
-                            &#func_params as *const _ as *mut ::std::ffi::c_void
+                            &#func_params as *const _ as *mut ::core::ffi::c_void
                         ),*
                     ]
                 ) }
