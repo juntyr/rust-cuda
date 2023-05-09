@@ -2,9 +2,21 @@ pub trait FitsIntoDeviceRegister: private::FitsIntoDeviceRegister {}
 impl<T: private::FitsIntoDeviceRegister> FitsIntoDeviceRegister for T {}
 
 mod private {
+    #[marker]
     pub trait FitsIntoDeviceRegister {}
     impl<T> FitsIntoDeviceRegister for T where
         AssertTypeFitsInto64Bits<{ TypeSize::check::<T>() }>: FitsInto64Bits
+    {
+    }
+
+    // Since T: Sized, the pointers are thin, and must thus fit into device
+    // registers
+    impl<'r, T: rustacuda_core::DeviceCopy + 'r> FitsIntoDeviceRegister
+        for crate::common::DeviceConstRef<'r, T>
+    {
+    }
+    impl<'r, T: rustacuda_core::DeviceCopy + 'r> FitsIntoDeviceRegister
+        for crate::common::DeviceMutRef<'r, T>
     {
     }
 
