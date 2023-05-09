@@ -38,6 +38,11 @@ pub struct Empty([u8; 0]);
 #[layout(crate = "rc::const_type_layout")]
 pub struct Tuple(u32, i32);
 
+#[repr(C)]
+#[derive(rc::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::const_type_layout")]
+pub struct Triple(i32, i32, i32);
+
 #[rc::common::kernel(use link_kernel! as impl Kernel<KernelArgs, KernelPtx> for Launcher)]
 #[kernel(crate = "rc")]
 #[kernel(
@@ -51,6 +56,7 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
     #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
     #[kernel(pass = SafeDeviceCopy)] Tuple(s, mut __t): Tuple,
+    #[kernel(pass = SafeDeviceCopy)] q: Triple,
     // #[kernel(pass = SafeDeviceCopy)] shared3: ThreadBlockShared<u32>,
 ) where
     T: rc::safety::StackOnly + rc::safety::NoAliasing,
@@ -65,7 +71,7 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
         (*shared.index_mut_unchecked(1)).0 = (f64::from(s) * 2.0) as u32;
     }
     unsafe {
-        (*shared2.index_mut_unchecked(2)).1 = 24;
+        (*shared2.index_mut_unchecked(2)).1 = q.0 + q.1 + q.2;
     }
     // unsafe { core::arch::asm!("hi") }
     // unsafe {

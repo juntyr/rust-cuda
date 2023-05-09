@@ -136,14 +136,8 @@ pub(in super::super) fn quote_cuda_wrapper(
                 #[allow(dead_code)]
                 fn assert_impl_no_aliasing<T: #crate_path::safety::NoAliasing>() {}
 
-                #[allow(dead_code)]
-                fn assert_impl_fits_into_device_register<
-                    T: #crate_path::safety::FitsIntoDeviceRegister,
-                >(_val: &T) {}
-
                 #(assert_impl_devicecopy(&#func_params);)*
                 #(assert_impl_no_aliasing::<#ptx_func_unboxed_types>();)*
-                #(assert_impl_fits_into_device_register(&#func_params);)*
             }
 
             #ptx_func_input_unwrap
