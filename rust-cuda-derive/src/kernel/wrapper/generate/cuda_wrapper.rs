@@ -2,7 +2,10 @@ use proc_macro2::TokenStream;
 use quote::quote_spanned;
 use syn::spanned::Spanned;
 
-use super::super::{FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
+use super::super::{
+    super::{KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY},
+    FuncIdent, FunctionInputs, InputCudaType, KernelConfig,
+};
 
 #[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
@@ -96,29 +99,27 @@ pub(in super::super) fn quote_cuda_wrapper(
             syn::FnArg::Receiver(_) => unreachable!(),
         });
 
-    let func_type_layout_ident = quote::format_ident!("{}_type_layout", func_ident);
-
     quote! {
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
-        pub unsafe extern "ptx-kernel" fn #func_type_layout_ident(#(#func_params: &mut &[u8]),*) {
+        pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
+            unsafe {
+                ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY);
+            }
             #(
                 #[no_mangle]
                 static #func_layout_params: [
                     u8; #crate_path::const_type_layout::serialised_type_graph_len::<#ptx_func_types>()
                 ] = #crate_path::const_type_layout::serialise_type_graph::<#ptx_func_types>();
 
-                *#func_params = &#func_layout_params;
+                unsafe { ::core::ptr::read_volatile(&#func_layout_params[0]) };
             )*
-        }
+            unsafe {
+                ::core::arch::asm!(#KERNEL_TYPE_USE_END_CANARY);
+            }
 
-        #[cfg(target_os = "cuda")]
-        #[#crate_path::device::specialise_kernel_entry(#args)]
-        #[no_mangle]
-        #(#func_attrs)*
-        pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
                 use super::#args;

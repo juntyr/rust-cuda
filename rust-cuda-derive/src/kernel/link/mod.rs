@@ -21,6 +21,7 @@ use ptx_builder::{
 use super::{
     lints::{LintLevel, PtxLint},
     utils::skip_kernel_compilation,
+    KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY,
 };
 
 mod config;
@@ -66,14 +67,14 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     quote!(::core::result::Result::Ok(())).into()
 }
 
-#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
+#[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {
         const PTX_STR: &'static str = "ERROR in this PTX compilation";
     });
 
     let LinkKernelConfig {
-        kernel,
+        kernel: _kernel,
         kernel_hash,
         args,
         crate_name,
@@ -111,114 +112,8 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     };
 
-    let kernel_layout_name = if specialisation.is_empty() {
-        format!("{kernel}_type_layout_kernel")
-    } else {
-        format!(
-            "{kernel}_type_layout_kernel_{:016x}",
-            seahash::hash(specialisation.as_bytes())
-        )
-    };
-
-    let mut type_layouts = Vec::new();
-
-    let type_layout_start_pattern = format!("\n\t// .globl\t{kernel_layout_name}");
-
-    if let Some(type_layout_start) = kernel_ptx.find(&type_layout_start_pattern) {
-        const BEFORE_PARAM_PATTERN: &str = ".global .align 1 .b8 ";
-        const PARAM_LEN_PATTERN: &str = "[";
-        const LEN_BYTES_PATTERN: &str = "] = {";
-        const AFTER_BYTES_PATTERN: &str = "};";
-
-        let after_type_layout_start = type_layout_start + type_layout_start_pattern.len();
-
-        let Some(type_layout_middle) = kernel_ptx[after_type_layout_start..]
-            .find(&format!(".visible .entry {kernel_layout_name}"))
-            .map(|i| after_type_layout_start + i)
-        else {
-            abort_call_site!(
-                "Kernel compilation generated invalid PTX: incomplete type layout information"
-            )
-        };
-
-        let mut next_type_layout = after_type_layout_start;
-
-        while let Some(param_start_offset) =
-            kernel_ptx[next_type_layout..type_layout_middle].find(BEFORE_PARAM_PATTERN)
-        {
-            let param_start = next_type_layout + param_start_offset + BEFORE_PARAM_PATTERN.len();
-
-            if let Some(len_start_offset) =
-                kernel_ptx[param_start..type_layout_middle].find(PARAM_LEN_PATTERN)
-            {
-                let len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
-
-                if let Some(bytes_start_offset) =
-                    kernel_ptx[len_start..type_layout_middle].find(LEN_BYTES_PATTERN)
-                {
-                    let bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
-
-                    if let Some(bytes_end_offset) =
-                        kernel_ptx[bytes_start..type_layout_middle].find(AFTER_BYTES_PATTERN)
-                    {
-                        let param = &kernel_ptx[param_start..(param_start + len_start_offset)];
-                        let len = &kernel_ptx[len_start..(len_start + bytes_start_offset)];
-                        let bytes = &kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
-
-                        let param = quote::format_ident!("{}", param);
-
-                        let Ok(len) = len.parse::<usize>() else {
-                            abort_call_site!(
-                                "Kernel compilation generated invalid PTX: invalid type layout \
-                                 length"
-                            )
-                        };
-                        let Ok(bytes) = bytes
-                            .split(", ")
-                            .map(std::str::FromStr::from_str)
-                            .collect::<Result<Vec<u8>, _>>()
-                        else {
-                            abort_call_site!(
-                                "Kernel compilation generated invalid PTX: invalid type layout \
-                                 byte"
-                            )
-                        };
-
-                        if bytes.len() != len {
-                            abort_call_site!(
-                                "Kernel compilation generated invalid PTX: type layout length \
-                                 mismatch"
-                            );
-                        }
-
-                        let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
-
-                        type_layouts.push(quote! {
-                            const #param: &[u8; #len] = #byte_str;
-                        });
-
-                        next_type_layout =
-                            bytes_start + bytes_end_offset + AFTER_BYTES_PATTERN.len();
-                    } else {
-                        next_type_layout = bytes_start;
-                    }
-                } else {
-                    next_type_layout = len_start;
-                }
-            } else {
-                next_type_layout = param_start;
-            }
-        }
-
-        let Some(type_layout_end) = kernel_ptx[type_layout_middle..]
-            .find('}')
-            .map(|i| type_layout_middle + i + '}'.len_utf8())
-        else {
-            abort_call_site!("Kernel compilation generated invalid PTX")
-        };
-
-        kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
-    }
+    let type_layouts = extract_ptx_kernel_layout(&mut kernel_ptx);
+    remove_kernel_type_use_from_ptx(&mut kernel_ptx);
 
     check_kernel_ptx_and_report(
         &kernel_ptx,
@@ -228,6 +123,98 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     );
 
     (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
+}
+
+fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenStream> {
+    const BEFORE_PARAM_PATTERN: &str = "global .align 1 .b8 ";
+    const PARAM_LEN_PATTERN: &str = "[";
+    const LEN_BYTES_PATTERN: &str = "] = {";
+    const AFTER_BYTES_PATTERN: &str = "};";
+
+    let mut type_layouts = Vec::new();
+
+    while let Some(type_layout_start) = kernel_ptx.find(BEFORE_PARAM_PATTERN) {
+        let param_start = type_layout_start + BEFORE_PARAM_PATTERN.len();
+
+        let Some(len_start_offset) = kernel_ptx[param_start..].find(PARAM_LEN_PATTERN) else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: missing type layout data"
+            )
+        };
+        let len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
+
+        let Some(bytes_start_offset) = kernel_ptx[len_start..].find(LEN_BYTES_PATTERN) else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: missing type layout length"
+            )
+        };
+        let bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
+
+        let Some(bytes_end_offset) = kernel_ptx[bytes_start..].find(AFTER_BYTES_PATTERN) else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: invalid type layout data"
+            )
+        };
+        let param = &kernel_ptx[param_start..(param_start + len_start_offset)];
+        let len = &kernel_ptx[len_start..(len_start + bytes_start_offset)];
+        let bytes = &kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
+
+        let param = quote::format_ident!("{}", param);
+
+        let Ok(len) = len.parse::<usize>() else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: invalid type layout length"
+            )
+        };
+        let Ok(bytes) = bytes.split(", ").map(std::str::FromStr::from_str).collect::<Result<Vec<u8>, _>>() else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: invalid type layout byte"
+            )
+        };
+
+        if bytes.len() != len {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: type layout length mismatch"
+            );
+        }
+
+        let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
+
+        type_layouts.push(quote! {
+            const #param: &[u8; #len] = #byte_str;
+        });
+
+        let type_layout_end = bytes_start + bytes_end_offset + AFTER_BYTES_PATTERN.len();
+
+        kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
+    }
+
+    type_layouts
+}
+
+fn remove_kernel_type_use_from_ptx(kernel_ptx: &mut String) {
+    while let Some(kernel_type_layout_start) = kernel_ptx.find(KERNEL_TYPE_USE_START_CANARY) {
+        let kernel_type_layout_start = kernel_ptx[..kernel_type_layout_start]
+            .rfind('\n')
+            .unwrap_or(kernel_type_layout_start);
+
+        let Some(kernel_type_layout_end_offset) = kernel_ptx[
+            kernel_type_layout_start..
+        ].find(KERNEL_TYPE_USE_END_CANARY) else {
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: incomplete type layout use section"
+            );
+        };
+
+        let kernel_type_layout_end_offset = kernel_type_layout_end_offset
+            + kernel_ptx[kernel_type_layout_start + kernel_type_layout_end_offset..]
+                .find('\n')
+                .unwrap_or(KERNEL_TYPE_USE_END_CANARY.len());
+
+        let kernel_type_layout_end = kernel_type_layout_start + kernel_type_layout_end_offset;
+
+        kernel_ptx.replace_range(kernel_type_layout_start..kernel_type_layout_end, "");
+    }
 }
 
 #[allow(clippy::too_many_lines)]
