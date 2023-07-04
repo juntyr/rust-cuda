@@ -31,10 +31,10 @@ rustacuda_derive = { version = "0.1.2", optional = true }
 const-type-layout = { git = "https://github.com/juntyr/const-type-layout", rev = "e163b36" }
 
 final = "0.1.1"
-hashbrown = { version = "0.13", default-features = false, features = ["inline-more"], optional = true }
+hashbrown = { version = "0.14", default-features = false, features = ["inline-more"], optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }
 
 [dev-dependencies]
-hashbrown = { version = "0.13", default-features = false, features = ["inline-more"] }
+hashbrown = { version = "0.14", default-features = false, features = ["inline-more"] }
