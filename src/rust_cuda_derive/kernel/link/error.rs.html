@@ -87,7 +87,7 @@
     );
     colored::control::unset_override();
 
-    <span class="kw">let </span>message = String::from_utf8(strip_ansi_escapes::strip(<span class="kw-2">&amp;</span>rendered).unwrap()).unwrap();
+    <span class="kw">let </span>message = String::from_utf8(strip_ansi_escapes::strip(<span class="kw-2">&amp;</span>rendered)).unwrap();
 
     <span class="kw">let </span>call_site = proc_macro::Span::call_site();
 
