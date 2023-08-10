@@ -18,7 +18,7 @@ pub fn emit_ptx_build_error() {
     );
     colored::control::unset_override();
 
-    let message = String::from_utf8(strip_ansi_escapes::strip(&rendered).unwrap()).unwrap();
+    let message = String::from_utf8(strip_ansi_escapes::strip(&rendered)).unwrap();
 
     let call_site = proc_macro::Span::call_site();
 
