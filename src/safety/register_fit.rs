@@ -8,7 +8,7 @@ mod private {
     {
     }
 
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, core::marker::ConstParamTy)]
     pub enum TypeSize {
         TypeFitsInto64Bits,
         TypeExeceeds64Bits(&'static str),

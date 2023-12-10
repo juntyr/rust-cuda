@@ -10,9 +10,10 @@ default-members = [
 [package]
 name = "rust-cuda"
 version = "0.1.0"
-authors = ["Juniper Tyree <juniper.langenstein@helsinki.fi>"]
+authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
+rust-version = "1.75" # nightly
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -28,7 +29,7 @@ rustacuda_core = "0.1.2"
 rustacuda = { version = "0.1.3", optional = true }
 rustacuda_derive = { version = "0.1.2", optional = true }
 
-const-type-layout = { git = "https://github.com/juntyr/const-type-layout", rev = "e163b36" }
+const-type-layout = { version = "0.2.0", features = ["derive"] }
 
 final = "0.1.1"
 hashbrown = { version = "0.14", default-features = false, features = ["inline-more"], optional = true }

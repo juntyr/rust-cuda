@@ -14,16 +14,16 @@ pub struct CudaExchangeBufferCudaRepresentation<T, const M2D: bool, const M2H: b
     pub(super) usize,
 )
 where
-    T: SafeDeviceCopy + ~const TypeGraphLayout;
+    T: SafeDeviceCopy + TypeGraphLayout;
 
 // Safety: `CudaExchangeBufferCudaRepresentation<T>` is `DeviceCopy`
 //         iff `T` is `SafeDeviceCopy`
-unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout, const M2D: bool, const M2H: bool> DeviceCopy
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> DeviceCopy
     for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
 {
 }
 
-unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout, const M2D: bool, const M2H: bool> CudaAsRust
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> CudaAsRust
     for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
 {
     type RustRepresentation = CudaExchangeBuffer<T, M2D, M2H>;

@@ -1,10 +1,6 @@
 #![deny(clippy::pedantic)]
-#![feature(cfg_version)]
-#![feature(const_trait_impl)]
 #![feature(const_type_name)]
-#![cfg_attr(not(version("1.65.0")), feature(const_ptr_offset_from))]
-#![feature(const_refs_to_cell)]
-#![feature(const_mut_refs)]
+#![feature(offset_of)]
 
 #[derive(rust_cuda::common::LendRustToCuda)]
 struct Inner<T: Copy> {

@@ -103,7 +103,7 @@ compile_error!("Both the CPU and GPU must use little-endian representation.");
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("Both the CPU and GPU must use 64bit pointers.");
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, core::marker::ConstParamTy)]
 struct TypeLayout {
     size: usize,
     align: usize,

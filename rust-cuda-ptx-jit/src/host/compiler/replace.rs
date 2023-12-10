@@ -55,7 +55,7 @@ impl PtxJITCompiler {
                             let mut registers_iter = registers.iter();
 
                             let Some(mut register) = registers_iter.next() else {
-                                continue
+                                continue;
                             };
 
                             loop {

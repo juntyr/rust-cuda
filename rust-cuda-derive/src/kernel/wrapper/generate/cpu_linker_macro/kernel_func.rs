@@ -122,6 +122,7 @@ fn generate_raw_func_input_wrap(
                                     )
                                 });
 
+                                #[allow(invalid_reference_casting)]
                                 if !__check_is_sync(#pat) {
                                     // Safety:
                                     // * Since `#ty` is `!Sync`, it contains interior mutability

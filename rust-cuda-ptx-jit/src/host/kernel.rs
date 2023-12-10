@@ -15,12 +15,9 @@ impl CudaKernel {
     /// Returns a `CudaError` if `ptx` is not a valid PTX source, or it does
     ///  not contain an entry point named `entry_point`.
     pub fn new(ptx: &CStr, entry_point: &CStr) -> CudaResult<Self> {
-        let module = Box::leak(Box::new(Module::load_from_string(ptx)?)) as &Module;
+        let module = Box::new(Module::load_from_string(ptx)?);
 
-        let function = module.get_function(entry_point);
-
-        let module = module as *const Module as *mut Module;
-        let module = unsafe { Box::from_raw(module) };
+        let function = unsafe { &*(module.as_ref() as *const Module) }.get_function(entry_point);
 
         let function = match function {
             Ok(function) => function,

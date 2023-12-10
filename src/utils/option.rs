@@ -97,7 +97,7 @@ unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     }
 }
 
-impl<T: SafeDeviceCopy + ~const TypeGraphLayout> RustToCudaProxy<Option<T>>
+impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaProxy<Option<T>>
     for Option<SafeDeviceCopyWrapper<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {

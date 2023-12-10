@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, core::marker::ConstParamTy)]
 pub enum CpuAndGpuKernelSignatures {
     Match,
     Mismatch,

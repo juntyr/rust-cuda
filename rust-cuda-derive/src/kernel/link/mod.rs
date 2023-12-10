@@ -87,7 +87,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         return (quote! {
             const PTX_STR: &'static str = "ERROR in this PTX compilation";
         })
-        .into()
+        .into();
     };
 
     let kernel_layout_name = if specialisation.is_empty() {
@@ -113,7 +113,8 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         let after_type_layout_start = type_layout_start + type_layout_start_pattern.len();
 
         let Some(type_layout_middle) = kernel_ptx[after_type_layout_start..]
-            .find(&format!(".visible .entry {kernel_layout_name}")).map(|i| after_type_layout_start + i)
+            .find(&format!(".visible .entry {kernel_layout_name}"))
+            .map(|i| after_type_layout_start + i)
         else {
             abort_call_site!(
                 "Kernel compilation generated invalid PTX: incomplete type layout information"
@@ -148,12 +149,18 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
                         let Ok(len) = len.parse::<usize>() else {
                             abort_call_site!(
-                                "Kernel compilation generated invalid PTX: invalid type layout length"
+                                "Kernel compilation generated invalid PTX: invalid type layout \
+                                 length"
                             )
                         };
-                        let Ok(bytes) = bytes.split(", ").map(std::str::FromStr::from_str).collect::<Result<Vec<u8>, _>>() else {
+                        let Ok(bytes) = bytes
+                            .split(", ")
+                            .map(std::str::FromStr::from_str)
+                            .collect::<Result<Vec<u8>, _>>()
+                        else {
                             abort_call_site!(
-                                "Kernel compilation generated invalid PTX: invalid type layout byte"
+                                "Kernel compilation generated invalid PTX: invalid type layout \
+                                 byte"
                             )
                         };
 
@@ -183,9 +190,10 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
             }
         }
 
-        let Some(type_layout_end) = kernel_ptx[type_layout_middle..].find('}').map(|i| {
-            type_layout_middle + i + '}'.len_utf8()
-        }) else {
+        let Some(type_layout_end) = kernel_ptx[type_layout_middle..]
+            .find('}')
+            .map(|i| type_layout_middle + i + '}'.len_utf8())
+        else {
             abort_call_site!("Kernel compilation generated invalid PTX")
         };
 

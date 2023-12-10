@@ -19,15 +19,15 @@ use crate::{
 #[repr(C)]
 pub struct BoxedSliceCudaRepresentation<T>(*mut T, usize)
 where
-    T: SafeDeviceCopy + ~const TypeGraphLayout;
+    T: SafeDeviceCopy + TypeGraphLayout;
 
 // Safety: This repr(C) struct only contains a device-owned pointer
-unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> rustacuda_core::DeviceCopy
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
     for BoxedSliceCudaRepresentation<T>
 {
 }
 
-unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> RustToCuda for Box<[T]> {
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<[T]> {
     #[cfg(feature = "host")]
     #[doc(cfg(feature = "host"))]
     type CudaAllocation = CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
@@ -74,9 +74,7 @@ unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> RustToCuda for Box<[T]> 
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout> CudaAsRust
-    for BoxedSliceCudaRepresentation<T>
-{
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for BoxedSliceCudaRepresentation<T> {
     type RustRepresentation = Box<[T]>;
 
     #[cfg(any(not(feature = "host"), doc))]

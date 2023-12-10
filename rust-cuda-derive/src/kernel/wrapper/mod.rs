@@ -229,6 +229,7 @@ enum InputCudaType {
 
 struct InputPtxJit(bool);
 
+#[allow(clippy::struct_field_names)]
 struct DeclGenerics<'f> {
     generic_start_token: &'f Option<syn::token::Lt>,
     generic_trait_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
@@ -241,11 +242,13 @@ struct DeclGenerics<'f> {
 }
 
 struct ImplGenerics<'f> {
+    #[allow(clippy::struct_field_names)]
     impl_generics: syn::ImplGenerics<'f>,
     ty_generics: syn::TypeGenerics<'f>,
     where_clause: Option<&'f syn::WhereClause>,
 }
 
+#[allow(clippy::struct_field_names)]
 struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
     func_ident_raw: syn::Ident,
@@ -275,8 +278,6 @@ fn ident_from_pat(pat: &syn::Pat) -> Option<syn::Ident> {
         syn::Pat::Struct(syn::PatStruct { fields, .. }) => {
             ident_from_pat_iter(fields.iter().map(|field| &*field.pat))
         },
-        #[cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        #[cfg_attr(not(test), allow(non_exhaustive_omitted_patterns))]
         _ => Err(()).ok(),
     }
 }

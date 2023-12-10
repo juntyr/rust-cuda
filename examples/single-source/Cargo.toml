@@ -8,7 +8,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-const-type-layout = { git = "https://github.com/juntyr/const-type-layout", rev = "e163b36" }
+const-type-layout = { version = "0.2.0" }
 
 [target.'cfg(target_os = "cuda")'.dependencies]
 rust-cuda = { path = "../../", features = ["derive"] }

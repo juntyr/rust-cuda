@@ -37,7 +37,7 @@ impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> DerefMut
 }
 
 #[cfg(not(all(doc, feature = "host")))]
-unsafe impl<T: SafeDeviceCopy + ~const TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
     for CudaExchangeBufferDevice<T, M2D, M2H>
 {
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
