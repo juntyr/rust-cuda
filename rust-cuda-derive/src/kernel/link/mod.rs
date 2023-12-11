@@ -104,11 +104,10 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     let type_layout_start_pattern = format!("\n\t// .globl\t{kernel_layout_name}");
 
     if let Some(type_layout_start) = kernel_ptx.find(&type_layout_start_pattern) {
-        const BEFORE_PARAM_PATTERN: &str = "\n.global .align 1 .b8 ";
+        const BEFORE_PARAM_PATTERN: &str = ".global .align 1 .b8 ";
         const PARAM_LEN_PATTERN: &str = "[";
         const LEN_BYTES_PATTERN: &str = "] = {";
-        const AFTER_BYTES_PATTERN: &str = "};\n";
-        const BYTES_PARAM_PATTERN: &str = "};";
+        const AFTER_BYTES_PATTERN: &str = "};";
 
         let after_type_layout_start = type_layout_start + type_layout_start_pattern.len();
 
@@ -178,7 +177,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
                         });
 
                         next_type_layout =
-                            bytes_start + bytes_end_offset + BYTES_PARAM_PATTERN.len();
+                            bytes_start + bytes_end_offset + AFTER_BYTES_PATTERN.len();
                     } else {
                         next_type_layout = bytes_start;
                     }
@@ -224,30 +223,31 @@ fn compile_kernel(
         args.to_string().to_uppercase()
     );
 
-    if let Ok(kernel_path) =
-        build_kernel_with_specialisation(crate_path, &specialisation_var, specialisation)
-    {
-        let mut file = fs::File::open(&kernel_path)
-            .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
+    match build_kernel_with_specialisation(crate_path, &specialisation_var, specialisation) {
+        Ok(kernel_path) => {
+            let mut file = fs::File::open(&kernel_path)
+                .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
 
-        let mut kernel_ptx = String::new();
+            let mut kernel_ptx = String::new();
 
-        file.read_to_string(&mut kernel_ptx)
-            .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
+            file.read_to_string(&mut kernel_ptx)
+                .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
 
-        colored::control::set_override(true);
-        eprintln!(
-            "{} {} compiling a PTX crate.",
-            "[PTX]".bright_black().bold(),
-            "Finished".green().bold()
-        );
-        colored::control::unset_override();
+            colored::control::set_override(true);
+            eprintln!(
+                "{} {} compiling a PTX crate.",
+                "[PTX]".bright_black().bold(),
+                "Finished".green().bold()
+            );
+            colored::control::unset_override();
 
-        Some(kernel_ptx)
-    } else {
-        emit_ptx_build_error();
-
-        None
+            Some(kernel_ptx)
+        },
+        Err(err) => {
+            eprintln!("{err:?}");
+            emit_ptx_build_error();
+            None
+        },
     }
 }
 

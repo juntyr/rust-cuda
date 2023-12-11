@@ -2,7 +2,6 @@
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
 #![feature(proc_macro_span)]
-#![feature(non_exhaustive_omitted_patterns_lint)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]

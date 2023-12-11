@@ -1,5 +1,5 @@
 [target.nvptx64-nvidia-cuda]
-rustflags = ["-Clink-args=--arch sm_35"]
+rustflags = ["-Clink-args=--arch sm_35", "-Clink-arg=-O3", "-Clink-arg=--lto"]
 
 [unstable]
 features = ["all"]
