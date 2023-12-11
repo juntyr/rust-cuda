@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"rust_cuda":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.StructuralEq.html\" title=\"trait core::marker::StructuralEq\">StructuralEq</a> for <a class=\"struct\" href=\"rust_cuda/host/struct.LaunchConfig.html\" title=\"struct rust_cuda::host::LaunchConfig\">LaunchConfig</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
