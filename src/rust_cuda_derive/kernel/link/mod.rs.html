@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/kernel/link/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (0f44eb32f 2023-11-09)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/kernel/link/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e883e87179a81222.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (21cce21d8 2023-12-11)" data-channel="nightly" data-search-js="search-2da88d4fc6a75ee8.js" data-settings-js="settings-fe03fdc259827cd2.js" ><script src="../../../../static.files/storage-bc37acceda91d44a.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-77dede896d6ac08e.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -425,7 +425,7 @@
 
 <span class="kw">pub fn </span>check_kernel(tokens: TokenStream) -&gt; TokenStream {
     proc_macro_error::set_dummy(<span class="macro">quote! </span>{
-        <span class="string">&quot;ERROR in this PTX compilation&quot;
+        <span class="string">"ERROR in this PTX compilation"
     </span>});
 
     <span class="kw">let </span>CheckKernelConfig {
@@ -436,8 +436,8 @@
         <span class="prelude-val">Ok</span>(config) =&gt; config,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">abort_call_site!</span>(
-                <span class="string">&quot;check_kernel!(ARGS NAME PATH) expects ARGS identifier, NAME and PATH string \
-                 literals: {:?}&quot;</span>,
+                <span class="string">"check_kernel!(ARGS NAME PATH) expects ARGS identifier, NAME and PATH string \
+                 literals: {:?}"</span>,
                 err
             )
         },
@@ -447,14 +447,14 @@
 
     <span class="kw">match </span>kernel_ptx {
         <span class="prelude-val">Some</span>(kernel_ptx) =&gt; <span class="macro">quote!</span>(#kernel_ptx).into(),
-        <span class="prelude-val">None </span>=&gt; <span class="macro">quote!</span>(<span class="string">&quot;ERROR in this PTX compilation&quot;</span>).into(),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">quote!</span>(<span class="string">"ERROR in this PTX compilation"</span>).into(),
     }
 }
 
 <span class="attr">#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
 </span><span class="kw">pub fn </span>link_kernel(tokens: TokenStream) -&gt; TokenStream {
     proc_macro_error::set_dummy(<span class="macro">quote! </span>{
-        <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;ERROR in this PTX compilation&quot;</span>;
+        <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"ERROR in this PTX compilation"</span>;
     });
 
     <span class="kw">let </span>LinkKernelConfig {
@@ -467,8 +467,8 @@
         <span class="prelude-val">Ok</span>(config) =&gt; config,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">abort_call_site!</span>(
-                <span class="string">&quot;link_kernel!(KERNEL ARGS NAME PATH SPECIALISATION) expects KERNEL and ARGS \
-                 identifiers, NAME and PATH string literals, and SPECIALISATION tokens: {:?}&quot;</span>,
+                <span class="string">"link_kernel!(KERNEL ARGS NAME PATH SPECIALISATION) expects KERNEL and ARGS \
+                 identifiers, NAME and PATH string literals, and SPECIALISATION tokens: {:?}"</span>,
                 err
             )
         },
@@ -476,7 +476,7 @@
 
     <span class="kw">if </span>skip_kernel_compilation() {
         <span class="kw">return </span><span class="macro">quote! </span>{
-            <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;CLIPPY skips specialised PTX compilation&quot;</span>;
+            <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"CLIPPY skips specialised PTX compilation"</span>;
         }
         .into();
     }
@@ -488,38 +488,38 @@
         Specialisation::Link(<span class="kw-2">&amp;</span>specialisation),
     ) <span class="kw">else </span>{
         <span class="kw">return </span>(<span class="macro">quote! </span>{
-            <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;ERROR in this PTX compilation&quot;</span>;
+            <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"ERROR in this PTX compilation"</span>;
         })
         .into();
     };
 
     <span class="kw">let </span>kernel_layout_name = <span class="kw">if </span>specialisation.is_empty() {
-        <span class="macro">format!</span>(<span class="string">&quot;{kernel}_type_layout_kernel&quot;</span>)
+        <span class="macro">format!</span>(<span class="string">"{kernel}_type_layout_kernel"</span>)
     } <span class="kw">else </span>{
         <span class="macro">format!</span>(
-            <span class="string">&quot;{kernel}_type_layout_kernel_{:016x}&quot;</span>,
+            <span class="string">"{kernel}_type_layout_kernel_{:016x}"</span>,
             seahash::hash(specialisation.as_bytes())
         )
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>type_layouts = Vec::new();
 
-    <span class="kw">let </span>type_layout_start_pattern = <span class="macro">format!</span>(<span class="string">&quot;\n\t// .globl\t{kernel_layout_name}&quot;</span>);
+    <span class="kw">let </span>type_layout_start_pattern = <span class="macro">format!</span>(<span class="string">"\n\t// .globl\t{kernel_layout_name}"</span>);
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(type_layout_start) = kernel_ptx.find(<span class="kw-2">&amp;</span>type_layout_start_pattern) {
-        <span class="kw">const </span>BEFORE_PARAM_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;.global .align 1 .b8 &quot;</span>;
-        <span class="kw">const </span>PARAM_LEN_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;[&quot;</span>;
-        <span class="kw">const </span>LEN_BYTES_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;] = {&quot;</span>;
-        <span class="kw">const </span>AFTER_BYTES_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;};&quot;</span>;
+        <span class="kw">const </span>BEFORE_PARAM_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">".global .align 1 .b8 "</span>;
+        <span class="kw">const </span>PARAM_LEN_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">"["</span>;
+        <span class="kw">const </span>LEN_BYTES_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">"] = {"</span>;
+        <span class="kw">const </span>AFTER_BYTES_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">"};"</span>;
 
         <span class="kw">let </span>after_type_layout_start = type_layout_start + type_layout_start_pattern.len();
 
         <span class="kw">let </span><span class="prelude-val">Some</span>(type_layout_middle) = kernel_ptx[after_type_layout_start..]
-            .find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.visible .entry {kernel_layout_name}&quot;</span>))
+            .find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">".visible .entry {kernel_layout_name}"</span>))
             .map(|i| after_type_layout_start + i)
         <span class="kw">else </span>{
             <span class="macro">abort_call_site!</span>(
-                <span class="string">&quot;Kernel compilation generated invalid PTX: incomplete type layout information&quot;
+                <span class="string">"Kernel compilation generated invalid PTX: incomplete type layout information"
             </span>)
         };
 
@@ -547,29 +547,29 @@
                         <span class="kw">let </span>len = <span class="kw-2">&amp;</span>kernel_ptx[len_start..(len_start + bytes_start_offset)];
                         <span class="kw">let </span>bytes = <span class="kw-2">&amp;</span>kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
 
-                        <span class="kw">let </span>param = <span class="macro">quote::format_ident!</span>(<span class="string">&quot;{}&quot;</span>, param);
+                        <span class="kw">let </span>param = <span class="macro">quote::format_ident!</span>(<span class="string">"{}"</span>, param);
 
                         <span class="kw">let </span><span class="prelude-val">Ok</span>(len) = len.parse::&lt;usize&gt;() <span class="kw">else </span>{
                             <span class="macro">abort_call_site!</span>(
-                                <span class="string">&quot;Kernel compilation generated invalid PTX: invalid type layout \
-                                 length&quot;
+                                <span class="string">"Kernel compilation generated invalid PTX: invalid type layout \
+                                 length"
                             </span>)
                         };
                         <span class="kw">let </span><span class="prelude-val">Ok</span>(bytes) = bytes
-                            .split(<span class="string">&quot;, &quot;</span>)
+                            .split(<span class="string">", "</span>)
                             .map(std::str::FromStr::from_str)
                             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw">_</span>&gt;&gt;()
                         <span class="kw">else </span>{
                             <span class="macro">abort_call_site!</span>(
-                                <span class="string">&quot;Kernel compilation generated invalid PTX: invalid type layout \
-                                 byte&quot;
+                                <span class="string">"Kernel compilation generated invalid PTX: invalid type layout \
+                                 byte"
                             </span>)
                         };
 
                         <span class="kw">if </span>bytes.len() != len {
                             <span class="macro">abort_call_site!</span>(
-                                <span class="string">&quot;Kernel compilation generated invalid PTX: type layout length \
-                                 mismatch&quot;
+                                <span class="string">"Kernel compilation generated invalid PTX: type layout length \
+                                 mismatch"
                             </span>);
                         }
 
@@ -593,16 +593,16 @@
         }
 
         <span class="kw">let </span><span class="prelude-val">Some</span>(type_layout_end) = kernel_ptx[type_layout_middle..]
-            .find(<span class="string">&#39;}&#39;</span>)
-            .map(|i| type_layout_middle + i + <span class="string">&#39;}&#39;</span>.len_utf8())
+            .find(<span class="string">'}'</span>)
+            .map(|i| type_layout_middle + i + <span class="string">'}'</span>.len_utf8())
         <span class="kw">else </span>{
-            <span class="macro">abort_call_site!</span>(<span class="string">&quot;Kernel compilation generated invalid PTX&quot;</span>)
+            <span class="macro">abort_call_site!</span>(<span class="string">"Kernel compilation generated invalid PTX"</span>)
         };
 
-        kernel_ptx.replace_range(type_layout_start..type_layout_end, <span class="string">&quot;&quot;</span>);
+        kernel_ptx.replace_range(type_layout_start..type_layout_end, <span class="string">""</span>);
     }
 
-    (<span class="macro">quote! </span>{ <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = #kernel_ptx; #(#type_layouts)* }).into()
+    (<span class="macro">quote! </span>{ <span class="kw">const </span>PTX_STR: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = #kernel_ptx; #(#type_layouts)* }).into()
 }
 
 <span class="kw">fn </span>compile_kernel(
@@ -611,17 +611,17 @@
     crate_path: <span class="kw-2">&amp;</span>Path,
     specialisation: Specialisation,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Ok</span>(rust_flags) = proc_macro::tracked_env::var(<span class="string">&quot;RUSTFLAGS&quot;</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(rust_flags) = proc_macro::tracked_env::var(<span class="string">"RUSTFLAGS"</span>) {
         env::set_var(
-            <span class="string">&quot;RUSTFLAGS&quot;</span>,
+            <span class="string">"RUSTFLAGS"</span>,
             rust_flags
-                .replace(<span class="string">&quot;-Zinstrument-coverage&quot;</span>, <span class="string">&quot;&quot;</span>)
-                .replace(<span class="string">&quot;-Cinstrument-coverage&quot;</span>, <span class="string">&quot;&quot;</span>),
+                .replace(<span class="string">"-Zinstrument-coverage"</span>, <span class="string">""</span>)
+                .replace(<span class="string">"-Cinstrument-coverage"</span>, <span class="string">""</span>),
         );
     }
 
     <span class="kw">let </span>specialisation_var = <span class="macro">format!</span>(
-        <span class="string">&quot;RUST_CUDA_DERIVE_SPECIALISE_{}_{}&quot;</span>,
+        <span class="string">"RUST_CUDA_DERIVE_SPECIALISE_{}_{}"</span>,
         crate_name,
         args.to_string().to_uppercase()
     );
@@ -629,25 +629,25 @@
     <span class="kw">match </span>build_kernel_with_specialisation(crate_path, <span class="kw-2">&amp;</span>specialisation_var, specialisation) {
         <span class="prelude-val">Ok</span>(kernel_path) =&gt; {
             <span class="kw">let </span><span class="kw-2">mut </span>file = fs::File::open(<span class="kw-2">&amp;</span>kernel_path)
-                .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Failed to open kernel file at {:?}.&quot;</span>, <span class="kw-2">&amp;</span>kernel_path));
+                .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"Failed to open kernel file at {:?}."</span>, <span class="kw-2">&amp;</span>kernel_path));
 
             <span class="kw">let </span><span class="kw-2">mut </span>kernel_ptx = String::new();
 
             file.read_to_string(<span class="kw-2">&amp;mut </span>kernel_ptx)
-                .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;Failed to read kernel file at {:?}.&quot;</span>, <span class="kw-2">&amp;</span>kernel_path));
+                .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"Failed to read kernel file at {:?}."</span>, <span class="kw-2">&amp;</span>kernel_path));
 
             colored::control::set_override(<span class="bool-val">true</span>);
             <span class="macro">eprintln!</span>(
-                <span class="string">&quot;{} {} compiling a PTX crate.&quot;</span>,
-                <span class="string">&quot;[PTX]&quot;</span>.bright_black().bold(),
-                <span class="string">&quot;Finished&quot;</span>.green().bold()
+                <span class="string">"{} {} compiling a PTX crate."</span>,
+                <span class="string">"[PTX]"</span>.bright_black().bold(),
+                <span class="string">"Finished"</span>.green().bold()
             );
             colored::control::unset_override();
 
             <span class="prelude-val">Some</span>(kernel_ptx)
         },
         <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{err:?}&quot;</span>);
+            <span class="macro">eprintln!</span>(<span class="string">"{err:?}"</span>);
             emit_ptx_build_error();
             <span class="prelude-val">None
         </span>},
@@ -661,7 +661,7 @@
     specialisation: Specialisation,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
     <span class="kw">match </span>specialisation {
-        Specialisation::Check =&gt; env::set_var(env_var, <span class="string">&quot;chECK&quot;</span>),
+        Specialisation::Check =&gt; env::set_var(env_var, <span class="string">"chECK"</span>),
         Specialisation::Link(specialisation) =&gt; env::set_var(env_var, specialisation),
     };
 
@@ -680,9 +680,9 @@
         });
 
         <span class="kw">let </span>specialisation_prefix = <span class="kw">match </span>specialisation {
-            Specialisation::Check =&gt; String::from(<span class="string">&quot;chECK&quot;</span>),
+            Specialisation::Check =&gt; String::from(<span class="string">"chECK"</span>),
             Specialisation::Link(specialisation) =&gt; {
-                <span class="macro">format!</span>(<span class="string">&quot;{:016x}&quot;</span>, seahash::hash(specialisation.as_bytes()))
+                <span class="macro">format!</span>(<span class="string">"{:016x}"</span>, seahash::hash(specialisation.as_bytes()))
             },
         };
         builder = builder.set_prefix(specialisation_prefix.clone());
@@ -701,8 +701,8 @@
                     {
                         colored::control::set_override(<span class="bool-val">true</span>);
                         <span class="macro">eprintln!</span>(
-                            <span class="string">&quot;{} of {} ({})&quot;</span>,
-                            <span class="string">&quot;[PTX]&quot;</span>.bright_black().bold(),
+                            <span class="string">"{} of {} ({})"</span>,
+                            <span class="string">"[PTX]"</span>.bright_black().bold(),
                             crate_name.bold(),
                             specialisation_prefix.to_ascii_lowercase(),
                         );
@@ -711,13 +711,13 @@
 
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(rendered) = <span class="kw-2">&amp;mut </span>message.message.rendered {
                         colored::control::set_override(<span class="bool-val">true</span>);
-                        <span class="kw">let </span>prefix = <span class="string">&quot;  | &quot;</span>.bright_black().bold().to_string();
+                        <span class="kw">let </span>prefix = <span class="string">"  | "</span>.bright_black().bold().to_string();
                         colored::control::unset_override();
 
-                        <span class="kw">let </span>glue = String::from(<span class="string">&#39;\n&#39;</span>) + <span class="kw-2">&amp;</span>prefix;
+                        <span class="kw">let </span>glue = String::from(<span class="string">'\n'</span>) + <span class="kw-2">&amp;</span>prefix;
 
                         <span class="kw">let </span><span class="kw-2">mut </span>lines = rendered
-                            .split(<span class="string">&#39;\n&#39;</span>)
+                            .split(<span class="string">'\n'</span>)
                             .rev()
                             .skip_while(|l| l.trim().is_empty())
                             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -728,7 +728,7 @@
                         std::mem::swap(rendered, <span class="kw-2">&amp;mut </span>prefixed);
                     }
 
-                    <span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>, serde_json::to_string(<span class="kw-2">&amp;</span>message.message).unwrap());
+                    <span class="macro">eprintln!</span>(<span class="string">"{}"</span>, serde_json::to_string(<span class="kw-2">&amp;</span>message.message).unwrap());
                 }
             },
             |stderr_line| {
@@ -742,8 +742,8 @@
                 {
                     colored::control::set_override(<span class="bool-val">true</span>);
                     <span class="macro">eprintln!</span>(
-                        <span class="string">&quot;{} of {} ({})&quot;</span>,
-                        <span class="string">&quot;[PTX]&quot;</span>.bright_black().bold(),
+                        <span class="string">"{} of {} ({})"</span>,
+                        <span class="string">"[PTX]"</span>.bright_black().bold(),
                         crate_name.bold(),
                         specialisation_prefix.to_ascii_lowercase(),
                     );
@@ -752,9 +752,9 @@
 
                 colored::control::set_override(<span class="bool-val">true</span>);
                 <span class="macro">eprintln!</span>(
-                    <span class="string">&quot;  {} {}&quot;</span>,
-                    <span class="string">&quot;|&quot;</span>.bright_black().bold(),
-                    stderr_line.replace(<span class="string">&quot;   &quot;</span>, <span class="string">&quot;&quot;</span>)
+                    <span class="string">"  {} {}"</span>,
+                    <span class="string">"|"</span>.bright_black().bold(),
+                    stderr_line.replace(<span class="string">"   "</span>, <span class="string">""</span>)
                 );
                 colored::control::unset_override();
             },
@@ -764,12 +764,12 @@
 
                 <span class="kw">let </span><span class="kw-2">mut </span>specialised_ptx_path = ptx_path.clone();
 
-                specialised_ptx_path.set_extension(<span class="macro">format!</span>(<span class="string">&quot;{specialisation_prefix}.ptx&quot;</span>));
+                specialised_ptx_path.set_extension(<span class="macro">format!</span>(<span class="string">"{specialisation_prefix}.ptx"</span>));
 
                 fs::copy(<span class="kw-2">&amp;</span>ptx_path, <span class="kw-2">&amp;</span>specialised_ptx_path).map_err(|err| {
                     Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                        <span class="string">&quot;Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: \
-                         {err}&quot;
+                        <span class="string">"Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: \
+                         {err}"
                     </span>)]))
                 })<span class="question-mark">?</span>;
 
@@ -777,10 +777,10 @@
                     fs::OpenOptions::new()
                         .append(<span class="bool-val">true</span>)
                         .open(<span class="kw-2">&amp;</span>specialised_ptx_path)
-                        .and_then(|<span class="kw-2">mut </span>file| <span class="macro">writeln!</span>(file, <span class="string">&quot;\n// {specialisation}&quot;</span>))
+                        .and_then(|<span class="kw-2">mut </span>file| <span class="macro">writeln!</span>(file, <span class="string">"\n// {specialisation}"</span>))
                         .map_err(|err| {
                             Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                                <span class="string">&quot;Failed to write specialisation to {specialised_ptx_path:?}: {err}&quot;
+                                <span class="string">"Failed to write specialisation to {specialised_ptx_path:?}: {err}"
                             </span>)]))
                         })<span class="question-mark">?</span>;
                 }
@@ -788,7 +788,7 @@
                 <span class="prelude-val">Ok</span>(specialised_ptx_path)
             },
             BuildStatus::NotNeeded =&gt; <span class="prelude-val">Err</span>(Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                <span class="string">&quot;Kernel build for specialisation {:?} was not needed.&quot;</span>,
+                <span class="string">"Kernel build for specialisation {:?} was not needed."</span>,
                 <span class="kw-2">&amp;</span>specialisation
             )]))),
         }
@@ -800,8 +800,8 @@
 }
 
 <span class="attr">#[derive(Copy, Clone, Debug)]
-</span><span class="kw">enum </span>Specialisation&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">enum </span>Specialisation&lt;<span class="lifetime">'a</span>&gt; {
     Check,
-    Link(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str),
+    Link(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str),
 }
 </code></pre></div></section></main></body></html>

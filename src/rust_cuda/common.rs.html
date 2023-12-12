@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/common.rs`."><title>common.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rust_cuda" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (0f44eb32f 2023-11-09)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/common.rs`."><title>common.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e883e87179a81222.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rust_cuda" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (21cce21d8 2023-12-11)" data-channel="nightly" data-search-js="search-2da88d4fc6a75ee8.js" data-settings-js="settings-fe03fdc259827cd2.js" ><script src="../../static.files/storage-bc37acceda91d44a.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-77dede896d6ac08e.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -184,46 +184,46 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
-</pre></div><pre class="rust"><code><span class="attr">#[cfg(any(not(feature = <span class="string">&quot;host&quot;</span>), doc))]
+</pre></div><pre class="rust"><code><span class="attr">#[cfg(any(not(feature = <span class="string">"host"</span>), doc))]
 </span><span class="kw">use </span>core::convert::{AsMut, AsRef};
 <span class="kw">use </span>core::marker::PhantomData;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">use </span>alloc::fmt;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;host&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"host"</span>))]
 </span><span class="kw">use </span>core::ops::{Deref, DerefMut};
-<span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">use </span>core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
 
 <span class="kw">use </span>const_type_layout::TypeGraphLayout;
 <span class="kw">use </span>rustacuda_core::DeviceCopy;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;derive&quot;</span>)]
-#[doc(cfg(feature = <span class="string">&quot;derive&quot;</span>))]
+<span class="attr">#[cfg(feature = <span class="string">"derive"</span>)]
+#[doc(cfg(feature = <span class="string">"derive"</span>))]
 </span><span class="kw">pub use </span>rust_cuda_derive::LendRustToCuda;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;derive&quot;</span>)]
-#[doc(cfg(feature = <span class="string">&quot;derive&quot;</span>))]
+<span class="attr">#[cfg(feature = <span class="string">"derive"</span>)]
+#[doc(cfg(feature = <span class="string">"derive"</span>))]
 </span><span class="kw">pub use </span>rust_cuda_derive::kernel;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">use crate</span>::{safety::SafeDeviceCopy, utils::device_copy::SafeDeviceCopyWrapper};
 
 <span class="attr">#[repr(transparent)]
-#[cfg_attr(not(feature = <span class="string">&quot;host&quot;</span>), derive(Debug))]
+#[cfg_attr(not(feature = <span class="string">"host"</span>), derive(Debug))]
 #[derive(TypeLayout)]
 </span><span class="kw">pub struct </span>DeviceAccessible&lt;T: <span class="question-mark">?</span>Sized + DeviceCopy&gt;(T);
 
 <span class="kw">unsafe impl</span>&lt;T: <span class="question-mark">?</span>Sized + DeviceCopy&gt; DeviceCopy <span class="kw">for </span>DeviceAccessible&lt;T&gt; {}
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">impl</span>&lt;T: CudaAsRust&gt; From&lt;T&gt; <span class="kw">for </span>DeviceAccessible&lt;T&gt; {
     <span class="kw">fn </span>from(value: T) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(value)
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">impl</span>&lt;T: SafeDeviceCopy + TypeGraphLayout&gt; From&lt;<span class="kw-2">&amp;</span>T&gt; <span class="kw">for </span>DeviceAccessible&lt;SafeDeviceCopyWrapper&lt;T&gt;&gt; {
     <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>T) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>value = <span class="kw">unsafe </span>{
@@ -236,7 +236,7 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized + DeviceCopy + fmt::Debug&gt; fmt::Debug <span class="kw">for </span>DeviceAccessible&lt;T&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, fmt: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
         fmt.debug_struct(<span class="macro">stringify!</span>(DeviceAccessible))
@@ -244,7 +244,7 @@
     }
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;host&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"host"</span>))]
 </span><span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized + DeviceCopy&gt; Deref <span class="kw">for </span>DeviceAccessible&lt;T&gt; {
     <span class="kw">type </span>Target = T;
 
@@ -253,7 +253,7 @@
     </span>}
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;host&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"host"</span>))]
 </span><span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized + DeviceCopy&gt; DerefMut <span class="kw">for </span>DeviceAccessible&lt;T&gt; {
     <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0
@@ -265,13 +265,13 @@
 /// This is an internal trait and should ONLY be derived automatically using
 /// `#[derive(LendRustToCuda)]`
 </span><span class="kw">pub unsafe trait </span>RustToCuda {
-    <span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
-    #[doc(cfg(feature = <span class="string">&quot;host&quot;</span>))]
+    <span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
+    #[doc(cfg(feature = <span class="string">"host"</span>))]
     </span><span class="kw">type </span>CudaAllocation: <span class="kw">crate</span>::host::CudaAlloc;
     <span class="kw">type </span>CudaRepresentation: CudaAsRust&lt;RustRepresentation = <span class="self">Self</span>&gt; + TypeGraphLayout;
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
-    #[doc(cfg(feature = <span class="string">&quot;host&quot;</span>))]
+    <span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
+    #[doc(cfg(feature = <span class="string">"host"</span>))]
     </span><span class="doccomment">/// # Errors
     ///
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
@@ -290,8 +290,8 @@
         <span class="kw">crate</span>::host::CombinedCudaAlloc&lt;<span class="self">Self</span>::CudaAllocation, A&gt;,
     )&gt;;
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;host&quot;</span>)]
-    #[doc(cfg(feature = <span class="string">&quot;host&quot;</span>))]
+    <span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
+    #[doc(cfg(feature = <span class="string">"host"</span>))]
     </span><span class="doccomment">/// # Errors
     ///
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
@@ -312,8 +312,8 @@
 </span><span class="kw">pub unsafe trait </span>CudaAsRust: DeviceCopy + TypeGraphLayout {
     <span class="kw">type </span>RustRepresentation: RustToCuda&lt;CudaRepresentation = <span class="self">Self</span>&gt;;
 
-    <span class="attr">#[cfg(any(not(feature = <span class="string">&quot;host&quot;</span>), doc))]
-    #[doc(cfg(not(feature = <span class="string">&quot;host&quot;</span>)))]
+    <span class="attr">#[cfg(any(not(feature = <span class="string">"host"</span>), doc))]
+    #[doc(cfg(not(feature = <span class="string">"host"</span>)))]
     </span><span class="doccomment">/// # Safety
     ///
     /// This is an internal function and should NEVER be called manually
@@ -329,17 +329,17 @@
 
 <span class="attr">#[repr(transparent)]
 #[derive(Clone, Copy, TypeLayout)]
-</span><span class="kw">pub struct </span>DeviceConstRef&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy + <span class="lifetime">&#39;r</span>&gt; {
-    <span class="attr">#[cfg_attr(feature = <span class="string">&quot;host&quot;</span>, allow(dead_code))]
+</span><span class="kw">pub struct </span>DeviceConstRef&lt;<span class="lifetime">'r</span>, T: DeviceCopy + <span class="lifetime">'r</span>&gt; {
+    <span class="attr">#[cfg_attr(feature = <span class="string">"host"</span>, allow(dead_code))]
     </span><span class="kw">pub</span>(<span class="kw">super</span>) pointer: <span class="kw-2">*const </span>T,
-    <span class="kw">pub</span>(<span class="kw">super</span>) reference: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>T&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) reference: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'r </span>T&gt;,
 }
 
-<span class="kw">unsafe impl</span>&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy&gt; DeviceCopy <span class="kw">for </span>DeviceConstRef&lt;<span class="lifetime">&#39;r</span>, T&gt; {}
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'r</span>, T: DeviceCopy&gt; DeviceCopy <span class="kw">for </span>DeviceConstRef&lt;<span class="lifetime">'r</span>, T&gt; {}
 
-<span class="attr">#[cfg(any(not(feature = <span class="string">&quot;host&quot;</span>), doc))]
-#[doc(cfg(not(feature = <span class="string">&quot;host&quot;</span>)))]
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy&gt; AsRef&lt;T&gt; <span class="kw">for </span>DeviceConstRef&lt;<span class="lifetime">&#39;r</span>, T&gt; {
+<span class="attr">#[cfg(any(not(feature = <span class="string">"host"</span>), doc))]
+#[doc(cfg(not(feature = <span class="string">"host"</span>)))]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'r</span>, T: DeviceCopy&gt; AsRef&lt;T&gt; <span class="kw">for </span>DeviceConstRef&lt;<span class="lifetime">'r</span>, T&gt; {
     <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
         <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.pointer }
     }
@@ -347,25 +347,25 @@
 
 <span class="attr">#[repr(transparent)]
 #[derive(TypeLayout)]
-</span><span class="kw">pub struct </span>DeviceMutRef&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy + <span class="lifetime">&#39;r</span>&gt; {
-    <span class="attr">#[cfg_attr(feature = <span class="string">&quot;host&quot;</span>, allow(dead_code))]
+</span><span class="kw">pub struct </span>DeviceMutRef&lt;<span class="lifetime">'r</span>, T: DeviceCopy + <span class="lifetime">'r</span>&gt; {
+    <span class="attr">#[cfg_attr(feature = <span class="string">"host"</span>, allow(dead_code))]
     </span><span class="kw">pub</span>(<span class="kw">super</span>) pointer: <span class="kw-2">*mut </span>T,
-    <span class="kw">pub</span>(<span class="kw">super</span>) reference: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span>T&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) reference: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'r </span><span class="kw-2">mut </span>T&gt;,
 }
 
-<span class="kw">unsafe impl</span>&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy&gt; DeviceCopy <span class="kw">for </span>DeviceMutRef&lt;<span class="lifetime">&#39;r</span>, T&gt; {}
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'r</span>, T: DeviceCopy&gt; DeviceCopy <span class="kw">for </span>DeviceMutRef&lt;<span class="lifetime">'r</span>, T&gt; {}
 
-<span class="attr">#[cfg(any(not(feature = <span class="string">&quot;host&quot;</span>), doc))]
-#[doc(cfg(not(feature = <span class="string">&quot;host&quot;</span>)))]
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy&gt; AsRef&lt;T&gt; <span class="kw">for </span>DeviceMutRef&lt;<span class="lifetime">&#39;r</span>, T&gt; {
+<span class="attr">#[cfg(any(not(feature = <span class="string">"host"</span>), doc))]
+#[doc(cfg(not(feature = <span class="string">"host"</span>)))]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'r</span>, T: DeviceCopy&gt; AsRef&lt;T&gt; <span class="kw">for </span>DeviceMutRef&lt;<span class="lifetime">'r</span>, T&gt; {
     <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
         <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.pointer }
     }
 }
 
-<span class="attr">#[cfg(any(not(feature = <span class="string">&quot;host&quot;</span>), doc))]
-#[doc(cfg(not(feature = <span class="string">&quot;host&quot;</span>)))]
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, T: DeviceCopy&gt; AsMut&lt;T&gt; <span class="kw">for </span>DeviceMutRef&lt;<span class="lifetime">&#39;r</span>, T&gt; {
+<span class="attr">#[cfg(any(not(feature = <span class="string">"host"</span>), doc))]
+#[doc(cfg(not(feature = <span class="string">"host"</span>)))]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'r</span>, T: DeviceCopy&gt; AsMut&lt;T&gt; <span class="kw">for </span>DeviceMutRef&lt;<span class="lifetime">'r</span>, T&gt; {
     <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
         <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span><span class="self">self</span>.pointer }
     }
