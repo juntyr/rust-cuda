@@ -383,11 +383,9 @@ fn check_kernel_ptx(
                 seahash::hash(specialisation.as_bytes())
             ),
         };
+        let kernel_name = CString::new(kernel_name).unwrap();
 
-        let mut options = vec![
-            CString::new("--entry").unwrap(),
-            CString::new(kernel_name).unwrap(),
-        ];
+        let mut options = vec![c"--entry", kernel_name.as_c_str()];
 
         if ptx_lint_levels
             .values()
@@ -399,27 +397,27 @@ fn check_kernel_ptx(
                 .get(&PtxLint::Verbose)
                 .map_or(false, |level| *level > LintLevel::Warn)
             {
-                options.push(CString::new("--verbose").unwrap());
+                options.push(c"--verbose");
             }
             if ptx_lint_levels
                 .get(&PtxLint::DoublePrecisionUse)
                 .map_or(false, |level| *level > LintLevel::Warn)
             {
-                options.push(CString::new("--warn-on-double-precision-use").unwrap());
+                options.push(c"--warn-on-double-precision-use");
             }
             if ptx_lint_levels
                 .get(&PtxLint::LocalMemoryUsage)
                 .map_or(false, |level| *level > LintLevel::Warn)
             {
-                options.push(CString::new("--warn-on-local-memory-usage").unwrap());
+                options.push(c"--warn-on-local-memory-usage");
             }
             if ptx_lint_levels
                 .get(&PtxLint::RegisterSpills)
                 .map_or(false, |level| *level > LintLevel::Warn)
             {
-                options.push(CString::new("--warn-on-spills").unwrap());
+                options.push(c"--warn-on-spills");
             }
-            options.push(CString::new("--warning-as-error").unwrap());
+            options.push(c"--warning-as-error");
 
             let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
@@ -436,25 +434,25 @@ fn check_kernel_ptx(
             .get(&PtxLint::Verbose)
             .map_or(false, |level| *level > LintLevel::Allow)
         {
-            options.push(CString::new("--verbose").unwrap());
+            options.push(c"--verbose");
         }
         if ptx_lint_levels
             .get(&PtxLint::DoublePrecisionUse)
             .map_or(false, |level| *level > LintLevel::Allow)
         {
-            options.push(CString::new("--warn-on-double-precision-use").unwrap());
+            options.push(c"--warn-on-double-precision-use");
         }
         if ptx_lint_levels
             .get(&PtxLint::LocalMemoryUsage)
             .map_or(false, |level| *level > LintLevel::Allow)
         {
-            options.push(CString::new("--warn-on-local-memory-usage").unwrap());
+            options.push(c"--warn-on-local-memory-usage");
         }
         if ptx_lint_levels
             .get(&PtxLint::RegisterSpills)
             .map_or(false, |level| *level > LintLevel::Allow)
         {
-            options.push(CString::new("--warn-on-spills").unwrap());
+            options.push(c"--warn-on-spills");
         }
 
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
