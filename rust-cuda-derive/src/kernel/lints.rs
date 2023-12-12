@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt};
 
 use syn::spanned::Spanned;
 
+#[allow(clippy::too_many_lines)]
 pub fn parse_ptx_lint_level(
     path: &syn::Path,
     nested: &syn::punctuated::Punctuated<syn::NestedMeta, syn::token::Comma>,
@@ -46,10 +47,15 @@ pub fn parse_ptx_lint_level(
             continue;
         }
 
-        let Some(syn::PathSegment { ident: namespace, arguments: syn::PathArguments::None }) = path.segments.first() else {
+        let Some(syn::PathSegment {
+            ident: namespace,
+            arguments: syn::PathArguments::None,
+        }) = path.segments.first()
+        else {
             emit_error!(
                 meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form `ptx::lint`.",
+                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form \
+                 `ptx::lint`.",
                 level,
             );
             continue;
@@ -65,10 +71,15 @@ pub fn parse_ptx_lint_level(
             continue;
         }
 
-        let Some(syn::PathSegment { ident: lint, arguments: syn::PathArguments::None }) = path.segments.last() else {
+        let Some(syn::PathSegment {
+            ident: lint,
+            arguments: syn::PathArguments::None,
+        }) = path.segments.last()
+        else {
             emit_error!(
                 meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form `ptx::lint`.",
+                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form \
+                 `ptx::lint`.",
                 level,
             );
             continue;

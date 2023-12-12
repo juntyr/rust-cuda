@@ -54,7 +54,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Specialisation::Check);
 
     let Some(kernel_ptx) = kernel_ptx else {
-        return quote!(::core::result::Result::Err(())).into()
+        return quote!(::core::result::Result::Err(())).into();
     };
 
     check_kernel_ptx_and_report(
@@ -126,7 +126,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 }
 
 fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenStream> {
-    const BEFORE_PARAM_PATTERN: &str = "global .align 1 .b8 ";
+    const BEFORE_PARAM_PATTERN: &str = ".visible .global .align 1 .b8 ";
     const PARAM_LEN_PATTERN: &str = "[";
     const LEN_BYTES_PATTERN: &str = "] = {";
     const AFTER_BYTES_PATTERN: &str = "};";
@@ -137,23 +137,17 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
         let param_start = type_layout_start + BEFORE_PARAM_PATTERN.len();
 
         let Some(len_start_offset) = kernel_ptx[param_start..].find(PARAM_LEN_PATTERN) else {
-            abort_call_site!(
-                "Kernel compilation generated invalid PTX: missing type layout data"
-            )
+            abort_call_site!("Kernel compilation generated invalid PTX: missing type layout data")
         };
         let len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
 
         let Some(bytes_start_offset) = kernel_ptx[len_start..].find(LEN_BYTES_PATTERN) else {
-            abort_call_site!(
-                "Kernel compilation generated invalid PTX: missing type layout length"
-            )
+            abort_call_site!("Kernel compilation generated invalid PTX: missing type layout length")
         };
         let bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
 
         let Some(bytes_end_offset) = kernel_ptx[bytes_start..].find(AFTER_BYTES_PATTERN) else {
-            abort_call_site!(
-                "Kernel compilation generated invalid PTX: invalid type layout data"
-            )
+            abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout data")
         };
         let param = &kernel_ptx[param_start..(param_start + len_start_offset)];
         let len = &kernel_ptx[len_start..(len_start + bytes_start_offset)];
@@ -162,14 +156,14 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
         let param = quote::format_ident!("{}", param);
 
         let Ok(len) = len.parse::<usize>() else {
-            abort_call_site!(
-                "Kernel compilation generated invalid PTX: invalid type layout length"
-            )
+            abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout length")
         };
-        let Ok(bytes) = bytes.split(", ").map(std::str::FromStr::from_str).collect::<Result<Vec<u8>, _>>() else {
-            abort_call_site!(
-                "Kernel compilation generated invalid PTX: invalid type layout byte"
-            )
+        let Ok(bytes) = bytes
+            .split(", ")
+            .map(std::str::FromStr::from_str)
+            .collect::<Result<Vec<u8>, _>>()
+        else {
+            abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout byte")
         };
 
         if bytes.len() != len {
@@ -198,9 +192,9 @@ fn remove_kernel_type_use_from_ptx(kernel_ptx: &mut String) {
             .rfind('\n')
             .unwrap_or(kernel_type_layout_start);
 
-        let Some(kernel_type_layout_end_offset) = kernel_ptx[
-            kernel_type_layout_start..
-        ].find(KERNEL_TYPE_USE_END_CANARY) else {
+        let Some(kernel_type_layout_end_offset) =
+            kernel_ptx[kernel_type_layout_start..].find(KERNEL_TYPE_USE_END_CANARY)
+        else {
             abort_call_site!(
                 "Kernel compilation generated invalid PTX: incomplete type layout use section"
             );

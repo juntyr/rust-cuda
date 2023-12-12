@@ -160,8 +160,8 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
-    RustToCudaAsync for CudaExchangeBufferHost<T, M2D, M2H>
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCudaAsync
+    for CudaExchangeBufferHost<T, M2D, M2H>
 {
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(

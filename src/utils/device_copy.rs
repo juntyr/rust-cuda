@@ -102,9 +102,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWr
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync
-    for SafeDeviceCopyWrapper<T>
-{
+unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync for SafeDeviceCopyWrapper<T> {
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(
