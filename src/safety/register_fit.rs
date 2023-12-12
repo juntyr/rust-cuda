@@ -24,9 +24,13 @@ mod private {
                 Self::TypeFitsInto64Bits
             } else {
                 #[cfg(not(doc))]
-                { Self::TypeExeceeds64Bits(core::any::type_name::<T>()) }
+                {
+                    Self::TypeExeceeds64Bits(core::any::type_name::<T>())
+                }
                 #[cfg(doc)]
-                { Self::TypeExeceeds64Bits }
+                {
+                    Self::TypeExeceeds64Bits
+                }
             }
         }
     }

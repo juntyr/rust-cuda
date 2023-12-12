@@ -7,9 +7,8 @@ on:
   pull_request:
     branches:
       - '*'
-  # Stop scheduled CI until const traits are back
-  # schedule:
-  #   - cron: '0 0 * * MON'
+  schedule:
+    - cron: '0 0 * * MON'
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,13 +16,30 @@ env:
 jobs:
   check:
     name: Check
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [nightly]
+
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
-
+      
       - name: Install the Rust toolchain
-        run: cargo install ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force --locked
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          target: nvptx64-nvidia-cuda
+          override: true
+
+      - name: Install the rust-ptx-linker
+        run: |
+          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
+          rm llvm.sh
+          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
 
       - name: Check without features on CPU
         run: |
@@ -74,11 +90,13 @@ jobs:
 
   test:
     name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the Repository
-        uses: actions/checkout@v2
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [nightly]
 
+    steps:
       - name: Install CUDA
         run: |
           wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
@@ -89,8 +107,23 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install cuda -y --no-install-recommends
 
+      - name: Checkout the Repository
+        uses: actions/checkout@v2
+      
       - name: Install the Rust toolchain
-        run: cargo install ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force --locked
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          target: nvptx64-nvidia-cuda
+          override: true
+
+      - name: Install the rust-ptx-linker
+        run: |
+          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
+          rm llvm.sh
+          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
       
       - name: Run the test-suite
         run: |
@@ -99,22 +132,49 @@ jobs:
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
+
+      - name: Install the Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: rustfmt
+          override: true
 
       - name: Check the code formatting
         run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [nightly]
+
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
-
+      
       - name: Install the Rust toolchain
-        run: cargo install ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force --locked
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          components: clippy
+          target: nvptx64-nvidia-cuda
+          override: true
+
+      - name: Install the rust-ptx-linker
+        run: |
+          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
+          rm llvm.sh
+          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
 
       - name: Check the code style without features on CPU
         run: |

@@ -16,9 +16,13 @@ jobs:
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
-
+      
       - name: Install the Rust toolchain
-        run: cargo install ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force --locked
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
 
       - name: Build the Documentation
         run: |
@@ -38,4 +42,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: ./target/doc
-          keep_files: true

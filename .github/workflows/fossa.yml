@@ -17,6 +17,13 @@ jobs:
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
+      
+      - name: Install the Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
 
       - name: Generate the Cargo.lock file
         run: cargo update
@@ -24,5 +31,5 @@ jobs:
       - name: Run FOSSA scan and upload build data
         uses: fossa-contrib/fossa-action@v1
         with:
-          fossa-api-key: c244cc76fd66ed0dafcb211e621b49dd
+          fossa-api-key: ${{ secrets.FOSSA_TOKEN }}
           skip-test: false

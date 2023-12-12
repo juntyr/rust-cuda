@@ -13,9 +13,13 @@ jobs:
     steps:
       - name: Checkout the Repository
         uses: actions/checkout@v2
-
+      
       - name: Install the Rust toolchain
-        run: cargo
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
       
       - name: Perform the security audit
         uses: actions-rs/audit-check@v1

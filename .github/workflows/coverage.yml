@@ -10,9 +10,6 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the Repository
-        uses: actions/checkout@v2
-
       - name: Install CUDA
         run: |
           wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
@@ -22,21 +19,45 @@ jobs:
           sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
           sudo apt-get update -q
           sudo apt-get install cuda -y --no-install-recommends
+      
+      - name: Download grcov
+        run: |
+          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.18/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
+          chmod +x ./grcov
+
+      - name: Checkout the Repository
+        uses: actions/checkout@v2
 
       - name: Install the Rust toolchain
-        run: |
-          cargo install ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force --locked
-          cargo install grcov --force --locked
-          rustup component add llvm-tools-preview
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: llvm-tools-preview
+          target: nvptx64-nvidia-cuda
+          override: true
 
-      - name: Generate the code coverage
+      - name: Install the rust-ptx-linker
         run: |
-          RUSTFLAGS="-Cinstrument-coverage" \
-          LLVM_PROFILE_FILE="codecov-%p-%m.profraw" \
-          cargo test --workspace
-
-          grcov . -s . --binary-path ./target/debug/ \
-            -t cobertura -o cobertura.xml --branch \
+          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
+          rm llvm.sh
+          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
+      
+      - name: Generate the coverage data
+        run: |
+          cargo clean
+          cargo test --workspace --all-targets
+        env:
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: -Cinstrument-coverage
+          RUSTDOCFLAGS: -Cinstrument-coverage
+          LLVM_PROFILE_FILE: coverage/coverage-%p-%m.profraw
+      
+      - name: Generate the coverage reports
+        run: |
+          ./grcov . -s . --binary-path ./target/debug/deps \
+            -t lcov -o coverage.lcov --branch \
             --keep-only "src/*" \
             --keep-only "rust-cuda-ptx-jit/*" \
             --keep-only "rust-cuda-derive/*" \
@@ -49,4 +70,5 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.lcov
           fail_ci_if_error: true
