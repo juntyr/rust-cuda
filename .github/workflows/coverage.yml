@@ -19,11 +19,6 @@ jobs:
           sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
           sudo apt-get update -q
           sudo apt-get install cuda -y --no-install-recommends
-      
-      - name: Download grcov
-        run: |
-          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.18/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
-          chmod +x ./grcov
 
       - name: Checkout the Repository
         uses: actions/checkout@v2
@@ -54,6 +49,11 @@ jobs:
           RUSTDOCFLAGS: -Cinstrument-coverage
           LLVM_PROFILE_FILE: coverage/coverage-%p-%m.profraw
       
+      - name: Download grcov
+        run: |
+          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.18/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
+          chmod +x ./grcov
+
       - name: Generate the coverage reports
         run: |
           ./grcov . -s . --binary-path ./target/debug/deps \
