@@ -180,7 +180,7 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: Sized + SafeDeviceCopy,
+        Self: Sized,
         <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc;
 }
@@ -238,7 +238,7 @@ impl<T: RustToCuda> LendToCuda for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: Sized + SafeDeviceCopy,
+        Self: Sized,
         <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
         <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
     {

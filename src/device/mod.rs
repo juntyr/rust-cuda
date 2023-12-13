@@ -51,7 +51,7 @@ pub trait BorrowFromRust: RustToCuda {
         inner: F,
     ) -> O
     where
-        Self: Sized + SafeDeviceCopy,
+        Self: Sized,
         <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy;
 }
 
@@ -86,7 +86,7 @@ impl<T: RustToCuda> BorrowFromRust for T {
         inner: F,
     ) -> O
     where
-        Self: Sized + SafeDeviceCopy,
+        Self: Sized,
         <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
     {
         inner(CudaAsRust::as_rust(cuda_repr_mut.as_mut()))
