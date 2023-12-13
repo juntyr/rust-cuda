@@ -100,10 +100,10 @@ pub(super) fn quote_kernel_func_async(
                     fn assert_impl_devicecopy<T: #crate_path::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                     #[allow(dead_code)]
-                    fn assert_impl_no_aliasing<T: #crate_path::safety::NoAliasing>() {}
+                    fn assert_impl_no_safe_aliasing<T: #crate_path::safety::NoSafeAliasing>() {}
 
                     #(assert_impl_devicecopy(&#func_params);)*
-                    #(assert_impl_no_aliasing::<#cpu_func_unboxed_types>();)*
+                    #(assert_impl_no_safe_aliasing::<#cpu_func_unboxed_types>();)*
                 }
 
                 let #crate_path::host::LaunchConfig {

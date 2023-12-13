@@ -1,20 +1,12 @@
-#[cfg(not(target_os = "cuda"))]
-use core::marker::PhantomData;
-
 use const_type_layout::TypeGraphLayout;
 
-#[cfg(not(target_os = "cuda"))]
 #[allow(clippy::module_name_repetitions)]
 #[repr(transparent)]
 pub struct ThreadBlockSharedSlice<T: 'static + TypeGraphLayout> {
-    len: usize,
-    marker: PhantomData<T>,
-}
-
-#[cfg(target_os = "cuda")]
-#[allow(clippy::module_name_repetitions)]
-#[repr(transparent)]
-pub struct ThreadBlockSharedSlice<T: 'static + TypeGraphLayout> {
+    #[cfg(not(target_os = "cuda"))]
+    // dangling marker s.t. Self is not StackOnly
+    dangling: *mut [T],
+    #[cfg(target_os = "cuda")]
     shared: *mut [T],
 }
 
@@ -24,8 +16,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     #[must_use]
     pub fn new_uninit_with_len(len: usize) -> Self {
         Self {
-            len,
-            marker: PhantomData::<T>,
+            dangling: Self::dangling_slice_with_len(len),
         }
     }
 
@@ -33,7 +24,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     #[doc(cfg(not(target_os = "cuda")))]
     #[must_use]
     pub fn with_len(mut self, len: usize) -> Self {
-        self.len = len;
+        self.dangling = Self::dangling_slice_with_len(len);
         self
     }
 
@@ -41,20 +32,27 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     #[doc(cfg(not(target_os = "cuda")))]
     #[must_use]
     pub fn with_len_mut(&mut self, len: usize) -> &mut Self {
-        self.len = len;
+        self.dangling = Self::dangling_slice_with_len(len);
         self
     }
 
     #[cfg(not(target_os = "cuda"))]
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.len
+    fn dangling_slice_with_len(len: usize) -> *mut [T] {
+        core::ptr::slice_from_raw_parts_mut(core::ptr::NonNull::dangling().as_ptr(), len)
     }
 
-    #[cfg(target_os = "cuda")]
     #[must_use]
     pub fn len(&self) -> usize {
-        core::ptr::metadata(self.shared)
+        core::ptr::metadata({
+            #[cfg(not(target_os = "cuda"))]
+            {
+                self.dangling
+            }
+            #[cfg(target_os = "cuda")]
+            {
+                self.shared
+            }
+        })
     }
 
     #[must_use]

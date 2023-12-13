@@ -1,30 +1,29 @@
-#[allow(clippy::module_name_repetitions)]
-pub trait SafeDeviceCopy: sealed::SafeDeviceCopy {}
+use const_type_layout::TypeGraphLayout;
 
-impl<T: sealed::SafeDeviceCopy> SafeDeviceCopy for T {}
+use crate::{common::DeviceAccessible, safety::StackOnly};
+
+#[allow(clippy::module_name_repetitions)]
+/// Types which are safe to memcpy from the CPU to a GPU.
+///
+/// For a type to implement [`SafeDeviceCopy`], it must
+///
+/// * have the same memory layout on both the CPU and GPU
+///
+/// * not contain any references to data that is inaccessible from the GPU
+///
+/// Types that implement both [`TypeGraphLayout`] and [`StackOnly`] satisfy
+/// both of these criteria and thus implement [`SafeDeviceCopy`].
+#[marker]
+pub trait SafeDeviceCopy: sealed::Sealed {}
+
+impl<T: StackOnly + TypeGraphLayout> SafeDeviceCopy for T {}
+impl<T: StackOnly + TypeGraphLayout> sealed::Sealed for T {}
+
+#[doc(hidden)]
+impl<T: SafeDeviceCopy + rustacuda_core::DeviceCopy> SafeDeviceCopy for DeviceAccessible<T> {}
+impl<T: SafeDeviceCopy + rustacuda_core::DeviceCopy> sealed::Sealed for DeviceAccessible<T> {}
 
 mod sealed {
     #[marker]
-    pub trait SafeDeviceCopy {}
-
-    // Thread-block-shared data cannot be copied since information is added inside
-    //  CUDA
-    impl<T: 'static> !SafeDeviceCopy for crate::utils::shared::r#static::ThreadBlockShared<T> {}
-    impl<T: 'static + const_type_layout::TypeGraphLayout> !SafeDeviceCopy
-        for crate::utils::shared::slice::ThreadBlockSharedSlice<T>
-    {
-    }
-
-    impl<T: crate::safety::StackOnly> SafeDeviceCopy for T {}
-    #[cfg(any(feature = "alloc", doc))]
-    impl<T: crate::safety::UnifiedHeapOnly> SafeDeviceCopy for T {}
-
-    impl<T: SafeDeviceCopy + rustacuda_core::DeviceCopy> SafeDeviceCopy
-        for crate::common::DeviceAccessible<T>
-    {
-    }
-    impl<T: SafeDeviceCopy + const_type_layout::TypeGraphLayout> SafeDeviceCopy
-        for crate::utils::device_copy::SafeDeviceCopyWrapper<T>
-    {
-    }
+    pub trait Sealed {}
 }

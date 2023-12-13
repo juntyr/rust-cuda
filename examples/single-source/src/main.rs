@@ -59,7 +59,7 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy)] q: Triple,
     // #[kernel(pass = SafeDeviceCopy)] shared3: ThreadBlockShared<u32>,
 ) where
-    T: rc::safety::StackOnly + rc::safety::NoAliasing,
+    T: rc::safety::StackOnly + rc::safety::NoSafeAliasing,
     <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
     <T as rc::common::RustToCuda>::CudaAllocation: rc::common::EmptyCudaAlloc,
 {

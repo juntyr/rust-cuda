@@ -64,9 +64,9 @@ pub(in super::super) fn quote_cuda_wrapper(
                         syn::TypeReference { and_token, .. }
                     ) = &**ty {
                         // DeviceCopy mode only supports immutable references
-                        quote! { #ptx_jit_load; { let #pat: #and_token #syn_type = #pat.as_ref().into_ref(); #inner } }
+                        quote! { { let #pat: #and_token #syn_type = #pat.as_ref().into_ref(); #inner } }
                     } else {
-                        quote! { { let #pat: #syn_type = #pat.into_inner(); #inner } }
+                        quote! { #ptx_jit_load; { let #pat: #syn_type = #pat.into_inner(); #inner } }
                     },
                     InputCudaType::LendRustToCuda => if let syn::Type::Reference(
                         syn::TypeReference { and_token, mutability, ..}
@@ -135,10 +135,10 @@ pub(in super::super) fn quote_cuda_wrapper(
                 fn assert_impl_devicecopy<T: #crate_path::rustacuda_core::DeviceCopy>(_val: &T) {}
 
                 #[allow(dead_code)]
-                fn assert_impl_no_aliasing<T: #crate_path::safety::NoAliasing>() {}
+                fn assert_impl_no_safe_aliasing<T: #crate_path::safety::NoSafeAliasing>() {}
 
                 #(assert_impl_devicecopy(&#func_params);)*
-                #(assert_impl_no_aliasing::<#ptx_func_unboxed_types>();)*
+                #(assert_impl_no_safe_aliasing::<#ptx_func_unboxed_types>();)*
             }
 
             #ptx_func_input_unwrap

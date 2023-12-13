@@ -19,7 +19,6 @@ rust-version = "1.75" # nightly
 
 [features]
 default = []
-alloc = ["hashbrown"]
 host = ["rustacuda", "rust-cuda-ptx-jit/host"]
 derive = ["rustacuda_derive", "rust-cuda-derive"]
 
@@ -32,10 +31,6 @@ rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc
 const-type-layout = { version = "0.2.0", features = ["derive"] }
 
 final = "0.1.1"
-hashbrown = { version = "0.14", default-features = false, features = ["inline-more"], optional = true }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-ptx-jit = { path = "rust-cuda-ptx-jit" }
-
-[dev-dependencies]
-hashbrown = { version = "0.14", default-features = false, features = ["inline-more"] }

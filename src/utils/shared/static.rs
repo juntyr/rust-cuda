@@ -1,43 +1,38 @@
-#[cfg(not(target_os = "cuda"))]
-use core::marker::PhantomData;
-
-#[cfg(not(target_os = "cuda"))]
 #[repr(transparent)]
 pub struct ThreadBlockShared<T: 'static> {
-    marker: PhantomData<T>,
-}
-
-#[cfg(target_os = "cuda")]
-#[repr(transparent)]
-pub struct ThreadBlockShared<T: 'static> {
+    #[cfg(not(target_os = "cuda"))]
+    // dangling marker s.t. Self is not StackOnly
+    _dangling: *mut T,
+    #[cfg(target_os = "cuda")]
     shared: *mut T,
 }
 
 impl<T: 'static> ThreadBlockShared<T> {
-    #[cfg(not(target_os = "cuda"))]
     #[must_use]
     pub fn new_uninit() -> Self {
-        Self {
-            marker: PhantomData::<T>,
-        }
-    }
-
-    #[cfg(target_os = "cuda")]
-    #[must_use]
-    pub fn new_uninit() -> Self {
-        let shared: *mut T;
-
-        unsafe {
-            core::arch::asm!(
-                ".shared .align {align} .b8 {reg}_rust_cuda_static_shared[{size}];",
-                "cvta.shared.u64 {reg}, {reg}_rust_cuda_static_shared;",
-                reg = out(reg64) shared,
-                align = const(core::mem::align_of::<T>()),
-                size = const(core::mem::size_of::<T>()),
-            );
+        #[cfg(not(target_os = "cuda"))]
+        {
+            Self {
+                _dangling: core::ptr::NonNull::dangling().as_ptr(),
+            }
         }
 
-        Self { shared }
+        #[cfg(target_os = "cuda")]
+        {
+            let shared: *mut T;
+
+            unsafe {
+                core::arch::asm!(
+                    ".shared .align {align} .b8 {reg}_rust_cuda_static_shared[{size}];",
+                    "cvta.shared.u64 {reg}, {reg}_rust_cuda_static_shared;",
+                    reg = out(reg64) shared,
+                    align = const(core::mem::align_of::<T>()),
+                    size = const(core::mem::size_of::<T>()),
+                );
+            }
+
+            Self { shared }
+        }
     }
 
     #[cfg(any(target_os = "cuda", doc))]

@@ -4,5 +4,5 @@
     "rust-analyzer.updates.askBeforeDownload": false,
     "rust-analyzer.checkOnSave.command": "reap-clippy",
     "rust-analyzer.cargo.allFeatures": false,
-    "rust-analyzer.cargo.features": ["alloc", "derive", "host"],
+    "rust-analyzer.cargo.features": ["derive", "host"],
 }

@@ -16,14 +16,13 @@
     any(all(not(feature = "host"), target_os = "cuda"), doc),
     feature(asm_const)
 )]
-#![cfg_attr(target_os = "cuda", feature(ptr_metadata))]
-#![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
 #![feature(const_type_name)]
 #![feature(offset_of)]
 #![feature(adt_const_params)]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(ptr_metadata)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![cfg_attr(target_os = "cuda", feature(slice_ptr_get))]
