@@ -4,7 +4,7 @@ use thiserror::Error;
 pub type size_t = ::std::os::raw::c_ulonglong;
 
 #[repr(C)]
-pub struct nvPTXCompiler {
+pub struct NvptxCompiler {
     _private: [u8; 0],
 }
 
@@ -60,15 +60,15 @@ impl NvptxError {
     }
 }
 
-/// [`nvPTXCompilerHandle`] represents a handle to the PTX Compiler.
+/// [`NvptxCompilerHandle`] represents a handle to the PTX Compiler.
 ///
-/// To compile a PTX program string, an instance of [`nvPTXCompiler`]
+/// To compile a PTX program string, an instance of [`NvptxCompiler`]
 /// must be created and the handle to it must be obtained using the
 /// API [`nvPTXCompilerCreate`]. Then the compilation can be done
 /// using the API [`nvPTXCompilerCompile`].
-pub type NvptxCompilerHandle = *mut nvPTXCompiler;
+pub type NvptxCompilerHandle = *mut NvptxCompiler;
 
-/// The [`nvPTXCompiler`] APIs return the [`nvPTXCompileResult`] codes to
+/// The [`NvptxCompiler`] APIs return the [`NvptxCompileResult`] codes to
 /// indicate the call result"]
 pub type NvptxCompileResult = ::std::os::raw::c_int;
 

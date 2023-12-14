@@ -1,7 +1,7 @@
 [package]
 name = "rust-cuda-derive"
 version = "0.1.0"
-authors = ["Juniper Tyree <juniper.langenstein@helsinki.fi>"]
+authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 links = "libnvptxcompiler_static"

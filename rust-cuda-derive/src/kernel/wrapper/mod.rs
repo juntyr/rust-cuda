@@ -114,6 +114,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let _ = ptx_lint_levels.try_insert(PtxLint::LocalMemoryUsage, LintLevel::Warn);
     let _ = ptx_lint_levels.try_insert(PtxLint::RegisterSpills, LintLevel::Warn);
     let _ = ptx_lint_levels.try_insert(PtxLint::DumpBinary, LintLevel::Allow);
+    let _ = ptx_lint_levels.try_insert(PtxLint::DynamicStackSize, LintLevel::Warn);
 
     let ptx_lint_levels = {
         let (lints, levels): (Vec<Ident>, Vec<Ident>) = ptx_lint_levels

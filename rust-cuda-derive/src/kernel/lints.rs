@@ -91,6 +91,7 @@ pub fn parse_ptx_lint_level(
             l if l == "local_memory_usage" => PtxLint::LocalMemoryUsage,
             l if l == "register_spills" => PtxLint::RegisterSpills,
             l if l == "dump_binary" => PtxLint::DumpBinary,
+            l if l == "dynamic_stack_size" => PtxLint::DynamicStackSize,
             _ => {
                 emit_error!(
                     meta.span(),
@@ -153,6 +154,7 @@ pub enum PtxLint {
     LocalMemoryUsage,
     RegisterSpills,
     DumpBinary,
+    DynamicStackSize,
 }
 
 impl fmt::Display for PtxLint {
@@ -163,6 +165,7 @@ impl fmt::Display for PtxLint {
             Self::LocalMemoryUsage => fmt.write_str("local_memory_usage"),
             Self::RegisterSpills => fmt.write_str("register_spills"),
             Self::DumpBinary => fmt.write_str("dump_binary"),
+            Self::DynamicStackSize => fmt.write_str("dynamic_stack_size"),
         }
     }
 }

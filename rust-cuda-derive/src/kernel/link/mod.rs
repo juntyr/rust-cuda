@@ -417,6 +417,12 @@ fn check_kernel_ptx(
             {
                 options.push(c"--warn-on-spills");
             }
+            if ptx_lint_levels
+                .get(&PtxLint::DynamicStackSize)
+                .map_or(true, |level| *level <= LintLevel::Warn)
+            {
+                options.push(c"--suppress-stack-size-warning");
+            }
             options.push(c"--warning-as-error");
 
             let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
@@ -453,6 +459,12 @@ fn check_kernel_ptx(
             .map_or(false, |level| *level > LintLevel::Allow)
         {
             options.push(c"--warn-on-spills");
+        }
+        if ptx_lint_levels
+            .get(&PtxLint::DynamicStackSize)
+            .map_or(true, |level| *level < LintLevel::Warn)
+        {
+            options.push(c"--suppress-stack-size-warning");
         }
 
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();

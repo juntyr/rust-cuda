@@ -3,7 +3,6 @@
 #![cfg_attr(target_os = "cuda", no_main)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
-#![cfg_attr(target_os = "cuda", feature(stdsimd))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(const_type_name)]
 #![feature(offset_of)]
@@ -103,8 +102,6 @@ mod host {
 
 #[cfg(target_os = "cuda")]
 mod cuda_prelude {
-    use core::arch::nvptx;
-
     use rc::device::alloc::PTXAllocator;
 
     #[global_allocator]
@@ -112,11 +109,11 @@ mod cuda_prelude {
 
     #[panic_handler]
     fn panic(_: &::core::panic::PanicInfo) -> ! {
-        unsafe { nvptx::trap() }
+        rc::device::utils::abort()
     }
 
     #[alloc_error_handler]
     fn alloc_error_handler(_: core::alloc::Layout) -> ! {
-        unsafe { nvptx::trap() }
+        rc::device::utils::abort()
     }
 }

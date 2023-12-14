@@ -14,8 +14,7 @@ use crate::{
 
 pub mod alloc;
 pub mod thread;
-
-mod macros;
+pub mod utils;
 
 pub trait BorrowFromRust: RustToCuda {
     /// # Safety

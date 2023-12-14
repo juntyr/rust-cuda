@@ -91,6 +91,7 @@ pub(super) fn quote_get_ptx_str(
 
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
+                #[allow(unused_imports)]
                 use super::#args;
 
                 extern "C" { #(

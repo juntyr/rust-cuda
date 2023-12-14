@@ -122,6 +122,7 @@ pub(in super::super) fn quote_cuda_wrapper(
 
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
+                #[allow(unused_imports)]
                 use super::#args;
 
                 extern "C" { #(
