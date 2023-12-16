@@ -4,7 +4,9 @@
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
-#![cfg_attr(target_os = "cuda", feature(core_panic))]
+#![feature(ptr_from_ref)]
+#![feature(stdsimd)]
+#![feature(c_str_literals)]
 
 extern crate alloc;
 
@@ -12,14 +14,11 @@ extern crate alloc;
 fn main() {}
 
 #[rust_cuda::common::kernel(use link_kernel! as impl Kernel<KernelArgs, KernelPtx> for Launcher)]
-#[kernel(deny(
-    ptx::double_precision_use,
-    ptx::local_memory_usage,
-    ptx::register_spills,
-    ptx::dynamic_stack_size
-))]
+#[kernel(allow(ptx::local_memory_usage))]
 pub fn kernel() {
     rust_cuda::device::utils::print(format_args!("println! from CUDA kernel"));
+
+    ::alloc::alloc::handle_alloc_error(::core::alloc::Layout::new::<i8>());
 }
 
 #[cfg(not(target_os = "cuda"))]
@@ -58,12 +57,38 @@ mod cuda_prelude {
     }
 
     #[alloc_error_handler]
+    #[track_caller]
     fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
-        let (size, align) = (layout.size(), layout.align());
+        #[repr(C)]
+        struct FormatArgs {
+            size: usize,
+            align: usize,
+            file_len: u32,
+            file_ptr: *const u8,
+            line: u32,
+            column: u32,
+        }
 
-        ::core::panicking::panic_nounwind_fmt(
-            format_args!("memory allocation of {size} bytes with alignment {align} failed\n"),
-            true,
-        )
+        let location = ::core::panic::Location::caller();
+
+        unsafe {
+            ::core::arch::nvptx::vprintf(
+                c"memory allocation of %llu bytes with alignment %llu failed at %.*s:%lu:%lu\n"
+                    .as_ptr()
+                    .cast(),
+                #[allow(clippy::cast_possible_truncation)]
+                ::core::ptr::from_ref(&FormatArgs {
+                    size: layout.size(),
+                    align: layout.align(),
+                    file_len: location.file().len() as u32,
+                    file_ptr: location.file().as_ptr(),
+                    line: location.line(),
+                    column: location.column(),
+                })
+                .cast(),
+            );
+        }
+
+        rust_cuda::device::utils::abort()
     }
 }

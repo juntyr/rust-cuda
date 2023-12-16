@@ -14,6 +14,12 @@ pub fn abort() -> ! {
 #[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn print(args: ::core::fmt::Arguments) {
+    #[repr(C)]
+    struct FormatArgs {
+        msg_len: u32,
+        msg_ptr: *const u8,
+    }
+
     let msg; // place to store the dynamically expanded format string
     let msg = if let Some(msg) = args.as_str() {
         msg
@@ -23,6 +29,14 @@ pub fn print(args: ::core::fmt::Arguments) {
     };
 
     unsafe {
-        ::core::arch::nvptx::vprintf(msg.as_ptr(), ::core::ptr::null_mut());
+        ::core::arch::nvptx::vprintf(
+            c"%.*s".as_ptr().cast(),
+            #[allow(clippy::cast_possible_truncation)]
+            ::core::ptr::from_ref(&FormatArgs {
+                msg_len: msg.len() as u32,
+                msg_ptr: msg.as_ptr(),
+            })
+            .cast(),
+        );
     }
 }
