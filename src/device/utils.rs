@@ -5,6 +5,12 @@ pub fn abort() -> ! {
     unsafe { ::core::arch::nvptx::trap() }
 }
 
+#[allow(clippy::inline_always)]
+#[inline(always)]
+pub fn exit() -> ! {
+    unsafe { ::core::arch::asm!("exit;", options(noreturn)) }
+}
+
 /// Prints to the CUDA kernel's standard output using the `vprintf` system call.
 ///
 /// Replacement for the [`std::print!`] macro, which now forwards to the
@@ -131,7 +137,7 @@ pub fn pretty_panic_handler(
         );
     }
 
-    abort()
+    exit()
 }
 
 // TODO: docs
@@ -177,5 +183,5 @@ pub fn pretty_alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
         );
     }
 
-    abort()
+    exit()
 }

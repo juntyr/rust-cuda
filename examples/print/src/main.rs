@@ -50,15 +50,6 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
         )?,
     );
 
-    rust_cuda::rustacuda::context::CurrentContext::set_resource_limit(
-        rust_cuda::rustacuda::context::ResourceLimit::StackSize,
-        4096,
-    )?;
-    rust_cuda::rustacuda::context::CurrentContext::set_resource_limit(
-        rust_cuda::rustacuda::context::ResourceLimit::PrintfFifoSize,
-        4096,
-    )?;
-
     // Create a new CUDA stream to submit kernels to
     let stream = rust_cuda::host::CudaDropWrapper::from(rust_cuda::rustacuda::stream::Stream::new(
         rust_cuda::rustacuda::stream::StreamFlags::NON_BLOCKING,
@@ -78,11 +69,11 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
 
     // Launch the CUDA kernel on the stream and synchronise to its completion
     println!("Launching print kernel ...");
-    launcher.kernel(&stream, Action::Print).unwrap();
+    launcher.kernel(&stream, Action::Print)?;
     println!("Launching panic kernel ...");
-    launcher.kernel(&stream, Action::Panic).unwrap_err();
+    launcher.kernel(&stream, Action::Panic)?;
     println!("Launching alloc error kernel ...");
-    launcher.kernel(&stream, Action::AllocError).unwrap_err();
+    launcher.kernel(&stream, Action::AllocError)?;
 
     Ok(())
 }
