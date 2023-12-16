@@ -30,7 +30,7 @@ pub fn print(args: ::core::fmt::Arguments) {
 
     unsafe {
         ::core::arch::nvptx::vprintf(
-            c"%.*s".as_ptr().cast(),
+            c"%*s".as_ptr().cast(),
             #[allow(clippy::cast_possible_truncation)]
             ::core::ptr::from_ref(&FormatArgs {
                 msg_len: msg.len() as u32,
