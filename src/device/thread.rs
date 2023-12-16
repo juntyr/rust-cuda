@@ -18,11 +18,15 @@ pub struct ThreadBlockGrid {
 
 impl Thread {
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn this() -> Self {
         Self { _private: () }
     }
 
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn index(&self) -> usize {
         let block = self.block();
         let grid = block.grid();
@@ -34,6 +38,8 @@ impl Thread {
     }
 
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn idx(&self) -> Idx3 {
         #[allow(clippy::cast_sign_loss)]
         unsafe {
@@ -46,6 +52,8 @@ impl Thread {
     }
 
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn block(&self) -> ThreadBlock {
         ThreadBlock { _private: () }
     }
@@ -53,6 +61,8 @@ impl Thread {
 
 impl ThreadBlock {
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn dim(&self) -> Dim3 {
         #[allow(clippy::cast_sign_loss)]
         unsafe {
@@ -65,6 +75,8 @@ impl ThreadBlock {
     }
 
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn idx(&self) -> Idx3 {
         #[allow(clippy::cast_sign_loss)]
         unsafe {
@@ -77,10 +89,14 @@ impl ThreadBlock {
     }
 
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn grid(&self) -> ThreadBlockGrid {
         ThreadBlockGrid { _private: () }
     }
 
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn synchronize(&self) {
         unsafe { nvptx::_syncthreads() }
     }
@@ -88,6 +104,8 @@ impl ThreadBlock {
 
 impl ThreadBlockGrid {
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn dim(&self) -> Dim3 {
         #[allow(clippy::cast_sign_loss)]
         unsafe {
@@ -118,6 +136,8 @@ pub struct Idx3 {
 
 impl Dim3 {
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn size(&self) -> usize {
         (self.x as usize) * (self.y as usize) * (self.z as usize)
     }
@@ -125,6 +145,8 @@ impl Dim3 {
 
 impl Idx3 {
     #[must_use]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
     pub fn as_id(&self, dim: &Dim3) -> usize {
         (self.x as usize)
             + (self.y as usize) * (dim.x as usize)

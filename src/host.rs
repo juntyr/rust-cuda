@@ -29,7 +29,7 @@ use crate::{
 
 pub trait Launcher {
     type KernelTraitObject: ?Sized;
-    type CompilationWatcher;
+    type CompilationWatcher<'a>;
 
     fn get_launch_package(&mut self) -> LaunchPackage<Self>;
 
@@ -38,7 +38,7 @@ pub trait Launcher {
     /// Should only return a [`CudaError`] if some implementation-defined
     ///  critical kernel function configuration failed.
     #[allow(unused_variables)]
-    fn on_compile(kernel: &Function, watcher: &mut Self::CompilationWatcher) -> CudaResult<()> {
+    fn on_compile(kernel: &Function, watcher: Self::CompilationWatcher<'_>) -> CudaResult<()> {
         Ok(())
     }
 }
@@ -54,7 +54,25 @@ pub struct LaunchConfig {
 pub struct LaunchPackage<'l, L: ?Sized + Launcher> {
     pub config: LaunchConfig,
     pub kernel: &'l mut TypedKernel<L::KernelTraitObject>,
-    pub watcher: &'l mut L::CompilationWatcher,
+    pub watcher: L::CompilationWatcher<'l>,
+}
+
+pub struct SimpleKernelLauncher<KernelTraitObject: ?Sized> {
+    pub kernel: TypedKernel<KernelTraitObject>,
+    pub config: LaunchConfig,
+}
+
+impl<KernelTraitObject: ?Sized> Launcher for SimpleKernelLauncher<KernelTraitObject> {
+    type CompilationWatcher<'a> = ();
+    type KernelTraitObject = KernelTraitObject;
+
+    fn get_launch_package(&mut self) -> LaunchPackage<Self> {
+        LaunchPackage {
+            config: self.config.clone(),
+            kernel: &mut self.kernel,
+            watcher: (),
+        }
+    }
 }
 
 pub enum KernelJITResult<'k> {

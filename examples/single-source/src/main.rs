@@ -91,7 +91,7 @@ mod host {
     link_kernel!(rc::utils::device_copy::SafeDeviceCopyWrapper<u64>);
 
     impl<T: rc::common::RustToCuda> rc::host::Launcher for Launcher<T> {
-        type CompilationWatcher = ();
+        type CompilationWatcher<'a> = ();
         type KernelTraitObject = dyn Kernel<T>;
 
         fn get_launch_package(&mut self) -> rc::host::LaunchPackage<Self> {
