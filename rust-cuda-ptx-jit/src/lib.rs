@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![cfg_attr(not(feature = "host"), no_std)]
-#![feature(ptr_from_ref)]
+#![feature(cfg_version)]
+#![cfg_attr(not(version("1.76.0")), feature(ptr_from_ref))]
 #![feature(doc_cfg)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
