@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     env,
-    ffi::CString,
+    ffi::{CStr, CString},
     fmt::Write as FmtWrite,
     fs,
     io::{Read, Write},
@@ -70,7 +70,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
 #[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {
-        const PTX_STR: &'static str = "ERROR in this PTX compilation";
+        const PTX_CSTR: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
     });
 
     let LinkKernelConfig {
@@ -95,7 +95,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
     if skip_kernel_compilation() {
         return quote! {
-            const PTX_STR: &'static str = "CLIPPY skips specialised PTX compilation";
+            const PTX_CSTR: &'static ::core::ffi::CStr = c"CLIPPY skips specialised PTX compilation";
         }
         .into();
     }
@@ -107,7 +107,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         Specialisation::Link(&specialisation),
     ) else {
         return (quote! {
-            const PTX_STR: &'static str = "ERROR in this PTX compilation";
+            const PTX_CSTR: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
         })
         .into();
     };
@@ -122,7 +122,23 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         &ptx_lint_levels,
     );
 
-    (quote! { const PTX_STR: &'static str = #kernel_ptx; #(#type_layouts)* }).into()
+    let mut kernel_ptx = kernel_ptx.into_bytes();
+    kernel_ptx.push(b'\0');
+
+    if let Err(err) = CStr::from_bytes_with_nul(&kernel_ptx) {
+        abort_call_site!(
+            "Kernel compilation generated invalid PTX: internal nul byte: {:?}",
+            err
+        );
+    }
+
+    // TODO: CStr constructor blocked on https://github.com/rust-lang/rust/issues/118560
+    let kernel_ptx = syn::LitByteStr::new(&kernel_ptx, proc_macro2::Span::call_site());
+    // Safety: the validity of kernel_ptx as a CStr was just checked above
+    let kernel_ptx =
+        quote! { unsafe { ::core::ffi::CStr::from_bytes_with_nul_unchecked(#kernel_ptx) } };
+
+    (quote! { const PTX_CSTR: &'static ::core::ffi::CStr = #kernel_ptx; #(#type_layouts)* }).into()
 }
 
 fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenStream> {
@@ -626,7 +642,7 @@ fn compile_kernel(
             Some(kernel_ptx)
         },
         Err(err) => {
-            eprintln!("{err:?}");
+            eprintln!("{err}");
             emit_ptx_build_error();
             None
         },
@@ -669,7 +685,7 @@ fn build_kernel_with_specialisation(
         let any_output = AtomicBool::new(false);
         let crate_name = String::from(builder.get_crate_name());
 
-        match builder.build_live(
+        let build = builder.build_live(
             |stdout_line| {
                 if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
                     serde_json::from_str(stdout_line)
@@ -737,7 +753,9 @@ fn build_kernel_with_specialisation(
                 );
                 colored::control::unset_override();
             },
-        )? {
+        )?;
+
+        match build {
             BuildStatus::Success(output) => {
                 let ptx_path = output.get_assembly_path();
 

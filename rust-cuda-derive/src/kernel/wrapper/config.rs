@@ -3,7 +3,6 @@ pub(super) struct KernelConfig {
     pub(super) linker: syn::Ident,
     pub(super) kernel: syn::Ident,
     pub(super) args: syn::Ident,
-    pub(super) ptx: syn::Ident,
     pub(super) launcher: syn::Ident,
 }
 
@@ -18,8 +17,6 @@ impl syn::parse::Parse for KernelConfig {
         let kernel: syn::Ident = input.parse()?;
         let _lt_token: syn::token::Lt = input.parse()?;
         let args: syn::Ident = input.parse()?;
-        let _comma: syn::token::Comma = input.parse()?;
-        let ptx: syn::Ident = input.parse()?;
         let _comma: Option<syn::token::Comma> = input.parse()?;
         let _gt_token: syn::token::Gt = input.parse()?;
         let _for: syn::token::For = input.parse()?;
@@ -30,7 +27,6 @@ impl syn::parse::Parse for KernelConfig {
             linker,
             kernel,
             args,
-            ptx,
             launcher,
         })
     }

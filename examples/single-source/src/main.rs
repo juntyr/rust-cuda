@@ -6,6 +6,10 @@
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(const_type_name)]
 #![feature(offset_of)]
+#![feature(cfg_version)]
+#![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
+#![feature(type_alias_impl_trait)]
+#![feature(associated_type_bounds)]
 
 extern crate alloc;
 
@@ -42,13 +46,13 @@ pub struct Tuple(u32, i32);
 #[layout(crate = "rc::const_type_layout")]
 pub struct Triple(i32, i32, i32);
 
-#[rc::common::kernel(use link_kernel! as impl Kernel<KernelArgs, KernelPtx> for Launcher)]
+#[rc::common::kernel(use link! as impl Kernel<KernelArgs> for Launcher)]
 #[kernel(crate = "rc")]
 #[kernel(
     allow(ptx::double_precision_use),
     forbid(ptx::local_memory_usage, ptx::register_spills)
 )]
-pub fn kernel<'a, T: rc::common::RustToCuda>(
+pub fn kernel<'a, T: rc::common::RustToCuda<CudaRepresentation: rc::safety::StackOnly, CudaAllocation: rc::common::EmptyCudaAlloc> + rc::safety::StackOnly + rc::safety::NoSafeAliasing>(
     #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
     #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
     #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
@@ -57,11 +61,7 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
     #[kernel(pass = SafeDeviceCopy)] Tuple(s, mut __t): Tuple,
     #[kernel(pass = SafeDeviceCopy)] q: Triple,
     // #[kernel(pass = SafeDeviceCopy)] shared3: ThreadBlockShared<u32>,
-) where
-    T: rc::safety::StackOnly + rc::safety::NoSafeAliasing,
-    <T as rc::common::RustToCuda>::CudaRepresentation: rc::safety::StackOnly,
-    <T as rc::common::RustToCuda>::CudaAllocation: rc::common::EmptyCudaAlloc,
-{
+) {
     let shared: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
     let shared2: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
 
@@ -80,24 +80,12 @@ pub fn kernel<'a, T: rc::common::RustToCuda>(
 
 #[cfg(not(target_os = "cuda"))]
 mod host {
-    #[allow(unused_imports)]
-    use super::KernelArgs;
-    use super::{Kernel, KernelPtx};
+    use super::{kernel, KernelArgs};
 
-    #[allow(dead_code)]
-    struct Launcher<T: rc::common::RustToCuda>(core::marker::PhantomData<T>);
-
-    link_kernel!(crate::Empty);
-    link_kernel!(rc::utils::device_copy::SafeDeviceCopyWrapper<u64>);
-
-    impl<T: rc::common::RustToCuda> rc::host::Launcher for Launcher<T> {
-        type CompilationWatcher<'a> = ();
-        type KernelTraitObject = dyn Kernel<T>;
-
-        fn get_launch_package(&mut self) -> rc::host::LaunchPackage<Self> {
-            unimplemented!()
-        }
-    }
+    // Link several instances of the generic CUDA kernel
+    struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
+    link! { impl kernel<'a, crate::Empty> for KernelPtx }
+    link! { impl kernel<'a, rc::utils::device_copy::SafeDeviceCopyWrapper<u64>> for KernelPtx }
 }
 
 #[cfg(target_os = "cuda")]

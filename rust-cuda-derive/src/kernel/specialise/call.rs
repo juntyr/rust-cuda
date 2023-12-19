@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 use proc_macro::TokenStream;
 
 #[allow(clippy::module_name_repetitions)]
@@ -24,6 +26,22 @@ pub fn specialise_kernel_call(tokens: TokenStream) -> TokenStream {
     } else {
         format!("{kernel}_kernel")
     };
+
+    let mut mangled_kernel_ident = mangled_kernel_ident.into_bytes();
+    mangled_kernel_ident.push(b'\0');
+
+    if let Err(err) = CStr::from_bytes_with_nul(&mangled_kernel_ident) {
+        abort_call_site!(
+            "Kernel compilation generated invalid kernel entry point: internal nul byte: {:?}",
+            err
+        );
+    }
+
+    // TODO: CStr constructor blocked on https://github.com/rust-lang/rust/issues/118560
+    let mangled_kernel_ident =
+        syn::LitByteStr::new(&mangled_kernel_ident, proc_macro2::Span::call_site());
+    // Safety: the validity of mangled_kernel_ident as a CStr was just checked above
+    let mangled_kernel_ident = quote! { unsafe { ::core::ffi::CStr::from_bytes_with_nul_unchecked(#mangled_kernel_ident) } };
 
     (quote! { #mangled_kernel_ident }).into()
 }

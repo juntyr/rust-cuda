@@ -5,6 +5,9 @@
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(const_type_name)]
+#![feature(cfg_version)]
+#![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
+#![feature(type_alias_impl_trait)]
 
 extern crate alloc;
 
@@ -17,7 +20,7 @@ pub enum Action {
     AllocError,
 }
 
-#[rust_cuda::common::kernel(pub use link_kernel! as impl Kernel<KernelArgs, KernelPtx> for Launcher)]
+#[rust_cuda::common::kernel(pub use link! as impl Kernel<KernelArgs> for Launcher)]
 #[kernel(allow(ptx::local_memory_usage))]
 pub fn kernel(#[kernel(pass = SafeDeviceCopy)] action: Action) {
     match action {
@@ -32,11 +35,11 @@ pub fn kernel(#[kernel(pass = SafeDeviceCopy)] action: Action) {
 #[cfg(not(target_os = "cuda"))]
 fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
     // Link the non-generic CUDA kernel
-    type Launcher = rust_cuda::host::SimpleKernelLauncher<dyn Kernel>;
-    link_kernel!();
+    struct KernelPtx;
+    link! { impl kernel for KernelPtx }
 
     // Initialize the CUDA API
-    rust_cuda::rustacuda::init(rust_cuda::rustacuda::CudaFlags::empty())?;
+    /*rust_cuda::rustacuda::init(rust_cuda::rustacuda::CudaFlags::empty())?;
 
     // Get the first CUDA GPU device
     let device = rust_cuda::rustacuda::device::Device::get_device(0)?;
@@ -54,26 +57,28 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
     let stream = rust_cuda::host::CudaDropWrapper::from(rust_cuda::rustacuda::stream::Stream::new(
         rust_cuda::rustacuda::stream::StreamFlags::NON_BLOCKING,
         None,
-    )?);
+    )?);*/
 
-    // Create a new launcher for the CUDA kernel
-    let mut launcher = Launcher {
-        kernel: <Launcher as KernelPtx>::new_kernel()?,
-        config: rust_cuda::host::LaunchConfig {
-            grid: rust_cuda::rustacuda::function::GridSize::x(1),
-            block: rust_cuda::rustacuda::function::BlockSize::x(4),
-            shared_memory_size: 0,
-            ptx_jit: false,
-        },
+    // Create a new instance of the CUDA kernel and prepare the launch config
+    let mut kernel = rust_cuda::host::TypedPtxKernel::<kernel>::new::<KernelPtx>(None);
+    let config = rust_cuda::host::LaunchConfig {
+        grid: rust_cuda::rustacuda::function::GridSize::x(1),
+        block: rust_cuda::rustacuda::function::BlockSize::x(4),
+        shared_memory_size: 0,
+        ptx_jit: false,
     };
+    // let mut launcher = rust_cuda::host::Launcher { kernel: &mut typed_kernel, config };
 
     // Launch the CUDA kernel on the stream and synchronise to its completion
     println!("Launching print kernel ...");
-    launcher.kernel(&stream, Action::Print)?;
+    kernel.launch1(&config, Action::Print)?;
+    // kernel(&mut launcher, Action::Print)?;
     println!("Launching panic kernel ...");
-    launcher.kernel(&stream, Action::Panic)?;
+    kernel.launch1(&config, Action::Panic)?;
+    // kernel(&mut launcher, Action::Panic)?;
     println!("Launching alloc error kernel ...");
-    launcher.kernel(&stream, Action::AllocError)?;
+    kernel.launch1(&config, Action::AllocError)?;
+    // kernel(&mut launcher, Action::AllocError)?;
 
     Ok(())
 }

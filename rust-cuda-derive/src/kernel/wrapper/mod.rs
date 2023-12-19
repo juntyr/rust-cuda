@@ -36,8 +36,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "#[kernel(pub? use LINKER! as impl KERNEL<ARGS, PTX> for LAUNCHER)] expects \
-                 LINKER, KERNEL, ARGS, PTX, and LAUNCHER identifiers: {:?}",
+                "#[kernel(pub? use LINKER! as impl KERNEL<ARGS> for LAUNCHER)] expects LINKER, \
+                 KERNEL, ARGS, and LAUNCHER identifiers: {:?}",
                 err
             )
         },
@@ -211,12 +211,18 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = trait_generics.split_for_impl();
     let blanket_ty = syn::Ident::new("K", Span::mixed_site());
     let mut blanket_params = generic_trait_params.clone();
-    let ptx = &config.ptx;
     blanket_params.push(syn::GenericParam::Type(syn::TypeParam {
         attrs: Vec::new(),
         ident: blanket_ty.clone(),
         colon_token: syn::parse_quote!(:),
-        bounds: syn::parse_quote!(#ptx #ty_generics),
+        bounds: {
+            let kernel = &config.kernel;
+            syn::parse_quote! {
+                #crate_path::host::CompiledKernelPtx<
+                    dyn #kernel #ty_generics
+                >
+            }
+        },
         eq_token: None,
         default: None,
     }));

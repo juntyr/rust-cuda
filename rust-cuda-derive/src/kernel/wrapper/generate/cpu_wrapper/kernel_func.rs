@@ -5,11 +5,13 @@ use super::super::super::{
 };
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines)] // FIXME
 pub(super) fn quote_kernel_func_inputs(
     crate_path: &syn::Path,
-    KernelConfig { kernel, args, .. }: &KernelConfig,
+    KernelConfig { kernel, args, visibility, .. }: &KernelConfig,
     ImplGenerics { ty_generics, .. }: &ImplGenerics,
     DeclGenerics {
+        generic_kernel_params,
         generic_wrapper_params,
         generic_wrapper_where_clause,
         ..
@@ -45,7 +47,7 @@ pub(super) fn quote_kernel_func_inputs(
         },
     };
 
-    let kernel_func_inputs = func_inputs
+    let (kernel_func_inputs, kernel_func_input_tys): (Vec<_>, Vec<_>) = func_inputs
         .iter()
         .enumerate()
         .map(|(i, arg)| match arg {
@@ -56,44 +58,73 @@ pub(super) fn quote_kernel_func_inputs(
                 ty,
             }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type = quote! {
+                let syn_type: syn::Type = syn::parse_quote! {
                     <() as #args #ty_generics>::#type_ident
                 };
-
-                if let syn::Type::Reference(syn::TypeReference {
+                let syn_type = if let syn::Type::Reference(syn::TypeReference {
                     and_token,
                     lifetime,
                     mutability,
                     ..
                 }) = &**ty
                 {
-                    quote! {
-                        #(#attrs)* #pat #colon_token #and_token #lifetime #mutability #syn_type
-                    }
+                    syn::Type::Reference(syn::TypeReference {
+                        and_token: *and_token,
+                        lifetime: lifetime.clone(),
+                        mutability: *mutability,
+                        elem: Box::new(syn_type),
+                    })
                 } else {
-                    quote! { #(#attrs)* #pat #colon_token #syn_type }
-                }
+                    syn_type
+                };
+
+                let param = quote! {
+                    #(#attrs)* #pat #colon_token #syn_type
+                };
+
+                (param, syn_type)
             },
             syn::FnArg::Receiver(_) => unreachable!(),
         })
-        .collect::<Vec<_>>();
+        .unzip();
 
     let raw_func_input_wrap =
         generate_raw_func_input_wrap(crate_path, inputs, fn_ident, func_params);
 
+    let full_generics = generic_kernel_params.iter().map(|param| match param {
+        syn::GenericParam::Type(syn::TypeParam { ident, .. }) | syn::GenericParam::Const(syn::ConstParam { ident, .. }) => quote!(#ident),
+        syn::GenericParam::Lifetime(syn::LifetimeDef { lifetime, .. }) => quote!(#lifetime),
+    }).collect::<Vec<_>>();
+    
+    let ty_turbofish = ty_generics.as_turbofish();
+
     quote! {
+        #[cfg(not(target_os = "cuda"))]
+        #[allow(non_camel_case_types)]
+        #visibility type #func_ident <#generic_kernel_params> = impl Copy + Fn(
+            &mut #crate_path::host::Launcher<#func_ident <#(#full_generics),*>>,
+            #(#kernel_func_input_tys),*
+        ) -> #crate_path::rustacuda::error::CudaResult<()>;
+
+        #[cfg(not(target_os = "cuda"))]
         #(#func_attrs)*
         #[allow(clippy::needless_lifetimes)]
         #[allow(clippy::too_many_arguments)]
         #[allow(clippy::used_underscore_binding)]
         #[allow(unused_variables)]
-        fn #func_ident <'stream, #generic_wrapper_params>(
-            &mut self,
-            stream: &'stream #crate_path::rustacuda::stream::Stream,
+        #visibility fn #func_ident </*'stream,*/ #generic_kernel_params>(
+            // &mut self,
+            // TODO: move the stream
+            // stream: &'stream #crate_path::rustacuda::stream::Stream,
+            // kernel: &mut #crate_path::host::TypedKernel<#func_ident #ty_generics>,
+            launcher: &mut #crate_path::host::Launcher<#func_ident #ty_generics>,
             #(#kernel_func_inputs),*
         ) -> #crate_path::rustacuda::error::CudaResult<()>
-            #generic_wrapper_where_clause
+        // TODO: don't allow where clause
+            //#generic_wrapper_where_clause
         {
+            let _: #func_ident <#(#full_generics),*> = #func_ident #ty_turbofish;
+
             // impls check adapted from Nikolai Vazquez's `impls` crate:
             //  https://docs.rs/impls/1.0.3/src/impls/lib.rs.html#584-602
             const fn __check_is_sync<T: ?Sized>(_x: &T) -> bool {
@@ -110,7 +141,9 @@ pub(super) fn quote_kernel_func_inputs(
                 <CheckIs<T>>::SYNC
             }
 
-            #raw_func_input_wrap
+            todo!()
+
+            // #raw_func_input_wrap
         }
     }
 }

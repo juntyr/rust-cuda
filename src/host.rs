@@ -1,4 +1,5 @@
-use core::{
+use std::{
+    ffi::{CStr, CString},
     marker::PhantomData,
     mem::ManuallyDrop,
     ops::{Deref, DerefMut},
@@ -23,27 +24,28 @@ use crate::{
     common::{
         DeviceAccessible, DeviceConstRef, DeviceMutRef, EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
     },
-    ptx_jit::{CudaKernel, PtxJITCompiler, PtxJITResult},
+    ptx_jit::{PtxJITCompiler, PtxJITResult},
     safety::SafeDeviceCopy,
 };
 
-pub trait Launcher {
-    type KernelTraitObject: ?Sized;
-    type CompilationWatcher<'a>;
+pub struct Launcher<'a, Kernel> {
+    pub kernel: &'a mut TypedPtxKernel<Kernel>,
+    pub config: LaunchConfig,
+}
 
-    fn get_launch_package(&mut self) -> LaunchPackage<Self>;
+impl<'a, Kernel> Launcher<'a, Kernel> {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn launch0(&mut self) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()> {
+        self.kernel.launch0(&self.config)
+    }
 
-    /// # Errors
-    ///
-    /// Should only return a [`CudaError`] if some implementation-defined
-    ///  critical kernel function configuration failed.
-    #[allow(unused_variables)]
-    fn on_compile(kernel: &Function, watcher: Self::CompilationWatcher<'_>) -> CudaResult<()> {
-        Ok(())
+    #[allow(clippy::missing_errors_doc)]
+    pub fn launch1<A>(&mut self, arg1: A) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()> {
+        self.kernel.launch1(&self.config, arg1)
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LaunchConfig {
     pub grid: rustacuda::function::GridSize,
     pub block: rustacuda::function::BlockSize,
@@ -51,26 +53,57 @@ pub struct LaunchConfig {
     pub ptx_jit: bool,
 }
 
-pub struct LaunchPackage<'l, L: ?Sized + Launcher> {
-    pub config: LaunchConfig,
-    pub kernel: &'l mut TypedKernel<L::KernelTraitObject>,
-    pub watcher: L::CompilationWatcher<'l>,
+#[doc(cfg(feature = "host"))]
+#[allow(clippy::module_name_repetitions)]
+pub struct PtxKernel {
+    module: ManuallyDrop<Box<Module>>,
+    function: ManuallyDrop<Function<'static>>,
 }
 
-pub struct SimpleKernelLauncher<KernelTraitObject: ?Sized> {
-    pub kernel: TypedKernel<KernelTraitObject>,
-    pub config: LaunchConfig,
+impl PtxKernel {
+    /// # Errors
+    ///
+    /// Returns a [`CudaError`] if `ptx` is not a valid PTX source, or it does
+    ///  not contain an entry point named `entry_point`.
+    pub fn new(ptx: &CStr, entry_point: &CStr) -> CudaResult<Self> {
+        let module = Box::new(Module::load_from_string(ptx)?);
+
+        let function = unsafe { &*(module.as_ref() as *const Module) }.get_function(entry_point);
+
+        let function = match function {
+            Ok(function) => function,
+            Err(err) => {
+                if let Err((_err, module)) = Module::drop(*module) {
+                    std::mem::forget(module);
+                }
+
+                return Err(err);
+            },
+        };
+
+        Ok(Self {
+            function: ManuallyDrop::new(function),
+            module: ManuallyDrop::new(module),
+        })
+    }
+
+    #[must_use]
+    pub fn get_function(&self) -> &Function {
+        &self.function
+    }
 }
 
-impl<KernelTraitObject: ?Sized> Launcher for SimpleKernelLauncher<KernelTraitObject> {
-    type CompilationWatcher<'a> = ();
-    type KernelTraitObject = KernelTraitObject;
+impl Drop for PtxKernel {
+    fn drop(&mut self) {
+        {
+            // Ensure that self.function is dropped before self.module as
+            //  it borrows data from the module and must not outlive it
+            let _function = unsafe { ManuallyDrop::take(&mut self.function) };
+        }
 
-    fn get_launch_package(&mut self) -> LaunchPackage<Self> {
-        LaunchPackage {
-            config: self.config.clone(),
-            kernel: &mut self.kernel,
-            watcher: (),
+        if let Err((_err, module)) = Module::drop(*unsafe { ManuallyDrop::take(&mut self.module) })
+        {
+            std::mem::forget(module);
         }
     }
 }
@@ -80,62 +113,91 @@ pub enum KernelJITResult<'k> {
     Recompiled(&'k Function<'k>),
 }
 
-pub struct TypedKernel<KernelTraitObject: ?Sized> {
+pub type PtxKernelConfigure = dyn FnMut(&Function) -> CudaResult<()>;
+
+pub struct TypedPtxKernel<Kernel> {
     compiler: PtxJITCompiler,
-    kernel: Option<CudaKernel>,
-    entry_point: alloc::boxed::Box<std::ffi::CStr>,
-    marker: PhantomData<KernelTraitObject>,
+    ptx_kernel: Option<PtxKernel>,
+    entry_point: Box<CStr>,
+    configure: Option<Box<PtxKernelConfigure>>,
+    marker: PhantomData<Kernel>,
 }
 
-impl<KernelTraitObject: ?Sized> TypedKernel<KernelTraitObject> {
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] if `ptx` or `entry_point` contain nul bytes.
-    pub fn new(ptx: &str, entry_point: &str) -> CudaResult<Self> {
-        let ptx_cstring = std::ffi::CString::new(ptx).map_err(|_| CudaError::InvalidPtx)?;
+impl<Kernel> TypedPtxKernel<Kernel> {
+    #[must_use]
+    pub fn new<T: CompiledKernelPtx<Kernel>>(configure: Option<Box<PtxKernelConfigure>>) -> Self {
+        let compiler = crate::ptx_jit::PtxJITCompiler::new(T::get_ptx());
+        let entry_point = CString::from(T::get_entry_point()).into_boxed_c_str();
 
-        let compiler = crate::ptx_jit::PtxJITCompiler::new(&ptx_cstring);
-
-        let entry_point_cstring =
-            std::ffi::CString::new(entry_point).map_err(|_| CudaError::InvalidValue)?;
-        let entry_point = entry_point_cstring.into_boxed_c_str();
-
-        Ok(Self {
+        Self {
             compiler,
-            kernel: None,
+            ptx_kernel: None,
             entry_point,
-            marker: PhantomData,
-        })
+            configure,
+            marker: PhantomData::<Kernel>,
+        }
     }
 
     /// # Errors
     ///
-    /// Returns a [`CudaError`] if `ptx` (from [`Self::new`]) is not a valid
-    ///  PTX source, or it does not contain an entry point named `entry_point`
-    ///  (from [`Self::new`]).
+    /// Returns a [`CudaError`] if the [`CompiledKernelPtx`] provided to
+    /// [`Self::new`] is not a valid PTX source or does not contain the
+    /// entry point it declares.
     pub fn compile_with_ptx_jit_args(
         &mut self,
         arguments: Option<&[Option<*const [u8]>]>,
     ) -> CudaResult<KernelJITResult> {
         let ptx_jit = self.compiler.with_arguments(arguments);
 
-        let kernel_jit = match (&mut self.kernel, ptx_jit) {
-            (Some(kernel), PtxJITResult::Cached(_)) => {
-                KernelJITResult::Cached(kernel.get_function())
+        let kernel_jit = match (&mut self.ptx_kernel, ptx_jit) {
+            (Some(ptx_kernel), PtxJITResult::Cached(_)) => {
+                KernelJITResult::Cached(ptx_kernel.get_function())
             },
-            (kernel, PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr)) => {
-                let recomputed_kernel = CudaKernel::new(ptx_cstr, &self.entry_point)?;
+            (ptx_kernel, PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr)) => {
+                let recomputed_ptx_kernel = PtxKernel::new(ptx_cstr, &self.entry_point)?;
 
                 // Replace the existing compiled kernel, drop the old one
-                let kernel = kernel.insert(recomputed_kernel);
+                let ptx_kernel = ptx_kernel.insert(recomputed_ptx_kernel);
 
-                KernelJITResult::Recompiled(kernel.get_function())
+                let function = ptx_kernel.get_function();
+
+                if let Some(configure) = self.configure.as_mut() {
+                    configure(function)?;
+                }
+
+                KernelJITResult::Recompiled(function)
             },
         };
 
         Ok(kernel_jit)
     }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn launch0(&mut self, config: &LaunchConfig) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()> {
+        (const { conjure::<Kernel>() })(&mut Launcher { kernel: self, config: config.clone() })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn launch1<A>(&mut self, config: &LaunchConfig, arg1: A) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()> {
+        (const { conjure::<Kernel>() })(&mut Launcher { kernel: self, config: config.clone() }, arg1)
+    }
 }
+
+const fn conjure<T: Copy>() -> T {
+    union Transmute<T: Copy> {
+        empty: (),
+        magic: T,
+    }
+
+    assert!(std::mem::size_of::<T>() == 0);
+    assert!(std::mem::align_of::<T>() == 1);
+
+    unsafe { Transmute { empty: () }.magic }
+}
+
+struct Assert<const ASSERT: bool>;
+trait True {}
+impl True for Assert<true> {}
 
 pub trait LendToCuda: RustToCuda {
     /// Lends an immutable copy of `&self` to CUDA:
@@ -907,4 +969,18 @@ impl<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'strea
     pub fn for_host(&'a mut self) -> &'a T {
         self.host_val
     }
+}
+
+/// # Safety
+///
+/// The PTX string returned by [`CompiledKernelPtx::get_ptx`] must correspond
+/// to the compiled kernel code for the `Kernel` function and contain a kernel
+/// entry point whose name is returned by
+/// [`CompiledKernelPtx::get_entry_point`].
+///
+/// This trait should not be implemented manually &ndash; use the
+/// [`kernel`](crate::common::kernel) macro instead.
+pub unsafe trait CompiledKernelPtx<Kernel> {
+    fn get_ptx() -> &'static CStr;
+    fn get_entry_point() -> &'static CStr;
 }

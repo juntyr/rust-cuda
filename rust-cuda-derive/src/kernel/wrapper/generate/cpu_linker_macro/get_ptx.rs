@@ -6,7 +6,7 @@ use crate::kernel::utils::skip_kernel_compilation;
 use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn quote_get_ptx_str(
+pub(super) fn quote_get_ptx(
     crate_path: &syn::Path,
     FuncIdent {
         func_ident,
@@ -43,12 +43,12 @@ pub(super) fn quote_get_ptx_str(
                 #crate_path::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
             }> = #crate_path::safety::kernel_signature::Assert::<{
                 #crate_path::safety::kernel_signature::check(
-                    PTX_STR.as_bytes(),
-                    concat!(".visible .entry ", #crate_path::host::specialise_kernel_call!(
+                    PTX_CSTR.to_bytes(),
+                    #crate_path::host::specialise_kernel_call!(
                         #func_ident_hash #generic_start_token
                             #($#macro_type_ids),*
                         #generic_close_token
-                    )).as_bytes()
+                    ).to_bytes(),
                 )
             }>;
         }
@@ -78,7 +78,7 @@ pub(super) fn quote_get_ptx_str(
     };
 
     quote! {
-        fn get_ptx_str() -> &'static str {
+        fn get_ptx() -> &'static ::core::ffi::CStr {
             #crate_path::host::link_kernel!{
                 #func_ident #func_ident_hash #args #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
@@ -100,7 +100,7 @@ pub(super) fn quote_get_ptx_str(
                 )* }
             }
 
-            PTX_STR
+            PTX_CSTR
         }
     }
 }

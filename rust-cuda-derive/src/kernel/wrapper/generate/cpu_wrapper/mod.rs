@@ -14,10 +14,7 @@ use kernel_func_async::quote_kernel_func_async;
 pub(in super::super) fn quote_cpu_wrapper(
     crate_path: &syn::Path,
     config @ KernelConfig {
-        visibility,
-        kernel,
-        ptx,
-        ..
+        visibility, kernel, ..
     }: &KernelConfig,
     decl @ DeclGenerics {
         generic_start_token,
@@ -37,12 +34,6 @@ pub(in super::super) fn quote_cpu_wrapper(
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
 ) -> TokenStream {
-    let launcher_predicate = quote! {
-        Self: Sized + #crate_path::host::Launcher<
-            KernelTraitObject = dyn #kernel #ty_generics
-        >
-    };
-
     let kernel_func = quote_kernel_func_inputs(
         crate_path,
         config,
@@ -65,32 +56,27 @@ pub(in super::super) fn quote_cpu_wrapper(
     );
 
     quote! {
-        #[cfg(not(target_os = "cuda"))]
-        #[allow(clippy::missing_safety_doc)]
-        #visibility unsafe trait #ptx #generic_start_token #generic_trait_params #generic_close_token
-            #generic_trait_where_clause
-        {
-            fn get_ptx_str() -> &'static str where #launcher_predicate;
+        // #[cfg(not(target_os = "cuda"))]
+        // #[allow(clippy::missing_safety_doc)]
+        // #visibility unsafe trait #kernel #generic_start_token
+        //     #generic_trait_params
+        // #generic_close_token: #crate_path::host::CompiledKernelPtx<
+        //     dyn #kernel #ty_generics
+        // > #generic_trait_where_clause
+        // {
+        //     #kernel_func
 
-            fn new_kernel() -> #crate_path::rustacuda::error::CudaResult<
-                #crate_path::host::TypedKernel<dyn #kernel #ty_generics>
-            > where #launcher_predicate;
-        }
+        //     #kernel_func_async
+        // }
 
-        #[cfg(not(target_os = "cuda"))]
-        #[allow(clippy::missing_safety_doc)]
-        #visibility unsafe trait #kernel #generic_start_token #generic_trait_params #generic_close_token: #ptx #ty_generics
-            #generic_trait_where_clause
-        {
-            #kernel_func
+        // #[cfg(not(target_os = "cuda"))]
+        // #[allow(clippy::missing_safety_doc)]
+        // unsafe impl #blanket_impl_generics #kernel #ty_generics for #blanket_ty
+        //     #blanket_where_clause
+        // {}
 
-            #kernel_func_async
-        }
+        #kernel_func
 
-        #[cfg(not(target_os = "cuda"))]
-        #[allow(clippy::missing_safety_doc)]
-        unsafe impl #blanket_impl_generics #kernel #ty_generics for #blanket_ty
-            #blanket_where_clause
-        {}
+        // #kernel_func_async
     }
 }

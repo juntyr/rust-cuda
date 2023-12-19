@@ -136,26 +136,26 @@ fn ensure_reference_type_lifetime(
             mutability,
             elem,
         }) => {
-            let lifetime = lifetime.clone().unwrap_or_else(|| {
-                let lifetime = syn::Lifetime::new(
-                    &format!("'__r2c_lt_{implicit_lifetime_id}"),
-                    lifetime.span(),
-                );
+            // let lifetime = lifetime.clone().unwrap_or_else(|| {
+            //     let lifetime = syn::Lifetime::new(
+            //         &format!("'__r2c_lt_{implicit_lifetime_id}"),
+            //         lifetime.span(),
+            //     );
 
-                generic_params.insert(
-                    *implicit_lifetime_id,
-                    syn::GenericParam::Lifetime(syn::LifetimeDef {
-                        attrs: Vec::new(),
-                        lifetime: lifetime.clone(),
-                        colon_token: None,
-                        bounds: syn::punctuated::Punctuated::new(),
-                    }),
-                );
+            //     generic_params.insert(
+            //         *implicit_lifetime_id,
+            //         syn::GenericParam::Lifetime(syn::LifetimeDef {
+            //             attrs: Vec::new(),
+            //             lifetime: lifetime.clone(),
+            //             colon_token: None,
+            //             bounds: syn::punctuated::Punctuated::new(),
+            //         }),
+            //     );
 
-                *implicit_lifetime_id += 1;
+            //     *implicit_lifetime_id += 1;
 
-                lifetime
-            });
+            //     lifetime
+            // });
 
             let elem = if matches!(cuda_type, InputCudaType::LendRustToCuda) {
                 (|| {
@@ -203,25 +203,25 @@ fn ensure_reference_type_lifetime(
 
             Box::new(syn::Type::Reference(syn::TypeReference {
                 and_token: *and_token,
-                lifetime: Some(lifetime),
+                lifetime: lifetime.clone(),//Some(lifetime),
                 mutability: *mutability,
                 elem,
             }))
         },
         ty => {
-            if matches!(cuda_type, InputCudaType::LendRustToCuda) {
-                generic_params.insert(
-                    *implicit_lifetime_id,
-                    syn::GenericParam::Lifetime(syn::LifetimeDef {
-                        attrs: Vec::new(),
-                        lifetime: r2c_move_lifetime(i, ty),
-                        colon_token: None,
-                        bounds: syn::punctuated::Punctuated::new(),
-                    }),
-                );
+            // if matches!(cuda_type, InputCudaType::LendRustToCuda) {
+            //     generic_params.insert(
+            //         *implicit_lifetime_id,
+            //         syn::GenericParam::Lifetime(syn::LifetimeDef {
+            //             attrs: Vec::new(),
+            //             lifetime: r2c_move_lifetime(i, ty),
+            //             colon_token: None,
+            //             bounds: syn::punctuated::Punctuated::new(),
+            //         }),
+            //     );
 
-                *implicit_lifetime_id += 1;
-            }
+            //     *implicit_lifetime_id += 1;
+            // }
 
             Box::new(ty.clone())
         },

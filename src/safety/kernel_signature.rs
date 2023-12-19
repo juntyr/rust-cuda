@@ -7,13 +7,33 @@ pub enum CpuAndGpuKernelSignatures {
 pub struct Assert<const MATCH: CpuAndGpuKernelSignatures>;
 
 #[must_use]
-pub const fn check(haystack: &[u8], needle: &[u8]) -> CpuAndGpuKernelSignatures {
-    let mut i = 0;
+pub const fn check(ptx: &[u8], entry_point: &[u8]) -> CpuAndGpuKernelSignatures {
+    const KERNEL_TYPE: &[u8] = b".visible .entry ";
+
     let mut j = 0;
+
+    while j < ptx.len() {
+        let Some(j2) = find(ptx, KERNEL_TYPE, j) else {
+            return CpuAndGpuKernelSignatures::Mismatch;
+        };
+
+        if starts_with(ptx, entry_point, j2) {
+            return CpuAndGpuKernelSignatures::Match;
+        }
+
+        j += 1;
+    }
+
+    CpuAndGpuKernelSignatures::Mismatch
+}
+
+const fn find(haystack: &[u8], needle: &[u8], from: usize) -> Option<usize> {
+    let mut i = 0;
+    let mut j = from;
 
     while i < needle.len() {
         if j >= haystack.len() {
-            return CpuAndGpuKernelSignatures::Mismatch;
+            return None;
         }
 
         if needle[i] == haystack[j] {
@@ -25,5 +45,23 @@ pub const fn check(haystack: &[u8], needle: &[u8]) -> CpuAndGpuKernelSignatures 
         }
     }
 
-    CpuAndGpuKernelSignatures::Match
+    Some(j)
+}
+
+const fn starts_with(haystack: &[u8], needle: &[u8], from: usize) -> bool {
+    let mut i = 0;
+
+    while i < needle.len() {
+        if (from + i) >= haystack.len() {
+            return false;
+        }
+
+        if needle[i] == haystack[from + i] {
+            i += 1;
+        } else {
+            return false;
+        }
+    }
+
+    true
 }

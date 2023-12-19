@@ -61,6 +61,7 @@ pub(super) fn quote_kernel_func_async(
         generate_launch_types(crate_path, config, impl_generics, func_inputs);
 
     quote! {
+        #[cfg(not(target_os = "cuda"))]
         #(#func_attrs)*
         #[allow(clippy::extra_unused_type_parameters)]
         #[allow(clippy::too_many_arguments)]
