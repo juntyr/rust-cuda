@@ -1,7 +1,5 @@
 use syn::spanned::Spanned;
 
-use crate::kernel::utils::r2c_move_lifetime;
-
 use super::{InputCudaType, InputPtxJit};
 
 mod attribute;
@@ -12,12 +10,7 @@ pub(super) struct FunctionInputs {
     pub(super) func_input_cuda_types: Vec<(InputCudaType, InputPtxJit)>,
 }
 
-pub(super) fn parse_function_inputs(
-    func: &syn::ItemFn,
-    generic_params: &mut syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
-) -> FunctionInputs {
-    let mut implicit_lifetime_id: usize = 0;
-
+pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
     let (func_inputs, func_input_cuda_types): (
         syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>,
         Vec<(InputCudaType, InputPtxJit)>,
@@ -25,8 +18,7 @@ pub(super) fn parse_function_inputs(
         .sig
         .inputs
         .iter()
-        .enumerate()
-        .map(|(i, arg)| match arg {
+        .map(|arg| match arg {
             receiver @ syn::FnArg::Receiver(_) => {
                 abort!(receiver.span(), "Kernel function must not have a receiver.")
             },
@@ -94,13 +86,7 @@ pub(super) fn parse_function_inputs(
                     );
                 });
 
-                let ty = ensure_reference_type_lifetime(
-                    i,
-                    ty,
-                    &cuda_type,
-                    &mut implicit_lifetime_id,
-                    generic_params,
-                );
+                let ty = ensure_reference_type_lifetime(ty, &cuda_type);
 
                 (
                     syn::FnArg::Typed(syn::PatType {
@@ -122,13 +108,7 @@ pub(super) fn parse_function_inputs(
 }
 
 #[allow(clippy::unnecessary_box_returns)]
-fn ensure_reference_type_lifetime(
-    i: usize,
-    ty: &syn::Type,
-    cuda_type: &InputCudaType,
-    implicit_lifetime_id: &mut usize,
-    generic_params: &mut syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
-) -> Box<syn::Type> {
+fn ensure_reference_type_lifetime(ty: &syn::Type, cuda_type: &InputCudaType) -> Box<syn::Type> {
     match ty {
         syn::Type::Reference(syn::TypeReference {
             and_token,
@@ -136,27 +116,6 @@ fn ensure_reference_type_lifetime(
             mutability,
             elem,
         }) => {
-            // let lifetime = lifetime.clone().unwrap_or_else(|| {
-            //     let lifetime = syn::Lifetime::new(
-            //         &format!("'__r2c_lt_{implicit_lifetime_id}"),
-            //         lifetime.span(),
-            //     );
-
-            //     generic_params.insert(
-            //         *implicit_lifetime_id,
-            //         syn::GenericParam::Lifetime(syn::LifetimeDef {
-            //             attrs: Vec::new(),
-            //             lifetime: lifetime.clone(),
-            //             colon_token: None,
-            //             bounds: syn::punctuated::Punctuated::new(),
-            //         }),
-            //     );
-
-            //     *implicit_lifetime_id += 1;
-
-            //     lifetime
-            // });
-
             let elem = if matches!(cuda_type, InputCudaType::LendRustToCuda) {
                 (|| {
                     if let syn::Type::Path(syn::TypePath {
@@ -203,27 +162,11 @@ fn ensure_reference_type_lifetime(
 
             Box::new(syn::Type::Reference(syn::TypeReference {
                 and_token: *and_token,
-                lifetime: lifetime.clone(),//Some(lifetime),
+                lifetime: lifetime.clone(),
                 mutability: *mutability,
                 elem,
             }))
         },
-        ty => {
-            // if matches!(cuda_type, InputCudaType::LendRustToCuda) {
-            //     generic_params.insert(
-            //         *implicit_lifetime_id,
-            //         syn::GenericParam::Lifetime(syn::LifetimeDef {
-            //             attrs: Vec::new(),
-            //             lifetime: r2c_move_lifetime(i, ty),
-            //             colon_token: None,
-            //             bounds: syn::punctuated::Punctuated::new(),
-            //         }),
-            //     );
-
-            //     *implicit_lifetime_id += 1;
-            // }
-
-            Box::new(ty.clone())
-        },
+        ty => Box::new(ty.clone()),
     }
 }

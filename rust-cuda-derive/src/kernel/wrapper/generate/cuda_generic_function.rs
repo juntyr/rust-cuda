@@ -7,7 +7,6 @@ pub(in super::super) fn quote_cuda_generic_function(
         generic_start_token,
         generic_kernel_params: generic_params,
         generic_close_token,
-        generic_kernel_where_clause: generic_where_clause,
         ..
     }: &DeclGenerics,
     func_inputs: &syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>,
@@ -19,7 +18,6 @@ pub(in super::super) fn quote_cuda_generic_function(
         #[cfg(target_os = "cuda")]
         #(#func_attrs)*
         fn #func_ident #generic_start_token #generic_params #generic_close_token (#func_inputs)
-            #generic_where_clause
         #func_block
     }
 }

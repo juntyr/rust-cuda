@@ -1,22 +1,12 @@
 use proc_macro2::TokenStream;
 
-use super::super::{DeclGenerics, FunctionInputs, ImplGenerics, KernelConfig};
+use super::super::{FunctionInputs, ImplGenerics, KernelConfig};
 
 pub(in super::super) fn quote_args_trait(
-    KernelConfig {
-        visibility, args, ..
-    }: &KernelConfig,
-    DeclGenerics {
-        generic_start_token,
-        generic_trait_params: generic_params,
-        generic_close_token,
-        generic_trait_where_clause: generic_where_clause,
-        ..
-    }: &DeclGenerics,
+    KernelConfig { args, .. }: &KernelConfig,
     ImplGenerics {
         impl_generics,
         ty_generics,
-        where_clause,
     }: &ImplGenerics,
     FunctionInputs { func_inputs, .. }: &FunctionInputs,
 ) -> TokenStream {
@@ -52,25 +42,12 @@ pub(in super::super) fn quote_args_trait(
         .collect::<Vec<_>>();
 
     quote! {
-        #[cfg(not(target_os = "cuda"))]
-        #[allow(clippy::missing_safety_doc)]
-        #visibility unsafe trait #args #generic_start_token #generic_params #generic_close_token
-            #generic_where_clause
-        {
+        #[allow(non_camel_case_types)]
+        pub trait #args #impl_generics {
             #(#func_input_typedefs)*
         }
 
-        // #args must always be pub in CUDA kernel as it is used to define the
-        //  public kernel entry point signature
-        #[cfg(target_os = "cuda")]
-        #[allow(clippy::missing_safety_doc)]
-        pub unsafe trait #args #generic_start_token #generic_params #generic_close_token
-            #generic_where_clause
-        {
-            #(#func_input_typedefs)*
-        }
-
-        unsafe impl #impl_generics #args #ty_generics for () #where_clause {
+        impl #impl_generics #args #ty_generics for () {
             #(#func_input_types)*
         }
     }

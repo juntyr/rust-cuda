@@ -50,5 +50,12 @@ pub(super) fn parse_kernel_fn(tokens: TokenStream) -> syn::ItemFn {
         ),
     };
 
+    if let Some(r#where) = &func.sig.generics.where_clause {
+        abort!(
+            r#where.span(),
+            "Kernel function must not have a where clause, use type generic bounds instead."
+        );
+    }
+
     func
 }

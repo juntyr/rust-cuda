@@ -5,6 +5,7 @@
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![feature(map_try_insert)]
+#![feature(proc_macro_def_site)]
 #![feature(cfg_version)]
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]

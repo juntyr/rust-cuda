@@ -8,6 +8,7 @@
 #![feature(cfg_version)]
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![feature(type_alias_impl_trait)]
+#![feature(decl_macro)]
 
 extern crate alloc;
 
@@ -20,7 +21,7 @@ pub enum Action {
     AllocError,
 }
 
-#[rust_cuda::common::kernel(pub use link! as impl Kernel<KernelArgs> for Launcher)]
+#[rust_cuda::common::kernel(use link! for impl)]
 #[kernel(allow(ptx::local_memory_usage))]
 pub fn kernel(#[kernel(pass = SafeDeviceCopy)] action: Action) {
     match action {
@@ -39,7 +40,7 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
     link! { impl kernel for KernelPtx }
 
     // Initialize the CUDA API
-    /*rust_cuda::rustacuda::init(rust_cuda::rustacuda::CudaFlags::empty())?;
+    rust_cuda::rustacuda::init(rust_cuda::rustacuda::CudaFlags::empty())?;
 
     // Get the first CUDA GPU device
     let device = rust_cuda::rustacuda::device::Device::get_device(0)?;
@@ -57,7 +58,7 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
     let stream = rust_cuda::host::CudaDropWrapper::from(rust_cuda::rustacuda::stream::Stream::new(
         rust_cuda::rustacuda::stream::StreamFlags::NON_BLOCKING,
         None,
-    )?);*/
+    )?);
 
     // Create a new instance of the CUDA kernel and prepare the launch config
     let mut kernel = rust_cuda::host::TypedPtxKernel::<kernel>::new::<KernelPtx>(None);
@@ -67,17 +68,16 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
         shared_memory_size: 0,
         ptx_jit: false,
     };
-    // let mut launcher = rust_cuda::host::Launcher { kernel: &mut typed_kernel, config };
 
     // Launch the CUDA kernel on the stream and synchronise to its completion
     println!("Launching print kernel ...");
-    kernel.launch1(&config, Action::Print)?;
+    kernel.launch1(&stream, &config, Action::Print)?;
     // kernel(&mut launcher, Action::Print)?;
     println!("Launching panic kernel ...");
-    kernel.launch1(&config, Action::Panic)?;
+    kernel.launch1(&stream, &config, Action::Panic)?;
     // kernel(&mut launcher, Action::Panic)?;
     println!("Launching alloc error kernel ...");
-    kernel.launch1(&config, Action::AllocError)?;
+    kernel.launch1(&stream, &config, Action::AllocError)?;
     // kernel(&mut launcher, Action::AllocError)?;
 
     Ok(())

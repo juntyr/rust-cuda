@@ -4,13 +4,13 @@ use syn::spanned::Spanned;
 
 use super::super::{
     super::{KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY},
-    FuncIdent, FunctionInputs, InputCudaType, KernelConfig,
+    FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
 };
 
 #[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
     crate_path: &syn::Path,
-    config @ KernelConfig { args, .. }: &KernelConfig,
+    config @ KernelConfig { args, private, .. }: &KernelConfig,
     inputs @ FunctionInputs {
         func_inputs,
         func_input_cuda_types,
@@ -20,6 +20,7 @@ pub(in super::super) fn quote_cuda_wrapper(
         func_ident_hash,
         ..
     }: &FuncIdent,
+    impl_generics: &ImplGenerics,
     func_attrs: &[syn::Attribute],
     func_params: &[syn::Ident],
 ) -> TokenStream {
@@ -56,7 +57,7 @@ pub(in super::super) fn quote_cuda_wrapper(
 
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#private :: #args :: #type_ident)
                 };
 
                 match cuda_mode {
@@ -99,12 +100,21 @@ pub(in super::super) fn quote_cuda_wrapper(
             syn::FnArg::Receiver(_) => unreachable!(),
         });
 
+    let args_trait = super::args_trait::quote_args_trait(config, impl_generics, inputs);
+
     quote! {
+        // TODO: args trait should not be publicly available like this
+        //       but specialisation requires it right now
+        #args_trait
+
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_entry(#args)]
         #[no_mangle]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
+            #[allow(unused_imports)]
+            use __rust_cuda_ffi_safe_assert::#args;
+
             unsafe {
                 ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY);
             }
@@ -123,7 +133,9 @@ pub(in super::super) fn quote_cuda_wrapper(
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
                 #[allow(unused_imports)]
-                use super::#args;
+                use super::*;
+
+                #args_trait
 
                 extern "C" { #(
                     #[allow(dead_code)]
@@ -149,7 +161,7 @@ pub(in super::super) fn quote_cuda_wrapper(
 
 fn specialise_ptx_func_inputs(
     crate_path: &syn::Path,
-    KernelConfig { args, .. }: &KernelConfig,
+    KernelConfig { args, private, .. }: &KernelConfig,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
@@ -170,7 +182,7 @@ fn specialise_ptx_func_inputs(
             ) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#private :: #args :: #type_ident)
                 };
 
                 let cuda_type = match cuda_mode {
@@ -228,7 +240,7 @@ fn specialise_ptx_func_inputs(
 
 fn specialise_ptx_unboxed_types(
     crate_path: &syn::Path,
-    KernelConfig { args, .. }: &KernelConfig,
+    KernelConfig { args, private, .. }: &KernelConfig,
     FunctionInputs { func_inputs, .. }: &FunctionInputs,
 ) -> Vec<TokenStream> {
     func_inputs
@@ -239,7 +251,7 @@ fn specialise_ptx_unboxed_types(
                 let type_ident = quote::format_ident!("__T_{}", i);
 
                 quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#private :: #args :: #type_ident)
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),

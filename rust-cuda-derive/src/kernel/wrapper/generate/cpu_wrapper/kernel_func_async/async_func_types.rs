@@ -1,18 +1,17 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use crate::kernel::utils::r2c_move_lifetime;
-
 use super::super::super::super::{FunctionInputs, ImplGenerics, InputCudaType, KernelConfig};
 
 pub(super) fn generate_async_func_types(
     crate_path: &syn::Path,
-    KernelConfig { args, .. }: &KernelConfig,
+    KernelConfig { args, private, .. }: &KernelConfig,
     ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
+    stream: &syn::Lifetime,
 ) -> Vec<TokenStream> {
     func_inputs
         .iter()
@@ -27,7 +26,7 @@ pub(super) fn generate_async_func_types(
             }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote! {
-                    <() as #args #ty_generics>::#type_ident
+                    <() as #private :: #args #ty_generics>::#type_ident
                 };
 
                 let cuda_type = match cuda_mode {
@@ -47,6 +46,8 @@ pub(super) fn generate_async_func_types(
                     ..
                 }) = &**ty
                 {
+                    let lifetime = lifetime.clone().unwrap_or(syn::parse_quote!('_));
+
                     let wrapped_type = if mutability.is_some() {
                         if matches!(cuda_mode, InputCudaType::SafeDeviceCopy) {
                             abort!(
@@ -56,11 +57,11 @@ pub(super) fn generate_async_func_types(
                         }
 
                         quote!(
-                            #crate_path::host::HostAndDeviceMutRefAsync<'stream, #lifetime, #cuda_type>
+                            #crate_path::host::HostAndDeviceMutRefAsync<#stream, #lifetime, #cuda_type>
                         )
                     } else {
                         quote!(
-                            #crate_path::host::HostAndDeviceConstRefAsync<'stream, #lifetime, #cuda_type>
+                            #crate_path::host::HostAndDeviceConstRefAsync<#stream, #lifetime, #cuda_type>
                         )
                     };
 
@@ -68,10 +69,8 @@ pub(super) fn generate_async_func_types(
                         #(#attrs)* #mutability #pat #colon_token #wrapped_type
                     }
                 } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
-                    let lifetime = r2c_move_lifetime(i, ty);
-
                     let wrapped_type = quote! {
-                        #crate_path::host::HostAndDeviceOwnedAsync<'stream, #lifetime, #cuda_type>
+                        #crate_path::host::HostAndDeviceOwnedAsync<#stream, '_, #cuda_type>
                     };
 
                     quote! {

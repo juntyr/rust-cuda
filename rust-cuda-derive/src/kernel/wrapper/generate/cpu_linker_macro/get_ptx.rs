@@ -3,7 +3,9 @@ use syn::spanned::Spanned;
 
 use crate::kernel::utils::skip_kernel_compilation;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
+use super::super::super::{
+    DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx(
@@ -19,6 +21,7 @@ pub(super) fn quote_get_ptx(
         generic_close_token,
         ..
     }: &DeclGenerics,
+    impl_generics: &ImplGenerics,
     inputs: &FunctionInputs,
     func_params: &[syn::Ident],
     macro_type_ids: &[syn::Ident],
@@ -31,6 +34,8 @@ pub(super) fn quote_get_ptx(
 
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
+
+    let args_trait = super::super::args_trait::quote_args_trait(config, impl_generics, inputs);
 
     let cpu_func_lifetime_erased_types =
         generate_lifetime_erased_types(crate_path, config, generics, inputs, macro_type_ids);
@@ -79,6 +84,9 @@ pub(super) fn quote_get_ptx(
 
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
+            #[allow(unused_imports)]
+            use __rust_cuda_ffi_safe_assert::#args;
+
             #crate_path::host::link_kernel!{
                 #func_ident #func_ident_hash #args #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
@@ -92,7 +100,9 @@ pub(super) fn quote_get_ptx(
             #[deny(improper_ctypes)]
             mod __rust_cuda_ffi_safe_assert {
                 #[allow(unused_imports)]
-                use super::#args;
+                use super::*;
+
+                #args_trait
 
                 extern "C" { #(
                     #[allow(dead_code)]

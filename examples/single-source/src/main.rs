@@ -10,6 +10,7 @@
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_bounds)]
+#![feature(decl_macro)]
 
 extern crate alloc;
 
@@ -46,13 +47,20 @@ pub struct Tuple(u32, i32);
 #[layout(crate = "rc::const_type_layout")]
 pub struct Triple(i32, i32, i32);
 
-#[rc::common::kernel(use link! as impl Kernel<KernelArgs> for Launcher)]
+#[rc::common::kernel(pub use link! for impl)]
 #[kernel(crate = "rc")]
 #[kernel(
     allow(ptx::double_precision_use),
     forbid(ptx::local_memory_usage, ptx::register_spills)
 )]
-pub fn kernel<'a, T: rc::common::RustToCuda<CudaRepresentation: rc::safety::StackOnly, CudaAllocation: rc::common::EmptyCudaAlloc> + rc::safety::StackOnly + rc::safety::NoSafeAliasing>(
+pub fn kernel<
+    'a,
+    T: rc::common::RustToCuda<
+            CudaRepresentation: rc::safety::StackOnly,
+            CudaAllocation: rc::common::EmptyCudaAlloc,
+        > + rc::safety::StackOnly
+        + rc::safety::NoSafeAliasing,
+>(
     #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
     #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
     #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
@@ -80,12 +88,12 @@ pub fn kernel<'a, T: rc::common::RustToCuda<CudaRepresentation: rc::safety::Stac
 
 #[cfg(not(target_os = "cuda"))]
 mod host {
-    use super::{kernel, KernelArgs};
+    // use super::{link, kernel};
 
     // Link several instances of the generic CUDA kernel
     struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
-    link! { impl kernel<'a, crate::Empty> for KernelPtx }
-    link! { impl kernel<'a, rc::utils::device_copy::SafeDeviceCopyWrapper<u64>> for KernelPtx }
+    crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
+    crate::link! { impl kernel<'a, rc::utils::device_copy::SafeDeviceCopyWrapper<u64>> for KernelPtx }
 }
 
 #[cfg(target_os = "cuda")]

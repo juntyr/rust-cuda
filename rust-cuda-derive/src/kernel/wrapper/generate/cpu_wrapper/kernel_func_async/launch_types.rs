@@ -1,13 +1,11 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use crate::kernel::utils::r2c_move_lifetime;
-
 use super::super::super::super::{FunctionInputs, ImplGenerics, InputCudaType, KernelConfig};
 
 pub(in super::super) fn generate_launch_types(
     crate_path: &syn::Path,
-    KernelConfig { args, .. }: &KernelConfig,
+    KernelConfig { args, private, .. }: &KernelConfig,
     ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs {
         func_inputs,
@@ -25,7 +23,7 @@ pub(in super::super) fn generate_launch_types(
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    <() as #args #ty_generics>::#type_ident
+                    <() as #private :: #args #ty_generics>::#type_ident
                 };
 
                 cpu_func_unboxed_types.push(syn_type.clone());
@@ -48,20 +46,21 @@ pub(in super::super) fn generate_launch_types(
                         ..
                     }) = &**ty
                     {
+                        let comma: Option<syn::token::Comma> =
+                            lifetime.as_ref().map(|_| syn::parse_quote!(,));
+
                         if mutability.is_some() {
                             quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceMutRef<#lifetime, #cuda_type>
+                                #crate_path::common::DeviceMutRef<#lifetime #comma #cuda_type>
                             }
                         } else {
                             quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceConstRef<#lifetime, #cuda_type>
+                                #crate_path::common::DeviceConstRef<#lifetime #comma #cuda_type>
                             }
                         }
                     } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
-                        let lifetime = r2c_move_lifetime(i, ty);
-
                         quote::quote_spanned! { ty.span()=>
-                            #crate_path::common::DeviceMutRef<#lifetime, #cuda_type>
+                            #crate_path::common::DeviceMutRef<#cuda_type>
                         }
                     } else {
                         quote! { #cuda_type }

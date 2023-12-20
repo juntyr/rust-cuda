@@ -28,20 +28,27 @@ use crate::{
     safety::SafeDeviceCopy,
 };
 
-pub struct Launcher<'a, Kernel> {
-    pub kernel: &'a mut TypedPtxKernel<Kernel>,
+pub struct Launcher<'stream, 'kernel, Kernel> {
+    pub stream: &'stream Stream,
+    pub kernel: &'kernel mut TypedPtxKernel<Kernel>,
     pub config: LaunchConfig,
 }
 
-impl<'a, Kernel> Launcher<'a, Kernel> {
+impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
     #[allow(clippy::missing_errors_doc)]
-    pub fn launch0(&mut self) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()> {
-        self.kernel.launch0(&self.config)
+    pub fn launch0(&mut self) -> CudaResult<()>
+    where
+        Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()>,
+    {
+        self.kernel.launch0(self.stream, &self.config)
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn launch1<A>(&mut self, arg1: A) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()> {
-        self.kernel.launch1(&self.config, arg1)
+    pub fn launch1<A>(&mut self, arg1: A) -> CudaResult<()>
+    where
+        Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()>,
+    {
+        self.kernel.launch1(self.stream, &self.config, arg1)
     }
 }
 
@@ -173,13 +180,30 @@ impl<Kernel> TypedPtxKernel<Kernel> {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn launch0(&mut self, config: &LaunchConfig) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()> {
-        (const { conjure::<Kernel>() })(&mut Launcher { kernel: self, config: config.clone() })
+    pub fn launch0(&mut self, stream: &Stream, config: &LaunchConfig) -> CudaResult<()>
+    where
+        Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()>,
+    {
+        (const { conjure::<Kernel>() })(&mut Launcher {
+            stream,
+            kernel: self,
+            config: config.clone(),
+        })
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn launch1<A>(&mut self, config: &LaunchConfig, arg1: A) -> CudaResult<()> where Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()> {
-        (const { conjure::<Kernel>() })(&mut Launcher { kernel: self, config: config.clone() }, arg1)
+    pub fn launch1<A>(&mut self, stream: &Stream, config: &LaunchConfig, arg1: A) -> CudaResult<()>
+    where
+        Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()>,
+    {
+        (const { conjure::<Kernel>() })(
+            &mut Launcher {
+                stream,
+                kernel: self,
+                config: config.clone(),
+            },
+            arg1,
+        )
     }
 }
 

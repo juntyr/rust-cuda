@@ -132,116 +132,33 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     };
 
-    let mut generic_kernel_params = func.sig.generics.params.clone();
-    let mut func_inputs = parse_function_inputs(&func, &mut generic_kernel_params);
+    let mut func_inputs = parse_function_inputs(&func);
 
-    let (generic_start_token, generic_close_token) = if generic_kernel_params.is_empty() {
-        (None, None)
-    } else if let (Some(start), Some(close)) =
-        (func.sig.generics.lt_token, func.sig.generics.gt_token)
-    {
-        (Some(start), Some(close))
-    } else {
-        (Some(syn::parse_quote!(<)), Some(syn::parse_quote!(>)))
-    };
+    let generic_kernel_params = func.sig.generics.params.clone();
+    let (generic_start_token, generic_close_token) =
+        (func.sig.generics.lt_token, func.sig.generics.gt_token);
 
     let generic_trait_params = generic_kernel_params
         .iter()
         .filter(|generic_param| !matches!(generic_param, syn::GenericParam::Lifetime(_)))
         .cloned()
         .collect();
-    let generic_wrapper_params = generic_kernel_params
-        .iter()
-        .filter(|generic_param| matches!(generic_param, syn::GenericParam::Lifetime(_)))
-        .cloned()
-        .collect();
-
-    let generic_kernel_where_clause = &func.sig.generics.where_clause;
-    let generic_trait_where_clause = generic_kernel_where_clause.as_ref().map(
-        |syn::WhereClause {
-             where_token,
-             predicates,
-         }: &syn::WhereClause| {
-            let predicates = predicates
-                .iter()
-                .filter(|predicate| !matches!(predicate, syn::WherePredicate::Lifetime(_)))
-                .cloned()
-                .collect();
-
-            syn::WhereClause {
-                where_token: *where_token,
-                predicates,
-            }
-        },
-    );
-    let generic_wrapper_where_clause = generic_kernel_where_clause.as_ref().map(
-        |syn::WhereClause {
-             where_token,
-             predicates,
-         }: &syn::WhereClause| {
-            let predicates = predicates
-                .iter()
-                .filter(|predicate| matches!(predicate, syn::WherePredicate::Lifetime(_)))
-                .cloned()
-                .collect();
-
-            syn::WhereClause {
-                where_token: *where_token,
-                predicates,
-            }
-        },
-    );
 
     let decl_generics = DeclGenerics {
         generic_start_token: &generic_start_token,
-        generic_trait_params: &generic_trait_params,
         generic_close_token: &generic_close_token,
-        generic_trait_where_clause: &generic_trait_where_clause,
-        generic_wrapper_params: &generic_wrapper_params,
-        generic_wrapper_where_clause: &generic_wrapper_where_clause,
         generic_kernel_params: &generic_kernel_params,
-        generic_kernel_where_clause,
     };
     let trait_generics = syn::Generics {
         lt_token: generic_start_token,
-        params: generic_trait_params.clone(),
+        params: generic_trait_params,
         gt_token: generic_close_token,
-        where_clause: generic_trait_where_clause.clone(),
+        where_clause: None,
     };
-    let (impl_generics, ty_generics, where_clause) = trait_generics.split_for_impl();
-    let blanket_ty = syn::Ident::new("K", Span::mixed_site());
-    let mut blanket_params = generic_trait_params.clone();
-    blanket_params.push(syn::GenericParam::Type(syn::TypeParam {
-        attrs: Vec::new(),
-        ident: blanket_ty.clone(),
-        colon_token: syn::parse_quote!(:),
-        bounds: {
-            let kernel = &config.kernel;
-            syn::parse_quote! {
-                #crate_path::host::CompiledKernelPtx<
-                    dyn #kernel #ty_generics
-                >
-            }
-        },
-        eq_token: None,
-        default: None,
-    }));
-    let trait_blanket_generics = syn::Generics {
-        lt_token: Some(generic_start_token.unwrap_or(syn::parse_quote!(<))),
-        params: blanket_params,
-        gt_token: Some(generic_close_token.unwrap_or(syn::parse_quote!(>))),
-        where_clause: generic_trait_where_clause.clone(),
-    };
-    let (blanket_impl_generics, _, blanket_where_clause) = trait_blanket_generics.split_for_impl();
-    let blanket_generics = BlanketGenerics {
-        blanket_ty,
-        impl_generics: blanket_impl_generics,
-        where_clause: blanket_where_clause,
-    };
+    let (impl_generics, ty_generics, _where_clause) = trait_generics.split_for_impl();
     let impl_generics = ImplGenerics {
         impl_generics,
         ty_generics,
-        where_clause,
     };
 
     let func_ident = FuncIdent {
@@ -293,13 +210,12 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let args_trait = quote_args_trait(&config, &decl_generics, &impl_generics, &func_inputs);
+    let args_trait = quote_args_trait(&config, &impl_generics, &func_inputs);
     let cpu_wrapper = quote_cpu_wrapper(
         &crate_path,
         &config,
         &decl_generics,
         &impl_generics,
-        &blanket_generics,
         &func_inputs,
         &func_ident,
         &func_params,
@@ -310,6 +226,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &crate_path,
         &config,
         &decl_generics,
+        &impl_generics,
         &func_inputs,
         &func_ident,
         &func_params,
@@ -320,6 +237,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &config,
         &func_inputs,
         &func_ident,
+        &impl_generics,
         &func.attrs,
         &func_params,
     );
@@ -330,9 +248,16 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func.attrs,
         &func.block,
     );
+    let private = &config.private;
 
     (quote! {
-        #args_trait
+        mod #private {
+            #[allow(unused_imports)]
+            use super::*;
+
+            #args_trait
+        }
+
         #cpu_wrapper
 
         #cpu_cuda_check
@@ -355,26 +280,14 @@ struct InputPtxJit(bool);
 #[allow(clippy::struct_field_names)]
 struct DeclGenerics<'f> {
     generic_start_token: &'f Option<syn::token::Lt>,
-    generic_trait_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
     generic_close_token: &'f Option<syn::token::Gt>,
-    generic_trait_where_clause: &'f Option<syn::WhereClause>,
-    generic_wrapper_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
-    generic_wrapper_where_clause: &'f Option<syn::WhereClause>,
     generic_kernel_params: &'f syn::punctuated::Punctuated<syn::GenericParam, syn::token::Comma>,
-    generic_kernel_where_clause: &'f Option<syn::WhereClause>,
 }
 
 struct ImplGenerics<'f> {
     #[allow(clippy::struct_field_names)]
     impl_generics: syn::ImplGenerics<'f>,
     ty_generics: syn::TypeGenerics<'f>,
-    where_clause: Option<&'f syn::WhereClause>,
-}
-
-struct BlanketGenerics<'f> {
-    blanket_ty: syn::Ident,
-    impl_generics: syn::ImplGenerics<'f>,
-    where_clause: Option<&'f syn::WhereClause>,
 }
 
 #[allow(clippy::struct_field_names)]
