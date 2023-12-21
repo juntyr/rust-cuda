@@ -27,6 +27,7 @@
 #![feature(panic_info_message)]
 #![feature(let_chains)]
 #![feature(inline_const)]
+#![feature(sync_unsafe_cell)]
 #![feature(cfg_version)]
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![cfg_attr(not(version("1.76.0")), feature(ptr_from_ref))]

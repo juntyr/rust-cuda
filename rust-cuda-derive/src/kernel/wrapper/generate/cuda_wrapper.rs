@@ -72,6 +72,8 @@ pub(in super::super) fn quote_cuda_wrapper(
                         syn::TypeReference { and_token, .. }
                     ) = &**ty {
                         // DeviceCopy mode only supports immutable references
+                        // TODO: ptx_jit_load should be here, not there
+                        // also ptx_jit_load should not be enabled for interior mutability
                         quote! { { let #pat: #and_token #syn_type = #pat.as_ref().into_ref(); #inner } }
                     } else {
                         quote! { #ptx_jit_load; { let #pat: #syn_type = #pat.into_inner(); #inner } }

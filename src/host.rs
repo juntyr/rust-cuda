@@ -22,7 +22,8 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_entry_po
 
 use crate::{
     common::{
-        DeviceAccessible, DeviceConstRef, DeviceMutRef, EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
+        DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef, EmptyCudaAlloc,
+        NoCudaAlloc, RustToCuda,
     },
     ptx_jit::{PtxJITCompiler, PtxJITResult},
     safety::SafeDeviceCopy,
@@ -779,56 +780,46 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwned<'a, T: SafeDeviceCopy + DeviceCopy> {
-    device_box: &'a mut HostDeviceBox<T>,
-    host_val: &'a mut T,
+pub struct HostAndDeviceOwned<T: SafeDeviceCopy + DeviceCopy> {
+    device_box: HostDeviceBox<T>,
+    host_val: T,
 }
 
-impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
+impl<T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<T> {
     /// # Errors
     ///
     /// Returns a [`CudaError`] iff `value` cannot be moved
     ///  to CUDA or an error occurs inside `inner`.
-    pub fn with_new<
-        O,
-        E: From<CudaError>,
-        F: for<'b> FnOnce(HostAndDeviceOwned<'b, T>) -> Result<O, E>,
-    >(
-        mut value: T,
+    pub fn with_new<O, E: From<CudaError>, F: FnOnce(HostAndDeviceOwned<T>) -> Result<O, E>>(
+        value: T,
         inner: F,
     ) -> Result<O, E> {
-        let mut device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
+        let device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
 
         // Safety: `device_box` contains exactly the device copy of `value`
-        let result = inner(HostAndDeviceOwned {
-            device_box: &mut device_box,
-            host_val: &mut value,
-        });
-
-        core::mem::drop(device_box);
-        core::mem::drop(value);
-
-        result
+        inner(HostAndDeviceOwned {
+            device_box,
+            host_val: value,
+        })
     }
 
     #[must_use]
-    pub fn for_device(self) -> DeviceMutRef<'a, T> {
-        DeviceMutRef {
-            pointer: self.device_box.0.as_raw_mut(),
-            reference: PhantomData,
+    pub fn for_device(self) -> DeviceOwnedRef<T> {
+        let mut device_box = ManuallyDrop::new(self.device_box);
+
+        DeviceOwnedRef {
+            pointer: device_box.0.as_raw_mut(),
+            marker: PhantomData::<T>,
         }
     }
 
     #[must_use]
-    pub fn for_host(&'a mut self) -> &'a T {
-        self.host_val
+    pub fn for_host(&self) -> &T {
+        &self.host_val
     }
 
     #[must_use]
-    pub fn as_async<'stream, 'b>(&'b mut self) -> HostAndDeviceOwnedAsync<'stream, 'b, T>
-    where
-        'a: 'b,
-    {
+    pub fn into_async<'stream>(self) -> HostAndDeviceOwnedAsync<'stream, T> {
         HostAndDeviceOwnedAsync {
             device_box: self.device_box,
             host_val: self.host_val,
@@ -970,28 +961,30 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceConstRefAsync<'stream, 'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> {
-    device_box: &'a mut HostDeviceBox<T>,
-    host_val: &'a mut T,
+pub struct HostAndDeviceOwnedAsync<'stream, T: SafeDeviceCopy + DeviceCopy> {
+    device_box: HostDeviceBox<T>,
+    host_val: T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'stream, 'a, T> {
+impl<'stream, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'stream, T> {
     #[must_use]
     /// # Safety
     ///
-    /// The returned [`DeviceConstRef`] must only be used on the
+    /// The returned [`DeviceOwnedRef`] must only be used on the
     /// constructed-with [`Stream`]
-    pub unsafe fn for_device_async(self) -> DeviceMutRef<'a, T> {
-        DeviceMutRef {
-            pointer: self.device_box.0.as_raw_mut(),
-            reference: PhantomData,
+    pub unsafe fn for_device_async(self) -> DeviceOwnedRef<T> {
+        let mut device_box = ManuallyDrop::new(self.device_box);
+
+        DeviceOwnedRef {
+            pointer: device_box.0.as_raw_mut(),
+            marker: PhantomData,
         }
     }
 
     #[must_use]
-    pub fn for_host(&'a mut self) -> &'a T {
-        self.host_val
+    pub fn for_host(&self) -> &T {
+        &self.host_val
     }
 }
 
