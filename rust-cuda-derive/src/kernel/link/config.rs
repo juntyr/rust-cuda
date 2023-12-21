@@ -6,7 +6,6 @@ use super::super::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 pub(super) struct LinkKernelConfig {
     pub(super) kernel: syn::Ident,
     pub(super) kernel_hash: syn::Ident,
-    pub(super) args: syn::Ident,
     pub(super) crate_name: String,
     pub(super) crate_path: PathBuf,
     pub(super) specialisation: String,
@@ -17,7 +16,6 @@ impl syn::parse::Parse for LinkKernelConfig {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let kernel: syn::Ident = input.parse()?;
         let kernel_hash: syn::Ident = input.parse()?;
-        let args: syn::Ident = input.parse()?;
         let name: syn::LitStr = input.parse()?;
         let path: syn::LitStr = input.parse()?;
 
@@ -56,7 +54,6 @@ impl syn::parse::Parse for LinkKernelConfig {
         Ok(Self {
             kernel,
             kernel_hash,
-            args,
             crate_name: name.value(),
             crate_path: PathBuf::from(path.value()),
             specialisation,
@@ -67,22 +64,22 @@ impl syn::parse::Parse for LinkKernelConfig {
 
 #[allow(clippy::module_name_repetitions)]
 pub(super) struct CheckKernelConfig {
+    pub(super) kernel: syn::Ident,
     pub(super) kernel_hash: syn::Ident,
-    pub(super) args: syn::Ident,
     pub(super) crate_name: String,
     pub(super) crate_path: PathBuf,
 }
 
 impl syn::parse::Parse for CheckKernelConfig {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let kernel: syn::Ident = input.parse()?;
         let kernel_hash: syn::Ident = input.parse()?;
-        let args: syn::Ident = input.parse()?;
         let name: syn::LitStr = input.parse()?;
         let path: syn::LitStr = input.parse()?;
 
         Ok(Self {
+            kernel,
             kernel_hash,
-            args,
             crate_name: name.value(),
             crate_path: PathBuf::from(path.value()),
         })

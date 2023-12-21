@@ -14,9 +14,8 @@ use super::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 
 use config::KernelConfig;
 use generate::{
-    args_trait::quote_args_trait, cpu_linker_macro::quote_cpu_linker_macro,
-    cpu_wrapper::quote_cpu_wrapper, cuda_generic_function::quote_cuda_generic_function,
-    cuda_wrapper::quote_cuda_wrapper,
+    cpu_linker_macro::quote_cpu_linker_macro, cpu_wrapper::quote_cpu_wrapper,
+    cuda_generic_function::quote_cuda_generic_function, cuda_wrapper::quote_cuda_wrapper,
 };
 use inputs::{parse_function_inputs, FunctionInputs};
 use parse::parse_kernel_fn;
@@ -210,10 +209,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let args_trait = quote_args_trait(&config, &impl_generics, &func_inputs);
     let cpu_wrapper = quote_cpu_wrapper(
         &crate_path,
-        &config,
         &decl_generics,
         &impl_generics,
         &func_inputs,
@@ -221,7 +218,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_params,
         &func.attrs,
     );
-    let cpu_cuda_check = quote_generic_check(&crate_path, &func_ident, &config);
+    let cpu_cuda_check = quote_generic_check(&crate_path, &func_ident);
     let cpu_linker_macro = quote_cpu_linker_macro(
         &crate_path,
         &config,
@@ -234,7 +231,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     );
     let cuda_wrapper = quote_cuda_wrapper(
         &crate_path,
-        &config,
         &func_inputs,
         &func_ident,
         &impl_generics,
@@ -248,16 +244,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func.attrs,
         &func.block,
     );
-    let private = &config.private;
 
     (quote! {
-        mod #private {
-            #[allow(unused_imports)]
-            use super::*;
-
-            #args_trait
-        }
-
         #cpu_wrapper
 
         #cpu_cuda_check
@@ -342,9 +330,10 @@ fn ident_from_pat_iter<'p, I: Iterator<Item = &'p syn::Pat>>(iter: I) -> Option<
 fn quote_generic_check(
     crate_path: &syn::Path,
     FuncIdent {
-        func_ident_hash, ..
+        func_ident,
+        func_ident_hash,
+        ..
     }: &FuncIdent,
-    KernelConfig { args, .. }: &KernelConfig,
 ) -> proc_macro2::TokenStream {
     let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
         Ok(crate_name) => crate_name.to_uppercase(),
@@ -357,7 +346,7 @@ fn quote_generic_check(
     quote::quote_spanned! { func_ident_hash.span()=>
         #[cfg(not(target_os = "cuda"))]
         const _: ::core::result::Result<(), ()> = #crate_path::host::check_kernel!(
-            #func_ident_hash #args #crate_name #crate_manifest_dir
+            #func_ident #func_ident_hash #crate_name #crate_manifest_dir
         );
     }
 }

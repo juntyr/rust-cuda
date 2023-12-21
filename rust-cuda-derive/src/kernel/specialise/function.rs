@@ -3,10 +3,10 @@ use std::env::VarError;
 use proc_macro::TokenStream;
 
 #[allow(clippy::module_name_repetitions)]
-pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStream {
+pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut func: syn::ItemFn = syn::parse(func).unwrap_or_else(|err| {
         abort_call_site!(
-            "#[specialise_kernel_entry(...)] must be wrapped around a function: {:?}",
+            "#[specialise_kernel_function(...)] must be wrapped around a function: {:?}",
             err
         )
     });
@@ -14,7 +14,7 @@ pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStr
     let kernel: syn::Ident = match syn::parse_macro_input::parse(attr) {
         Ok(kernel) => kernel,
         Err(err) => abort_call_site!(
-            "#[specialise_kernel_entry(KERNEL)] expects KERNEL identifier: {:?}",
+            "#[specialise_kernel_function(KERNEL)] expects KERNEL identifier: {:?}",
             err
         ),
     };

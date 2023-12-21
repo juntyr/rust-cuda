@@ -1,14 +1,9 @@
 use proc_macro2::TokenStream;
 
-use super::super::super::{
-    DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
-};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType};
 
-#[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_lines)] // FIXME
 pub(super) fn quote_kernel_func_inputs(
     crate_path: &syn::Path,
-    KernelConfig { args, private, .. }: &KernelConfig,
     ImplGenerics { ty_generics, .. }: &ImplGenerics,
     DeclGenerics {
         generic_kernel_params,
@@ -21,46 +16,14 @@ pub(super) fn quote_kernel_func_inputs(
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
 ) -> TokenStream {
-    let (kernel_func_inputs, kernel_func_input_tys): (Vec<_>, Vec<_>) = func_inputs
+    let kernel_func_inputs = func_inputs.iter().collect::<Vec<_>>();
+    let kernel_func_input_tys = func_inputs
         .iter()
-        .enumerate()
-        .map(|(i, arg)| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                attrs,
-                pat,
-                colon_token,
-                ty,
-            }) => {
-                let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type: syn::Type = syn::parse_quote! {
-                    <() as #private :: #args #ty_generics>::#type_ident
-                };
-                let syn_type = if let syn::Type::Reference(syn::TypeReference {
-                    and_token,
-                    lifetime,
-                    mutability,
-                    ..
-                }) = &**ty
-                {
-                    syn::Type::Reference(syn::TypeReference {
-                        and_token: *and_token,
-                        lifetime: lifetime.clone(),
-                        mutability: *mutability,
-                        elem: Box::new(syn_type),
-                    })
-                } else {
-                    syn_type
-                };
-
-                let param = quote! {
-                    #(#attrs)* #pat #colon_token #syn_type
-                };
-
-                (param, syn_type)
-            },
+        .map(|arg| match arg {
+            syn::FnArg::Typed(syn::PatType { ty, .. }) => syn::Type::clone(ty),
             syn::FnArg::Receiver(_) => unreachable!(),
         })
-        .unzip();
+        .collect::<Vec<_>>();
 
     let launcher = syn::Ident::new("launcher", proc_macro2::Span::mixed_site());
 

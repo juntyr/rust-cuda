@@ -3,9 +3,7 @@ use syn::spanned::Spanned;
 
 use crate::kernel::utils::skip_kernel_compilation;
 
-use super::super::super::{
-    DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
-};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx(
@@ -15,7 +13,6 @@ pub(super) fn quote_get_ptx(
         func_ident_hash,
         ..
     }: &FuncIdent,
-    config @ KernelConfig { args, .. }: &KernelConfig,
     generics @ DeclGenerics {
         generic_start_token,
         generic_close_token,
@@ -35,10 +32,11 @@ pub(super) fn quote_get_ptx(
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));
 
-    let args_trait = super::super::args_trait::quote_args_trait(config, impl_generics, inputs);
+    let args = syn::Ident::new("KernelArgs", proc_macro::Span::def_site().into());
+    let args_trait = super::args_trait::quote_args_trait(&args, impl_generics, inputs);
 
     let cpu_func_lifetime_erased_types =
-        generate_lifetime_erased_types(crate_path, config, generics, inputs, macro_type_ids);
+        generate_lifetime_erased_types(crate_path, &args, generics, inputs, macro_type_ids);
 
     let matching_kernel_assert = if skip_kernel_compilation() {
         quote!()
@@ -49,7 +47,7 @@ pub(super) fn quote_get_ptx(
             }> = #crate_path::safety::kernel_signature::Assert::<{
                 #crate_path::safety::kernel_signature::check(
                     PTX_CSTR.to_bytes(),
-                    #crate_path::host::specialise_kernel_call!(
+                    #crate_path::host::specialise_kernel_entry_point!(
                         #func_ident_hash #generic_start_token
                             #($#macro_type_ids),*
                         #generic_close_token
@@ -88,7 +86,7 @@ pub(super) fn quote_get_ptx(
             use __rust_cuda_ffi_safe_assert::#args;
 
             #crate_path::host::link_kernel!{
-                #func_ident #func_ident_hash #args #crate_name #crate_manifest_dir #generic_start_token
+                #func_ident #func_ident_hash #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token #ptx_lint_levels
             }
@@ -117,7 +115,7 @@ pub(super) fn quote_get_ptx(
 
 fn generate_lifetime_erased_types(
     crate_path: &syn::Path,
-    KernelConfig { args, .. }: &KernelConfig,
+    args: &syn::Ident,
     DeclGenerics {
         generic_start_token,
         generic_close_token,

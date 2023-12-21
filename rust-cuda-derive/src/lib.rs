@@ -54,15 +54,15 @@ pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
 #[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro]
-pub fn specialise_kernel_call(tokens: TokenStream) -> TokenStream {
-    kernel::specialise::call::specialise_kernel_call(tokens)
+pub fn specialise_kernel_entry_point(tokens: TokenStream) -> TokenStream {
+    kernel::specialise::entry_point::specialise_kernel_entry_point(tokens)
 }
 
 #[doc(hidden)]
 #[proc_macro_error]
 #[proc_macro_attribute]
-pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStream {
-    kernel::specialise::entry::specialise_kernel_entry(attr, func)
+pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> TokenStream {
+    kernel::specialise::function::specialise_kernel_function(attr, func)
 }
 
 #[doc(hidden)]

@@ -1,12 +1,10 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use super::super::super::super::{FunctionInputs, ImplGenerics, InputCudaType, KernelConfig};
+use super::super::super::super::{FunctionInputs, InputCudaType};
 
 pub(super) fn generate_async_func_types(
     crate_path: &syn::Path,
-    KernelConfig { args, private, .. }: &KernelConfig,
-    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
@@ -16,17 +14,16 @@ pub(super) fn generate_async_func_types(
     func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
-        .enumerate()
-        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+        .map(|(arg, (cuda_mode, _ptx_jit))| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs,
                 pat,
                 colon_token,
                 ty,
             }) => {
-                let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type = quote! {
-                    <() as #private :: #args #ty_generics>::#type_ident
+                let syn_type = match &**ty {
+                    syn::Type::Reference(syn::TypeReference { elem, .. }) => elem,
+                    other => other,
                 };
 
                 let cuda_type = match cuda_mode {

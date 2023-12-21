@@ -1,9 +1,9 @@
 use proc_macro2::TokenStream;
 
-use super::super::{FunctionInputs, ImplGenerics, KernelConfig};
+use super::super::super::{FunctionInputs, ImplGenerics};
 
 pub(in super::super) fn quote_args_trait(
-    KernelConfig { args, .. }: &KernelConfig,
+    args: &syn::Ident,
     ImplGenerics {
         impl_generics,
         ty_generics,

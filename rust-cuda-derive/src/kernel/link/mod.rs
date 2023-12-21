@@ -36,22 +36,22 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {::core::result::Result::Err(())});
 
     let CheckKernelConfig {
+        kernel,
         kernel_hash,
-        args,
         crate_name,
         crate_path,
     } = match syn::parse_macro_input::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "check_kernel!(HASH ARGS NAME PATH) expects HASH and ARGS identifiers, annd NAME \
-                 and PATH string literals: {:?}",
+                "check_kernel!(KERNEL HASH NAME PATH) expects KERNEL and HASH identifiers, annd \
+                 NAME and PATH string literals: {:?}",
                 err
             )
         },
     };
 
-    let kernel_ptx = compile_kernel(&args, &crate_name, &crate_path, Specialisation::Check);
+    let kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, Specialisation::Check);
 
     let Some(kernel_ptx) = kernel_ptx else {
         return quote!(::core::result::Result::Err(())).into();
@@ -74,9 +74,8 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     });
 
     let LinkKernelConfig {
-        kernel: _kernel,
+        kernel,
         kernel_hash,
-        args,
         crate_name,
         crate_path,
         specialisation,
@@ -85,9 +84,9 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "link_kernel!(KERNEL HASH ARGS NAME PATH SPECIALISATION LINTS,*) expects KERNEL, \
-                 HASH, and ARGS identifiers, NAME and PATH string literals, and SPECIALISATION \
-                 and LINTS tokens: {:?}",
+                "link_kernel!(KERNEL HASH NAME PATH SPECIALISATION LINTS,*) expects KERNEL and \
+                 HASH identifiers, NAME and PATH string literals, and SPECIALISATION and LINTS \
+                 tokens: {:?}",
                 err
             )
         },
@@ -101,7 +100,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     }
 
     let Some(mut kernel_ptx) = compile_kernel(
-        &args,
+        &kernel,
         &crate_name,
         &crate_path,
         Specialisation::Link(&specialisation),
@@ -601,7 +600,7 @@ fn check_kernel_ptx(
 }
 
 fn compile_kernel(
-    args: &syn::Ident,
+    kernel: &syn::Ident,
     crate_name: &str,
     crate_path: &Path,
     specialisation: Specialisation,
@@ -618,7 +617,7 @@ fn compile_kernel(
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
         crate_name,
-        args.to_string().to_uppercase()
+        kernel.to_string().to_uppercase()
     );
 
     match build_kernel_with_specialisation(crate_path, &specialisation_var, specialisation) {

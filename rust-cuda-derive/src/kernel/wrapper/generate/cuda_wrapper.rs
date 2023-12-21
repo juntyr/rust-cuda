@@ -4,28 +4,32 @@ use syn::spanned::Spanned;
 
 use super::super::{
     super::{KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY},
-    FuncIdent, FunctionInputs, ImplGenerics, InputCudaType, KernelConfig,
+    FuncIdent, FunctionInputs, ImplGenerics, InputCudaType,
 };
 
 #[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
     crate_path: &syn::Path,
-    config @ KernelConfig { args, private, .. }: &KernelConfig,
     inputs @ FunctionInputs {
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
-    FuncIdent {
+    func @ FuncIdent {
         func_ident,
         func_ident_hash,
         ..
     }: &FuncIdent,
-    impl_generics: &ImplGenerics,
+    impl_generics @ ImplGenerics {
+        impl_generics: generics,
+        ..
+    }: &ImplGenerics,
     func_attrs: &[syn::Attribute],
     func_params: &[syn::Ident],
 ) -> TokenStream {
-    let (ptx_func_inputs, ptx_func_types) = specialise_ptx_func_inputs(crate_path, config, inputs);
-    let ptx_func_unboxed_types = specialise_ptx_unboxed_types(crate_path, config, inputs);
+    let (ptx_func_inputs, ptx_func_types) =
+        specialise_ptx_func_inputs(crate_path, inputs, func, impl_generics);
+    let ptx_func_unboxed_types =
+        specialise_ptx_unboxed_types(crate_path, inputs, func, impl_generics);
 
     let func_layout_params = func_params
         .iter()
@@ -55,9 +59,12 @@ pub(in super::super) fn quote_cuda_wrapper(
                     }
                 } else { quote! {} };
 
-                let type_ident = quote::format_ident!("__T_{}", i);
+                let arg_type = match &**ty {
+                    syn::Type::Reference(syn::TypeReference { elem, .. }) => elem,
+                    other => other,
+                };
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#private :: #args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#arg_type for #generics in #func_ident)
                 };
 
                 match cuda_mode {
@@ -100,21 +107,12 @@ pub(in super::super) fn quote_cuda_wrapper(
             syn::FnArg::Receiver(_) => unreachable!(),
         });
 
-    let args_trait = super::args_trait::quote_args_trait(config, impl_generics, inputs);
-
     quote! {
-        // TODO: args trait should not be publicly available like this
-        //       but specialisation requires it right now
-        #args_trait
-
         #[cfg(target_os = "cuda")]
-        #[#crate_path::device::specialise_kernel_entry(#args)]
+        #[#crate_path::device::specialise_kernel_function(#func_ident)]
         #[no_mangle]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ptx_func_inputs),*) {
-            #[allow(unused_imports)]
-            use __rust_cuda_ffi_safe_assert::#args;
-
             unsafe {
                 ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY);
             }
@@ -134,8 +132,6 @@ pub(in super::super) fn quote_cuda_wrapper(
             mod __rust_cuda_ffi_safe_assert {
                 #[allow(unused_imports)]
                 use super::*;
-
-                #args_trait
 
                 extern "C" { #(
                     #[allow(dead_code)]
@@ -161,17 +157,17 @@ pub(in super::super) fn quote_cuda_wrapper(
 
 fn specialise_ptx_func_inputs(
     crate_path: &syn::Path,
-    KernelConfig { args, private, .. }: &KernelConfig,
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
     }: &FunctionInputs,
+    FuncIdent { func_ident, .. }: &FuncIdent,
+    ImplGenerics { impl_generics, .. }: &ImplGenerics,
 ) -> (Vec<TokenStream>, Vec<TokenStream>) {
     func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
-        .enumerate()
-        .map(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+        .map(|(arg, (cuda_mode, _ptx_jit))| match arg {
             syn::FnArg::Typed(
                 fn_arg @ syn::PatType {
                     attrs,
@@ -180,9 +176,12 @@ fn specialise_ptx_func_inputs(
                     ty,
                 },
             ) => {
-                let type_ident = quote::format_ident!("__T_{}", i);
+                let arg_type = match &**ty {
+                    syn::Type::Reference(syn::TypeReference { elem, .. }) => elem,
+                    other => other,
+                };
                 let syn_type = quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#private :: #args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#arg_type for #impl_generics in #func_ident)
                 };
 
                 let cuda_type = match cuda_mode {
@@ -240,18 +239,21 @@ fn specialise_ptx_func_inputs(
 
 fn specialise_ptx_unboxed_types(
     crate_path: &syn::Path,
-    KernelConfig { args, private, .. }: &KernelConfig,
     FunctionInputs { func_inputs, .. }: &FunctionInputs,
+    FuncIdent { func_ident, .. }: &FuncIdent,
+    ImplGenerics { impl_generics, .. }: &ImplGenerics,
 ) -> Vec<TokenStream> {
     func_inputs
         .iter()
-        .enumerate()
-        .map(|(i, arg)| match arg {
+        .map(|arg| match arg {
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
-                let type_ident = quote::format_ident!("__T_{}", i);
+                let arg_type = match &**ty {
+                    syn::Type::Reference(syn::TypeReference { elem, .. }) => elem,
+                    other => other,
+                };
 
                 quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#private :: #args :: #type_ident)
+                    #crate_path::device::specialise_kernel_type!(#arg_type for #impl_generics in #func_ident)
                 }
             },
             syn::FnArg::Receiver(_) => unreachable!(),

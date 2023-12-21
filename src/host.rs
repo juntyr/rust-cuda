@@ -18,7 +18,7 @@ use rustacuda_core::{DeviceCopy, DevicePointer};
 
 #[cfg(feature = "derive")]
 #[doc(cfg(feature = "derive"))]
-pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_call};
+pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_entry_point};
 
 use crate::{
     common::{

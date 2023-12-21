@@ -1,8 +1,6 @@
 pub(super) struct KernelConfig {
     pub(super) visibility: Option<syn::token::Pub>,
     pub(super) linker: syn::Ident,
-    pub(super) private: syn::Ident,
-    pub(super) args: syn::Ident,
 }
 
 impl syn::parse::Parse for KernelConfig {
@@ -14,14 +12,6 @@ impl syn::parse::Parse for KernelConfig {
         let _for: syn::token::For = input.parse()?;
         let _impl: syn::token::Impl = input.parse()?;
 
-        let private = syn::Ident::new("private", proc_macro::Span::def_site().into());
-        let args = syn::Ident::new("KernelArgs", proc_macro::Span::def_site().into());
-
-        Ok(Self {
-            visibility,
-            linker,
-            private,
-            args,
-        })
+        Ok(Self { visibility, linker })
     }
 }

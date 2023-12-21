@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, KernelConfig};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
 
 mod async_func_types;
 mod launch_types;
@@ -13,8 +13,7 @@ use type_wrap::generate_func_input_and_ptx_jit_wraps;
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_async(
     crate_path: &syn::Path,
-    config: &KernelConfig,
-    impl_generics @ ImplGenerics { ty_generics, .. }: &ImplGenerics,
+    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     DeclGenerics {
         generic_kernel_params,
         ..
@@ -31,12 +30,11 @@ pub(super) fn quote_kernel_func_async(
     let launcher = syn::Ident::new("launcher", proc_macro2::Span::mixed_site());
     let stream = syn::Lifetime::new("'stream", proc_macro2::Span::mixed_site());
 
-    let kernel_func_async_inputs =
-        generate_async_func_types(crate_path, config, impl_generics, func_inputs, &stream);
+    let kernel_func_async_inputs = generate_async_func_types(crate_path, func_inputs, &stream);
     let (func_input_wrap, func_cpu_ptx_jit_wrap) =
         generate_func_input_and_ptx_jit_wraps(crate_path, func_inputs);
     let (cpu_func_types_launch, cpu_func_unboxed_types) =
-        generate_launch_types(crate_path, config, impl_generics, func_inputs);
+        generate_launch_types(crate_path, func_inputs);
 
     quote! {
         #[cfg(not(target_os = "cuda"))]

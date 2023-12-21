@@ -1,3 +1,3 @@
-pub mod call;
-pub mod entry;
+pub mod entry_point;
+pub mod function;
 pub mod ty;

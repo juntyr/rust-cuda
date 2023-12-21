@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, KernelConfig};
+use super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
 
 mod kernel_func;
 mod kernel_func_async;
@@ -8,10 +8,8 @@ mod kernel_func_async;
 use kernel_func::quote_kernel_func_inputs;
 use kernel_func_async::quote_kernel_func_async;
 
-#[allow(clippy::too_many_arguments)]
 pub(in super::super) fn quote_cpu_wrapper(
     crate_path: &syn::Path,
-    config: &KernelConfig,
     decl: &DeclGenerics,
     impl_generics: &ImplGenerics,
     func_inputs: &FunctionInputs,
@@ -21,7 +19,6 @@ pub(in super::super) fn quote_cpu_wrapper(
 ) -> TokenStream {
     let kernel_func = quote_kernel_func_inputs(
         crate_path,
-        config,
         impl_generics,
         decl,
         func_inputs,
@@ -31,7 +28,6 @@ pub(in super::super) fn quote_cpu_wrapper(
     );
     let kernel_func_async = quote_kernel_func_async(
         crate_path,
-        config,
         impl_generics,
         decl,
         func_inputs,

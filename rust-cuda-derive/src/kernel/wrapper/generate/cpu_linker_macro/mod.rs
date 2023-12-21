@@ -2,6 +2,7 @@ use proc_macro2::TokenStream;
 
 use super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, KernelConfig};
 
+mod args_trait;
 mod get_ptx;
 
 use get_ptx::quote_get_ptx;
@@ -9,7 +10,7 @@ use get_ptx::quote_get_ptx;
 #[allow(clippy::too_many_arguments)] // FIXME
 pub(in super::super) fn quote_cpu_linker_macro(
     crate_path: &syn::Path,
-    config @ KernelConfig {
+    KernelConfig {
         visibility, linker, ..
     }: &KernelConfig,
     decl_generics @ DeclGenerics {
@@ -75,7 +76,6 @@ pub(in super::super) fn quote_cpu_linker_macro(
     let get_ptx = quote_get_ptx(
         crate_path,
         func_ident,
-        config,
         decl_generics,
         impl_generics,
         func_inputs,
@@ -98,7 +98,7 @@ pub(in super::super) fn quote_cpu_linker_macro(
                 #get_ptx
 
                 fn get_entry_point() -> &'static ::core::ffi::CStr {
-                    #crate_path::host::specialise_kernel_call!(
+                    #crate_path::host::specialise_kernel_entry_point!(
                         #func_ident_hash #generic_start_token
                             #($#macro_non_lt_generic_ids),*
                         #generic_close_token
