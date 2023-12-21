@@ -16,7 +16,6 @@ pub(super) fn quote_kernel_func_inputs(
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
 ) -> TokenStream {
-    let kernel_func_inputs = func_inputs.iter().collect::<Vec<_>>();
     let kernel_func_input_tys = func_inputs
         .iter()
         .map(|arg| match arg {
@@ -61,7 +60,7 @@ pub(super) fn quote_kernel_func_inputs(
         #[allow(unused_variables)]
         pub fn #func_ident <#generic_kernel_params>(
             #launcher: &mut #crate_path::host::Launcher<#func_ident #ty_generics>,
-            #(#kernel_func_inputs),*
+            #func_inputs
         ) -> #crate_path::rustacuda::error::CudaResult<()> {
             let _: #func_ident <#(#full_generics),*> = #func_ident #ty_turbofish;
 

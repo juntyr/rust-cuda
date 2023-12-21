@@ -35,8 +35,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "#[kernel(pub? use LINKER! as impl KERNEL<ARGS> for LAUNCHER)] expects LINKER, \
-                 KERNEL, ARGS, and LAUNCHER identifiers: {:?}",
+                "#[kernel(pub? use LINKER! for impl)] expects LINKER identifier: {:?}",
                 err
             )
         },
