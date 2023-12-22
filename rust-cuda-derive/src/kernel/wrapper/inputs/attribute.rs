@@ -1,9 +1,6 @@
 use syn::spanned::Spanned;
 
-use super::InputCudaType;
-
 pub(super) enum KernelInputAttribute {
-    PassType(proc_macro2::Span, InputCudaType),
     PtxJit(proc_macro2::Span, bool),
 }
 
@@ -12,31 +9,6 @@ impl syn::parse::Parse for KernelInputAttribute {
         let ident: syn::Ident = input.parse()?;
 
         match &*ident.to_string() {
-            "pass" => {
-                let eq: syn::token::Eq = input.parse()?;
-                let mode: syn::Ident = input.parse()?;
-
-                let cuda_type = match &*mode.to_string() {
-                    "SafeDeviceCopy" => InputCudaType::SafeDeviceCopy,
-                    "LendRustToCuda" => InputCudaType::LendRustToCuda,
-                    _ => abort!(
-                        mode.span(),
-                        "Unexpected CUDA transfer mode `{:?}`: Expected `SafeDeviceCopy` or \
-                         `LendRustToCuda`.",
-                        mode
-                    ),
-                };
-
-                Ok(KernelInputAttribute::PassType(
-                    ident
-                        .span()
-                        .join(eq.span())
-                        .unwrap()
-                        .join(mode.span())
-                        .unwrap(),
-                    cuda_type,
-                ))
-            },
             "jit" => {
                 let eq: Option<syn::token::Eq> = input.parse()?;
 
@@ -61,7 +33,7 @@ impl syn::parse::Parse for KernelInputAttribute {
             },
             _ => abort!(
                 ident.span(),
-                "Unexpected kernel attribute `{:?}`: Expected `pass` or `jit`.",
+                "Unexpected kernel attribute `{:?}`: Expected `jit`.",
                 ident
             ),
         }

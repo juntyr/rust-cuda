@@ -3,7 +3,7 @@ use syn::spanned::Spanned;
 
 use crate::kernel::utils::skip_kernel_compilation;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx(
@@ -121,60 +121,32 @@ fn generate_lifetime_erased_types(
         generic_close_token,
         ..
     }: &DeclGenerics,
-    FunctionInputs {
-        func_inputs,
-        func_input_cuda_types,
-    }: &FunctionInputs,
+    FunctionInputs { func_inputs, .. }: &FunctionInputs,
     macro_type_ids: &[syn::Ident],
-) -> Vec<TokenStream> {
-    let mut cpu_func_lifetime_erased_types = Vec::with_capacity(func_inputs.len());
-
+) -> Vec<proc_macro2::TokenStream> {
     func_inputs
         .iter()
-        .zip(func_input_cuda_types.iter())
         .enumerate()
-        .for_each(|(i, (arg, (cuda_mode, _ptx_jit)))| match arg {
+        .map(|(i, arg)| match arg {
             syn::FnArg::Typed(syn::PatType { ty, .. }) => {
                 let type_ident = quote::format_ident!("__T_{}", i);
-                let syn_type = quote::quote_spanned! { ty.span()=>
+
+                let mut specialised_ty = quote::quote_spanned! { ty.span()=>
                     <() as #args #generic_start_token
                         #($#macro_type_ids),*
                     #generic_close_token>::#type_ident
                 };
+                // the args trait has to unbox outer lifetimes, so we need to add them back in here
+                if let syn::Type::Reference(syn::TypeReference { and_token, lifetime, mutability, .. }) = &**ty {
+                    let lifetime = quote::quote_spanned! { lifetime.span()=> 'static };
 
-                let cuda_type = match cuda_mode {
-                    InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
-                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#syn_type>
-                    },
-                    InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
-                        #crate_path::common::DeviceAccessible<
-                            <#syn_type as #crate_path::common::RustToCuda>::CudaRepresentation
-                        >
-                    },
-                };
+                    specialised_ty = quote! { #and_token #lifetime #mutability #specialised_ty };
+                }
 
-                cpu_func_lifetime_erased_types.push(
-                    if let syn::Type::Reference(syn::TypeReference { mutability, .. }) = &**ty {
-                        if mutability.is_some() {
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceMutRef<'static, #cuda_type>
-                            }
-                        } else {
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceConstRef<'static, #cuda_type>
-                            }
-                        }
-                    } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
-                        quote::quote_spanned! { ty.span()=>
-                            #crate_path::common::DeviceMutRef<'static, #cuda_type>
-                        }
-                    } else {
-                        cuda_type
-                    },
-                );
+                quote::quote_spanned! { ty.span()=>
+                    <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
+                }
             },
             syn::FnArg::Receiver(_) => unreachable!(),
-        });
-
-    cpu_func_lifetime_erased_types
+        }).collect()
 }

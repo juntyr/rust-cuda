@@ -23,7 +23,7 @@ pub enum Action {
 
 #[rust_cuda::common::kernel(use link! for impl)]
 #[kernel(allow(ptx::local_memory_usage))]
-pub fn kernel(#[kernel(pass = SafeDeviceCopy)] action: Action) {
+pub fn kernel(action: rust_cuda::common::PerThreadShallowCopy<Action>) {
     match action {
         Action::Print => rust_cuda::device::utils::println!("println! from CUDA kernel"),
         Action::Panic => panic!("panic! from CUDA kernel"),

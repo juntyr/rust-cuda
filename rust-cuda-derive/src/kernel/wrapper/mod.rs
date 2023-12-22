@@ -237,6 +237,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_params,
     );
     let cuda_generic_function = quote_cuda_generic_function(
+        &crate_path,
         &decl_generics,
         &pat_func_inputs,
         &func_ident,
@@ -255,11 +256,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         #cuda_generic_function
     })
     .into()
-}
-
-enum InputCudaType {
-    SafeDeviceCopy,
-    LendRustToCuda,
 }
 
 struct InputPtxJit(bool);

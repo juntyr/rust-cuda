@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, InputCudaType};
+use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_kernel_func_async(
@@ -23,13 +23,8 @@ pub(super) fn quote_kernel_func_async(
     let launcher = syn::Ident::new("launcher", proc_macro2::Span::mixed_site());
     let stream = syn::Lifetime::new("'stream", proc_macro2::Span::mixed_site());
 
-    let (
-        async_params,
-        launch_param_types,
-        unboxed_param_types,
-        launch_param_wrap,
-        ptx_jit_param_wrap,
-    ) = generate_type_wrap(crate_path, func_inputs, &stream);
+    let (async_params, launch_param_types, launch_param_wrap, _ptx_jit_param_wrap) =
+        generate_type_wrap(crate_path, func_inputs, &stream);
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
@@ -43,7 +38,7 @@ pub(super) fn quote_kernel_func_async(
             #(#async_params),*
         ) -> #crate_path::rustacuda::error::CudaResult<()> {
             let kernel_jit_result = if #launcher.config.ptx_jit {
-                #launcher.kernel.compile_with_ptx_jit_args(#ptx_jit_param_wrap)?
+                #launcher.kernel.compile_with_ptx_jit_args(None)? // TODO: #ptx_jit_param_wrap)?
             } else {
                 #launcher.kernel.compile_with_ptx_jit_args(None)?
             };
@@ -54,17 +49,6 @@ pub(super) fn quote_kernel_func_async(
 
             #[allow(clippy::redundant_closure_call)]
             (|#(#func_params: #launch_param_types),*| {
-                if false {
-                    #[allow(dead_code)]
-                    fn assert_impl_devicecopy<T: #crate_path::rustacuda_core::DeviceCopy>(_val: &T) {}
-
-                    #[allow(dead_code)]
-                    fn assert_impl_no_safe_aliasing<T: #crate_path::safety::NoSafeAliasing>() {}
-
-                    #(assert_impl_devicecopy(&#func_params);)*
-                    #(assert_impl_no_safe_aliasing::<#unboxed_param_types>();)*
-                }
-
                 let #crate_path::host::LaunchConfig {
                     grid, block, shared_memory_size, ptx_jit: _,
                 } = #launcher.config.clone();
@@ -81,7 +65,6 @@ pub(super) fn quote_kernel_func_async(
     }
 }
 
-#[allow(clippy::too_many_lines)] // FIXME
 fn generate_type_wrap(
     crate_path: &syn::Path,
     FunctionInputs {
@@ -90,8 +73,7 @@ fn generate_type_wrap(
     }: &FunctionInputs,
     stream: &syn::Lifetime,
 ) -> (
-    Vec<TokenStream>,
-    Vec<TokenStream>,
+    Vec<syn::FnArg>,
     Vec<syn::Type>,
     Vec<TokenStream>,
     TokenStream,
@@ -100,14 +82,13 @@ fn generate_type_wrap(
 
     let mut async_params = Vec::with_capacity(func_inputs.len());
     let mut launch_param_types = Vec::with_capacity(func_inputs.len());
-    let mut unboxed_param_types = Vec::with_capacity(func_inputs.len());
     let mut launch_param_wrap = Vec::with_capacity(func_inputs.len());
     let mut ptx_jit_param_wrap = Vec::with_capacity(func_inputs.len());
 
     func_inputs
         .iter()
         .zip(func_input_cuda_types.iter())
-        .for_each(|(arg, (cuda_mode, ptx_jit))| match arg {
+        .for_each(|(arg, ptx_jit)| match arg {
             syn::FnArg::Typed(syn::PatType {
                 attrs,
                 pat,
@@ -122,95 +103,30 @@ fn generate_type_wrap(
                     quote! { None }
                 });
 
-                #[allow(clippy::if_same_then_else)]
-                launch_param_wrap.push(if let syn::Type::Reference(_) = &**ty {
-                    quote! { unsafe { #pat.for_device_async() } }
-                } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
-                    quote! { unsafe { #pat.for_device_async() } }
-                } else {
-                    quote! { #pat }
+                let async_ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
+                    <#ty as #crate_path::common::CudaKernelParameter>::AsyncHostType<#stream, '_>
+                };
+
+                let async_param = syn::FnArg::Typed(syn::PatType {
+                    attrs: attrs.clone(),
+                    ty: Box::new(async_ty),
+                    pat: pat.clone(),
+                    colon_token: *colon_token,
                 });
 
-                let unboxed_param_type = match &**ty {
-                    syn::Type::Reference(syn::TypeReference { elem, .. }) => elem,
-                    other => other,
-                };
-                unboxed_param_types.push(unboxed_param_type.clone());
-
-                let cuda_param_type = match cuda_mode {
-                    InputCudaType::SafeDeviceCopy => quote::quote_spanned! { ty.span()=>
-                        #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#unboxed_param_type>
-                    },
-                    InputCudaType::LendRustToCuda => quote::quote_spanned! { ty.span()=>
-                        #crate_path::common::DeviceAccessible<
-                            <#unboxed_param_type as #crate_path::common::RustToCuda>::CudaRepresentation
-                        >
-                    },
-                };
-
-                let (async_param, launch_param_type) = if let syn::Type::Reference(syn::TypeReference {
-                    mutability,
-                    lifetime,
-                    ..
-                }) = &**ty
-                {
-                    let lifetime_or_default = lifetime.clone().unwrap_or(syn::parse_quote!('_));
-                    let comma: Option<syn::token::Comma> =
-                        lifetime.as_ref().map(|_| syn::parse_quote!(,));
-
-                    let (async_param_type, launch_param_type) = if mutability.is_some() {
-                        if matches!(cuda_mode, InputCudaType::SafeDeviceCopy) {
-                            abort!(
-                                mutability.span(),
-                                "Cannot mutably alias a `SafeDeviceCopy` kernel parameter."
-                            );
-                        }
-
-                        (
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::host::HostAndDeviceMutRefAsync<#stream, #lifetime_or_default, #cuda_param_type>
-                            },
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceMutRef<#lifetime #comma #cuda_param_type>
-                            },
-                        )
-                    } else {
-                        (
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::host::HostAndDeviceConstRefAsync<#stream, #lifetime_or_default, #cuda_param_type>
-                            },
-                            quote::quote_spanned! { ty.span()=>
-                                #crate_path::common::DeviceConstRef<#lifetime #comma #cuda_param_type>
-                            },
-                        )
-                    };
-
-                    (quote! {
-                        #(#attrs)* #mutability #pat #colon_token #async_param_type
-                    }, launch_param_type)
-                } else if matches!(cuda_mode, InputCudaType::LendRustToCuda) {
-                    let async_param_type = quote::quote_spanned! { ty.span()=>
-                        #crate_path::host::HostAndDeviceOwnedAsync<#stream, '_, #cuda_param_type>
-                    };
-                    let launch_param_type = quote::quote_spanned! { ty.span()=>
-                        #crate_path::common::DeviceMutRef<#cuda_param_type>
-                    };
-
-                    (
-                        quote! {
-                            #(#attrs)* #pat #colon_token #async_param_type
-                        },
-                        launch_param_type
-                    )
-                } else {
-                    (
-                        quote! { #(#attrs)* #pat #colon_token #cuda_param_type },
-                        quote! { #cuda_param_type },
-                    )
-                };
-
                 async_params.push(async_param);
-                launch_param_types.push(launch_param_type);
+
+                let launch_ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
+                    <#ty as #crate_path::common::CudaKernelParameter>::FfiType<#stream, '_>
+                };
+
+                launch_param_types.push(launch_ty);
+
+                let launch_wrap = quote::quote_spanned! { ty.span()=>
+                    <#ty as #crate_path::common::CudaKernelParameter>::async_to_ffi(#pat)
+                };
+
+                launch_param_wrap.push(launch_wrap);
             },
             syn::FnArg::Receiver(_) => unreachable!(),
         });
@@ -224,7 +140,6 @@ fn generate_type_wrap(
     (
         async_params,
         launch_param_types,
-        unboxed_param_types,
         launch_param_wrap,
         ptx_jit_param_wrap,
     )

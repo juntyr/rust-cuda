@@ -54,15 +54,23 @@ pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
             );
         }
 
+        // replace all lifetimes with 'static
+        ty = syn::fold::Fold::fold_type(
+            &mut FoldLifetimeAllStatic {
+                r#static: syn::parse_quote!('static),
+            },
+            ty,
+        );
+
         for (generic, arg) in generics.params.into_iter().zip(args.into_iter()) {
             match (generic, arg) {
                 (
                     syn::GenericParam::Lifetime(syn::LifetimeDef {
-                        lifetime: generic, ..
+                        lifetime: _generic, ..
                     }),
-                    syn::GenericArgument::Lifetime(arg),
+                    syn::GenericArgument::Lifetime(_arg),
                 ) => {
-                    ty = syn::fold::Fold::fold_type(&mut FoldLifetimeGeneric { generic, arg }, ty);
+                    // all lifetimes are already replaced with 'static above
                 },
                 (
                     syn::GenericParam::Const(syn::ConstParam { ident: generic, .. }),
@@ -115,18 +123,34 @@ impl syn::parse::Parse for SpecialiseTypeConfig {
     }
 }
 
-struct FoldLifetimeGeneric {
-    generic: syn::Lifetime,
-    arg: syn::Lifetime,
+struct FoldLifetimeAllStatic {
+    r#static: syn::Lifetime,
 }
 
-impl syn::fold::Fold for FoldLifetimeGeneric {
+impl syn::fold::Fold for FoldLifetimeAllStatic {
+    fn fold_type_reference(&mut self, r#ref: syn::TypeReference) -> syn::TypeReference {
+        let syn::TypeReference {
+            and_token,
+            lifetime: _,
+            mutability,
+            elem,
+        } = r#ref;
+
+        syn::fold::fold_type_reference(
+            self,
+            syn::TypeReference {
+                and_token,
+                lifetime: Some(self.r#static.clone()),
+                mutability,
+                elem,
+            },
+        )
+    }
+
     fn fold_lifetime(&mut self, lt: syn::Lifetime) -> syn::Lifetime {
-        if lt == self.generic {
-            self.arg.clone()
-        } else {
-            lt
-        }
+        let mut r#static = self.r#static.clone();
+        r#static.set_span(lt.span());
+        r#static
     }
 }
 

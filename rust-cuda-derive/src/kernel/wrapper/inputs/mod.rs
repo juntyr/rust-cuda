@@ -1,19 +1,19 @@
 use syn::spanned::Spanned;
 
-use super::{InputCudaType, InputPtxJit};
+use super::InputPtxJit;
 
 mod attribute;
 use attribute::{KernelInputAttribute, KernelInputAttributes};
 
 pub(super) struct FunctionInputs {
     pub(super) func_inputs: syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>,
-    pub(super) func_input_cuda_types: Vec<(InputCudaType, InputPtxJit)>,
+    pub(super) func_input_cuda_types: Vec<InputPtxJit>,
 }
 
 pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
     let (func_inputs, func_input_cuda_types): (
         syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>,
-        Vec<(InputCudaType, InputPtxJit)>,
+        Vec<InputPtxJit>,
     ) = func
         .sig
         .inputs
@@ -22,15 +22,12 @@ pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
             receiver @ syn::FnArg::Receiver(_) => {
                 abort!(receiver.span(), "Kernel function must not have a receiver.")
             },
-            syn::FnArg::Typed(
-                input @ syn::PatType {
-                    attrs,
-                    pat,
-                    colon_token,
-                    ty,
-                },
-            ) => {
-                let mut cuda_type: Option<InputCudaType> = None;
+            syn::FnArg::Typed(syn::PatType {
+                attrs,
+                pat,
+                colon_token,
+                ty,
+            }) => {
                 let mut ptx_jit: Option<InputPtxJit> = None;
 
                 let attrs = attrs
@@ -45,14 +42,6 @@ pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
 
                             for attr in attrs {
                                 match attr {
-                                    KernelInputAttribute::PassType(_span, pass_type)
-                                        if cuda_type.is_none() =>
-                                    {
-                                        cuda_type = Some(pass_type);
-                                    },
-                                    KernelInputAttribute::PassType(span, _pass_type) => {
-                                        abort!(span, "Duplicate CUDA transfer mode declaration.");
-                                    },
                                     KernelInputAttribute::PtxJit(span, jit)
                                         if ptx_jit.is_none() =>
                                     {
@@ -78,24 +67,14 @@ pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
                     .cloned()
                     .collect();
 
-                let cuda_type = cuda_type.unwrap_or_else(|| {
-                    abort!(
-                        input.span(),
-                        "Kernel function input must specify its CUDA transfer mode using \
-                         #[kernel(pass = ...)]."
-                    );
-                });
-
-                let ty = ensure_reference_type_lifetime(ty, &cuda_type);
-
                 (
                     syn::FnArg::Typed(syn::PatType {
                         attrs,
                         pat: pat.clone(),
                         colon_token: *colon_token,
-                        ty,
+                        ty: ty.clone(),
                     }),
-                    (cuda_type, ptx_jit.unwrap_or(InputPtxJit(false))),
+                    ptx_jit.unwrap_or(InputPtxJit(false)),
                 )
             },
         })
@@ -104,69 +83,5 @@ pub(super) fn parse_function_inputs(func: &syn::ItemFn) -> FunctionInputs {
     FunctionInputs {
         func_inputs,
         func_input_cuda_types,
-    }
-}
-
-#[allow(clippy::unnecessary_box_returns)]
-fn ensure_reference_type_lifetime(ty: &syn::Type, cuda_type: &InputCudaType) -> Box<syn::Type> {
-    match ty {
-        syn::Type::Reference(syn::TypeReference {
-            and_token,
-            lifetime,
-            mutability,
-            elem,
-        }) => {
-            let elem = if matches!(cuda_type, InputCudaType::LendRustToCuda) {
-                (|| {
-                    if let syn::Type::Path(syn::TypePath {
-                        path: syn::Path { segments, .. },
-                        qself: None,
-                    }) = &**elem
-                    {
-                        if let Some(syn::PathSegment {
-                            ident,
-                            arguments:
-                                syn::PathArguments::AngleBracketed(
-                                    syn::AngleBracketedGenericArguments { args, .. },
-                                ),
-                        }) = segments.last()
-                        {
-                            if ident == "ShallowCopy" && segments.len() == 1 {
-                                match args.last() {
-                                    Some(syn::GenericArgument::Type(elem)) if args.len() == 1 => {
-                                        return Box::new(elem.clone());
-                                    },
-                                    _ => {
-                                        abort!(
-                                            args.span(),
-                                            "`ShallowCopy<T>` takes exactly one generic type \
-                                             argument."
-                                        );
-                                    },
-                                }
-                            }
-                        }
-                    }
-
-                    emit_warning!(
-                        elem.span(),
-                        "RustToCuda kernel parameters should be explicitly wrapped with the \
-                         `ShallowCopy<T>` marker to communicate their aliasing behaviour."
-                    );
-
-                    elem.clone()
-                })()
-            } else {
-                elem.clone()
-            };
-
-            Box::new(syn::Type::Reference(syn::TypeReference {
-                and_token: *and_token,
-                lifetime: lifetime.clone(),
-                mutability: *mutability,
-                elem,
-            }))
-        },
-        ty => Box::new(ty.clone()),
     }
 }

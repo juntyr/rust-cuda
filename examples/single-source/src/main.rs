@@ -11,6 +11,7 @@
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_bounds)]
 #![feature(decl_macro)]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
 
@@ -55,20 +56,22 @@ pub struct Triple(i32, i32, i32);
 )]
 pub fn kernel<
     'a,
-    T: rc::common::RustToCuda<
+    T: 'static
+        + rc::common::RustToCuda<
             CudaRepresentation: rc::safety::StackOnly,
             CudaAllocation: rc::common::EmptyCudaAlloc,
-        > + rc::safety::StackOnly
+        >
+        + rc::safety::StackOnly
         + rc::safety::NoSafeAliasing,
 >(
-    #[kernel(pass = SafeDeviceCopy)] _x: &Dummy,
-    #[kernel(pass = LendRustToCuda, jit)] _y: &mut ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = LendRustToCuda)] _z: &ShallowCopy<Wrapper<T>>,
-    #[kernel(pass = SafeDeviceCopy, jit)] _v @ _w: &'a core::sync::atomic::AtomicU64,
-    #[kernel(pass = LendRustToCuda)] _: Wrapper<T>,
-    #[kernel(pass = SafeDeviceCopy)] Tuple(s, mut __t): Tuple,
-    #[kernel(pass = SafeDeviceCopy)] q: Triple,
-    // #[kernel(pass = SafeDeviceCopy)] shared3: ThreadBlockShared<u32>,
+    _x: &rc::common::PerThreadShallowCopy<Dummy>,
+    #[kernel(jit)] _y: &mut rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    _z: &rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    #[kernel(jit)] _v @ _w: &'a rc::common::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
+    _: rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    Tuple(s, mut __t): rc::common::PerThreadShallowCopy<Tuple>,
+    q: rc::common::PerThreadShallowCopy<Triple>,
+    // shared3: ThreadBlockShared<u32>,
 ) {
     let shared: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
     let shared2: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
@@ -80,6 +83,7 @@ pub fn kernel<
     unsafe {
         (*shared2.index_mut_unchecked(2)).1 = q.0 + q.1 + q.2;
     }
+
     // unsafe { core::arch::asm!("hi") }
     // unsafe {
     //     *shared3.as_mut_ptr() = 12;
