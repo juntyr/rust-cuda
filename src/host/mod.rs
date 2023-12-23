@@ -39,7 +39,7 @@ pub struct Launcher<'stream, 'kernel, Kernel> {
 }
 
 macro_rules! impl_launcher_launch {
-    ($launch:ident($($arg:ident : $T:ident),*) => $launch_async:ident) => {
+    ($launch:ident($($arg:ident : $T:ident),*) => $with_async:ident => $launch_async:ident) => {
         #[allow(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch<$($T: CudaKernelParameter),*>(
@@ -57,6 +57,35 @@ macro_rules! impl_launcher_launch {
 
         #[allow(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
+        pub fn $with_async<
+            'a,
+            Ok,
+            Err: From<CudaError>,
+            $($T: CudaKernelParameter),*
+        >(
+            &'a mut self,
+            $($arg: $T::SyncHostType,)*
+            inner: impl FnOnce(
+                &'a mut Self,
+                $($T::AsyncHostType<'stream, '_>),*
+            ) -> Result<Ok, Err>,
+        ) -> Result<Ok, Err>
+        where
+            Kernel: Copy + FnOnce(
+                &mut Launcher<Kernel>,
+                $($T::SyncHostType),*
+            ) -> CudaResult<()>,
+        {
+            #[allow(unused_variables)]
+            let stream = self.stream;
+
+            impl_launcher_launch! { impl with_new_async ($($arg: $T),*) + (stream) {
+                inner(self, $($arg),*)
+            } }
+        }
+
+        #[allow(clippy::missing_errors_doc)]
+        #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch_async<$($T: CudaKernelParameter),*>(
             &mut self,
             $($arg: $T::AsyncHostType<'stream, '_>),*
@@ -70,52 +99,68 @@ macro_rules! impl_launcher_launch {
             self.kernel.$launch_async::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
     };
+    (impl $func:ident () + ($($other:ident),*) $inner:block) => {
+        $inner
+    };
+    (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:ident),*) $inner:block) => {
+        $T0::$func($arg0 $(, $other)*, |$arg0| {
+            impl_launcher_launch! { impl $func ($($arg: $T),*) + ($($other),*) $inner }
+        })
+    };
 }
 
 impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
-    impl_launcher_launch! { launch0() => launch0_async }
+    impl_launcher_launch! { launch0() => with0_async => launch0_async }
 
-    impl_launcher_launch! { launch1(arg1: A) => launch1_async }
+    impl_launcher_launch! { launch1(
+        arg1: A
+    ) => with1_async => launch1_async }
 
-    impl_launcher_launch! { launch2(arg1: A, arg2: B) => launch2_async }
+    impl_launcher_launch! { launch2(
+        arg1: A, arg2: B
+    ) => with2_async => launch2_async }
 
-    impl_launcher_launch! { launch3(arg1: A, arg2: B, arg3: C) => launch3_async }
+    impl_launcher_launch! { launch3(
+        arg1: A, arg2: B, arg3: C
+    ) => with3_async => launch3_async }
 
-    impl_launcher_launch! { launch4(arg1: A, arg2: B, arg3: C, arg4: D) => launch4_async }
+    impl_launcher_launch! { launch4(
+        arg1: A, arg2: B, arg3: C, arg4: D
+    ) => with4_async => launch4_async }
 
     impl_launcher_launch! { launch5(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E
-    ) => launch5_async }
+    ) => with5_async => launch5_async }
 
     impl_launcher_launch! { launch6(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F
-    ) => launch6_async }
+    ) => with6_async => launch6_async }
 
     impl_launcher_launch! { launch7(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G
-    ) => launch7_async }
+    ) => with7_async => launch7_async }
 
     impl_launcher_launch! { launch8(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H
-    ) => launch8_async }
+    ) => with8_async => launch8_async }
 
     impl_launcher_launch! { launch9(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I
-    ) => launch9_async }
+    ) => with9_async => launch9_async }
 
     impl_launcher_launch! { launch10(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J
-    ) => launch10_async }
+    ) => with10_async => launch10_async }
 
     impl_launcher_launch! { launch11(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
         arg11: K
-    ) => launch11_async }
+    ) => with11_async => launch11_async }
 
     impl_launcher_launch! { launch12(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
         arg11: K, arg12: L
-    ) => launch12_async }
+    ) => with12_async => launch12_async }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -197,7 +242,7 @@ pub struct TypedPtxKernel<Kernel> {
 }
 
 macro_rules! impl_typed_kernel_launch {
-    ($launch:ident($($arg:ident : $T:ident),*) => $launch_async:ident) => {
+    ($launch:ident($($arg:ident : $T:ident),*) => $with_async:ident => $launch_async:ident) => {
         #[allow(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch<$($T: CudaKernelParameter),*>(
@@ -212,8 +257,50 @@ macro_rules! impl_typed_kernel_launch {
                 $($T::SyncHostType),*
             ) -> CudaResult<()>,
         {
+            self.$with_async::<(), CudaError, $($T),*>(
+                stream,
+                config,
+                $($arg,)*
+                |kernel, stream, config, $($arg),*| {
+                    let result = kernel.$launch_async::<$($T),*>(stream, config, $($arg),*);
+
+                    // important: always synchronise here, this function is sync!
+                    match (stream.synchronize(), result) {
+                        (Ok(()), result) => result,
+                        (Err(_), Err(err)) | (Err(err), Ok(())) => Err(err),
+                    }
+                },
+            )
+        }
+
+        #[allow(clippy::missing_errors_doc)]
+        #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
+        pub fn $with_async<
+            'a,
+            'stream,
+            Ok,
+            Err: From<CudaError>,
+            $($T: CudaKernelParameter),*
+        >(
+            &'a mut self,
+            stream: &'stream Stream,
+            config: &LaunchConfig,
+            $($arg: $T::SyncHostType,)*
+            inner: impl FnOnce(
+                &'a mut Self,
+                &'stream Stream,
+                &LaunchConfig,
+                $($T::AsyncHostType<'stream, '_>),*
+            ) -> Result<Ok, Err>,
+        ) -> Result<Ok, Err>
+        where
+            Kernel: Copy + FnOnce(
+                &mut Launcher<Kernel>,
+                $($T::SyncHostType),*
+            ) -> CudaResult<()>,
+        {
             impl_typed_kernel_launch! { impl with_new_async ($($arg: $T),*) + (stream) {
-                self.$launch_async::<$($T),*>(stream, config, $($arg),*)
+                inner(self, stream, config, $($arg),*)
             } }
         }
 
@@ -276,49 +363,57 @@ macro_rules! impl_typed_kernel_launch {
 }
 
 impl<Kernel> TypedPtxKernel<Kernel> {
-    impl_typed_kernel_launch! { launch0() => launch0_async }
+    impl_typed_kernel_launch! { launch0() => with0_async => launch0_async }
 
-    impl_typed_kernel_launch! { launch1(arg1: A) => launch1_async }
+    impl_typed_kernel_launch! { launch1(
+        arg1: A
+    ) => with1_async => launch1_async }
 
-    impl_typed_kernel_launch! { launch2(arg1: A, arg2: B) => launch2_async }
+    impl_typed_kernel_launch! { launch2(
+        arg1: A, arg2: B
+    ) => with2_async => launch2_async }
 
-    impl_typed_kernel_launch! { launch3(arg1: A, arg2: B, arg3: C) => launch3_async }
+    impl_typed_kernel_launch! { launch3(
+        arg1: A, arg2: B, arg3: C
+    ) => with3_async => launch3_async }
 
-    impl_typed_kernel_launch! { launch4(arg1: A, arg2: B, arg3: C, arg4: D) => launch4_async }
+    impl_typed_kernel_launch! { launch4(
+        arg1: A, arg2: B, arg3: C, arg4: D
+    ) => with4_async => launch4_async }
 
     impl_typed_kernel_launch! { launch5(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E
-    ) => launch5_async }
+    ) => with5_async => launch5_async }
 
     impl_typed_kernel_launch! { launch6(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F
-    ) => launch6_async }
+    ) => with6_async => launch6_async }
 
     impl_typed_kernel_launch! { launch7(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G
-    ) => launch7_async }
+    ) => with7_async => launch7_async }
 
     impl_typed_kernel_launch! { launch8(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H
-    ) => launch8_async }
+    ) => with8_async => launch8_async }
 
     impl_typed_kernel_launch! { launch9(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I
-    ) => launch9_async }
+    ) => with9_async => launch9_async }
 
     impl_typed_kernel_launch! { launch10(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J
-    ) => launch10_async }
+    ) => with10_async => launch10_async }
 
     impl_typed_kernel_launch! { launch11(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
         arg11: K
-    ) => launch11_async }
+    ) => with11_async => launch11_async }
 
     impl_typed_kernel_launch! { launch12(
         arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
         arg11: K, arg12: L
-    ) => launch12_async }
+    ) => with12_async => launch12_async }
 
     #[must_use]
     pub fn new<T: CompiledKernelPtx<Kernel>>(configure: Option<Box<PtxKernelConfigure>>) -> Self {
