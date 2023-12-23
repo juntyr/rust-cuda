@@ -5,7 +5,7 @@ use std::{
 
 use super::{
     regex::{
-        CONST_BASE_REGISTER_REGEX, CONST_LOAD_INSTRUCTION_REGEX, CONST_MARKER_REGEX, REGISTER_REGEX,
+        const_base_register_regex, const_load_instruction_regex, const_marker_regex, register_regex,
     },
     PtxElement, PtxJITCompiler, PtxLoadWidth,
 };
@@ -19,7 +19,7 @@ impl PtxJITCompiler {
         let mut const_markers: HashMap<&[u8], usize> = HashMap::new();
 
         // Find injected rust-cuda-const-markers which identify dummy register rxx
-        for const_marker in CONST_MARKER_REGEX.captures_iter(ptx) {
+        for const_marker in const_marker_regex().captures_iter(ptx) {
             if let Some(tmpreg) = const_marker.name("tmpreg").map(|s| s.as_bytes()) {
                 if let Some(param) = const_marker
                     .name("param")
@@ -36,7 +36,7 @@ impl PtxJITCompiler {
         let mut const_base_registers: HashMap<&[u8], usize> = HashMap::new();
 
         // Find base register ryy which was used in `ld.global.u32 rxx, [ryy];`
-        for const_base_register in CONST_BASE_REGISTER_REGEX.captures_iter(ptx) {
+        for const_base_register in const_base_register_regex().captures_iter(ptx) {
             if let Some(tmpreg) = const_base_register.name("tmpreg").map(|s| s.as_bytes()) {
                 if let Some(param) = const_markers.get(tmpreg) {
                     if let Some(basereg) = const_base_register.name("basereg").map(|s| s.as_bytes())
@@ -54,7 +54,7 @@ impl PtxJITCompiler {
         let mut ptx_slices: Vec<PtxElement> = Vec::new();
 
         // Iterate over all load from base register with offset instructions
-        for const_load_instruction in CONST_LOAD_INSTRUCTION_REGEX.captures_iter(ptx) {
+        for const_load_instruction in const_load_instruction_regex().captures_iter(ptx) {
             // Only consider instructions where the base register is ryy
             if let Some(basereg) = const_load_instruction.name("basereg").map(|s| s.as_bytes()) {
                 if let Some(param) = const_base_registers.get(basereg) {
@@ -100,7 +100,7 @@ impl PtxJITCompiler {
                                         parameter_index: *param,
                                         byte_offset: loadoffset,
                                         load_width: loadwidth,
-                                        registers: REGISTER_REGEX
+                                        registers: register_regex()
                                             .captures_iter(constreg)
                                             .filter_map(|m| {
                                                 m.name("register").map(|s| {

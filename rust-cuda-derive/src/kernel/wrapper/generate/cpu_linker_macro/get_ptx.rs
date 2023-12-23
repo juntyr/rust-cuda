@@ -121,32 +121,29 @@ fn generate_lifetime_erased_types(
         generic_close_token,
         ..
     }: &DeclGenerics,
-    FunctionInputs { func_inputs, .. }: &FunctionInputs,
+    FunctionInputs { func_inputs }: &FunctionInputs,
     macro_type_ids: &[syn::Ident],
 ) -> Vec<proc_macro2::TokenStream> {
     func_inputs
         .iter()
         .enumerate()
-        .map(|(i, arg)| match arg {
-            syn::FnArg::Typed(syn::PatType { ty, .. }) => {
-                let type_ident = quote::format_ident!("__T_{}", i);
+        .map(|(i, syn::PatType { ty, .. })| {
+            let type_ident = quote::format_ident!("__T_{}", i);
 
-                let mut specialised_ty = quote::quote_spanned! { ty.span()=>
-                    <() as #args #generic_start_token
-                        #($#macro_type_ids),*
-                    #generic_close_token>::#type_ident
-                };
-                // the args trait has to unbox outer lifetimes, so we need to add them back in here
-                if let syn::Type::Reference(syn::TypeReference { and_token, lifetime, mutability, .. }) = &**ty {
-                    let lifetime = quote::quote_spanned! { lifetime.span()=> 'static };
+            let mut specialised_ty = quote::quote_spanned! { ty.span()=>
+                <() as #args #generic_start_token
+                    #($#macro_type_ids),*
+                #generic_close_token>::#type_ident
+            };
+            // the args trait has to unbox outer lifetimes, so we need to add them back in here
+            if let syn::Type::Reference(syn::TypeReference { and_token, lifetime, mutability, .. }) = &**ty {
+                let lifetime = quote::quote_spanned! { lifetime.span()=> 'static };
 
-                    specialised_ty = quote! { #and_token #lifetime #mutability #specialised_ty };
-                }
+                specialised_ty = quote! { #and_token #lifetime #mutability #specialised_ty };
+            }
 
-                quote::quote_spanned! { ty.span()=>
-                    <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
-                }
-            },
-            syn::FnArg::Receiver(_) => unreachable!(),
+            quote::quote_spanned! { ty.span()=>
+                <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
+            }
         }).collect()
 }

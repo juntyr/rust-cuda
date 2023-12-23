@@ -1,3 +1,4 @@
+use core::ptr::NonNull;
 use std::{
     ffi::{CStr, CString},
     marker::PhantomData,
@@ -22,12 +23,14 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_entry_po
 
 use crate::{
     common::{
-        DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef, EmptyCudaAlloc,
-        NoCudaAlloc, RustToCuda,
+        CudaKernelParameter, DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef,
+        EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
     },
-    ptx_jit::{PtxJITCompiler, PtxJITResult},
     safety::SafeDeviceCopy,
 };
+
+mod ptx_jit;
+use ptx_jit::{PtxJITCompiler, PtxJITResult};
 
 pub struct Launcher<'stream, 'kernel, Kernel> {
     pub stream: &'stream Stream,
@@ -35,22 +38,84 @@ pub struct Launcher<'stream, 'kernel, Kernel> {
     pub config: LaunchConfig,
 }
 
-impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
-    #[allow(clippy::missing_errors_doc)]
-    pub fn launch0(&mut self) -> CudaResult<()>
-    where
-        Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()>,
-    {
-        self.kernel.launch0(self.stream, &self.config)
-    }
+macro_rules! impl_launcher_launch {
+    ($launch:ident($($arg:ident : $T:ident),*) => $launch_async:ident) => {
+        #[allow(clippy::missing_errors_doc)]
+        #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
+        pub fn $launch<$($T: CudaKernelParameter),*>(
+            &mut self,
+            $($arg: $T::SyncHostType),*
+        ) -> CudaResult<()>
+        where
+            Kernel: Copy + FnOnce(
+                &mut Launcher<Kernel>,
+                $($T::SyncHostType),*
+            ) -> CudaResult<()>,
+        {
+            self.kernel.$launch::<$($T),*>(self.stream, &self.config, $($arg),*)
+        }
 
-    #[allow(clippy::missing_errors_doc)]
-    pub fn launch1<A>(&mut self, arg1: A) -> CudaResult<()>
-    where
-        Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()>,
-    {
-        self.kernel.launch1(self.stream, &self.config, arg1)
-    }
+        #[allow(clippy::missing_errors_doc)]
+        #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
+        pub fn $launch_async<$($T: CudaKernelParameter),*>(
+            &mut self,
+            $($arg: $T::AsyncHostType<'stream, '_>),*
+        ) -> CudaResult<()>
+        where
+            Kernel: Copy + FnOnce(
+                &mut Launcher<Kernel>,
+                $($T::SyncHostType),*
+            ) -> CudaResult<()>,
+        {
+            self.kernel.$launch_async::<$($T),*>(self.stream, &self.config, $($arg),*)
+        }
+    };
+}
+
+impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
+    impl_launcher_launch! { launch0() => launch0_async }
+
+    impl_launcher_launch! { launch1(arg1: A) => launch1_async }
+
+    impl_launcher_launch! { launch2(arg1: A, arg2: B) => launch2_async }
+
+    impl_launcher_launch! { launch3(arg1: A, arg2: B, arg3: C) => launch3_async }
+
+    impl_launcher_launch! { launch4(arg1: A, arg2: B, arg3: C, arg4: D) => launch4_async }
+
+    impl_launcher_launch! { launch5(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E
+    ) => launch5_async }
+
+    impl_launcher_launch! { launch6(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F
+    ) => launch6_async }
+
+    impl_launcher_launch! { launch7(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G
+    ) => launch7_async }
+
+    impl_launcher_launch! { launch8(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H
+    ) => launch8_async }
+
+    impl_launcher_launch! { launch9(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I
+    ) => launch9_async }
+
+    impl_launcher_launch! { launch10(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J
+    ) => launch10_async }
+
+    impl_launcher_launch! { launch11(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
+        arg11: K
+    ) => launch11_async }
+
+    impl_launcher_launch! { launch12(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
+        arg11: K, arg12: L
+    ) => launch12_async }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -131,10 +196,133 @@ pub struct TypedPtxKernel<Kernel> {
     marker: PhantomData<Kernel>,
 }
 
+macro_rules! impl_typed_kernel_launch {
+    ($launch:ident($($arg:ident : $T:ident),*) => $launch_async:ident) => {
+        #[allow(clippy::missing_errors_doc)]
+        #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
+        pub fn $launch<$($T: CudaKernelParameter),*>(
+            &mut self,
+            stream: &Stream,
+            config: &LaunchConfig,
+            $($arg: $T::SyncHostType),*
+        ) -> CudaResult<()>
+        where
+            Kernel: Copy + FnOnce(
+                &mut Launcher<Kernel>,
+                $($T::SyncHostType),*
+            ) -> CudaResult<()>,
+        {
+            impl_typed_kernel_launch! { impl with_new_async ($($arg: $T),*) + (stream) {
+                self.$launch_async::<$($T),*>(stream, config, $($arg),*)
+            } }
+        }
+
+        #[allow(clippy::missing_errors_doc)]
+        #[allow(clippy::needless_lifetimes)] // 'stream is unused for zero args
+        #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
+        pub fn $launch_async<'stream, $($T: CudaKernelParameter),*>(
+            &mut self,
+            stream: &'stream Stream,
+            config: &LaunchConfig,
+            $($arg: $T::AsyncHostType<'stream, '_>),*
+        ) -> CudaResult<()>
+        where
+            Kernel: Copy + FnOnce(
+                &mut Launcher<Kernel>,
+                $($T::SyncHostType),*
+            ) -> CudaResult<()>,
+        {
+            let kernel_jit_result = if config.ptx_jit {
+                impl_typed_kernel_launch! { impl with_async_as_ptx_jit ref ($($arg: $T),*) + () {
+                    self.compile_with_ptx_jit_args(Some(&[$($arg),*]))
+                } }?
+            } else {
+                self.compile_with_ptx_jit_args(None)?
+            };
+            let function = match kernel_jit_result {
+                KernelJITResult::Recompiled(function)
+                | KernelJITResult::Cached(function) => function,
+            };
+
+            unsafe { stream.launch(
+                function,
+                config.grid.clone(),
+                config.block.clone(),
+                config.shared_memory_size,
+                &[
+                    $(core::ptr::from_mut(
+                        &mut $T::async_to_ffi($arg)
+                    ).cast::<core::ffi::c_void>()),*
+                ],
+            ) }
+        }
+    };
+    (impl $func:ident () + ($($other:ident),*) $inner:block) => {
+        $inner
+    };
+    (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:ident),*) $inner:block) => {
+        $T0::$func($arg0 $(, $other)*, |$arg0| {
+            impl_typed_kernel_launch! { impl $func ($($arg: $T),*) + ($($other),*) $inner }
+        })
+    };
+    (impl $func:ident ref () + ($($other:ident),*) $inner:block) => {
+        $inner
+    };
+    (impl $func:ident ref ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:ident),*) $inner:block) => {
+        $T0::$func(&$arg0 $(, $other)*, |$arg0| {
+            impl_typed_kernel_launch! { impl $func ref ($($arg: $T),*) + ($($other),*) $inner }
+        })
+    };
+}
+
 impl<Kernel> TypedPtxKernel<Kernel> {
+    impl_typed_kernel_launch! { launch0() => launch0_async }
+
+    impl_typed_kernel_launch! { launch1(arg1: A) => launch1_async }
+
+    impl_typed_kernel_launch! { launch2(arg1: A, arg2: B) => launch2_async }
+
+    impl_typed_kernel_launch! { launch3(arg1: A, arg2: B, arg3: C) => launch3_async }
+
+    impl_typed_kernel_launch! { launch4(arg1: A, arg2: B, arg3: C, arg4: D) => launch4_async }
+
+    impl_typed_kernel_launch! { launch5(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E
+    ) => launch5_async }
+
+    impl_typed_kernel_launch! { launch6(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F
+    ) => launch6_async }
+
+    impl_typed_kernel_launch! { launch7(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G
+    ) => launch7_async }
+
+    impl_typed_kernel_launch! { launch8(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H
+    ) => launch8_async }
+
+    impl_typed_kernel_launch! { launch9(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I
+    ) => launch9_async }
+
+    impl_typed_kernel_launch! { launch10(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J
+    ) => launch10_async }
+
+    impl_typed_kernel_launch! { launch11(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
+        arg11: K
+    ) => launch11_async }
+
+    impl_typed_kernel_launch! { launch12(
+        arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J,
+        arg11: K, arg12: L
+    ) => launch12_async }
+
     #[must_use]
     pub fn new<T: CompiledKernelPtx<Kernel>>(configure: Option<Box<PtxKernelConfigure>>) -> Self {
-        let compiler = crate::ptx_jit::PtxJITCompiler::new(T::get_ptx());
+        let compiler = PtxJITCompiler::new(T::get_ptx());
         let entry_point = CString::from(T::get_entry_point()).into_boxed_c_str();
 
         Self {
@@ -151,9 +339,9 @@ impl<Kernel> TypedPtxKernel<Kernel> {
     /// Returns a [`CudaError`] if the [`CompiledKernelPtx`] provided to
     /// [`Self::new`] is not a valid PTX source or does not contain the
     /// entry point it declares.
-    pub fn compile_with_ptx_jit_args(
+    fn compile_with_ptx_jit_args(
         &mut self,
-        arguments: Option<&[Option<*const [u8]>]>,
+        arguments: Option<&[Option<&NonNull<[u8]>>]>,
     ) -> CudaResult<KernelJITResult> {
         let ptx_jit = self.compiler.with_arguments(arguments);
 
@@ -179,50 +367,7 @@ impl<Kernel> TypedPtxKernel<Kernel> {
 
         Ok(kernel_jit)
     }
-
-    #[allow(clippy::missing_errors_doc)]
-    pub fn launch0(&mut self, stream: &Stream, config: &LaunchConfig) -> CudaResult<()>
-    where
-        Kernel: Copy + FnOnce(&mut Launcher<Kernel>) -> CudaResult<()>,
-    {
-        (const { conjure::<Kernel>() })(&mut Launcher {
-            stream,
-            kernel: self,
-            config: config.clone(),
-        })
-    }
-
-    #[allow(clippy::missing_errors_doc)]
-    pub fn launch1<A>(&mut self, stream: &Stream, config: &LaunchConfig, arg1: A) -> CudaResult<()>
-    where
-        Kernel: Copy + FnOnce(&mut Launcher<Kernel>, A) -> CudaResult<()>,
-    {
-        (const { conjure::<Kernel>() })(
-            &mut Launcher {
-                stream,
-                kernel: self,
-                config: config.clone(),
-            },
-            arg1,
-        )
-    }
 }
-
-const fn conjure<T: Copy>() -> T {
-    union Transmute<T: Copy> {
-        empty: (),
-        magic: T,
-    }
-
-    assert!(std::mem::size_of::<T>() == 0);
-    assert!(std::mem::align_of::<T>() == 1);
-
-    unsafe { Transmute { empty: () }.magic }
-}
-
-struct Assert<const ASSERT: bool>;
-trait True {}
-impl True for Assert<true> {}
 
 pub trait LendToCuda: RustToCuda {
     /// Lends an immutable copy of `&self` to CUDA:

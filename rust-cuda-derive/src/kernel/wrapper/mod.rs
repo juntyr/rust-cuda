@@ -7,7 +7,6 @@ use proc_macro::TokenStream;
 
 mod config;
 mod generate;
-mod inputs;
 mod parse;
 
 use super::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
@@ -17,7 +16,6 @@ use generate::{
     cpu_linker_macro::quote_cpu_linker_macro, cpu_wrapper::quote_cpu_wrapper,
     cuda_generic_function::quote_cuda_generic_function, cuda_wrapper::quote_cuda_wrapper,
 };
-use inputs::{parse_function_inputs, FunctionInputs};
 use parse::parse_kernel_fn;
 use proc_macro2::{Ident, Span};
 use syn::spanned::Spanned;
@@ -130,7 +128,19 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     };
 
-    let mut func_inputs = parse_function_inputs(&func);
+    let mut func_inputs = FunctionInputs {
+        func_inputs: func
+            .sig
+            .inputs
+            .into_iter()
+            .map(|arg| match arg {
+                syn::FnArg::Typed(arg) => arg,
+                syn::FnArg::Receiver(_) => {
+                    unreachable!("already checked that no receiver arg exists")
+                },
+            })
+            .collect(),
+    };
 
     let generic_kernel_params = func.sig.generics.params.clone();
     let (generic_start_token, generic_close_token) =
@@ -161,7 +171,6 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_ident = FuncIdent {
         func_ident: &func.sig.ident,
-        func_ident_async: quote::format_ident!("{}_async", &func.sig.ident),
         func_ident_hash: quote::format_ident!("{}_{:016x}", &func.sig.ident, kernel_hash),
     };
 
@@ -169,12 +178,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         .func_inputs
         .iter()
         .enumerate()
-        .map(|(i, arg)| match arg {
-            syn::FnArg::Typed(syn::PatType { pat, .. }) => match ident_from_pat(pat) {
-                Some(ident) => ident,
-                None => syn::Ident::new(&format!("{}_arg_{i}", func_ident.func_ident), pat.span()),
-            },
-            syn::FnArg::Receiver(_) => unreachable!(),
+        .map(|(i, syn::PatType { pat, .. })| match ident_from_pat(pat) {
+            Some(ident) => ident,
+            None => syn::Ident::new(&format!("{}_arg_{i}", func_ident.func_ident), pat.span()),
         })
         .collect::<Vec<_>>();
 
@@ -182,29 +188,28 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         .func_inputs
         .iter_mut()
         .zip(&func_params)
-        .map(|(arg, ident)| match arg {
-            syn::FnArg::Typed(syn::PatType {
+        .map(|(arg, ident)| {
+            let syn::PatType {
                 attrs,
                 colon_token,
                 ty,
                 ..
-            }) => {
-                let ident_fn_arg = syn::FnArg::Typed(syn::PatType {
-                    attrs: attrs.clone(),
-                    pat: Box::new(syn::Pat::Ident(syn::PatIdent {
-                        attrs: Vec::new(),
-                        by_ref: None,
-                        mutability: None,
-                        ident: ident.clone(),
-                        subpat: None,
-                    })),
-                    colon_token: *colon_token,
-                    ty: ty.clone(),
-                });
+            } = arg;
 
-                std::mem::replace(arg, ident_fn_arg)
-            },
-            syn::FnArg::Receiver(_) => unreachable!(),
+            let ident_fn_arg = syn::PatType {
+                attrs: attrs.clone(),
+                pat: Box::new(syn::Pat::Ident(syn::PatIdent {
+                    attrs: Vec::new(),
+                    by_ref: None,
+                    mutability: None,
+                    ident: ident.clone(),
+                    subpat: None,
+                })),
+                colon_token: *colon_token,
+                ty: ty.clone(),
+            };
+
+            std::mem::replace(arg, ident_fn_arg)
         })
         .collect();
 
@@ -258,7 +263,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     .into()
 }
 
-struct InputPtxJit(bool);
+struct FunctionInputs {
+    func_inputs: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
+}
 
 #[allow(clippy::struct_field_names)]
 struct DeclGenerics<'f> {
@@ -276,7 +283,6 @@ struct ImplGenerics<'f> {
 #[allow(clippy::struct_field_names)]
 struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
-    func_ident_async: syn::Ident,
     func_ident_hash: syn::Ident,
 }
 

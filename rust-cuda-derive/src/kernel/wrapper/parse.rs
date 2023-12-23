@@ -41,6 +41,20 @@ pub(super) fn parse_kernel_fn(tokens: TokenStream) -> syn::ItemFn {
         );
     }
 
+    for param in &func.sig.inputs {
+        if let syn::FnArg::Receiver(receiver) = param {
+            abort!(receiver.span(), "Kernel function must not have a receiver.");
+        }
+    }
+
+    if func.sig.inputs.len() > 12 {
+        abort!(
+            func.sig.inputs.span(),
+            "Kernel function has too many arguments, {} were found but at most 12 are supported.",
+            func.sig.inputs.len()
+        );
+    }
+
     match &func.sig.output {
         syn::ReturnType::Default => (),
         syn::ReturnType::Type(_, box syn::Type::Tuple(tuple)) if tuple.elems.is_empty() => (),

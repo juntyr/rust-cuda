@@ -9,10 +9,7 @@ use super::super::{
 #[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
     crate_path: &syn::Path,
-    inputs @ FunctionInputs {
-        func_inputs,
-        func_input_cuda_types,
-    }: &FunctionInputs,
+    inputs @ FunctionInputs { func_inputs }: &FunctionInputs,
     func @ FuncIdent {
         func_ident,
         func_ident_hash,
@@ -39,34 +36,27 @@ pub(in super::super) fn quote_cuda_wrapper(
         .collect::<Vec<_>>();
 
     let ffi_param_ptx_jit_wrap = func_inputs
-        .iter().zip(func_input_cuda_types.iter()).enumerate()
+        .iter().enumerate()
         .rev()
         .fold(quote! {
             #func_ident(#(#func_params),*)
-        }, |inner, (_i, (arg, _ptx_jit))| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                pat,
-                ty,
-                ..
-            }) => {
-                // Emit PTX JIT load markers
-                // let ptx_jit_load = if ptx_jit.0 {
-                //     quote! {
-                //         #crate_path::ptx_jit::PtxJITConstLoad!([#i] => #pat.as_ref())
-                //     }
-                // } else { quote! {} };
+        }, |inner, (i, syn::PatType {
+            pat,
+            ty,
+            ..
+        })| {
+            let specialised_ty = quote::quote_spanned! { ty.span()=>
+                #crate_path::device::specialise_kernel_type!(#ty for #generics in #func_ident)
+            };
 
-                let specialised_ty = quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#ty for #generics in #func_ident)
-                };
-
-                quote::quote_spanned! { ty.span()=>
-                    <#specialised_ty as #crate_path::common::CudaKernelParameter>::with_ffi_as_device(
-                        #pat, |#pat| { #inner }
-                    )
-                }
-            },
-            syn::FnArg::Receiver(_) => unreachable!(),
+            // Load the device param from its FFI representation
+            // To allow some parameters to also inject PTX JIT load markers here,
+            //  we pass them the param index i
+            quote::quote_spanned! { ty.span()=>
+                <#specialised_ty as #crate_path::common::CudaKernelParameter>::with_ffi_as_device::<_, #i>(
+                    #pat, |#pat| { #inner }
+                )
+            }
         });
 
     quote! {
@@ -108,39 +98,34 @@ pub(in super::super) fn quote_cuda_wrapper(
 
 fn specialise_ffi_input_types(
     crate_path: &syn::Path,
-    FunctionInputs { func_inputs, .. }: &FunctionInputs,
+    FunctionInputs { func_inputs }: &FunctionInputs,
     FuncIdent { func_ident, .. }: &FuncIdent,
     ImplGenerics { impl_generics, .. }: &ImplGenerics,
 ) -> (Vec<syn::FnArg>, Vec<syn::Type>) {
     func_inputs
         .iter()
-        .map(|arg| match arg {
-            syn::FnArg::Typed(
-                syn::PatType {
-                    attrs,
-                    pat,
-                    colon_token,
-                    ty,
-                },
-            ) => {
-                let specialised_ty = quote::quote_spanned! { ty.span()=>
-                    #crate_path::device::specialise_kernel_type!(#ty for #impl_generics in #func_ident)
-                };
+        .map(|syn::PatType {
+            attrs,
+            pat,
+            colon_token,
+            ty,
+        }| {
+            let specialised_ty = quote::quote_spanned! { ty.span()=>
+                #crate_path::device::specialise_kernel_type!(#ty for #impl_generics in #func_ident)
+            };
 
-                let ffi_ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
-                    <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
-                };
+            let ffi_ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
+                <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
+            };
 
-                let ffi_param = syn::FnArg::Typed(syn::PatType {
-                    attrs: attrs.clone(),
-                    ty: Box::new(ffi_ty.clone()),
-                    pat: pat.clone(),
-                    colon_token: *colon_token,
-                });
+            let ffi_param = syn::FnArg::Typed(syn::PatType {
+                attrs: attrs.clone(),
+                ty: Box::new(ffi_ty.clone()),
+                pat: pat.clone(),
+                colon_token: *colon_token,
+            });
 
-                (ffi_param, ffi_ty)
-            },
-            syn::FnArg::Receiver(_) => unreachable!(),
+            (ffi_param, ffi_ty)
         })
         .unzip()
 }

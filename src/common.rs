@@ -8,7 +8,10 @@ use core::{
 #[cfg(feature = "host")]
 use alloc::fmt;
 #[cfg(feature = "host")]
-use core::{mem::MaybeUninit, ptr::copy_nonoverlapping};
+use core::{
+    mem::MaybeUninit,
+    ptr::{copy_nonoverlapping, NonNull},
+};
 
 use const_type_layout::TypeGraphLayout;
 use rustacuda_core::DeviceCopy;
@@ -334,18 +337,42 @@ pub trait CudaKernelParameter: sealed::Sealed {
     ) -> Result<O, E>;
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O;
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b>;
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O;
 }
 
-#[repr(transparent)]
+pub struct PtxJit<T> {
+    never: !,
+    _marker: PhantomData<T>,
+}
+
+impl<T> Deref for PtxJit<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.never
+    }
+}
+
+impl<T> DerefMut for PtxJit<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.never
+    }
+}
+
 pub struct PerThreadShallowCopy<
     T: crate::safety::SafeDeviceCopy
         + crate::safety::NoSafeAliasing
@@ -404,6 +431,14 @@ impl<
     }
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -411,7 +446,7 @@ impl<
     }
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -470,6 +505,14 @@ impl<
     }
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -477,7 +520,7 @@ impl<
     }
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -495,7 +538,68 @@ impl<
 {
 }
 
-#[repr(transparent)]
+impl<
+        'a,
+        T: 'static
+            + crate::safety::SafeDeviceCopy
+            + crate::safety::NoSafeAliasing
+            + const_type_layout::TypeGraphLayout,
+    > CudaKernelParameter for &'a PtxJit<PerThreadShallowCopy<T>>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> =
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+    type DeviceType<'b> = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type FfiType<'stream, 'b> =
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+    #[cfg(feature = "host")]
+    type SyncHostType = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(param, stream, inner)
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b>(
+        param: Self::AsyncHostType<'stream, 'b>,
+    ) -> Self::FfiType<'stream, 'b> {
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+    }
+
+    #[cfg(not(feature = "host"))]
+    fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+            param, inner,
+        )
+    }
+}
+impl<
+        'a,
+        T: crate::safety::SafeDeviceCopy
+            + crate::safety::NoSafeAliasing
+            + const_type_layout::TypeGraphLayout,
+    > sealed::Sealed for &'a PtxJit<PerThreadShallowCopy<T>>
+{
+}
+
 pub struct ShallowInteriorMutable<T: InteriorMutableSafeDeviceCopy> {
     never: !,
     _marker: PhantomData<T>,
@@ -554,6 +658,14 @@ impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -561,7 +673,7 @@ impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
     }
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -602,7 +714,6 @@ impl_atomic_interior_mutable! {
 // impl<T: crate::safety::SafeDeviceCopy> sealed::Sealed for
 // core::cell::SyncUnsafeCell<T> {}
 
-#[repr(transparent)]
 pub struct SharedHeapPerThreadShallowCopy<T: RustToCuda + crate::safety::NoSafeAliasing> {
     never: !,
     _marker: PhantomData<T>,
@@ -651,6 +762,14 @@ impl<
     }
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -658,7 +777,7 @@ impl<
     }
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -702,6 +821,14 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
     }
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -709,7 +836,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
     }
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -750,6 +877,14 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
     }
 
     #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         mut param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -757,7 +892,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
     }
 
     #[cfg(not(feature = "host"))]
-    fn with_ffi_as_device<O>(
+    fn with_ffi_as_device<O, const PARAM: usize>(
         mut param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -772,4 +907,202 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
 impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
     for &'a mut SharedHeapPerThreadShallowCopy<T>
 {
+}
+
+impl<
+        T: RustToCuda<
+                CudaRepresentation: 'static + crate::safety::SafeDeviceCopy,
+                CudaAllocation: EmptyCudaAlloc,
+            > + crate::safety::NoSafeAliasing,
+    > CudaKernelParameter for PtxJit<SharedHeapPerThreadShallowCopy<T>>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> =
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+    type DeviceType<'b> =
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type FfiType<'stream, 'b> =
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+    #[cfg(feature = "host")]
+    type SyncHostType = <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(
+            param, stream, inner,
+        )
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b>(
+        param: Self::AsyncHostType<'stream, 'b>,
+    ) -> Self::FfiType<'stream, 'b> {
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+    }
+
+    #[cfg(not(feature = "host"))]
+    fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+            param, inner,
+        )
+    }
+}
+impl<
+        T: RustToCuda<
+                CudaRepresentation: crate::safety::SafeDeviceCopy,
+                CudaAllocation: EmptyCudaAlloc,
+            > + crate::safety::NoSafeAliasing,
+    > sealed::Sealed for PtxJit<SharedHeapPerThreadShallowCopy<T>>
+{
+}
+
+impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelParameter
+    for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> =
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+    type DeviceType<'b> =
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type FfiType<'stream, 'b> =
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+    #[cfg(feature = "host")]
+    type SyncHostType =
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(
+            param, stream, inner,
+        )
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b>(
+        param: Self::AsyncHostType<'stream, 'b>,
+    ) -> Self::FfiType<'stream, 'b> {
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+    }
+
+    #[cfg(not(feature = "host"))]
+    fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+            param, inner,
+        )
+    }
+}
+impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
+    for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>>
+{
+}
+
+impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelParameter
+    for &'a mut PtxJit<SharedHeapPerThreadShallowCopy<T>>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> =
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<
+            'stream,
+            'b,
+        >;
+    type DeviceType<'b> =
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type FfiType<'stream, 'b> =
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+    #[cfg(feature = "host")]
+    type SyncHostType =
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(
+            param, stream, inner,
+        )
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b>(
+        param: Self::AsyncHostType<'stream, 'b>,
+    ) -> Self::FfiType<'stream, 'b> {
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+    }
+
+    #[cfg(not(feature = "host"))]
+    fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+
+        <&'a mut SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<
+            O,
+            PARAM,
+        >(param, inner)
+    }
+}
+impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
+    for &'a mut PtxJit<SharedHeapPerThreadShallowCopy<T>>
+{
+}
+
+#[cfg(feature = "host")]
+fn param_as_raw_bytes<T: ?Sized>(r: &T) -> NonNull<[u8]> {
+    NonNull::slice_from_raw_parts(NonNull::from(r).cast::<u8>(), core::mem::size_of_val(r))
+}
+
+#[cfg(not(feature = "host"))]
+fn emit_param_ptx_jit_marker<T: ?Sized, const INDEX: usize>(param: &T) {
+    unsafe {
+        core::arch::asm!(
+            "// <rust-cuda-ptx-jit-const-load-{}-{}> //",
+            in(reg32) *(core::ptr::from_ref(param).cast::<u32>()),
+            const(INDEX),
+        );
+    }
 }

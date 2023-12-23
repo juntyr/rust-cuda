@@ -8,7 +8,7 @@ pub(in super::super) fn quote_args_trait(
         impl_generics,
         ty_generics,
     }: &ImplGenerics,
-    FunctionInputs { func_inputs, .. }: &FunctionInputs,
+    FunctionInputs { func_inputs }: &FunctionInputs,
 ) -> TokenStream {
     let func_input_typedefs = (0..func_inputs.len())
         .map(|i| {
@@ -23,12 +23,7 @@ pub(in super::super) fn quote_args_trait(
     let func_input_types = func_inputs
         .iter()
         .enumerate()
-        .map(|(i, arg)| {
-            let pat_type = match arg {
-                syn::FnArg::Typed(pat_type) => pat_type,
-                syn::FnArg::Receiver(_) => unreachable!(),
-            };
-
+        .map(|(i, pat_type)| {
             let type_ident = quote::format_ident!("__T_{}", i);
             let arg_type = match &*pat_type.ty {
                 syn::Type::Reference(syn::TypeReference { elem, .. }) => elem,
