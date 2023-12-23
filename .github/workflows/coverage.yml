@@ -59,7 +59,6 @@ jobs:
           ./grcov . -s . --binary-path ./target/debug/deps \
             -t lcov -o coverage.lcov --branch \
             --keep-only "src/*" \
-            --keep-only "rust-cuda-ptx-jit/*" \
             --keep-only "rust-cuda-derive/*" \
             --ignore-not-existing \
             --excl-line GRCOV_EXCL_LINE \

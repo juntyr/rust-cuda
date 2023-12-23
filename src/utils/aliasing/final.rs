@@ -83,8 +83,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Final<T> {
 unsafe impl<T: CudaAsRust> CudaAsRust for FinalCudaRepresentation<T> {
     type RustRepresentation = Final<T::RustRepresentation>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         Final::new(CudaAsRust::as_rust(&this.0))
     }

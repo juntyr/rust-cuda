@@ -26,7 +26,7 @@ use crate::{
         CudaKernelParameter, DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef,
         EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
     },
-    safety::SafeDeviceCopy,
+    safety::{NoSafeAliasing, SafeDeviceCopy},
 };
 
 mod ptx_jit;
@@ -47,10 +47,7 @@ macro_rules! impl_launcher_launch {
             $($arg: $T::SyncHostType),*
         ) -> CudaResult<()>
         where
-            Kernel: /*Copy +*/ FnOnce(
-                &mut Launcher<Kernel>,
-                $($T/*::SyncHostType*/),*
-            )/* -> CudaResult<()>*/,
+            Kernel: FnOnce(&mut Launcher<Kernel>, $($T),*),
         {
             self.kernel.$launch::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
@@ -71,10 +68,7 @@ macro_rules! impl_launcher_launch {
             ) -> Result<Ok, Err>,
         ) -> Result<Ok, Err>
         where
-            Kernel: /*Copy +*/ FnOnce(
-                &mut Launcher<Kernel>,
-                $($T/*::SyncHostType*/),*
-            )/* -> CudaResult<()>*/,
+            Kernel: FnOnce(&mut Launcher<Kernel>, $($T),*),
         {
             #[allow(unused_variables)]
             let stream = self.stream;
@@ -91,10 +85,7 @@ macro_rules! impl_launcher_launch {
             $($arg: $T::AsyncHostType<'stream, '_>),*
         ) -> CudaResult<()>
         where
-            Kernel: /*Copy +*/ FnOnce(
-                &mut Launcher<Kernel>,
-                $($T/*::SyncHostType*/),*
-            )/* -> CudaResult<()>*/,
+            Kernel: FnOnce(&mut Launcher<Kernel>, $($T),*),
         {
             self.kernel.$launch_async::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
@@ -173,12 +164,12 @@ pub struct LaunchConfig {
 
 #[doc(cfg(feature = "host"))]
 #[allow(clippy::module_name_repetitions)]
-pub struct PtxKernel {
+pub struct RawPtxKernel {
     module: ManuallyDrop<Box<Module>>,
     function: ManuallyDrop<Function<'static>>,
 }
 
-impl PtxKernel {
+impl RawPtxKernel {
     /// # Errors
     ///
     /// Returns a [`CudaError`] if `ptx` is not a valid PTX source, or it does
@@ -211,7 +202,7 @@ impl PtxKernel {
     }
 }
 
-impl Drop for PtxKernel {
+impl Drop for RawPtxKernel {
     fn drop(&mut self) {
         {
             // Ensure that self.function is dropped before self.module as
@@ -226,16 +217,11 @@ impl Drop for PtxKernel {
     }
 }
 
-pub enum KernelJITResult<'k> {
-    Cached(&'k Function<'k>),
-    Recompiled(&'k Function<'k>),
-}
-
 pub type PtxKernelConfigure = dyn FnMut(&Function) -> CudaResult<()>;
 
 pub struct TypedPtxKernel<Kernel> {
     compiler: PtxJITCompiler,
-    ptx_kernel: Option<PtxKernel>,
+    ptx_kernel: Option<RawPtxKernel>,
     entry_point: Box<CStr>,
     configure: Option<Box<PtxKernelConfigure>>,
     marker: PhantomData<Kernel>,
@@ -252,10 +238,7 @@ macro_rules! impl_typed_kernel_launch {
             $($arg: $T::SyncHostType),*
         ) -> CudaResult<()>
         where
-            Kernel: /*Copy +*/ FnOnce(
-                &mut Launcher<Kernel>,
-                $($T/*::SyncHostType*/),*
-            )/* -> CudaResult<()>*/,
+            Kernel: FnOnce(&mut Launcher<Kernel>, $($T),*),
         {
             self.$with_async::<(), CudaError, $($T),*>(
                 stream,
@@ -294,10 +277,7 @@ macro_rules! impl_typed_kernel_launch {
             ) -> Result<Ok, Err>,
         ) -> Result<Ok, Err>
         where
-            Kernel: /*Copy +*/ FnOnce(
-                &mut Launcher<Kernel>,
-                $($T/*::SyncHostType*/),*
-            )/* -> CudaResult<()>*/,
+            Kernel: FnOnce(&mut Launcher<Kernel>, $($T),*),
         {
             impl_typed_kernel_launch! { impl with_new_async ($($arg: $T),*) + (stream) {
                 inner(self, stream, config, $($arg),*)
@@ -314,21 +294,14 @@ macro_rules! impl_typed_kernel_launch {
             $($arg: $T::AsyncHostType<'stream, '_>),*
         ) -> CudaResult<()>
         where
-            Kernel: /*Copy +*/ FnOnce(
-                &mut Launcher<Kernel>,
-                $($T/*::SyncHostType*/),*
-            )/* -> CudaResult<()>*/,
+            Kernel: FnOnce(&mut Launcher<Kernel>, $($T),*),
         {
-            let kernel_jit_result = if config.ptx_jit {
+            let function = if config.ptx_jit {
                 impl_typed_kernel_launch! { impl with_async_as_ptx_jit ref ($($arg: $T),*) + () {
                     self.compile_with_ptx_jit_args(Some(&[$($arg),*]))
                 } }?
             } else {
                 self.compile_with_ptx_jit_args(None)?
-            };
-            let function = match kernel_jit_result {
-                KernelJITResult::Recompiled(function)
-                | KernelJITResult::Cached(function) => function,
             };
 
             unsafe { stream.launch(
@@ -360,6 +333,22 @@ macro_rules! impl_typed_kernel_launch {
             impl_typed_kernel_launch! { impl $func ref ($($arg: $T),*) + ($($other),*) $inner }
         })
     };
+}
+
+impl<Kernel> TypedPtxKernel<Kernel> {
+    #[must_use]
+    pub fn new<T: CompiledKernelPtx<Kernel>>(configure: Option<Box<PtxKernelConfigure>>) -> Self {
+        let compiler = PtxJITCompiler::new(T::get_ptx());
+        let entry_point = CString::from(T::get_entry_point()).into_boxed_c_str();
+
+        Self {
+            compiler,
+            ptx_kernel: None,
+            entry_point,
+            configure,
+            marker: PhantomData::<Kernel>,
+        }
+    }
 }
 
 impl<Kernel> TypedPtxKernel<Kernel> {
@@ -415,20 +404,6 @@ impl<Kernel> TypedPtxKernel<Kernel> {
         arg11: K, arg12: L
     ) => with12_async => launch12_async }
 
-    #[must_use]
-    pub fn new<T: CompiledKernelPtx<Kernel>>(configure: Option<Box<PtxKernelConfigure>>) -> Self {
-        let compiler = PtxJITCompiler::new(T::get_ptx());
-        let entry_point = CString::from(T::get_entry_point()).into_boxed_c_str();
-
-        Self {
-            compiler,
-            ptx_kernel: None,
-            entry_point,
-            configure,
-            marker: PhantomData::<Kernel>,
-        }
-    }
-
     /// # Errors
     ///
     /// Returns a [`CudaError`] if the [`CompiledKernelPtx`] provided to
@@ -437,15 +412,13 @@ impl<Kernel> TypedPtxKernel<Kernel> {
     fn compile_with_ptx_jit_args(
         &mut self,
         arguments: Option<&[Option<&NonNull<[u8]>>]>,
-    ) -> CudaResult<KernelJITResult> {
+    ) -> CudaResult<&Function> {
         let ptx_jit = self.compiler.with_arguments(arguments);
 
         let kernel_jit = match (&mut self.ptx_kernel, ptx_jit) {
-            (Some(ptx_kernel), PtxJITResult::Cached(_)) => {
-                KernelJITResult::Cached(ptx_kernel.get_function())
-            },
+            (Some(ptx_kernel), PtxJITResult::Cached(_)) => ptx_kernel.get_function(),
             (ptx_kernel, PtxJITResult::Cached(ptx_cstr) | PtxJITResult::Recomputed(ptx_cstr)) => {
-                let recomputed_ptx_kernel = PtxKernel::new(ptx_cstr, &self.entry_point)?;
+                let recomputed_ptx_kernel = RawPtxKernel::new(ptx_cstr, &self.entry_point)?;
 
                 // Replace the existing compiled kernel, drop the old one
                 let ptx_kernel = ptx_kernel.insert(recomputed_ptx_kernel);
@@ -456,7 +429,7 @@ impl<Kernel> TypedPtxKernel<Kernel> {
                     configure(function)?;
                 }
 
-                KernelJITResult::Recompiled(function)
+                function
             },
         };
 
@@ -464,7 +437,7 @@ impl<Kernel> TypedPtxKernel<Kernel> {
     }
 }
 
-pub trait LendToCuda: RustToCuda {
+pub trait LendToCuda: RustToCuda + NoSafeAliasing {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
     ///   [`DeviceConstRef`] inside the closure
@@ -525,12 +498,10 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: Sized,
-        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
-        <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc;
+        Self: RustToCuda<CudaRepresentation: SafeDeviceCopy, CudaAllocation: EmptyCudaAlloc>;
 }
 
-impl<T: RustToCuda> LendToCuda for T {
+impl<T: RustToCuda + NoSafeAliasing> LendToCuda for T {
     fn lend_to_cuda<
         O,
         E: From<CudaError>,
@@ -583,9 +554,7 @@ impl<T: RustToCuda> LendToCuda for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: Sized,
-        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
-        <Self as RustToCuda>::CudaAllocation: EmptyCudaAlloc,
+        Self: RustToCuda<CudaRepresentation: SafeDeviceCopy, CudaAllocation: EmptyCudaAlloc>,
     {
         let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
@@ -597,23 +566,21 @@ impl<T: RustToCuda> LendToCuda for T {
     }
 }
 
-mod private {
-    pub mod drop {
-        pub trait Sealed: Sized {
-            fn drop(val: Self) -> Result<(), (rustacuda::error::CudaError, Self)>;
-        }
-    }
+pub trait CudaDroppable: Sized {
+    #[allow(clippy::missing_errors_doc)]
+    fn drop(val: Self) -> Result<(), (rustacuda::error::CudaError, Self)>;
 }
 
 #[repr(transparent)]
-pub struct CudaDropWrapper<C: private::drop::Sealed>(ManuallyDrop<C>);
-impl<C: private::drop::Sealed> crate::common::crate_private::alloc::Sealed for CudaDropWrapper<C> {}
-impl<C: private::drop::Sealed> From<C> for CudaDropWrapper<C> {
+pub struct CudaDropWrapper<C: CudaDroppable>(ManuallyDrop<C>);
+impl<C: CudaDroppable> crate::common::CudaAlloc for CudaDropWrapper<C> {}
+impl<C: CudaDroppable> crate::common::crate_private::alloc::Sealed for CudaDropWrapper<C> {}
+impl<C: CudaDroppable> From<C> for CudaDropWrapper<C> {
     fn from(val: C) -> Self {
         Self(ManuallyDrop::new(val))
     }
 }
-impl<C: private::drop::Sealed> Drop for CudaDropWrapper<C> {
+impl<C: CudaDroppable> Drop for CudaDropWrapper<C> {
     fn drop(&mut self) {
         // Safety: drop is only ever called once
         let val = unsafe { ManuallyDrop::take(&mut self.0) };
@@ -623,14 +590,14 @@ impl<C: private::drop::Sealed> Drop for CudaDropWrapper<C> {
         }
     }
 }
-impl<C: private::drop::Sealed> Deref for CudaDropWrapper<C> {
+impl<C: CudaDroppable> Deref for CudaDropWrapper<C> {
     type Target = C;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<C: private::drop::Sealed> DerefMut for CudaDropWrapper<C> {
+impl<C: CudaDroppable> DerefMut for CudaDropWrapper<C> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -638,7 +605,7 @@ impl<C: private::drop::Sealed> DerefMut for CudaDropWrapper<C> {
 
 macro_rules! impl_sealed_drop_collection {
     ($type:ident) => {
-        impl<C: DeviceCopy> private::drop::Sealed for $type<C> {
+        impl<C: DeviceCopy> CudaDroppable for $type<C> {
             fn drop(val: Self) -> Result<(), (CudaError, Self)> {
                 Self::drop(val)
             }
@@ -653,7 +620,7 @@ impl_sealed_drop_collection!(LockedBox);
 
 macro_rules! impl_sealed_drop_value {
     ($type:ident) => {
-        impl private::drop::Sealed for $type {
+        impl CudaDroppable for $type {
             fn drop(val: Self) -> Result<(), (CudaError, Self)> {
                 Self::drop(val)
             }
@@ -727,6 +694,7 @@ impl<T: DeviceCopy> Drop for HostLockedBox<T> {
 #[allow(clippy::module_name_repetitions)]
 pub struct HostDeviceBox<T: DeviceCopy>(DevicePointer<T>);
 
+impl<T: DeviceCopy> crate::common::CudaAlloc for HostDeviceBox<T> {}
 impl<T: DeviceCopy> crate::common::crate_private::alloc::Sealed for HostDeviceBox<T> {}
 
 impl<T: DeviceCopy> HostDeviceBox<T> {

@@ -133,7 +133,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync for SafeDeviceC
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
     type RustRepresentation = Self;
 
-    #[cfg(any(not(feature = "host"), doc))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         let mut uninit = core::mem::MaybeUninit::uninit();
         core::ptr::copy_nonoverlapping(&**this, uninit.as_mut_ptr(), 1);

@@ -19,8 +19,8 @@ rust-version = "1.75" # nightly
 
 [features]
 default = []
-host = ["rustacuda", "regex"]
-derive = ["rustacuda_derive", "rust-cuda-derive"]
+host = ["dep:rustacuda", "dep:regex"]
+derive = ["dep:rustacuda_derive", "dep:rust-cuda-derive"]
 
 [dependencies]
 rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc" }

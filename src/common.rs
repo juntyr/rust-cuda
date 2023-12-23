@@ -86,8 +86,8 @@ pub unsafe trait RustToCuda {
     type CudaAllocation: CudaAlloc;
     type CudaRepresentation: CudaAsRust<RustRepresentation = Self> + TypeGraphLayout;
 
+    #[doc(hidden)]
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     /// # Errors
     ///
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -107,8 +107,8 @@ pub unsafe trait RustToCuda {
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
 
+    #[doc(hidden)]
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     /// # Errors
     ///
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -129,8 +129,8 @@ pub unsafe trait RustToCuda {
 /// This is an internal trait and should ONLY be derived automatically using
 /// `#[derive(LendRustToCuda)]`
 pub unsafe trait RustToCudaAsync: RustToCuda {
+    #[doc(hidden)]
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     /// # Errors
     ///
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -153,8 +153,8 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
 
+    #[doc(hidden)]
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     /// # Errors
     ///
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -177,8 +177,8 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
 pub unsafe trait CudaAsRust: DeviceCopy + TypeGraphLayout {
     type RustRepresentation: RustToCuda<CudaRepresentation = Self>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[doc(hidden)]
+    #[cfg(not(feature = "host"))]
     /// # Safety
     ///
     /// This is an internal function and should NEVER be called manually
@@ -283,23 +283,31 @@ mod private {
 }
 
 pub trait EmptyCudaAlloc: private::empty::Sealed {}
-impl<T: private::empty::Sealed> EmptyCudaAlloc for T {}
 
 pub trait CudaAlloc: crate_private::alloc::Sealed {}
-impl<T: crate_private::alloc::Sealed> CudaAlloc for T {}
 
+impl<T: CudaAlloc> CudaAlloc for Option<T> {}
 impl<T: CudaAlloc> crate_private::alloc::Sealed for Option<T> {}
 
 pub struct NoCudaAlloc;
+impl CudaAlloc for NoCudaAlloc {}
 impl crate_private::alloc::Sealed for NoCudaAlloc {}
+impl EmptyCudaAlloc for NoCudaAlloc {}
 impl private::empty::Sealed for NoCudaAlloc {}
 
 pub struct SomeCudaAlloc(());
+impl CudaAlloc for SomeCudaAlloc {}
 impl crate_private::alloc::Sealed for SomeCudaAlloc {}
+impl !EmptyCudaAlloc for SomeCudaAlloc {}
 impl !private::empty::Sealed for SomeCudaAlloc {}
 
 pub struct CombinedCudaAlloc<A: CudaAlloc, B: CudaAlloc>(A, B);
+impl<A: CudaAlloc, B: CudaAlloc> CudaAlloc for CombinedCudaAlloc<A, B> {}
 impl<A: CudaAlloc, B: CudaAlloc> crate_private::alloc::Sealed for CombinedCudaAlloc<A, B> {}
+impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> EmptyCudaAlloc
+    for CombinedCudaAlloc<A, B>
+{
+}
 impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> private::empty::Sealed
     for CombinedCudaAlloc<A, B>
 {
@@ -791,10 +799,7 @@ impl<
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        // The type contains no allocations and is safe to copy
-        let param = unsafe { CudaAsRust::as_rust(param.as_ref()) };
-
-        inner(param)
+        unsafe { crate::device::BorrowFromRust::with_moved_from_rust(param, inner) }
     }
 }
 impl<
@@ -851,11 +856,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        // Safety: param must never be dropped as we do NOT own any of the
-        //         heap memory it might reference
-        let param = core::mem::ManuallyDrop::new(unsafe { CudaAsRust::as_rust(param.as_ref()) });
-
-        inner(&param)
+        unsafe { crate::device::BorrowFromRust::with_borrow_from_rust(param, inner) }
     }
 }
 impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
@@ -905,15 +906,10 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
     fn with_ffi_as_device<O, const PARAM: usize>(
-        mut param: Self::FfiType<'static, 'static>,
+        param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        // Safety: param must never be dropped as we do NOT own any of the
-        //         heap memory it might reference
-        let mut param =
-            core::mem::ManuallyDrop::new(unsafe { CudaAsRust::as_rust(param.as_mut()) });
-
-        inner(&mut param)
+        unsafe { crate::device::BorrowFromRust::with_borrow_from_rust_mut(param, inner) }
     }
 }
 impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed

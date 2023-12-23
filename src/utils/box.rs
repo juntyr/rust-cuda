@@ -79,8 +79,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<T> {
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for BoxCudaRepresentation<T> {
     type RustRepresentation = Box<T>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         alloc::boxed::Box::from_raw(this.0)
     }

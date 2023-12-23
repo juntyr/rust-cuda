@@ -28,8 +28,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
 {
     type RustRepresentation = CudaExchangeBuffer<T, M2D, M2H>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &crate::common::DeviceAccessible<Self>) -> Self::RustRepresentation {
         CudaExchangeBuffer(core::mem::ManuallyDrop::new(alloc::boxed::Box::from_raw(
             core::slice::from_raw_parts_mut(this.0, this.1),

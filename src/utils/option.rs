@@ -146,8 +146,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
 unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     type RustRepresentation = Option<<T as CudaAsRust>::RustRepresentation>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         if this.present {
             Some(CudaAsRust::as_rust(this.maybe.assume_init_ref()))

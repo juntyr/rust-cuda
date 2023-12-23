@@ -248,8 +248,7 @@ unsafe impl<T: CudaAsRust, const STRIDE: usize> CudaAsRust
 {
     type RustRepresentation = SplitSliceOverCudaThreadsConstStride<T::RustRepresentation, STRIDE>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         SplitSliceOverCudaThreadsConstStride::new(CudaAsRust::as_rust(&this.0))
     }

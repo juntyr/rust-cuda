@@ -62,7 +62,7 @@ jobs:
       - name: Check feature powerset on CUDA
         run: |
           cargo hack check --feature-powerset --optional-deps \
-            --skip host,rustacuda,rustacuda_derive \
+            --skip host,rustacuda,rustacuda_derive,regex \
             --keep-going \
             --target nvptx64-nvidia-cuda
 
@@ -180,7 +180,7 @@ jobs:
       - name: Check feature powerset on CUDA
         run: |
           cargo hack clippy --feature-powerset --optional-deps \
-            --skip host,rustacuda,rustacuda_derive \
+            --skip host,rustacuda,rustacuda_derive,regex \
             --keep-going \
             --target nvptx64-nvidia-cuda \
             -- -D warnings

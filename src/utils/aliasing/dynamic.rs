@@ -226,8 +226,7 @@ unsafe impl<T: CudaAsRust> CudaAsRust
 {
     type RustRepresentation = SplitSliceOverCudaThreadsDynamicStride<T::RustRepresentation>;
 
-    #[cfg(any(not(feature = "host"), doc))]
-    #[doc(cfg(not(feature = "host")))]
+    #[cfg(not(feature = "host"))]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         SplitSliceOverCudaThreadsDynamicStride::new(CudaAsRust::as_rust(&this.inner), this.stride)
     }
