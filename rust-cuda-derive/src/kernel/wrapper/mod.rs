@@ -13,8 +13,8 @@ use super::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 
 use config::KernelConfig;
 use generate::{
-    cpu_linker_macro::quote_cpu_linker_macro, cpu_wrapper::quote_cpu_wrapper,
     cuda_generic_function::quote_cuda_generic_function, cuda_wrapper::quote_cuda_wrapper,
+    host_kernel_ty::quote_host_kernel_ty, host_linker_macro::quote_host_linker_macro,
 };
 use parse::parse_kernel_fn;
 use proc_macro2::{Ident, Span};
@@ -213,7 +213,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let cpu_wrapper = quote_cpu_wrapper(
+    let host_kernel_ty = quote_host_kernel_ty(
         &crate_path,
         &decl_generics,
         &impl_generics,
@@ -222,8 +222,8 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func_params,
         &func.attrs,
     );
-    let cpu_cuda_check = quote_generic_check(&crate_path, &func_ident);
-    let cpu_linker_macro = quote_cpu_linker_macro(
+    let host_generic_kernel_check = quote_generic_check(&crate_path, &func_ident);
+    let host_linker_macro = quote_host_linker_macro(
         &crate_path,
         &config,
         &decl_generics,
@@ -251,11 +251,11 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     );
 
     (quote! {
-        #cpu_wrapper
+        #host_kernel_ty
 
-        #cpu_cuda_check
+        #host_generic_kernel_check
 
-        #cpu_linker_macro
+        #host_linker_macro
 
         #cuda_wrapper
         #cuda_generic_function

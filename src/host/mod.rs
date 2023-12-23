@@ -47,10 +47,10 @@ macro_rules! impl_launcher_launch {
             $($arg: $T::SyncHostType),*
         ) -> CudaResult<()>
         where
-            Kernel: Copy + FnOnce(
+            Kernel: /*Copy +*/ FnOnce(
                 &mut Launcher<Kernel>,
-                $($T::SyncHostType),*
-            ) -> CudaResult<()>,
+                $($T/*::SyncHostType*/),*
+            )/* -> CudaResult<()>*/,
         {
             self.kernel.$launch::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
@@ -71,10 +71,10 @@ macro_rules! impl_launcher_launch {
             ) -> Result<Ok, Err>,
         ) -> Result<Ok, Err>
         where
-            Kernel: Copy + FnOnce(
+            Kernel: /*Copy +*/ FnOnce(
                 &mut Launcher<Kernel>,
-                $($T::SyncHostType),*
-            ) -> CudaResult<()>,
+                $($T/*::SyncHostType*/),*
+            )/* -> CudaResult<()>*/,
         {
             #[allow(unused_variables)]
             let stream = self.stream;
@@ -91,10 +91,10 @@ macro_rules! impl_launcher_launch {
             $($arg: $T::AsyncHostType<'stream, '_>),*
         ) -> CudaResult<()>
         where
-            Kernel: Copy + FnOnce(
+            Kernel: /*Copy +*/ FnOnce(
                 &mut Launcher<Kernel>,
-                $($T::SyncHostType),*
-            ) -> CudaResult<()>,
+                $($T/*::SyncHostType*/),*
+            )/* -> CudaResult<()>*/,
         {
             self.kernel.$launch_async::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
@@ -252,10 +252,10 @@ macro_rules! impl_typed_kernel_launch {
             $($arg: $T::SyncHostType),*
         ) -> CudaResult<()>
         where
-            Kernel: Copy + FnOnce(
+            Kernel: /*Copy +*/ FnOnce(
                 &mut Launcher<Kernel>,
-                $($T::SyncHostType),*
-            ) -> CudaResult<()>,
+                $($T/*::SyncHostType*/),*
+            )/* -> CudaResult<()>*/,
         {
             self.$with_async::<(), CudaError, $($T),*>(
                 stream,
@@ -294,10 +294,10 @@ macro_rules! impl_typed_kernel_launch {
             ) -> Result<Ok, Err>,
         ) -> Result<Ok, Err>
         where
-            Kernel: Copy + FnOnce(
+            Kernel: /*Copy +*/ FnOnce(
                 &mut Launcher<Kernel>,
-                $($T::SyncHostType),*
-            ) -> CudaResult<()>,
+                $($T/*::SyncHostType*/),*
+            )/* -> CudaResult<()>*/,
         {
             impl_typed_kernel_launch! { impl with_new_async ($($arg: $T),*) + (stream) {
                 inner(self, stream, config, $($arg),*)
@@ -314,10 +314,10 @@ macro_rules! impl_typed_kernel_launch {
             $($arg: $T::AsyncHostType<'stream, '_>),*
         ) -> CudaResult<()>
         where
-            Kernel: Copy + FnOnce(
+            Kernel: /*Copy +*/ FnOnce(
                 &mut Launcher<Kernel>,
-                $($T::SyncHostType),*
-            ) -> CudaResult<()>,
+                $($T/*::SyncHostType*/),*
+            )/* -> CudaResult<()>*/,
         {
             let kernel_jit_result = if config.ptx_jit {
                 impl_typed_kernel_launch! { impl with_async_as_ptx_jit ref ($($arg: $T),*) + () {

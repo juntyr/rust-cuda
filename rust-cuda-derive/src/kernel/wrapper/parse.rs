@@ -48,7 +48,7 @@ pub(super) fn parse_kernel_fn(tokens: TokenStream) -> syn::ItemFn {
     }
 
     if func.sig.inputs.len() > 12 {
-        abort!(
+        emit_warning!(
             func.sig.inputs.span(),
             "Kernel function has too many arguments, {} were found but at most 12 are supported.",
             func.sig.inputs.len()

@@ -29,6 +29,8 @@
 #![feature(inline_const)]
 #![feature(sync_unsafe_cell)]
 #![feature(never_type)]
+#![feature(tuple_trait)]
+#![feature(unboxed_closures)]
 #![feature(cfg_version)]
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![cfg_attr(not(version("1.76.0")), feature(ptr_from_ref))]

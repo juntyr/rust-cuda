@@ -71,26 +71,11 @@ fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
 
     // Launch the CUDA kernel on the stream and synchronise to its completion
     println!("Launching print kernel ...");
-    kernel.launch1::<rust_cuda::common::PerThreadShallowCopy<Action>>(
-        &stream,
-        &config,
-        Action::Print,
-    )?;
-    // kernel(&mut launcher, Action::Print)?;
+    kernel.launch1(&stream, &config, Action::Print)?;
     println!("Launching panic kernel ...");
-    kernel.launch1::<rust_cuda::common::PerThreadShallowCopy<Action>>(
-        &stream,
-        &config,
-        Action::Panic,
-    )?;
-    // kernel(&mut launcher, Action::Panic)?;
+    kernel.launch1(&stream, &config, Action::Panic)?;
     println!("Launching alloc error kernel ...");
-    kernel.launch1::<rust_cuda::common::PerThreadShallowCopy<Action>>(
-        &stream,
-        &config,
-        Action::AllocError,
-    )?;
-    // kernel(&mut launcher, Action::AllocError)?;
+    kernel.launch1(&stream, &config, Action::AllocError)?;
 
     Ok(())
 }

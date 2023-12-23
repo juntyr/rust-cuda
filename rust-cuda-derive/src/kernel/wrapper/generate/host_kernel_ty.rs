@@ -1,56 +1,27 @@
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
+use super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
 
-pub(super) fn quote_kernel_func_inputs(
+pub(in super::super) fn quote_host_kernel_ty(
     crate_path: &syn::Path,
-    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     DeclGenerics {
         generic_kernel_params,
         generic_start_token,
         generic_close_token,
         ..
     }: &DeclGenerics,
+    ImplGenerics { ty_generics, .. }: &ImplGenerics,
     FunctionInputs { func_inputs }: &FunctionInputs,
     FuncIdent { func_ident, .. }: &FuncIdent,
     func_params: &[syn::Ident],
     func_attrs: &[syn::Attribute],
 ) -> TokenStream {
-    let (kernel_func_inputs, kernel_func_input_tys): (Vec<_>, Vec<_>) = func_inputs
-        .iter()
-        .map(
-            |syn::PatType {
-                 attrs,
-                 ty,
-                 pat,
-                 colon_token,
-             }| {
-                let ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
-                    <#ty as #crate_path::common::CudaKernelParameter>::SyncHostType
-                };
-
-                (
-                    syn::FnArg::Typed(syn::PatType {
-                        attrs: attrs.clone(),
-                        ty: Box::new(ty.clone()),
-                        pat: pat.clone(),
-                        colon_token: *colon_token,
-                    }),
-                    ty,
-                )
-            },
-        )
-        .unzip();
-
     let cuda_kernel_param_tys = func_inputs
         .iter()
         .map(|syn::PatType { ty, .. }| &**ty)
         .collect::<Vec<_>>();
 
     let launcher = syn::Ident::new("launcher", proc_macro2::Span::mixed_site());
-
-    let launch = quote::format_ident!("launch{}", func_inputs.len());
 
     let full_generics = generic_kernel_params
         .iter()
@@ -61,6 +32,9 @@ pub(super) fn quote_kernel_func_inputs(
         })
         .collect::<Vec<_>>();
 
+    let mut private_func_ident = syn::Ident::clone(func_ident);
+    private_func_ident.set_span(proc_macro::Span::def_site().into());
+
     let ty_turbofish = ty_generics.as_turbofish();
 
     quote! {
@@ -68,28 +42,30 @@ pub(super) fn quote_kernel_func_inputs(
         #[allow(non_camel_case_types)]
         pub type #func_ident #generic_start_token
             #generic_kernel_params
-        #generic_close_token = impl Copy + Fn(
+        #generic_close_token = impl Fn(
             &mut #crate_path::host::Launcher<#func_ident #generic_start_token
                 #(#full_generics),*
             #generic_close_token>,
-            #(#kernel_func_input_tys),*
-        ) -> #crate_path::rustacuda::error::CudaResult<()>;
+            #(#cuda_kernel_param_tys),*
+        );
 
         #[cfg(not(target_os = "cuda"))]
         #(#func_attrs)*
         #[allow(clippy::too_many_arguments)]
         #[allow(clippy::used_underscore_binding)]
-        pub fn #func_ident <#generic_kernel_params>(
+        fn #private_func_ident #generic_start_token
+            #generic_kernel_params
+        #generic_close_token (
             #launcher: &mut #crate_path::host::Launcher<#func_ident #generic_start_token
                 #(#full_generics),*
             #generic_close_token>,
-            #(#kernel_func_inputs),*
-        ) -> #crate_path::rustacuda::error::CudaResult<()> {
-            let _: #func_ident <#(#full_generics),*> = #func_ident #ty_turbofish;
+            #func_inputs
+        ) {
+            let _: #func_ident <#(#full_generics),*> = #private_func_ident #ty_turbofish;
 
-            #launcher.#launch::<
-                #(#cuda_kernel_param_tys),*
-            >(#(#func_params),*)
+            #(
+                let _ = #func_params;
+            )*
         }
     }
 }
