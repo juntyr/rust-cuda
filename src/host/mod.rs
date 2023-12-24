@@ -457,31 +457,6 @@ pub trait LendToCuda: RustToCuda + NoSafeAliasing {
         inner: F,
     ) -> Result<O, E>;
 
-    /// Lends a mutable copy of `&mut self` to CUDA:
-    /// - code in the CUDA kernel can only access `&mut self` through the
-    ///   [`DeviceMutRef`] inside the closure
-    /// - after the closure, `&mut self` might have changed in the following
-    ///   ways:
-    ///   - to avoid aliasing, each CUDA thread gets its own shallow copy of
-    ///     `&mut self`, i.e. any shallow changes will NOT be reflected after
-    ///     the closure
-    ///   - each CUDA thread can access the same heap allocated storage, i.e.
-    ///     any deep changes will be reflected after the closure
-    ///
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] iff an error occurs inside CUDA
-    fn lend_to_cuda_mut<
-        O,
-        E: From<CudaError>,
-        F: FnOnce(
-            HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> Result<O, E>,
-    >(
-        &mut self,
-        inner: F,
-    ) -> Result<O, E>;
-
     /// Moves `self` to CUDA iff `self` is [`SafeDeviceCopy`]
     ///
     /// # Errors
@@ -518,27 +493,6 @@ impl<T: RustToCuda + NoSafeAliasing> LendToCuda for T {
 
         core::mem::drop(cuda_repr);
         core::mem::drop(alloc);
-
-        result
-    }
-
-    fn lend_to_cuda_mut<
-        O,
-        E: From<CudaError>,
-        F: FnOnce(
-            HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-        ) -> Result<O, E>,
-    >(
-        &mut self,
-        inner: F,
-    ) -> Result<O, E> {
-        let (mut cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
-
-        let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, inner);
-
-        core::mem::drop(cuda_repr);
-
-        let _: NoCudaAlloc = unsafe { self.restore(alloc) }?;
 
         result
     }

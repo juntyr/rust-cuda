@@ -62,7 +62,6 @@ pub fn kernel<
         + rc::safety::NoSafeAliasing,
 >(
     _x: &rc::common::PerThreadShallowCopy<Dummy>,
-    _y: &mut rc::common::PtxJit<rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>>,
     _z: &rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
     _v @ _w: &'a rc::common::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
     _: rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
