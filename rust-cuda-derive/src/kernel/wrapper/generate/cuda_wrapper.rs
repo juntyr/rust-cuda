@@ -35,16 +35,11 @@ pub(in super::super) fn quote_cuda_wrapper(
         })
         .collect::<Vec<_>>();
 
-    let ffi_param_ptx_jit_wrap = func_inputs
-        .iter().enumerate()
-        .rev()
-        .fold(quote! {
+    let ffi_param_ptx_jit_wrap = func_inputs.iter().enumerate().rev().fold(
+        quote! {
             #func_ident(#(#func_params),*)
-        }, |inner, (i, syn::PatType {
-            pat,
-            ty,
-            ..
-        })| {
+        },
+        |inner, (i, syn::PatType { pat, ty, .. })| {
             let specialised_ty = quote::quote_spanned! { ty.span()=>
                 #crate_path::device::specialise_kernel_type!(#ty for #generics in #func_ident)
             };
@@ -53,18 +48,30 @@ pub(in super::super) fn quote_cuda_wrapper(
             // To allow some parameters to also inject PTX JIT load markers here,
             //  we pass them the param index i
             quote::quote_spanned! { ty.span()=>
-                <#specialised_ty as #crate_path::common::CudaKernelParameter>::with_ffi_as_device::<_, #i>(
-                    #pat, |#pat| { #inner }
-                )
+                unsafe {
+                    <
+                        #specialised_ty as #crate_path::common::CudaKernelParameter
+                    >::with_ffi_as_device::<_, #i>(
+                        #pat, |#pat| { #inner }
+                    )
+                }
             }
-        });
+        },
+    );
 
     quote! {
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_function(#func_ident)]
         #[no_mangle]
+        #[allow(unused_unsafe)]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ffi_inputs),*) {
+            unsafe {
+                // Initialise the dynamically-sized thread-block shared memory
+                //  and the thread-local offset pointer that points to it
+                #crate_path::utils::shared::slice::init();
+            }
+
             unsafe {
                 ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY);
             }

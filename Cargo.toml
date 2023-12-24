@@ -30,7 +30,7 @@ rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc
 
 regex = { version = "1.10", optional = true }
 
-const-type-layout = { version = "0.2.0", features = ["derive"] }
+const-type-layout = { version = "0.2.1", features = ["derive"] }
 
 final = "0.1.1"
 

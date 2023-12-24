@@ -67,6 +67,7 @@ pub fn kernel<
     _: rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
     q @ Triple(s, mut __t, _u): rc::common::PerThreadShallowCopy<Triple>,
     shared3: &mut rc::utils::shared::r#static::ThreadBlockShared<u32>,
+    dynamic: &mut rc::utils::shared::slice::ThreadBlockSharedSlice<Dummy>,
 ) {
     let shared = rc::utils::shared::r#static::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
     let shared2 = rc::utils::shared::r#static::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
@@ -81,6 +82,13 @@ pub fn kernel<
 
     unsafe {
         *shared3.as_mut_ptr() = 12;
+    }
+
+    let index = rc::device::thread::Thread::this().index();
+    if index < dynamic.len() {
+        unsafe {
+            *dynamic.index_mut_unchecked(index) = Dummy(42);
+        }
     }
 }
 

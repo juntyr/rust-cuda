@@ -28,7 +28,7 @@ jobs:
         run: |
           RUSTDOCFLAGS="\
             --enable-index-page \
-            --extern-html-root-url const_type_layout=https://docs.rs/const-type-layout/0.2.0/ \
+            --extern-html-root-url const_type_layout=https://docs.rs/const-type-layout/0.2.1/ \
             --extern-html-root-url final=https://docs.rs/final/0.1.1/ \
             --extern-html-root-url rustacuda=https://docs.rs/rustacuda/0.1.3/ \
             --extern-html-root-url rustacuda_core=https://docs.rs/rustacuda_core/0.1.2/ \

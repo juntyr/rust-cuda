@@ -362,7 +362,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
 
     #[doc(hidden)]
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O;
@@ -461,7 +461,7 @@ impl<
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -536,7 +536,7 @@ impl<
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -597,7 +597,7 @@ impl<
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -691,7 +691,7 @@ impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -726,11 +726,20 @@ impl_atomic_interior_mutable! {
     AtomicU8(u8), AtomicU16(u16), AtomicU32(u32), AtomicU64(u64), AtomicUsize(usize)
 }
 
-// TODO: update const type layout
-// impl<T: crate::safety::SafeDeviceCopy + const_type_layout::TypeGraphLayout>
-// InteriorMutableSafeDeviceCopy for core::cell::SyncUnsafeCell<T> {}
-// impl<T: crate::safety::SafeDeviceCopy> sealed::Sealed for
-// core::cell::SyncUnsafeCell<T> {}
+impl<
+        T: crate::safety::StackOnly
+            + crate::safety::NoSafeAliasing
+            + const_type_layout::TypeGraphLayout,
+    > InteriorMutableSafeDeviceCopy for core::cell::SyncUnsafeCell<T>
+{
+}
+impl<
+        T: crate::safety::StackOnly
+            + crate::safety::NoSafeAliasing
+            + const_type_layout::TypeGraphLayout,
+    > sealed::Sealed for core::cell::SyncUnsafeCell<T>
+{
+}
 
 pub struct SharedHeapPerThreadShallowCopy<T: RustToCuda + crate::safety::NoSafeAliasing> {
     never: !,
@@ -796,7 +805,7 @@ impl<
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -853,7 +862,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -910,7 +919,7 @@ impl<
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -972,7 +981,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
     }
 
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -997,9 +1006,9 @@ fn param_as_raw_bytes<T: ?Sized>(r: &T) -> NonNull<[u8]> {
 fn emit_param_ptx_jit_marker<T: ?Sized, const INDEX: usize>(param: &T) {
     unsafe {
         core::arch::asm!(
-            "// <rust-cuda-ptx-jit-const-load-{}-{}> //",
-            in(reg32) *(core::ptr::from_ref(param).cast::<u32>()),
-            const(INDEX),
+            "// <rust-cuda-ptx-jit-const-load-{param_reg}-{param_index}> //",
+            param_reg = in(reg32) *(core::ptr::from_ref(param).cast::<u32>()),
+            param_index = const(INDEX),
         );
     }
 }
@@ -1017,6 +1026,17 @@ mod private_shared {
 
     // Safety: there is nothing to copy, this is just a zero-sized marker type
     unsafe impl<T: 'static + TypeGraphLayout> DeviceCopy for ThreadBlockSharedFfi<T> {}
+
+    #[doc(hidden)]
+    #[derive(TypeLayout)]
+    #[repr(C)]
+    pub struct ThreadBlockSharedSliceFfi<T: 'static + TypeGraphLayout> {
+        pub(super) len: usize,
+        pub(super) _marker: [T; 0],
+    }
+
+    // Safety: we only copy a usize, which implements `DeviceCopy`
+    unsafe impl<T: 'static + TypeGraphLayout> DeviceCopy for ThreadBlockSharedSliceFfi<T> {}
 }
 
 impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
@@ -1057,7 +1077,7 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
     #[cfg(all(not(feature = "host"), target_os = "cuda"))]
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    fn with_ffi_as_device<O, const PARAM: usize>(
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
         _param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
@@ -1068,5 +1088,63 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
 }
 impl<'a, T: 'static + TypeGraphLayout> sealed::Sealed
     for &'a mut crate::utils::shared::r#static::ThreadBlockShared<T>
+{
+}
+
+impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
+    for &'a mut crate::utils::shared::slice::ThreadBlockSharedSlice<T>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> =
+        &'b mut crate::utils::shared::slice::ThreadBlockSharedSlice<T>;
+    #[cfg(all(not(feature = "host"), target_os = "cuda"))]
+    type DeviceType<'b> = &'b mut crate::utils::shared::slice::ThreadBlockSharedSlice<T>;
+    type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedSliceFfi<T>;
+    #[cfg(feature = "host")]
+    type SyncHostType = Self;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        _stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        inner(param)
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b>(
+        param: Self::AsyncHostType<'stream, 'b>,
+    ) -> Self::FfiType<'stream, 'b> {
+        private_shared::ThreadBlockSharedSliceFfi {
+            len: param.len(),
+            _marker: [],
+        }
+    }
+
+    #[cfg(all(not(feature = "host"), target_os = "cuda"))]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        unsafe {
+            crate::utils::shared::slice::ThreadBlockSharedSlice::with_uninit_for_len(
+                param.len, inner,
+            )
+        }
+    }
+}
+impl<'a, T: 'static + TypeGraphLayout> sealed::Sealed
+    for &'a mut crate::utils::shared::slice::ThreadBlockSharedSlice<T>
 {
 }
