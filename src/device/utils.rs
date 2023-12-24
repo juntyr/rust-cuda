@@ -48,6 +48,7 @@ pub fn print(args: ::core::fmt::Arguments) {
     }
 
     let msg; // place to store the dynamically expanded format string
+    #[allow(clippy::option_if_let_else)]
     let msg = if let Some(msg) = args.as_str() {
         msg
     } else {
@@ -87,6 +88,7 @@ pub fn pretty_panic_handler(
     }
 
     let msg; // place to store the dynamically expanded format string
+    #[allow(clippy::option_if_let_else)]
     let msg = if let Some(message) = info.message() {
         if let Some(msg) = message.as_str() {
             msg

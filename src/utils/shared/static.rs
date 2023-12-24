@@ -9,6 +9,8 @@ pub struct ThreadBlockShared<T: 'static> {
 
 impl<T: 'static> ThreadBlockShared<T> {
     #[must_use]
+    #[allow(clippy::inline_always, clippy::missing_const_for_fn)]
+    #[inline(always)]
     pub fn new_uninit() -> Self {
         #[cfg(not(target_os = "cuda"))]
         {
@@ -38,7 +40,7 @@ impl<T: 'static> ThreadBlockShared<T> {
     #[cfg(any(target_os = "cuda", doc))]
     #[doc(cfg(target_os = "cuda"))]
     #[must_use]
-    pub fn as_mut_ptr(&self) -> *mut T {
+    pub const fn as_mut_ptr(&self) -> *mut T {
         self.shared
     }
 }

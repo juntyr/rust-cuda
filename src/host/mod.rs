@@ -154,7 +154,7 @@ impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
     ) => with12_async => launch12_async }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchConfig {
     pub grid: rustacuda::function::GridSize,
     pub block: rustacuda::function::BlockSize,
@@ -676,7 +676,7 @@ impl<T: DeviceCopy> From<HostLockedBox<T>> for LockedBox<T> {
     fn from(host_locked_box: HostLockedBox<T>) -> Self {
         // Safety: pointer comes from [`LockedBox::into_raw`]
         //         i.e. this function completes the roundtrip
-        unsafe { LockedBox::from_raw(host_locked_box.0) }
+        unsafe { Self::from_raw(host_locked_box.0) }
     }
 }
 
@@ -790,7 +790,7 @@ impl<T: DeviceCopy> From<HostDeviceBox<T>> for DeviceBox<T> {
     fn from(host_device_box: HostDeviceBox<T>) -> Self {
         // Safety: pointer comes from [`DeviceBox::into_device`]
         //         i.e. this function completes the roundtrip
-        unsafe { DeviceBox::from_device(host_device_box.0) }
+        unsafe { Self::from_device(host_device_box.0) }
     }
 }
 
@@ -918,7 +918,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub unsafe fn new(device_box: &'a HostDeviceBox<T>, host_ref: &'a T) -> Self {
+    pub const unsafe fn new(device_box: &'a HostDeviceBox<T>, host_ref: &'a T) -> Self {
         Self {
             device_box,
             host_ref,
@@ -962,12 +962,12 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&'a self) -> &'a T {
+    pub const fn for_host(&'a self) -> &'a T {
         self.host_ref
     }
 
     #[must_use]
-    pub fn as_ref<'b>(&'b self) -> HostAndDeviceConstRef<'b, T>
+    pub const fn as_ref<'b>(&'b self) -> HostAndDeviceConstRef<'b, T>
     where
         'a: 'b,
     {
@@ -975,7 +975,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     }
 
     #[must_use]
-    pub fn as_async<'stream, 'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
+    pub const fn as_async<'stream, 'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
     where
         'a: 'b,
     {
@@ -1124,7 +1124,8 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceConstRefAsync<'stream, 'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub unsafe fn new(
+    #[must_use]
+    pub const unsafe fn new(
         device_box: &'a HostDeviceBox<T>,
         host_ref: &'a T,
         stream: &'stream Stream,
@@ -1154,12 +1155,12 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceConstRefAsync<'stream, 'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&'a self) -> &'a T {
+    pub const fn for_host(&'a self) -> &'a T {
         self.host_ref
     }
 
     #[must_use]
-    pub fn as_ref<'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
+    pub const fn as_ref<'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
     where
         'a: 'b,
     {

@@ -17,7 +17,7 @@ pub struct SplitSliceOverCudaThreadsDynamicStride<T> {
 
 impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
     #[must_use]
-    pub fn new(inner: T, stride: usize) -> Self {
+    pub const fn new(inner: T, stride: usize) -> Self {
         Self { stride, inner }
     }
 }
@@ -49,7 +49,7 @@ impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
     /// All cross-CUDA-thread aliasing guarantees are lost with this method.
     /// Instead, the caller must ensure that no two threads in a kernel launch
     /// access the same underlying elements.
-    pub unsafe fn alias_unchecked(&self) -> &T {
+    pub const unsafe fn alias_unchecked(&self) -> &T {
         &self.inner
     }
 

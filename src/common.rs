@@ -313,7 +313,8 @@ impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> private::empt
 {
 }
 impl<A: CudaAlloc, B: CudaAlloc> CombinedCudaAlloc<A, B> {
-    pub fn new(front: A, tail: B) -> Self {
+    #[must_use]
+    pub const fn new(front: A, tail: B) -> Self {
         Self(front, tail)
     }
 
@@ -1116,4 +1117,71 @@ fn emit_param_ptx_jit_marker<T: ?Sized, const INDEX: usize>(param: &T) {
             const(INDEX),
         );
     }
+}
+
+mod private_shared {
+    use const_type_layout::TypeGraphLayout;
+    use rustacuda_core::DeviceCopy;
+
+    #[doc(hidden)]
+    #[derive(TypeLayout)]
+    #[repr(C)]
+    pub struct ThreadBlockSharedFfi<T: 'static + TypeGraphLayout> {
+        pub(super) _marker: [T; 0],
+    }
+
+    // Safety: there is nothing to copy, this is just a zero-sized marker type
+    unsafe impl<T: 'static + TypeGraphLayout> DeviceCopy for ThreadBlockSharedFfi<T> {}
+}
+
+impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
+    for &'a mut crate::utils::shared::r#static::ThreadBlockShared<T>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::r#static::ThreadBlockShared<T>;
+    #[cfg(all(not(feature = "host"), target_os = "cuda"))]
+    type DeviceType<'b> = &'b mut crate::utils::shared::r#static::ThreadBlockShared<T>;
+    type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedFfi<T>;
+    #[cfg(feature = "host")]
+    type SyncHostType = Self;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        _stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        inner(param)
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b>(
+        _param: Self::AsyncHostType<'stream, 'b>,
+    ) -> Self::FfiType<'stream, 'b> {
+        private_shared::ThreadBlockSharedFfi { _marker: [] }
+    }
+
+    #[cfg(all(not(feature = "host"), target_os = "cuda"))]
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
+    fn with_ffi_as_device<O, const PARAM: usize>(
+        _param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        let mut param = crate::utils::shared::r#static::ThreadBlockShared::new_uninit();
+
+        inner(&mut param)
+    }
+}
+impl<'a, T: 'static + TypeGraphLayout> sealed::Sealed
+    for &'a mut crate::utils::shared::r#static::ThreadBlockShared<T>
+{
 }

@@ -224,13 +224,13 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> IntoFuture
 
         core::future::poll_fn(move |cx| match &wrapper {
             Some(inner) => match inner.move_event.query() {
-                Ok(EventStatus::NotReady) => match inner.waker.lock() {
-                    Ok(mut w) => {
+                Ok(EventStatus::NotReady) => inner.waker.lock().map_or_else(
+                    |_| Poll::Ready(Err(CudaError::OperatingSystemError)),
+                    |mut w| {
                         *w = Some(cx.waker().clone());
                         Poll::Pending
                     },
-                    Err(_) => Poll::Ready(Err(CudaError::OperatingSystemError)),
-                },
+                ),
                 Ok(EventStatus::Ready) => match wrapper.take() {
                     Some(inner) => Poll::Ready(Ok(ExchangeWrapperOnHost {
                         value: inner.value,
@@ -419,13 +419,13 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> IntoFuture
 
         core::future::poll_fn(move |cx| match &wrapper {
             Some(inner) => match inner.move_event.query() {
-                Ok(EventStatus::NotReady) => match inner.waker.lock() {
-                    Ok(mut w) => {
+                Ok(EventStatus::NotReady) => inner.waker.lock().map_or_else(
+                    |_| Poll::Ready(Err(CudaError::OperatingSystemError)),
+                    |mut w| {
                         *w = Some(cx.waker().clone());
                         Poll::Pending
                     },
-                    Err(_) => Poll::Ready(Err(CudaError::OperatingSystemError)),
-                },
+                ),
                 Ok(EventStatus::Ready) => match wrapper.take() {
                     Some(inner) => Poll::Ready(Ok(ExchangeWrapperOnDevice {
                         value: inner.value,

@@ -63,14 +63,14 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     #[cfg(any(target_os = "cuda", doc))]
     #[doc(cfg(target_os = "cuda"))]
     #[must_use]
-    pub fn as_mut_ptr(&self) -> *mut T {
+    pub const fn as_mut_ptr(&self) -> *mut T {
         self.shared.cast()
     }
 
     #[cfg(any(target_os = "cuda", doc))]
     #[doc(cfg(target_os = "cuda"))]
     #[must_use]
-    pub fn as_mut_slice_ptr(&self) -> *mut [T] {
+    pub const fn as_mut_slice_ptr(&self) -> *mut [T] {
         self.shared
     }
 

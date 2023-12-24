@@ -14,7 +14,7 @@ pub struct SplitSliceOverCudaThreadsConstStride<T, const STRIDE: usize>(T);
 
 impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     #[must_use]
-    pub fn new(inner: T) -> Self {
+    pub const fn new(inner: T) -> Self {
         Self(inner)
     }
 }
@@ -49,7 +49,7 @@ impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     /// All cross-CUDA-thread aliasing guarantees are lost with this method.
     /// Instead, the caller must ensure that no two threads in a kernel launch
     /// access the same underlying elements.
-    pub unsafe fn alias_unchecked(&self) -> &T {
+    pub const unsafe fn alias_unchecked(&self) -> &T {
         &self.0
     }
 

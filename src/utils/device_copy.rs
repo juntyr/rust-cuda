@@ -28,45 +28,54 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> From<T> for SafeDeviceCopyWrapper<T> {
 }
 
 impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
+    #[must_use]
     pub fn into_inner(self) -> T {
         self.0
     }
 
-    pub fn from_ref(reference: &T) -> &Self {
+    #[must_use]
+    pub const fn from_ref(reference: &T) -> &Self {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &*(reference as *const T).cast() }
     }
 
-    pub fn into_ref(&self) -> &T {
+    #[must_use]
+    pub const fn into_ref(&self) -> &T {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &*(self as *const Self).cast() }
     }
 
+    #[must_use]
     pub fn from_mut(reference: &mut T) -> &mut Self {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &mut *(reference as *mut T).cast() }
     }
 
+    #[must_use]
     pub fn into_mut(&mut self) -> &mut T {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { &mut *(self as *mut Self).cast() }
     }
 
-    pub fn from_slice(slice: &[T]) -> &[Self] {
+    #[must_use]
+    pub const fn from_slice(slice: &[T]) -> &[Self] {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts(slice.as_ptr().cast(), slice.len()) }
     }
 
-    pub fn into_slice(slice: &[Self]) -> &[T] {
+    #[must_use]
+    pub const fn into_slice(slice: &[Self]) -> &[T] {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts(slice.as_ptr().cast(), slice.len()) }
     }
 
+    #[must_use]
     pub fn from_mut_slice(slice: &mut [T]) -> &mut [Self] {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().cast(), slice.len()) }
     }
 
+    #[must_use]
     pub fn into_mut_slice(slice: &mut [Self]) -> &mut [T] {
         // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype around [`T`]
         unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().cast(), slice.len()) }

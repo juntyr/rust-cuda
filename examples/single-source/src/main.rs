@@ -15,9 +15,6 @@
 
 extern crate alloc;
 
-#[cfg(target_os = "cuda")]
-use rc::utils::shared::r#static::ThreadBlockShared;
-
 #[cfg(not(target_os = "cuda"))]
 fn main() {}
 
@@ -69,12 +66,11 @@ pub fn kernel<
     _z: &rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
     _v @ _w: &'a rc::common::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
     _: rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
-    Tuple(s, mut __t): rc::common::PerThreadShallowCopy<Tuple>,
-    q: rc::common::PerThreadShallowCopy<Triple>,
-    // shared3: ThreadBlockShared<u32>,
+    q @ Triple(s, mut __t, _u): rc::common::PerThreadShallowCopy<Triple>,
+    shared3: &mut rc::utils::shared::r#static::ThreadBlockShared<u32>,
 ) {
-    let shared: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
-    let shared2: ThreadBlockShared<[Tuple; 3]> = ThreadBlockShared::new_uninit();
+    let shared = rc::utils::shared::r#static::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
+    let shared2 = rc::utils::shared::r#static::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     unsafe {
@@ -84,10 +80,9 @@ pub fn kernel<
         (*shared2.index_mut_unchecked(2)).1 = q.0 + q.1 + q.2;
     }
 
-    // unsafe { core::arch::asm!("hi") }
-    // unsafe {
-    //     *shared3.as_mut_ptr() = 12;
-    // }
+    unsafe {
+        *shared3.as_mut_ptr() = 12;
+    }
 }
 
 #[cfg(not(target_os = "cuda"))]

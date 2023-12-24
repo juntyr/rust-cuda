@@ -32,7 +32,7 @@ unsafe impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> rustacuda_core:
 impl<T: SafeDeviceCopy, const M2D: bool> CudaExchangeItem<T, M2D, true> {
     #[cfg(any(feature = "host", doc))]
     #[doc(cfg(feature = "host"))]
-    pub fn read(&self) -> &T {
+    pub const fn read(&self) -> &T {
         &self.0
     }
 
@@ -46,7 +46,7 @@ impl<T: SafeDeviceCopy, const M2D: bool> CudaExchangeItem<T, M2D, true> {
 impl<T: SafeDeviceCopy, const M2H: bool> CudaExchangeItem<T, true, M2H> {
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    pub fn read(&self) -> &T {
+    pub const fn read(&self) -> &T {
         &self.0
     }
 
@@ -66,7 +66,7 @@ impl<T: SafeDeviceCopy> AsMut<T> for CudaExchangeItem<T, true, true> {
 impl<T: SafeDeviceCopy> CudaExchangeItem<T, false, true> {
     #[cfg(any(feature = "host", doc))]
     #[doc(cfg(feature = "host"))]
-    pub fn as_scratch(&self) -> &T {
+    pub const fn as_scratch(&self) -> &T {
         &self.0
     }
 
@@ -80,7 +80,7 @@ impl<T: SafeDeviceCopy> CudaExchangeItem<T, false, true> {
 impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    pub fn as_scratch(&self) -> &T {
+    pub const fn as_scratch(&self) -> &T {
         &self.0
     }
 
@@ -94,7 +94,7 @@ impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
 impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
     #[cfg(any(feature = "host", doc))]
     #[doc(cfg(feature = "host"))]
-    pub fn as_uninit(&self) -> &MaybeUninit<T> {
+    pub const fn as_uninit(&self) -> &MaybeUninit<T> {
         // Safety:
         // - MaybeUninit is a transparent newtype union
         // - CudaExchangeItem is a transparent newtype
@@ -114,7 +114,7 @@ impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
 impl<T: SafeDeviceCopy> CudaExchangeItem<T, false, true> {
     #[cfg(any(not(feature = "host"), doc))]
     #[doc(cfg(not(feature = "host")))]
-    pub fn as_uninit(&self) -> &MaybeUninit<T> {
+    pub const fn as_uninit(&self) -> &MaybeUninit<T> {
         // Safety:
         // - MaybeUninit is a transparent newtype union
         // - CudaExchangeItem is a transparent newtype

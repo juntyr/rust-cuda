@@ -20,7 +20,7 @@ impl Thread {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn this() -> Self {
+    pub const fn this() -> Self {
         Self { _private: () }
     }
 
@@ -54,7 +54,7 @@ impl Thread {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn block(&self) -> ThreadBlock {
+    pub const fn block(&self) -> ThreadBlock {
         ThreadBlock { _private: () }
     }
 }
@@ -91,7 +91,7 @@ impl ThreadBlock {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn grid(&self) -> ThreadBlockGrid {
+    pub const fn grid(&self) -> ThreadBlockGrid {
         ThreadBlockGrid { _private: () }
     }
 
@@ -138,7 +138,7 @@ impl Dim3 {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn size(&self) -> usize {
+    pub const fn size(&self) -> usize {
         (self.x as usize) * (self.y as usize) * (self.z as usize)
     }
 }
@@ -147,7 +147,7 @@ impl Idx3 {
     #[must_use]
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn as_id(&self, dim: &Dim3) -> usize {
+    pub const fn as_id(&self, dim: &Dim3) -> usize {
         (self.x as usize)
             + (self.y as usize) * (dim.x as usize)
             + (self.z as usize) * (dim.x as usize) * (dim.y as usize)
