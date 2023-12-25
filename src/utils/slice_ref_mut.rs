@@ -1,4 +1,4 @@
-use crate::deps::alloc::boxed::Box;
+use core::marker::PhantomData;
 
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
@@ -24,20 +24,24 @@ use crate::{
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, TypeLayout)]
 #[repr(C)]
-pub struct BoxedSliceCudaRepresentation<T: SafeDeviceCopy + TypeGraphLayout>(*mut T, usize);
+pub struct SliceRefMutCudaRepresentation<'a, T: 'a + SafeDeviceCopy + TypeGraphLayout> {
+    data: *mut T,
+    len: usize,
+    _marker: PhantomData<&'a mut [T]>,
+}
 
 // Safety: This repr(C) struct only contains a device-owned pointer and a usize
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
-    for BoxedSliceCudaRepresentation<T>
+unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
+    for SliceRefMutCudaRepresentation<'a, T>
 {
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<[T]> {
+unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a mut [T] {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocation = crate::host::CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
     #[cfg(any(not(feature = "host"), doc))]
     type CudaAllocation = crate::common::SomeCudaAlloc;
-    type CudaRepresentation = BoxedSliceCudaRepresentation<T>;
+    type CudaRepresentation = SliceRefMutCudaRepresentation<'a, T>;
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
@@ -53,10 +57,11 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<[T]> {
         )?);
 
         Ok((
-            DeviceAccessible::from(BoxedSliceCudaRepresentation(
-                device_buffer.as_mut_ptr().cast(),
-                device_buffer.len(),
-            )),
+            DeviceAccessible::from(SliceRefMutCudaRepresentation {
+                data: device_buffer.as_mut_ptr().cast(),
+                len: device_buffer.len(),
+                _marker: PhantomData::<&'a mut [T]>,
+            }),
             CombinedCudaAlloc::new(device_buffer, alloc),
         ))
     }
@@ -78,11 +83,13 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<[T]> {
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for BoxedSliceCudaRepresentation<T> {
-    type RustRepresentation = Box<[T]>;
+unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust
+    for SliceRefMutCudaRepresentation<'a, T>
+{
+    type RustRepresentation = &'a mut [T];
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        crate::deps::alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(this.0, this.1))
+        core::slice::from_raw_parts_mut(this.data, this.len)
     }
 }
