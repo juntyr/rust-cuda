@@ -6,12 +6,12 @@ use core::{
 };
 
 #[cfg(feature = "host")]
-use alloc::fmt;
-#[cfg(feature = "host")]
 use core::{
     mem::MaybeUninit,
     ptr::{copy_nonoverlapping, NonNull},
 };
+#[cfg(feature = "host")]
+use std::fmt;
 
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 use rustacuda_core::DeviceCopy;

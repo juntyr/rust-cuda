@@ -6,7 +6,7 @@
 #![deny(clippy::style)]
 #![deny(clippy::suspicious)]
 #![allow(clippy::useless_attribute)]
-#![cfg_attr(all(feature = "device", not(doc)), no_std)]
+#![cfg_attr(all(any(feature = "device", target_os = "cuda"), not(doc)), no_std)]
 #![feature(associated_type_bounds)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
@@ -43,9 +43,6 @@ core::compile_error!("cannot enable the `host` feature on a target with `target_
 
 #[cfg(all(feature = "device", not(target_os = "cuda"), not(doc)))]
 core::compile_error!("cannot enable the `device` feature on a target without `target_os=\"cuda\"`");
-
-#[doc(hidden)]
-pub extern crate alloc;
 
 pub mod common;
 

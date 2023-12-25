@@ -2,7 +2,7 @@ use core::ops::{Deref, DerefMut};
 
 use const_type_layout::TypeGraphLayout;
 
-use crate::safety::SafeDeviceCopy;
+use crate::{deps::alloc::boxed::Box, safety::SafeDeviceCopy};
 
 use super::CudaExchangeItem;
 
@@ -11,7 +11,7 @@ pub struct CudaExchangeBufferDevice<
     T: SafeDeviceCopy + TypeGraphLayout,
     const M2D: bool,
     const M2H: bool,
->(pub(super) core::mem::ManuallyDrop<alloc::boxed::Box<[CudaExchangeItem<T, M2D, M2H>]>>);
+>(pub(super) core::mem::ManuallyDrop<Box<[CudaExchangeItem<T, M2D, M2H>]>>);
 
 impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
     for CudaExchangeBufferDevice<T, M2D, M2H>

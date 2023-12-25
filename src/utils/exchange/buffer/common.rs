@@ -32,7 +32,9 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
     unsafe fn as_rust(this: &crate::common::DeviceAccessible<Self>) -> Self::RustRepresentation {
         CudaExchangeBuffer {
             inner: super::device::CudaExchangeBufferDevice(core::mem::ManuallyDrop::new(
-                alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(this.0, this.1)),
+                crate::deps::alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(
+                    this.0, this.1,
+                )),
             )),
         }
     }

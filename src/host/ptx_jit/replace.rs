@@ -1,5 +1,4 @@
-use core::ptr::NonNull;
-use std::{ffi::CString, ops::Deref};
+use std::{ffi::CString, ops::Deref, ptr::NonNull};
 
 use super::{PtxElement, PtxJITCompiler, PtxJITResult, PtxLoadWidth};
 

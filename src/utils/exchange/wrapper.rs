@@ -1,12 +1,11 @@
-use core::{
+use std::{
     future::{Future, IntoFuture},
     marker::PhantomData,
     ops::{Deref, DerefMut},
+    sync::{Arc, Mutex},
     task::{Poll, Waker},
 };
-use std::sync::Mutex;
 
-use alloc::sync::Arc;
 use rustacuda::{
     error::{CudaError, CudaResult},
     event::{Event, EventFlags, EventStatus},

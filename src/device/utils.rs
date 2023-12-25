@@ -1,3 +1,5 @@
+use crate::deps::alloc::{fmt, string::String};
+
 /// Abort the CUDA kernel using the `trap` system call.
 #[allow(clippy::inline_always)]
 #[inline(always)]
@@ -52,7 +54,7 @@ pub fn print(args: ::core::fmt::Arguments) {
     let msg = if let Some(msg) = args.as_str() {
         msg
     } else {
-        msg = ::alloc::fmt::format(args);
+        msg = fmt::format(args);
         msg.as_str()
     };
 
@@ -93,7 +95,7 @@ pub fn pretty_panic_handler(
         if let Some(msg) = message.as_str() {
             msg
         } else if allow_dynamic_message {
-            msg = ::alloc::fmt::format(*message);
+            msg = fmt::format(*message);
             msg.as_str()
         } else {
             "<dynamic panic message>"
@@ -102,7 +104,7 @@ pub fn pretty_panic_handler(
         && allow_dynamic_payload
     {
         msg
-    } else if let Some(msg) = info.payload().downcast_ref::<::alloc::string::String>()
+    } else if let Some(msg) = info.payload().downcast_ref::<String>()
         && allow_dynamic_payload
     {
         msg.as_str()

@@ -1,9 +1,9 @@
-use core::ptr::NonNull;
 use std::{
     ffi::{CStr, CString},
     marker::PhantomData,
     mem::ManuallyDrop,
     ops::{Deref, DerefMut},
+    ptr::NonNull,
 };
 
 use rustacuda::{

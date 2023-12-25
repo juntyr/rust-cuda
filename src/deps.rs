@@ -1,3 +1,5 @@
+pub(crate) extern crate alloc;
+
 pub extern crate const_type_layout;
 
 #[cfg(feature = "host")]

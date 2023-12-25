@@ -1,4 +1,4 @@
-use alloc::boxed::Box;
+use crate::deps::alloc::boxed::Box;
 
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
@@ -83,6 +83,6 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for BoxCudaRepresent
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        alloc::boxed::Box::from_raw(this.0)
+        crate::deps::alloc::boxed::Box::from_raw(this.0)
     }
 }

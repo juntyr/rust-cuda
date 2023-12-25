@@ -1,6 +1,7 @@
-use alloc::alloc::{GlobalAlloc, Layout};
 #[cfg(all(feature = "device", not(doc)))]
 use core::arch::nvptx;
+
+use crate::deps::alloc::alloc::{GlobalAlloc, Layout};
 
 /// Memory allocator using CUDA malloc/free
 pub struct PTXAllocator;
