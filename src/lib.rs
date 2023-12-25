@@ -45,15 +45,13 @@ core::compile_error!("cannot enable the `host` feature on a target with `target_
 core::compile_error!("cannot enable the `device` feature on a target without `target_os=\"cuda\"`");
 
 pub mod common;
+pub mod deps;
+pub mod kernel;
+pub mod safety;
+pub mod utils;
 
 #[cfg(feature = "host")]
 pub mod host;
 
 #[cfg(feature = "device")]
 pub mod device;
-
-pub mod utils;
-
-pub mod safety;
-
-pub mod deps;

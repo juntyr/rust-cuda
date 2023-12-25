@@ -143,7 +143,7 @@ fn generate_lifetime_erased_types(
             }
 
             quote::quote_spanned! { ty.span()=>
-                <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
+                <#specialised_ty as #crate_path::kernel::CudaKernelParameter>::FfiType<'static, 'static>
             }
         }).collect()
 }

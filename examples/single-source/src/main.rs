@@ -45,7 +45,7 @@ pub struct Tuple(u32, i32);
 #[layout(crate = "rc::deps::const_type_layout")]
 pub struct Triple(i32, i32, i32);
 
-#[rc::common::kernel(pub use link! for impl)]
+#[rc::kernel::kernel(pub use link! for impl)]
 #[kernel(crate = "rc")]
 #[kernel(
     allow(ptx::double_precision_use),
@@ -61,16 +61,16 @@ pub fn kernel<
         + rc::safety::StackOnly
         + rc::safety::NoSafeAliasing,
 >(
-    _x: &rc::common::PerThreadShallowCopy<Dummy>,
-    _z: &rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
-    _v @ _w: &'a rc::common::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
-    _: rc::common::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
-    q @ Triple(s, mut __t, _u): rc::common::PerThreadShallowCopy<Triple>,
-    shared3: &mut rc::utils::shared::r#static::ThreadBlockShared<u32>,
-    dynamic: &mut rc::utils::shared::slice::ThreadBlockSharedSlice<Dummy>,
+    _x: &rc::kernel::PerThreadShallowCopy<Dummy>,
+    _z: &rc::kernel::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    _v @ _w: &'a rc::kernel::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
+    _: rc::kernel::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    q @ Triple(s, mut __t, _u): rc::kernel::PerThreadShallowCopy<Triple>,
+    shared3: &mut rc::utils::shared::ThreadBlockShared<u32>,
+    dynamic: &mut rc::utils::shared::ThreadBlockSharedSlice<Dummy>,
 ) {
-    let shared = rc::utils::shared::r#static::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
-    let shared2 = rc::utils::shared::r#static::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
+    let shared = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
+    let shared2 = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     unsafe {

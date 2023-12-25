@@ -21,9 +21,9 @@ pub enum Action {
     AllocError,
 }
 
-#[rust_cuda::common::kernel(use link! for impl)]
+#[rust_cuda::kernel::kernel(use link! for impl)]
 #[kernel(allow(ptx::local_memory_usage))]
-pub fn kernel(action: rust_cuda::common::PerThreadShallowCopy<Action>) {
+pub fn kernel(action: rust_cuda::kernel::PerThreadShallowCopy<Action>) {
     match action {
         Action::Print => rust_cuda::device::utils::println!("println! from CUDA kernel"),
         Action::Panic => panic!("panic! from CUDA kernel"),

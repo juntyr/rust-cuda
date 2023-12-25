@@ -50,7 +50,7 @@ pub(in super::super) fn quote_cuda_wrapper(
             quote::quote_spanned! { ty.span()=>
                 unsafe {
                     <
-                        #specialised_ty as #crate_path::common::CudaKernelParameter
+                        #specialised_ty as #crate_path::kernel::CudaKernelParameter
                     >::with_ffi_as_device::<_, #i>(
                         #pat, |#pat| { #inner }
                     )
@@ -69,7 +69,7 @@ pub(in super::super) fn quote_cuda_wrapper(
             unsafe {
                 // Initialise the dynamically-sized thread-block shared memory
                 //  and the thread-local offset pointer that points to it
-                #crate_path::utils::shared::slice::init();
+                #crate_path::utils::shared::init();
             }
 
             unsafe {
@@ -122,7 +122,7 @@ fn specialise_ffi_input_types(
             };
 
             let ffi_ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
-                <#specialised_ty as #crate_path::common::CudaKernelParameter>::FfiType<'static, 'static>
+                <#specialised_ty as #crate_path::kernel::CudaKernelParameter>::FfiType<'static, 'static>
             };
 
             let ffi_param = syn::FnArg::Typed(syn::PatType {

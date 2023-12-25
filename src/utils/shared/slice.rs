@@ -108,7 +108,6 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     }
 }
 
-#[doc(hidden)]
 #[cfg(feature = "device")]
 /// # Safety
 ///

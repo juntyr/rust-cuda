@@ -47,9 +47,9 @@
 /// with mutable access to its own partition of a slice and thus avoid mutable
 /// aliasing.
 ///
-/// * [`ThreadBlockShared`](crate::utils::shared::static::ThreadBlockShared)
+/// * [`ThreadBlockShared`](crate::utils::shared::ThreadBlockShared)
 /// and
-/// [`ThreadBlockSharedSlice`](crate::utils::shared::slice::ThreadBlockSharedSlice)
+/// [`ThreadBlockSharedSlice`](crate::utils::shared::ThreadBlockSharedSlice)
 /// also implement [`NoSafeAliasing`] since they only provide access to `*mut
 /// T`, which is always unsafe to mutate and thus moves the burden to uphoald
 /// the no-mutable-aliasing safety invariant to the user who derefereces these
@@ -79,8 +79,8 @@ unsafe impl<T> NoSafeAliasing
 
 // Thread-block-shared data only allows unsafe aliasing since only raw pointers
 //  are exposed
-unsafe impl<T: 'static> NoSafeAliasing for crate::utils::shared::r#static::ThreadBlockShared<T> {}
+unsafe impl<T: 'static> NoSafeAliasing for crate::utils::shared::ThreadBlockShared<T> {}
 unsafe impl<T: 'static + const_type_layout::TypeGraphLayout> NoSafeAliasing
-    for crate::utils::shared::slice::ThreadBlockSharedSlice<T>
+    for crate::utils::shared::ThreadBlockSharedSlice<T>
 {
 }

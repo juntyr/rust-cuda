@@ -26,7 +26,7 @@ pub(in super::super) fn quote_cuda_generic_function(
                  colon_token,
              }| {
                 let ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
-                    <#ty as #crate_path::common::CudaKernelParameter>::DeviceType<'_>
+                    <#ty as #crate_path::kernel::CudaKernelParameter>::DeviceType<'_>
                 };
 
                 syn::FnArg::Typed(syn::PatType {

@@ -22,9 +22,10 @@ pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_entry_po
 
 use crate::{
     common::{
-        CudaKernelParameter, DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef,
-        EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
+        DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef, EmptyCudaAlloc,
+        NoCudaAlloc, RustToCuda,
     },
+    kernel::CudaKernelParameter,
     safety::{NoSafeAliasing, SafeDeviceCopy},
 };
 
@@ -1154,7 +1155,7 @@ impl<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'strea
 /// [`CompiledKernelPtx::get_entry_point`].
 ///
 /// This trait should not be implemented manually &ndash; use the
-/// [`kernel`](crate::common::kernel) macro instead.
+/// [`kernel`](crate::kernel::kernel) macro instead.
 pub unsafe trait CompiledKernelPtx<Kernel> {
     fn get_ptx() -> &'static CStr;
     fn get_entry_point() -> &'static CStr;
