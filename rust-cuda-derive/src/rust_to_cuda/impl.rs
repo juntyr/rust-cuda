@@ -23,6 +23,7 @@ pub fn cuda_struct_declaration(
         quote! { #[repr(C)] }
     };
 
+    #[allow(clippy::option_if_let_else)]
     let struct_fields_where_clause = if let Some(struct_semi_cuda) = struct_semi_cuda {
         quote!(#struct_fields_cuda #where_clause #struct_semi_cuda)
     } else {

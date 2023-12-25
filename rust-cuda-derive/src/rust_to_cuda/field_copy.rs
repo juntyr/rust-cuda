@@ -21,10 +21,12 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
     c2r_field_initialisations: &mut Vec<TokenStream>,
 ) -> TokenStream {
+    #[allow(clippy::option_if_let_else)]
     let field_accessor = match &field.ident {
         Some(ident) => quote! { #ident },
         None => proc_macro2::Literal::usize_unsuffixed(field_index).to_token_stream(),
     };
+    #[allow(clippy::option_if_let_else)]
     let field_repr_ident = match &field.ident {
         Some(ident) => format_ident!("field_{}_repr", ident),
         None => format_ident!("field_{}_repr", field_index),

@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    ".", "rust-cuda-derive",
+    ".", "rust-cuda-derive", "rust-cuda-kernel",
     "examples/derive", "examples/print", "examples/single-source",
 ]
 default-members = [
-    ".", "rust-cuda-derive",
+    ".", "rust-cuda-derive", "rust-cuda-kernel",
 ]
 
 [package]
@@ -19,9 +19,10 @@ rust-version = "1.75" # nightly
 
 [features]
 default = []
-host = ["dep:rustacuda", "dep:regex"]
-device = []
 derive = ["dep:rustacuda_derive", "dep:rust-cuda-derive"]
+device = []
+host = ["dep:rustacuda", "dep:regex"]
+kernel = ["dep:rust-cuda-kernel"]
 
 [dependencies]
 rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc" }
@@ -36,3 +37,4 @@ const-type-layout = { version = "0.2.1", features = ["derive"] }
 final = "0.1.1"
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
+rust-cuda-kernel = { path = "rust-cuda-kernel", optional = true }

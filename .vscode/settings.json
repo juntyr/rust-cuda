@@ -6,7 +6,8 @@
     "rust-analyzer.cargo.allFeatures": false,
     "rust-analyzer.cargo.features": [
         "derive",
-        "host"
+        "host",
+        "kernel"
     ],
     "rust-analyzer.showUnlinkedFileNotification": false,
 }
