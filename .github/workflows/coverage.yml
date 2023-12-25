@@ -60,6 +60,7 @@ jobs:
             -t lcov -o coverage.lcov --branch \
             --keep-only "src/*" \
             --keep-only "rust-cuda-derive/*" \
+            --keep-only "rust-cuda-kernel/*" \
             --ignore-not-existing \
             --excl-line GRCOV_EXCL_LINE \
             --excl-start GRCOV_EXCL_START \
