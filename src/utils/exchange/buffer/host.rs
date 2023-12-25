@@ -10,9 +10,10 @@ use rustacuda::{
 };
 
 use crate::{
-    common::{CombinedCudaAlloc, CudaAlloc, DeviceAccessible, NoCudaAlloc},
+    alloc::{CombinedCudaAlloc, CudaAlloc, NoCudaAlloc},
     host::CudaDropWrapper,
     safety::SafeDeviceCopy,
+    utils::ffi::DeviceAccessible,
 };
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};

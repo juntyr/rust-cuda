@@ -91,14 +91,14 @@ pub(in super::super) fn quote_host_linker_macro(
                 #(#macro_generics),* $(,)?
             #generic_close_token for $ptx:ident
         ) {
-            unsafe impl<#($#macro_only_lt_generic_ids),*> #crate_path::host::CompiledKernelPtx<
+            unsafe impl<#($#macro_only_lt_generic_ids),*> #crate_path::kernel::CompiledKernelPtx<
                 #func_ident_name #generic_start_token #($#macro_generic_ids),* #generic_close_token
             > for $ptx #generic_start_token #($#macro_generic_ids),* #generic_close_token
             {
                 #get_ptx
 
                 fn get_entry_point() -> &'static ::core::ffi::CStr {
-                    #crate_path::host::specialise_kernel_entry_point!(
+                    #crate_path::kernel::specialise_kernel_entry_point!(
                         #func_ident_hash #generic_start_token
                             #($#macro_non_lt_generic_ids),*
                         #generic_close_token

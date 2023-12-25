@@ -3,15 +3,16 @@
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 use crate::{
-    common::{CudaAsRust, NoCudaAlloc, RustToCuda, RustToCudaAsync},
+    alloc::NoCudaAlloc,
+    lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
     safety::SafeDeviceCopy,
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
-use crate::common::DeviceAccessible;
+use crate::utils::ffi::DeviceAccessible;
 
 #[cfg(feature = "host")]
-use crate::common::{CombinedCudaAlloc, CudaAlloc};
+use crate::alloc::{CombinedCudaAlloc, CudaAlloc};
 
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]

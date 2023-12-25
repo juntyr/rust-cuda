@@ -1,6 +1,6 @@
 use const_type_layout::TypeGraphLayout;
 
-use crate::{common::DeviceAccessible, safety::StackOnly};
+use crate::{safety::StackOnly, utils::ffi::DeviceAccessible};
 
 #[allow(clippy::module_name_repetitions)]
 /// Types which are safe to memcpy from the CPU to a GPU.

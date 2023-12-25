@@ -36,8 +36,8 @@ pub fn swap_field_type_and_filter_attrs(
                                     field_ty: Box::new(field_ty.clone()),
                                 });
                                 field_ty = parse_quote! {
-                                    #crate_path::common::DeviceAccessible<
-                                        <#field_ty as #crate_path::common::RustToCuda>::CudaRepresentation
+                                    #crate_path::utils::ffi::DeviceAccessible<
+                                        <#field_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
                                     >
                                 };
                             } else {
@@ -57,8 +57,8 @@ pub fn swap_field_type_and_filter_attrs(
                                     Ok(proxy_ty) => {
                                         let old_field_ty = Box::new(field_ty.clone());
                                         field_ty = parse_quote! {
-                                            #crate_path::common::DeviceAccessible<
-                                                <#proxy_ty as #crate_path::common::RustToCuda>::CudaRepresentation
+                                            #crate_path::utils::ffi::DeviceAccessible<
+                                                <#proxy_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
                                             >
                                         };
                                         cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
@@ -107,7 +107,7 @@ pub fn swap_field_type_and_filter_attrs(
         cuda_repr_field_ty
     } else {
         field_ty = parse_quote! {
-            #crate_path::common::DeviceAccessible<
+            #crate_path::utils::ffi::DeviceAccessible<
                 #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#field_ty>
             >
         };

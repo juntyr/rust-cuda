@@ -43,7 +43,7 @@ pub(in super::super) fn quote_host_kernel_ty(
         pub type #func_ident #generic_start_token
             #generic_kernel_params
         #generic_close_token = impl Fn(
-            &mut #crate_path::host::Launcher<#func_ident #generic_start_token
+            &mut #crate_path::kernel::Launcher<#func_ident #generic_start_token
                 #(#full_generics),*
             #generic_close_token>,
             #(#cuda_kernel_param_tys),*
@@ -56,7 +56,7 @@ pub(in super::super) fn quote_host_kernel_ty(
         fn #private_func_ident #generic_start_token
             #generic_kernel_params
         #generic_close_token (
-            #launcher: &mut #crate_path::host::Launcher<#func_ident #generic_start_token
+            #launcher: &mut #crate_path::kernel::Launcher<#func_ident #generic_start_token
                 #(#full_generics),*
             #generic_close_token>,
             #func_inputs

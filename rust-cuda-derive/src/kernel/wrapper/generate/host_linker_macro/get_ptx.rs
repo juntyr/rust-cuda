@@ -47,7 +47,7 @@ pub(super) fn quote_get_ptx(
             }> = #crate_path::safety::kernel_signature::Assert::<{
                 #crate_path::safety::kernel_signature::check(
                     PTX_CSTR.to_bytes(),
-                    #crate_path::host::specialise_kernel_entry_point!(
+                    #crate_path::kernel::specialise_kernel_entry_point!(
                         #func_ident_hash #generic_start_token
                             #($#macro_type_ids),*
                         #generic_close_token
@@ -85,7 +85,7 @@ pub(super) fn quote_get_ptx(
             #[allow(unused_imports)]
             use __rust_cuda_ffi_safe_assert::#args;
 
-            #crate_path::host::link_kernel!{
+            #crate_path::kernel::link_kernel!{
                 #func_ident #func_ident_hash #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token #ptx_lint_levels

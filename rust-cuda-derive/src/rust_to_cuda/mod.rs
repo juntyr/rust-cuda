@@ -31,7 +31,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     ) = generics::expand_cuda_struct_generics_where_requested_in_attrs(ast);
 
     let mut combined_cuda_alloc_type: TokenStream = quote! {
-        #crate_path::common::NoCudaAlloc
+        #crate_path::alloc::NoCudaAlloc
     };
     let mut r2c_field_declarations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_async_declarations: Vec<TokenStream> = Vec::new();

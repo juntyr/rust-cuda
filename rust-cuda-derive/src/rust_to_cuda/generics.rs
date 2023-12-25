@@ -190,13 +190,13 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             .make_where_clause()
             .predicates
             .push(syn::parse_quote! {
-                #ty: #crate_path::common::RustToCuda
+                #ty: #crate_path::lend::RustToCuda
             });
         struct_generics_cuda_async
             .make_where_clause()
             .predicates
             .push(syn::parse_quote! {
-                #ty: #crate_path::common::RustToCudaAsync
+                #ty: #crate_path::lend::RustToCudaAsync
             });
     }
 

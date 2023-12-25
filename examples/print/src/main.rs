@@ -23,7 +23,7 @@ pub enum Action {
 
 #[rust_cuda::kernel::kernel(use link! for impl)]
 #[kernel(allow(ptx::local_memory_usage))]
-pub fn kernel(action: rust_cuda::kernel::PerThreadShallowCopy<Action>) {
+pub fn kernel(action: rust_cuda::kernel::param::PerThreadShallowCopy<Action>) {
     match action {
         Action::Print => rust_cuda::device::utils::println!("println! from CUDA kernel"),
         Action::Panic => panic!("panic! from CUDA kernel"),
@@ -62,11 +62,10 @@ fn main() -> rust_cuda::deps::rustacuda::error::CudaResult<()> {
         )?);
 
     // Create a new instance of the CUDA kernel and prepare the launch config
-    let mut kernel = rust_cuda::host::TypedPtxKernel::<kernel>::new::<KernelPtx>(None);
-    let config = rust_cuda::host::LaunchConfig {
+    let mut kernel = rust_cuda::kernel::TypedPtxKernel::<kernel>::new::<KernelPtx>(None);
+    let config = rust_cuda::kernel::LaunchConfig {
         grid: rust_cuda::deps::rustacuda::function::GridSize::x(1),
         block: rust_cuda::deps::rustacuda::function::BlockSize::x(4),
-        shared_memory_size: 0,
         ptx_jit: false,
     };
 

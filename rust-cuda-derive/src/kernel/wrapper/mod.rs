@@ -346,7 +346,7 @@ fn quote_generic_check(
 
     quote::quote_spanned! { func_ident_hash.span()=>
         #[cfg(not(target_os = "cuda"))]
-        const _: ::core::result::Result<(), ()> = #crate_path::host::check_kernel!(
+        const _: ::core::result::Result<(), ()> = #crate_path::kernel::check_kernel!(
             #func_ident #func_ident_hash #crate_name #crate_manifest_dir
         );
     }

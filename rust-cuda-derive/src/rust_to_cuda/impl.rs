@@ -76,7 +76,7 @@ pub fn rust_to_cuda_trait(
     let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics #crate_path::common::RustToCuda for #struct_name #ty_generics
+        unsafe impl #impl_generics #crate_path::lend::RustToCuda for #struct_name #ty_generics
             #where_clause
         {
             type CudaRepresentation = #struct_name_cuda #ty_generics;
@@ -84,14 +84,14 @@ pub fn rust_to_cuda_trait(
             type CudaAllocation = #combined_cuda_alloc_type;
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn borrow<CudaAllocType: #crate_path::common::CudaAlloc>(
+            unsafe fn borrow<CudaAllocType: #crate_path::alloc::CudaAlloc>(
                 &self,
                 alloc: CudaAllocType,
             ) -> #crate_path::deps::rustacuda::error::CudaResult<(
-                #crate_path::common::DeviceAccessible<Self::CudaRepresentation>,
-                #crate_path::common::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
+                #crate_path::utils::ffi::DeviceAccessible<Self::CudaRepresentation>,
+                #crate_path::alloc::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
-                let alloc_front = #crate_path::common::NoCudaAlloc;
+                let alloc_front = #crate_path::alloc::NoCudaAlloc;
                 let alloc_tail = alloc;
 
                 #(#r2c_field_declarations)*
@@ -99,15 +99,15 @@ pub fn rust_to_cuda_trait(
                 let borrow = #rust_to_cuda_struct_construction;
 
                 Ok((
-                    #crate_path::common::DeviceAccessible::from(borrow),
-                    #crate_path::common::CombinedCudaAlloc::new(alloc_front, alloc_tail)
+                    #crate_path::utils::ffi::DeviceAccessible::from(borrow),
+                    #crate_path::alloc::CombinedCudaAlloc::new(alloc_front, alloc_tail)
                 ))
             }
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn restore<CudaAllocType: #crate_path::common::CudaAlloc>(
+            unsafe fn restore<CudaAllocType: #crate_path::alloc::CudaAlloc>(
                 &mut self,
-                alloc: #crate_path::common::CombinedCudaAlloc<
+                alloc: #crate_path::alloc::CombinedCudaAlloc<
                     Self::CudaAllocation, CudaAllocType
                 >,
             ) -> #crate_path::deps::rustacuda::error::CudaResult<CudaAllocType> {
@@ -149,19 +149,19 @@ pub fn rust_to_cuda_async_trait(
     let (impl_generics, ty_generics, where_clause) = struct_generics_cuda_async.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics #crate_path::common::RustToCudaAsync for #struct_name #ty_generics
+        unsafe impl #impl_generics #crate_path::lend::RustToCudaAsync for #struct_name #ty_generics
             #where_clause
         {
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn borrow_async<CudaAllocType: #crate_path::common::CudaAlloc>(
+            unsafe fn borrow_async<CudaAllocType: #crate_path::alloc::CudaAlloc>(
                 &self,
                 alloc: CudaAllocType,
                 stream: &#crate_path::deps::rustacuda::stream::Stream,
             ) -> #crate_path::deps::rustacuda::error::CudaResult<(
-                #crate_path::common::DeviceAccessible<Self::CudaRepresentation>,
-                #crate_path::common::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
+                #crate_path::utils::ffi::DeviceAccessible<Self::CudaRepresentation>,
+                #crate_path::alloc::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
-                let alloc_front = #crate_path::common::NoCudaAlloc;
+                let alloc_front = #crate_path::alloc::NoCudaAlloc;
                 let alloc_tail = alloc;
 
                 #(#r2c_field_async_declarations)*
@@ -169,15 +169,15 @@ pub fn rust_to_cuda_async_trait(
                 let borrow = #rust_to_cuda_struct_construction;
 
                 Ok((
-                    #crate_path::common::DeviceAccessible::from(borrow),
-                    #crate_path::common::CombinedCudaAlloc::new(alloc_front, alloc_tail)
+                    #crate_path::utils::ffi::DeviceAccessible::from(borrow),
+                    #crate_path::alloc::CombinedCudaAlloc::new(alloc_front, alloc_tail)
                 ))
             }
 
             #[cfg(not(target_os = "cuda"))]
-            unsafe fn restore_async<CudaAllocType: #crate_path::common::CudaAlloc>(
+            unsafe fn restore_async<CudaAllocType: #crate_path::alloc::CudaAlloc>(
                 &mut self,
-                alloc: #crate_path::common::CombinedCudaAlloc<
+                alloc: #crate_path::alloc::CombinedCudaAlloc<
                     Self::CudaAllocation, CudaAllocType
                 >,
                 stream: &#crate_path::deps::rustacuda::stream::Stream,
@@ -217,14 +217,14 @@ pub fn cuda_as_rust_trait(
     let (impl_generics, ty_generics, where_clause) = &struct_generics_cuda.split_for_impl();
 
     quote! {
-        unsafe impl #impl_generics #crate_path::common::CudaAsRust
+        unsafe impl #impl_generics #crate_path::lend::CudaAsRust
             for #struct_name_cuda #ty_generics #where_clause
         {
             type RustRepresentation = #struct_name #ty_generics;
 
             #[cfg(target_os = "cuda")]
             unsafe fn as_rust(
-                this: &#crate_path::common::DeviceAccessible<Self>,
+                this: &#crate_path::utils::ffi::DeviceAccessible<Self>,
             ) -> #struct_name #ty_generics {
                 #cuda_as_rust_struct_construction
             }

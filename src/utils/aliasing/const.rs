@@ -8,7 +8,10 @@ use core::{
 use const_type_layout::TypeLayout;
 use rustacuda_core::DeviceCopy;
 
-use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
+use crate::{
+    lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
+    utils::ffi::DeviceAccessible,
+};
 
 #[repr(transparent)]
 #[derive(Clone, TypeLayout)]
@@ -193,12 +196,12 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: crate::common::CudaAlloc>(
+    unsafe fn borrow<A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        crate::alloc::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let (cuda_repr, alloc) = self.0.borrow(alloc)?;
 
@@ -209,9 +212,9 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
     }
 
     #[cfg(feature = "host")]
-    unsafe fn restore<A: crate::common::CudaAlloc>(
+    unsafe fn restore<A: crate::alloc::CudaAlloc>(
         &mut self,
-        alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: crate::alloc::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         self.0.restore(alloc)
     }
@@ -222,13 +225,13 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
 {
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: crate::common::CudaAlloc>(
+    unsafe fn borrow_async<A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        crate::alloc::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let (cuda_repr, alloc) = self.0.borrow_async(alloc, stream)?;
 
@@ -239,9 +242,9 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
     }
 
     #[cfg(feature = "host")]
-    unsafe fn restore_async<A: crate::common::CudaAlloc>(
+    unsafe fn restore_async<A: crate::alloc::CudaAlloc>(
         &mut self,
-        alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: crate::alloc::CombinedCudaAlloc<Self::CudaAllocation, A>,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A> {
         self.0.restore_async(alloc, stream)

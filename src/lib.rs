@@ -27,6 +27,7 @@
 #![feature(inline_const)]
 #![feature(sync_unsafe_cell)]
 #![feature(never_type)]
+#![feature(layout_for_ptr)]
 #![feature(cfg_version)]
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![cfg_attr(not(version("1.76.0")), feature(ptr_from_ref))]
@@ -44,9 +45,10 @@ core::compile_error!("cannot enable the `host` feature on a target with `target_
 #[cfg(all(feature = "device", not(target_os = "cuda"), not(doc)))]
 core::compile_error!("cannot enable the `device` feature on a target without `target_os=\"cuda\"`");
 
-pub mod common;
+pub mod alloc;
 pub mod deps;
 pub mod kernel;
+pub mod lend;
 pub mod safety;
 pub mod utils;
 

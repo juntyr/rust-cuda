@@ -14,14 +14,13 @@ use rustacuda::{
 };
 
 use crate::{
-    common::{
-        CombinedCudaAlloc, DeviceAccessible, EmptyCudaAlloc, NoCudaAlloc, RustToCuda,
-        RustToCudaAsync,
-    },
+    alloc::{CombinedCudaAlloc, EmptyCudaAlloc, NoCudaAlloc},
     host::{
         CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceConstRefAsync, HostAndDeviceMutRef,
         HostAndDeviceMutRefAsync, HostDeviceBox, HostLockedBox,
     },
+    lend::{RustToCuda, RustToCudaAsync},
+    utils::ffi::DeviceAccessible,
 };
 
 #[allow(clippy::module_name_repetitions)]

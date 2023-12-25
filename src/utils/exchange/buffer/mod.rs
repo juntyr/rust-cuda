@@ -12,10 +12,16 @@ use const_type_layout::TypeGraphLayout;
 use crate::safety::SafeDeviceCopy;
 
 #[cfg(any(feature = "host", feature = "device"))]
-use crate::common::{NoCudaAlloc, RustToCuda, RustToCudaAsync};
+use crate::{
+    alloc::NoCudaAlloc,
+    lend::{RustToCuda, RustToCudaAsync},
+};
 
 #[cfg(feature = "host")]
-use crate::common::{CombinedCudaAlloc, CudaAlloc, DeviceAccessible};
+use crate::{
+    alloc::{CombinedCudaAlloc, CudaAlloc},
+    utils::ffi::DeviceAccessible,
+};
 
 #[cfg(any(feature = "host", feature = "device"))]
 use self::common::CudaExchangeBufferCudaRepresentation;

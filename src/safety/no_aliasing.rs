@@ -63,7 +63,7 @@ impl<T> !NoSafeAliasing for *mut T {}
 unsafe impl<T> NoSafeAliasing for core::marker::PhantomData<T> {}
 
 unsafe impl<T> NoSafeAliasing for r#final::Final<T> {}
-unsafe impl<T: crate::common::CudaAsRust> NoSafeAliasing
+unsafe impl<T: crate::lend::CudaAsRust> NoSafeAliasing
     for crate::utils::aliasing::FinalCudaRepresentation<T>
 {
 }

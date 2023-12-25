@@ -6,58 +6,16 @@ use core::{
 };
 
 #[cfg(feature = "host")]
-use core::ptr::NonNull;
+use std::{alloc::Layout, ptr::NonNull};
 
 use const_type_layout::TypeGraphLayout;
 
-#[cfg(feature = "derive")]
-pub use rust_cuda_derive::kernel;
-
-use crate::common::{DeviceAccessible, DeviceConstRef, DeviceOwnedRef, EmptyCudaAlloc, RustToCuda};
-
-mod sealed {
-    #[doc(hidden)]
-    pub trait Sealed {}
-}
-
-pub trait CudaKernelParameter: sealed::Sealed {
-    #[cfg(feature = "host")]
-    type SyncHostType;
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b>;
-    #[doc(hidden)]
-    type FfiType<'stream, 'b>: rustacuda_core::DeviceCopy + TypeGraphLayout;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b>;
-
-    #[cfg(feature = "host")]
-    #[allow(clippy::missing_errors_doc)] // FIXME
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E>;
-
-    #[doc(hidden)]
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        param: &Self::AsyncHostType<'_, '_>,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O;
-
-    #[doc(hidden)]
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
-        param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b>;
-
-    #[doc(hidden)]
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O;
-}
+use crate::{
+    alloc::EmptyCudaAlloc,
+    kernel::{sealed, CudaKernelParameter},
+    lend::RustToCuda,
+    utils::ffi::{DeviceAccessible, DeviceConstRef, DeviceOwnedRef},
+};
 
 pub struct PtxJit<T> {
     never: !,
@@ -145,6 +103,11 @@ impl<
     }
 
     #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -220,6 +183,11 @@ impl<
     }
 
     #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -278,6 +246,11 @@ impl<
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
@@ -372,6 +345,11 @@ impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
@@ -477,7 +455,7 @@ impl<
         _stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        crate::host::LendToCuda::move_to_cuda(param, |param| inner(param.into_async()))
+        crate::lend::LendToCuda::move_to_cuda(param, |param| inner(param.into_async()))
     }
 
     #[cfg(feature = "host")]
@@ -486,6 +464,11 @@ impl<
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
@@ -500,7 +483,7 @@ impl<
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        unsafe { crate::device::BorrowFromRust::with_moved_from_rust(param, inner) }
+        unsafe { crate::lend::BorrowFromRust::with_moved_from_rust(param, inner) }
     }
 }
 impl<
@@ -534,7 +517,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         _stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        crate::host::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async()))
+        crate::lend::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async()))
     }
 
     #[cfg(feature = "host")]
@@ -543,6 +526,11 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
@@ -557,7 +545,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        unsafe { crate::device::BorrowFromRust::with_borrow_from_rust(param, inner) }
+        unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust(param, inner) }
     }
 }
 impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
@@ -607,6 +595,11 @@ impl<
         param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
         <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
     }
 
     #[cfg(feature = "device")]
@@ -662,6 +655,11 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
@@ -759,6 +757,11 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
+    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        Layout::new::<()>()
+    }
+
+    #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b>(
         _param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
@@ -808,6 +811,11 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(param: &Self::AsyncHostType<'_, '_>) -> Layout {
+        param.layout()
     }
 
     #[cfg(feature = "host")]

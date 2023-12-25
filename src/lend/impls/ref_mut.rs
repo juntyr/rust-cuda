@@ -6,16 +6,16 @@ use const_type_layout::{TypeGraphLayout, TypeLayout};
 use rustacuda::{error::CudaResult, memory::DeviceBox};
 
 use crate::{
-    common::{CudaAsRust, RustToCuda},
+    lend::{CudaAsRust, RustToCuda},
     safety::SafeDeviceCopy,
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
-use crate::common::DeviceAccessible;
+use crate::utils::ffi::DeviceAccessible;
 
 #[cfg(feature = "host")]
 use crate::{
-    common::{CombinedCudaAlloc, CudaAlloc},
+    alloc::{CombinedCudaAlloc, CudaAlloc},
     host::CudaDropWrapper,
     utils::device_copy::SafeDeviceCopyWrapper,
 };
@@ -39,7 +39,7 @@ unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a mut T {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocation = crate::host::CudaDropWrapper<DeviceBox<SafeDeviceCopyWrapper<T>>>;
     #[cfg(any(not(feature = "host"), doc))]
-    type CudaAllocation = crate::common::SomeCudaAlloc;
+    type CudaAllocation = crate::alloc::SomeCudaAlloc;
     type CudaRepresentation = RefMutCudaRepresentation<'a, T>;
 
     #[cfg(feature = "host")]

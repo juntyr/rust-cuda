@@ -1,3 +1,5 @@
+use core::alloc::Layout;
+
 use const_type_layout::TypeGraphLayout;
 
 #[allow(clippy::module_name_repetitions)]
@@ -42,6 +44,12 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    #[must_use]
+    pub fn layout(&self) -> Layout {
+        // Safety: the length of self.shared is always initialised
+        unsafe { Layout::for_value_raw(self.shared) }
     }
 
     #[cfg(feature = "device")]
@@ -124,3 +132,38 @@ pub unsafe fn init() {
 
 #[cfg(feature = "device")]
 core::arch::global_asm!(".extern .shared .align 8 .b8 rust_cuda_dynamic_shared_base[];");
+
+#[cfg(feature = "host")]
+pub struct SharedMemorySize {
+    last_align: usize,
+    total_size: usize,
+}
+
+#[cfg(feature = "host")]
+impl SharedMemorySize {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            // we allocate the shared memory with an alignment of 8
+            last_align: 8,
+            total_size: 0,
+        }
+    }
+
+    pub fn add(&mut self, layout: core::alloc::Layout) {
+        if layout.align() > self.last_align {
+            // in the worst case, we are one element of the smaller alignment
+            //  into the larger alignment, so we need to pad the entire rest
+            let pessimistic_padding = layout.align() - self.last_align;
+
+            self.total_size += pessimistic_padding;
+        }
+
+        self.last_align = layout.align();
+        self.total_size += layout.size();
+    }
+
+    pub const fn total(self) -> usize {
+        self.total_size
+    }
+}

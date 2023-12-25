@@ -6,16 +6,13 @@ use const_type_layout::{TypeGraphLayout, TypeLayout};
 use rustacuda::error::CudaResult;
 
 use crate::{
-    common::{
-        CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync, RustToCudaAsyncProxy,
-        RustToCudaProxy,
-    },
+    lend::{CudaAsRust, RustToCuda, RustToCudaAsync, RustToCudaAsyncProxy, RustToCudaProxy},
     safety::SafeDeviceCopy,
-    utils::device_copy::SafeDeviceCopyWrapper,
+    utils::{device_copy::SafeDeviceCopyWrapper, ffi::DeviceAccessible},
 };
 
 #[cfg(feature = "host")]
-use crate::common::{CombinedCudaAlloc, CudaAlloc};
+use crate::alloc::{CombinedCudaAlloc, CudaAlloc};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]

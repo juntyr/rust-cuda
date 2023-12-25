@@ -23,7 +23,7 @@ fn main() {}
 #[layout(crate = "rc::deps::const_type_layout")]
 pub struct Dummy(i32);
 
-#[derive(rc::common::LendRustToCuda)]
+#[derive(rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
 #[allow(dead_code)]
 pub struct Wrapper<T> {
@@ -31,7 +31,7 @@ pub struct Wrapper<T> {
     inner: T,
 }
 
-#[derive(rc::common::LendRustToCuda)]
+#[derive(rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
 pub struct Empty([u8; 0]);
 
@@ -54,18 +54,18 @@ pub struct Triple(i32, i32, i32);
 pub fn kernel<
     'a,
     T: 'static
-        + rc::common::RustToCuda<
+        + rc::lend::RustToCuda<
             CudaRepresentation: rc::safety::StackOnly,
-            CudaAllocation: rc::common::EmptyCudaAlloc,
+            CudaAllocation: rc::alloc::EmptyCudaAlloc,
         >
         + rc::safety::StackOnly
         + rc::safety::NoSafeAliasing,
 >(
-    _x: &rc::kernel::PerThreadShallowCopy<Dummy>,
-    _z: &rc::kernel::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
-    _v @ _w: &'a rc::kernel::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
-    _: rc::kernel::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
-    q @ Triple(s, mut __t, _u): rc::kernel::PerThreadShallowCopy<Triple>,
+    _x: &rc::kernel::param::PerThreadShallowCopy<Dummy>,
+    _z: &rc::kernel::param::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    _v @ _w: &'a rc::kernel::param::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
+    _: rc::kernel::param::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    q @ Triple(s, mut __t, _u): rc::kernel::param::PerThreadShallowCopy<Triple>,
     shared3: &mut rc::utils::shared::ThreadBlockShared<u32>,
     dynamic: &mut rc::utils::shared::ThreadBlockSharedSlice<Dummy>,
 ) {
