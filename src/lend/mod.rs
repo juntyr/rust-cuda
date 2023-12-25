@@ -7,7 +7,7 @@ use rustacuda_core::DeviceCopy;
 #[allow(clippy::module_name_repetitions)]
 pub use rust_cuda_derive::LendRustToCuda;
 
-use crate::{alloc::CudaAlloc, utils::ffi::DeviceAccessible};
+use crate::alloc::CudaAlloc;
 
 #[cfg(feature = "device")]
 use crate::utils::ffi::{DeviceConstRef, DeviceOwnedRef};
@@ -16,9 +16,11 @@ use crate::{
     alloc::{CombinedCudaAlloc, EmptyCudaAlloc, NoCudaAlloc},
     host::{HostAndDeviceConstRef, HostAndDeviceOwned},
 };
-
 #[cfg(any(feature = "host", feature = "device"))]
-use crate::safety::{NoSafeAliasing, SafeDeviceCopy};
+use crate::{
+    safety::{NoSafeAliasing, SafeDeviceCopy},
+    utils::ffi::DeviceAccessible,
+};
 
 mod impls;
 
