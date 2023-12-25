@@ -1,6 +1,9 @@
 use core::mem::MaybeUninit;
 
-use const_type_layout::TypeGraphLayout;
+use const_type_layout::{TypeGraphLayout, TypeLayout};
+
+#[cfg(feature = "host")]
+use rustacuda::error::CudaResult;
 
 use crate::{
     common::{
@@ -12,10 +15,7 @@ use crate::{
 };
 
 #[cfg(feature = "host")]
-use crate::{
-    common::{CombinedCudaAlloc, CudaAlloc},
-    rustacuda::error::CudaResult,
-};
+use crate::common::{CombinedCudaAlloc, CudaAlloc};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
@@ -35,7 +35,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     type CudaRepresentation = OptionCudaRepresentation<<T as RustToCuda>::CudaRepresentation>;
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
@@ -71,7 +70,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -89,7 +87,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 
 unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(
         &self,
@@ -126,7 +123,6 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -146,7 +142,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
 unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     type RustRepresentation = Option<<T as CudaAsRust>::RustRepresentation>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         if this.present {
             Some(CudaAsRust::as_rust(this.maybe.assume_init_ref()))

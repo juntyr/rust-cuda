@@ -1,11 +1,14 @@
 #![allow(clippy::trait_duplication_in_bounds)]
 
-use const_type_layout::TypeGraphLayout;
+use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 use crate::{
-    common::{CudaAsRust, DeviceAccessible, NoCudaAlloc, RustToCuda, RustToCudaAsync},
+    common::{CudaAsRust, NoCudaAlloc, RustToCuda, RustToCudaAsync},
     safety::SafeDeviceCopy,
 };
+
+#[cfg(any(feature = "host", feature = "device"))]
+use crate::common::DeviceAccessible;
 
 #[cfg(feature = "host")]
 use crate::common::{CombinedCudaAlloc, CudaAlloc};
@@ -100,7 +103,6 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWr
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -127,7 +129,6 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync for SafeDeviceC
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -142,7 +143,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync for SafeDeviceC
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
     type RustRepresentation = Self;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         let mut uninit = core::mem::MaybeUninit::uninit();
         core::ptr::copy_nonoverlapping(&**this, uninit.as_mut_ptr(), 1);

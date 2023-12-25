@@ -1,4 +1,4 @@
-use const_type_layout::TypeGraphLayout;
+use const_type_layout::{TypeGraphLayout, TypeLayout};
 use rustacuda_core::DeviceCopy;
 
 use crate::{common::CudaAsRust, safety::SafeDeviceCopy};
@@ -28,10 +28,12 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
 {
     type RustRepresentation = CudaExchangeBuffer<T, M2D, M2H>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &crate::common::DeviceAccessible<Self>) -> Self::RustRepresentation {
-        CudaExchangeBuffer(core::mem::ManuallyDrop::new(alloc::boxed::Box::from_raw(
-            core::slice::from_raw_parts_mut(this.0, this.1),
-        )))
+        CudaExchangeBuffer {
+            inner: super::device::CudaExchangeBufferDevice(core::mem::ManuallyDrop::new(
+                alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(this.0, this.1)),
+            )),
+        }
     }
 }

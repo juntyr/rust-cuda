@@ -1,5 +1,5 @@
 use alloc::alloc::{GlobalAlloc, Layout};
-#[cfg(target_os = "cuda")]
+#[cfg(all(feature = "device", not(doc)))]
 use core::arch::nvptx;
 
 /// Memory allocator using CUDA malloc/free

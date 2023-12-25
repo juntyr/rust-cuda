@@ -29,20 +29,20 @@ pub fn cuda_struct_declaration(
         quote!(#where_clause #struct_fields_cuda)
     };
 
-    let const_type_layout_crate_path = quote! { #crate_path::const_type_layout }.to_string();
+    let const_type_layout_crate_path = quote! { #crate_path::deps::const_type_layout }.to_string();
 
     quote! {
         #[allow(dead_code)]
         #[doc(hidden)]
         #(#struct_attrs_cuda)*
-        #[derive(#crate_path::const_type_layout::TypeLayout)]
+        #[derive(#crate_path::deps::const_type_layout::TypeLayout)]
         #struct_repr
         #(#struct_layout_attrs)*
         #[layout(crate = #const_type_layout_crate_path)]
         #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda #struct_fields_where_clause
 
         // #[derive(DeviceCopy)] can interfer with type parameters
-        unsafe impl #impl_generics #crate_path::rustacuda_core::DeviceCopy
+        unsafe impl #impl_generics #crate_path::deps::rustacuda_core::DeviceCopy
             for #struct_name_cuda #ty_generics #where_clause {}
     }
 }
@@ -87,7 +87,7 @@ pub fn rust_to_cuda_trait(
             unsafe fn borrow<CudaAllocType: #crate_path::common::CudaAlloc>(
                 &self,
                 alloc: CudaAllocType,
-            ) -> #crate_path::rustacuda::error::CudaResult<(
+            ) -> #crate_path::deps::rustacuda::error::CudaResult<(
                 #crate_path::common::DeviceAccessible<Self::CudaRepresentation>,
                 #crate_path::common::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
@@ -110,7 +110,7 @@ pub fn rust_to_cuda_trait(
                 alloc: #crate_path::common::CombinedCudaAlloc<
                     Self::CudaAllocation, CudaAllocType
                 >,
-            ) -> #crate_path::rustacuda::error::CudaResult<CudaAllocType> {
+            ) -> #crate_path::deps::rustacuda::error::CudaResult<CudaAllocType> {
                 let (alloc_front, alloc_tail) = alloc.split();
 
                 #(#r2c_field_destructors)*
@@ -156,8 +156,8 @@ pub fn rust_to_cuda_async_trait(
             unsafe fn borrow_async<CudaAllocType: #crate_path::common::CudaAlloc>(
                 &self,
                 alloc: CudaAllocType,
-                stream: &#crate_path::rustacuda::stream::Stream,
-            ) -> #crate_path::rustacuda::error::CudaResult<(
+                stream: &#crate_path::deps::rustacuda::stream::Stream,
+            ) -> #crate_path::deps::rustacuda::error::CudaResult<(
                 #crate_path::common::DeviceAccessible<Self::CudaRepresentation>,
                 #crate_path::common::CombinedCudaAlloc<Self::CudaAllocation, CudaAllocType>
             )> {
@@ -180,8 +180,8 @@ pub fn rust_to_cuda_async_trait(
                 alloc: #crate_path::common::CombinedCudaAlloc<
                     Self::CudaAllocation, CudaAllocType
                 >,
-                stream: &#crate_path::rustacuda::stream::Stream,
-            ) -> #crate_path::rustacuda::error::CudaResult<CudaAllocType> {
+                stream: &#crate_path::deps::rustacuda::stream::Stream,
+            ) -> #crate_path::deps::rustacuda::error::CudaResult<CudaAllocType> {
                 let (alloc_front, alloc_tail) = alloc.split();
 
                 #(#r2c_field_async_destructors)*

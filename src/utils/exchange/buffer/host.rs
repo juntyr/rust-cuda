@@ -11,9 +11,7 @@ use rustacuda::{
 };
 
 use crate::{
-    common::{
-        CombinedCudaAlloc, CudaAlloc, DeviceAccessible, NoCudaAlloc, RustToCuda, RustToCudaAsync,
-    },
+    common::{CombinedCudaAlloc, CudaAlloc, DeviceAccessible, NoCudaAlloc},
     host::CudaDropWrapper,
     safety::SafeDeviceCopy,
 };
@@ -21,13 +19,6 @@ use crate::{
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
-#[doc(cfg(feature = "host"))]
-/// When the `host` feature is **not** set,
-/// [`CudaExchangeBuffer`](super::CudaExchangeBuffer)
-/// refers to
-/// [`CudaExchangeBufferDevice`](super::CudaExchangeBufferDevice)
-/// instead.
-/// [`CudaExchangeBufferHost`](Self) is never exposed directly.
 pub struct CudaExchangeBufferHost<
     T: SafeDeviceCopy + TypeGraphLayout,
     const M2D: bool,
@@ -104,19 +95,16 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Dere
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
-    for CudaExchangeBufferHost<T, M2D, M2H>
+impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    CudaExchangeBufferHost<T, M2D, M2H>
 {
-    type CudaAllocation = NoCudaAlloc;
-    type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
-
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: CudaAlloc>(
+    pub unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>,
+        CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
         // Safety: device_buffer is inside an UnsafeCell
         //         borrow checks must be satisfied through LendToCuda
@@ -141,9 +129,9 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
     }
 
     #[allow(clippy::type_complexity)]
-    unsafe fn restore<A: CudaAlloc>(
+    pub unsafe fn restore<A: CudaAlloc>(
         &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
     ) -> rustacuda::error::CudaResult<A> {
         let (_alloc_front, alloc_tail) = alloc.split();
 
@@ -160,17 +148,17 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCudaAsync
-    for CudaExchangeBufferHost<T, M2D, M2H>
+impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    CudaExchangeBufferHost<T, M2D, M2H>
 {
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: CudaAlloc>(
+    pub unsafe fn borrow_async<A: CudaAlloc>(
         &self,
         alloc: A,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>,
+        CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
         // Safety: device_buffer is inside an UnsafeCell
         //         borrow checks must be satisfied through LendToCuda
@@ -196,9 +184,9 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
     }
 
     #[allow(clippy::type_complexity)]
-    unsafe fn restore_async<A: CudaAlloc>(
+    pub unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A> {
         let (_alloc_front, alloc_tail) = alloc.split();

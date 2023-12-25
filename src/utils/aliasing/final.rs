@@ -1,3 +1,4 @@
+use const_type_layout::TypeLayout;
 use r#final::Final;
 
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
@@ -16,7 +17,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
     type CudaRepresentation = FinalCudaRepresentation<T::CudaRepresentation>;
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: crate::common::CudaAlloc>(
         &self,
@@ -34,7 +34,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore<A: crate::common::CudaAlloc>(
         &mut self,
         alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -48,7 +47,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
 
 unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Final<T> {
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: crate::common::CudaAlloc>(
         &self,
@@ -67,7 +65,6 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Final<T> {
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore_async<A: crate::common::CudaAlloc>(
         &mut self,
         alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -83,7 +80,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Final<T> {
 unsafe impl<T: CudaAsRust> CudaAsRust for FinalCudaRepresentation<T> {
     type RustRepresentation = Final<T::RustRepresentation>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         Final::new(CudaAsRust::as_rust(&this.0))
     }

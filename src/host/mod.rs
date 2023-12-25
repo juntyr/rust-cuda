@@ -18,7 +18,6 @@ use rustacuda::{
 use rustacuda_core::{DeviceCopy, DevicePointer};
 
 #[cfg(feature = "derive")]
-#[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{check_kernel, link_kernel, specialise_kernel_entry_point};
 
 use crate::{
@@ -162,8 +161,6 @@ pub struct LaunchConfig {
     pub ptx_jit: bool,
 }
 
-#[doc(cfg(feature = "host"))]
-#[allow(clippy::module_name_repetitions)]
 pub struct RawPtxKernel {
     module: ManuallyDrop<Box<Module>>,
     function: ManuallyDrop<Function<'static>>,

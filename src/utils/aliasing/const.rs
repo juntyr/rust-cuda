@@ -1,9 +1,11 @@
+#[cfg(any(feature = "host", feature = "device"))]
 use core::{
     borrow::{Borrow, BorrowMut},
     convert::{AsMut, AsRef},
     ops::{Deref, DerefMut},
 };
 
+use const_type_layout::TypeLayout;
 use rustacuda_core::DeviceCopy;
 
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
@@ -13,6 +15,7 @@ use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
 pub struct SplitSliceOverCudaThreadsConstStride<T, const STRIDE: usize>(T);
 
 impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
+    #[cfg(feature = "host")]
     #[must_use]
     pub const fn new(inner: T) -> Self {
         Self(inner)
@@ -26,7 +29,7 @@ unsafe impl<T: DeviceCopy, const STRIDE: usize> DeviceCopy
 {
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 fn split_slice_const_stride<E, const STRIDE: usize>(slice: &[E]) -> &[E] {
     let offset: usize = crate::device::thread::Thread::this().index() * STRIDE;
     let len = slice.len().min(offset + STRIDE).saturating_sub(offset);
@@ -34,7 +37,7 @@ fn split_slice_const_stride<E, const STRIDE: usize>(slice: &[E]) -> &[E] {
     unsafe { core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 fn split_slice_const_stride_mut<E, const STRIDE: usize>(slice: &mut [E]) -> &mut [E] {
     let offset: usize = crate::device::thread::Thread::this().index() * STRIDE;
     let len = slice.len().min(offset + STRIDE).saturating_sub(offset);
@@ -42,7 +45,7 @@ fn split_slice_const_stride_mut<E, const STRIDE: usize>(slice: &mut [E]) -> &mut
     unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     /// # Safety
     ///
@@ -63,7 +66,8 @@ impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: Deref<Target = [E]>, const STRIDE: usize> Deref
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -74,7 +78,8 @@ impl<E, T: Deref<Target = [E]>, const STRIDE: usize> Deref
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: DerefMut<Target = [E]>, const STRIDE: usize> DerefMut
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -83,7 +88,8 @@ impl<E, T: DerefMut<Target = [E]>, const STRIDE: usize> DerefMut
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: AsRef<[E]>, const STRIDE: usize> AsRef<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -92,7 +98,8 @@ impl<E, T: AsRef<[E]>, const STRIDE: usize> AsRef<[E]>
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: AsMut<[E]>, const STRIDE: usize> AsMut<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -101,7 +108,8 @@ impl<E, T: AsMut<[E]>, const STRIDE: usize> AsMut<[E]>
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: Borrow<[E]>, const STRIDE: usize> Borrow<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -110,7 +118,8 @@ impl<E, T: Borrow<[E]>, const STRIDE: usize> Borrow<[E]>
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: BorrowMut<[E]>, const STRIDE: usize> BorrowMut<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -119,7 +128,7 @@ impl<E, T: BorrowMut<[E]>, const STRIDE: usize> BorrowMut<[E]>
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: Deref<Target = [E]>, const STRIDE: usize> Deref
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -130,7 +139,7 @@ impl<E, T: Deref<Target = [E]>, const STRIDE: usize> Deref
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: DerefMut<Target = [E]>, const STRIDE: usize> DerefMut
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -139,7 +148,7 @@ impl<E, T: DerefMut<Target = [E]>, const STRIDE: usize> DerefMut
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: AsRef<[E]>, const STRIDE: usize> AsRef<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -148,7 +157,7 @@ impl<E, T: AsRef<[E]>, const STRIDE: usize> AsRef<[E]>
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: AsMut<[E]>, const STRIDE: usize> AsMut<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -157,7 +166,7 @@ impl<E, T: AsMut<[E]>, const STRIDE: usize> AsMut<[E]>
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: Borrow<[E]>, const STRIDE: usize> Borrow<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -166,7 +175,7 @@ impl<E, T: Borrow<[E]>, const STRIDE: usize> Borrow<[E]>
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: BorrowMut<[E]>, const STRIDE: usize> BorrowMut<[E]>
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
@@ -183,7 +192,6 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
         SplitSliceOverCudaThreadsConstStride<DeviceAccessible<T::CudaRepresentation>, STRIDE>;
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: crate::common::CudaAlloc>(
         &self,
@@ -201,7 +209,6 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore<A: crate::common::CudaAlloc>(
         &mut self,
         alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -214,7 +221,6 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
     for SplitSliceOverCudaThreadsConstStride<T, STRIDE>
 {
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: crate::common::CudaAlloc>(
         &self,
@@ -233,7 +239,6 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore_async<A: crate::common::CudaAlloc>(
         &mut self,
         alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -248,8 +253,8 @@ unsafe impl<T: CudaAsRust, const STRIDE: usize> CudaAsRust
 {
     type RustRepresentation = SplitSliceOverCudaThreadsConstStride<T::RustRepresentation, STRIDE>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        SplitSliceOverCudaThreadsConstStride::new(CudaAsRust::as_rust(&this.0))
+        SplitSliceOverCudaThreadsConstStride(CudaAsRust::as_rust(&this.0))
     }
 }

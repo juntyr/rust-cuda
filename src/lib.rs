@@ -6,22 +6,14 @@
 #![deny(clippy::style)]
 #![deny(clippy::suspicious)]
 #![allow(clippy::useless_attribute)]
-#![cfg_attr(not(feature = "host"), no_std)]
+#![cfg_attr(all(feature = "device", not(doc)), no_std)]
 #![feature(associated_type_bounds)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
-#![cfg_attr(
-    any(all(not(feature = "host"), target_os = "cuda"), doc),
-    feature(stdsimd)
-)]
-#![cfg_attr(
-    any(all(not(feature = "host"), target_os = "cuda"), doc),
-    feature(asm_experimental_arch)
-)]
-#![cfg_attr(
-    any(all(not(feature = "host"), target_os = "cuda"), doc),
-    feature(asm_const)
-)]
+#![cfg_attr(feature = "device", feature(stdsimd))]
+#![cfg_attr(feature = "device", feature(asm_experimental_arch))]
+#![cfg_attr(feature = "device", feature(asm_const))]
+#![feature(doc_auto_cfg)]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
 #![feature(const_type_name)]
@@ -35,43 +27,36 @@
 #![feature(inline_const)]
 #![feature(sync_unsafe_cell)]
 #![feature(never_type)]
-#![feature(tuple_trait)]
-#![feature(unboxed_closures)]
 #![feature(cfg_version)]
 #![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![cfg_attr(not(version("1.76.0")), feature(ptr_from_ref))]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-#![cfg_attr(target_os = "cuda", feature(slice_ptr_get))]
+#![cfg_attr(feature = "device", feature(slice_ptr_get))]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
+
+#[cfg(all(feature = "host", feature = "device", not(doc)))]
+core::compile_error!("cannot enable the `host` and `device` features at the same time");
+
+#[cfg(all(feature = "host", targt_os = "cuda", not(doc)))]
+core::compile_error!("cannot enable the `host` feature on a target with `target_os=\"cuda\"`");
+
+#[cfg(all(feature = "device", not(target_os = "cuda"), not(doc)))]
+core::compile_error!("cannot enable the `device` feature on a target without `target_os=\"cuda\"`");
 
 #[doc(hidden)]
 pub extern crate alloc;
 
-pub extern crate rustacuda_core;
-
-#[doc(hidden)]
-#[macro_use]
-pub extern crate const_type_layout;
-
-#[cfg(feature = "derive")]
-#[doc(cfg(feature = "derive"))]
-pub extern crate rustacuda_derive;
-
 pub mod common;
 
 #[cfg(feature = "host")]
-#[doc(cfg(feature = "host"))]
 pub mod host;
 
-#[cfg(feature = "host")]
-#[doc(cfg(feature = "host"))]
-pub extern crate rustacuda;
-
-#[cfg(any(all(not(feature = "host"), target_os = "cuda"), doc))]
-#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
+#[cfg(feature = "device")]
 pub mod device;
 
 pub mod utils;
 
 pub mod safety;
+
+pub mod deps;

@@ -1,7 +1,6 @@
 use core::mem::ManuallyDrop;
 
 #[cfg(feature = "derive")]
-#[doc(cfg(feature = "derive"))]
 pub use rust_cuda_derive::{specialise_kernel_function, specialise_kernel_type};
 
 use crate::{

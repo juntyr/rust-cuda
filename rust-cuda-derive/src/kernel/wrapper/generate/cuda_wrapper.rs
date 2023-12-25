@@ -78,8 +78,8 @@ pub(in super::super) fn quote_cuda_wrapper(
             #(
                 #[no_mangle]
                 static #func_layout_params: [
-                    u8; #crate_path::const_type_layout::serialised_type_graph_len::<#ffi_types>()
-                ] = #crate_path::const_type_layout::serialise_type_graph::<#ffi_types>();
+                    u8; #crate_path::deps::const_type_layout::serialised_type_graph_len::<#ffi_types>()
+                ] = #crate_path::deps::const_type_layout::serialise_type_graph::<#ffi_types>();
 
                 unsafe { ::core::ptr::read_volatile(&#func_layout_params[0]) };
             )*

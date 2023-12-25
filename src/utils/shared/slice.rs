@@ -3,56 +3,40 @@ use const_type_layout::TypeGraphLayout;
 #[allow(clippy::module_name_repetitions)]
 #[repr(transparent)]
 pub struct ThreadBlockSharedSlice<T: 'static + TypeGraphLayout> {
-    #[cfg(not(target_os = "cuda"))]
-    // dangling marker s.t. Self is not StackOnly
-    dangling: *mut [T],
-    #[cfg(target_os = "cuda")]
     shared: *mut [T],
 }
 
 impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
-    #[cfg(any(not(target_os = "cuda"), doc))]
-    #[doc(cfg(not(target_os = "cuda")))]
+    #[cfg(feature = "host")]
     #[must_use]
     pub fn new_uninit_with_len(len: usize) -> Self {
         Self {
-            dangling: Self::dangling_slice_with_len(len),
+            shared: Self::dangling_slice_with_len(len),
         }
     }
 
-    #[cfg(any(not(target_os = "cuda"), doc))]
-    #[doc(cfg(not(target_os = "cuda")))]
+    #[cfg(feature = "host")]
     #[must_use]
     pub fn with_len(mut self, len: usize) -> Self {
-        self.dangling = Self::dangling_slice_with_len(len);
+        self.shared = Self::dangling_slice_with_len(len);
         self
     }
 
-    #[cfg(any(not(target_os = "cuda"), doc))]
-    #[doc(cfg(not(target_os = "cuda")))]
+    #[cfg(feature = "host")]
     #[must_use]
     pub fn with_len_mut(&mut self, len: usize) -> &mut Self {
-        self.dangling = Self::dangling_slice_with_len(len);
+        self.shared = Self::dangling_slice_with_len(len);
         self
     }
 
-    #[cfg(not(target_os = "cuda"))]
+    #[cfg(feature = "host")]
     fn dangling_slice_with_len(len: usize) -> *mut [T] {
         core::ptr::slice_from_raw_parts_mut(core::ptr::NonNull::dangling().as_ptr(), len)
     }
 
     #[must_use]
     pub fn len(&self) -> usize {
-        core::ptr::metadata({
-            #[cfg(not(target_os = "cuda"))]
-            {
-                self.dangling
-            }
-            #[cfg(target_os = "cuda")]
-            {
-                self.shared
-            }
-        })
+        core::ptr::metadata(self.shared)
     }
 
     #[must_use]
@@ -60,22 +44,19 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
         self.len() == 0
     }
 
-    #[cfg(any(target_os = "cuda", doc))]
-    #[doc(cfg(target_os = "cuda"))]
+    #[cfg(feature = "device")]
     #[must_use]
     pub const fn as_mut_ptr(&self) -> *mut T {
         self.shared.cast()
     }
 
-    #[cfg(any(target_os = "cuda", doc))]
-    #[doc(cfg(target_os = "cuda"))]
+    #[cfg(feature = "device")]
     #[must_use]
     pub const fn as_mut_slice_ptr(&self) -> *mut [T] {
         self.shared
     }
 
-    #[cfg(any(target_os = "cuda", doc))]
-    #[doc(cfg(target_os = "cuda"))]
+    #[cfg(feature = "device")]
     /// # Safety
     ///
     /// The provided `index` must not be out of bounds.
@@ -89,8 +70,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
-#[doc(cfg(all(not(feature = "host"), target_os = "cuda")))]
+#[cfg(feature = "device")]
 impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     /// # Safety
     ///
@@ -129,7 +109,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
 }
 
 #[doc(hidden)]
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 /// # Safety
 ///
 /// The thread-block shared dynamic memory must be initialised once and
@@ -143,5 +123,5 @@ pub unsafe fn init() {
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 core::arch::global_asm!(".extern .shared .align 8 .b8 rust_cuda_dynamic_shared_base[];");

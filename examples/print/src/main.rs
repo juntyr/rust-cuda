@@ -12,8 +12,8 @@
 
 extern crate alloc;
 
-#[derive(rust_cuda::const_type_layout::TypeLayout)]
-#[layout(crate = "rust_cuda::const_type_layout")]
+#[derive(rust_cuda::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rust_cuda::deps::const_type_layout")]
 #[repr(C)]
 pub enum Action {
     Print,
@@ -34,37 +34,38 @@ pub fn kernel(action: rust_cuda::common::PerThreadShallowCopy<Action>) {
 }
 
 #[cfg(not(target_os = "cuda"))]
-fn main() -> rust_cuda::rustacuda::error::CudaResult<()> {
+fn main() -> rust_cuda::deps::rustacuda::error::CudaResult<()> {
     // Link the non-generic CUDA kernel
     struct KernelPtx;
     link! { impl kernel for KernelPtx }
 
     // Initialize the CUDA API
-    rust_cuda::rustacuda::init(rust_cuda::rustacuda::CudaFlags::empty())?;
+    rust_cuda::deps::rustacuda::init(rust_cuda::deps::rustacuda::CudaFlags::empty())?;
 
     // Get the first CUDA GPU device
-    let device = rust_cuda::rustacuda::device::Device::get_device(0)?;
+    let device = rust_cuda::deps::rustacuda::device::Device::get_device(0)?;
 
     // Create a CUDA context associated to this device
     let _context = rust_cuda::host::CudaDropWrapper::from(
-        rust_cuda::rustacuda::context::Context::create_and_push(
-            rust_cuda::rustacuda::context::ContextFlags::MAP_HOST
-                | rust_cuda::rustacuda::context::ContextFlags::SCHED_AUTO,
+        rust_cuda::deps::rustacuda::context::Context::create_and_push(
+            rust_cuda::deps::rustacuda::context::ContextFlags::MAP_HOST
+                | rust_cuda::deps::rustacuda::context::ContextFlags::SCHED_AUTO,
             device,
         )?,
     );
 
     // Create a new CUDA stream to submit kernels to
-    let stream = rust_cuda::host::CudaDropWrapper::from(rust_cuda::rustacuda::stream::Stream::new(
-        rust_cuda::rustacuda::stream::StreamFlags::NON_BLOCKING,
-        None,
-    )?);
+    let stream =
+        rust_cuda::host::CudaDropWrapper::from(rust_cuda::deps::rustacuda::stream::Stream::new(
+            rust_cuda::deps::rustacuda::stream::StreamFlags::NON_BLOCKING,
+            None,
+        )?);
 
     // Create a new instance of the CUDA kernel and prepare the launch config
     let mut kernel = rust_cuda::host::TypedPtxKernel::<kernel>::new::<KernelPtx>(None);
     let config = rust_cuda::host::LaunchConfig {
-        grid: rust_cuda::rustacuda::function::GridSize::x(1),
-        block: rust_cuda::rustacuda::function::BlockSize::x(4),
+        grid: rust_cuda::deps::rustacuda::function::GridSize::x(1),
+        block: rust_cuda::deps::rustacuda::function::BlockSize::x(4),
         shared_memory_size: 0,
         ptx_jit: false,
     };

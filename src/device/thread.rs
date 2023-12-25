@@ -1,4 +1,4 @@
-#[cfg(target_os = "cuda")]
+#[cfg(all(feature = "device", not(doc)))]
 use core::arch::nvptx;
 
 #[allow(clippy::module_name_repetitions)]

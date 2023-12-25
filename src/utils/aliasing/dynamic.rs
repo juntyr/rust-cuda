@@ -1,9 +1,11 @@
+#[cfg(any(feature = "host", feature = "device"))]
 use core::{
     borrow::{Borrow, BorrowMut},
     convert::{AsMut, AsRef},
     ops::{Deref, DerefMut},
 };
 
+use const_type_layout::TypeLayout;
 use rustacuda_core::DeviceCopy;
 
 use crate::common::{CudaAsRust, DeviceAccessible, RustToCuda, RustToCudaAsync};
@@ -16,6 +18,7 @@ pub struct SplitSliceOverCudaThreadsDynamicStride<T> {
 }
 
 impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
+    #[cfg(feature = "host")]
     #[must_use]
     pub const fn new(inner: T, stride: usize) -> Self {
         Self { stride, inner }
@@ -26,7 +29,7 @@ impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
 // [`DeviceCopy`]
 unsafe impl<T: DeviceCopy> DeviceCopy for SplitSliceOverCudaThreadsDynamicStride<T> {}
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {
     let offset: usize = crate::device::thread::Thread::this().index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
@@ -34,7 +37,7 @@ fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {
     unsafe { core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 fn split_slice_dynamic_stride_mut<E>(slice: &mut [E], stride: usize) -> &mut [E] {
     let offset: usize = crate::device::thread::Thread::this().index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
@@ -42,7 +45,7 @@ fn split_slice_dynamic_stride_mut<E>(slice: &mut [E], stride: usize) -> &mut [E]
     unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(feature = "device")]
 impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
     /// # Safety
     ///
@@ -63,7 +66,8 @@ impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: Deref<Target = [E]>> Deref for SplitSliceOverCudaThreadsDynamicStride<T> {
     type Target = [E];
 
@@ -72,42 +76,47 @@ impl<E, T: Deref<Target = [E]>> Deref for SplitSliceOverCudaThreadsDynamicStride
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: DerefMut<Target = [E]>> DerefMut for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         split_slice_dynamic_stride_mut(&mut self.inner, self.stride)
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: AsRef<[E]>> AsRef<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn as_ref(&self) -> &[E] {
         split_slice_dynamic_stride(self.inner.as_ref(), self.stride)
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: AsMut<[E]>> AsMut<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn as_mut(&mut self) -> &mut [E] {
         split_slice_dynamic_stride_mut(self.inner.as_mut(), self.stride)
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: Borrow<[E]>> Borrow<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn borrow(&self) -> &[E] {
         split_slice_dynamic_stride(self.inner.borrow(), self.stride)
     }
 }
 
-#[cfg(all(not(feature = "host"), target_os = "cuda"))]
+#[cfg(any(feature = "device", doc))]
+#[doc(cfg(any(feature = "device", feature = "host")))]
 impl<E, T: BorrowMut<[E]>> BorrowMut<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn borrow_mut(&mut self) -> &mut [E] {
         split_slice_dynamic_stride_mut(self.inner.borrow_mut(), self.stride)
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: Deref<Target = [E]>> Deref for SplitSliceOverCudaThreadsDynamicStride<T> {
     type Target = [E];
 
@@ -116,35 +125,35 @@ impl<E, T: Deref<Target = [E]>> Deref for SplitSliceOverCudaThreadsDynamicStride
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: DerefMut<Target = [E]>> DerefMut for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: AsRef<[E]>> AsRef<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn as_ref(&self) -> &[E] {
         self.inner.as_ref()
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: AsMut<[E]>> AsMut<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn as_mut(&mut self) -> &mut [E] {
         self.inner.as_mut()
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: Borrow<[E]>> Borrow<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn borrow(&self) -> &[E] {
         self.inner.borrow()
     }
 }
 
-#[cfg(any(feature = "host", not(target_os = "cuda")))]
+#[cfg(all(feature = "host", not(doc)))]
 impl<E, T: BorrowMut<[E]>> BorrowMut<[E]> for SplitSliceOverCudaThreadsDynamicStride<T> {
     fn borrow_mut(&mut self) -> &mut [E] {
         self.inner.borrow_mut()
@@ -157,7 +166,6 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
         SplitSliceOverCudaThreadsDynamicStride<DeviceAccessible<T::CudaRepresentation>>;
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: crate::common::CudaAlloc>(
         &self,
@@ -178,7 +186,6 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore<A: crate::common::CudaAlloc>(
         &mut self,
         alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -189,7 +196,6 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
 
 unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDynamicStride<T> {
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: crate::common::CudaAlloc>(
         &self,
@@ -211,7 +217,6 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDyn
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore_async<A: crate::common::CudaAlloc>(
         &mut self,
         alloc: crate::common::CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -226,8 +231,11 @@ unsafe impl<T: CudaAsRust> CudaAsRust
 {
     type RustRepresentation = SplitSliceOverCudaThreadsDynamicStride<T::RustRepresentation>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        SplitSliceOverCudaThreadsDynamicStride::new(CudaAsRust::as_rust(&this.inner), this.stride)
+        SplitSliceOverCudaThreadsDynamicStride {
+            stride: this.stride,
+            inner: CudaAsRust::as_rust(&this.inner),
+        }
     }
 }

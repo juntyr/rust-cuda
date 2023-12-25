@@ -1,18 +1,22 @@
 use alloc::boxed::Box;
 
-use const_type_layout::TypeGraphLayout;
+use const_type_layout::{TypeGraphLayout, TypeLayout};
+
+#[cfg(feature = "host")]
+use rustacuda::{error::CudaResult, memory::DeviceBox};
 
 use crate::{
-    common::{CudaAsRust, DeviceAccessible, RustToCuda},
+    common::{CudaAsRust, RustToCuda},
     safety::SafeDeviceCopy,
 };
+
+#[cfg(any(feature = "host", feature = "device"))]
+use crate::common::DeviceAccessible;
 
 #[cfg(feature = "host")]
 use crate::{
     common::{CombinedCudaAlloc, CudaAlloc},
     host::CudaDropWrapper,
-    rustacuda::error::CudaResult,
-    rustacuda::memory::DeviceBox,
     utils::device_copy::SafeDeviceCopyWrapper,
 };
 
@@ -31,14 +35,13 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
 }
 
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<T> {
-    #[cfg(feature = "host")]
+    #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocation = crate::host::CudaDropWrapper<DeviceBox<SafeDeviceCopyWrapper<T>>>;
-    #[cfg(not(feature = "host"))]
+    #[cfg(any(not(feature = "host"), doc))]
     type CudaAllocation = crate::common::SomeCudaAlloc;
     type CudaRepresentation = BoxCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
@@ -59,7 +62,6 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<T> {
     }
 
     #[cfg(feature = "host")]
-    #[doc(cfg(feature = "host"))]
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -79,7 +81,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for Box<T> {
 unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for BoxCudaRepresentation<T> {
     type RustRepresentation = Box<T>;
 
-    #[cfg(not(feature = "host"))]
+    #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
         alloc::boxed::Box::from_raw(this.0)
     }

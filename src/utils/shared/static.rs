@@ -1,25 +1,23 @@
 #[repr(transparent)]
 pub struct ThreadBlockShared<T: 'static> {
-    #[cfg(not(target_os = "cuda"))]
-    // dangling marker s.t. Self is not StackOnly
-    _dangling: *mut T,
-    #[cfg(target_os = "cuda")]
+    #[cfg_attr(not(feature = "device"), allow(dead_code))]
     shared: *mut T,
 }
 
 impl<T: 'static> ThreadBlockShared<T> {
+    #[cfg(any(feature = "host", feature = "device"))]
     #[must_use]
     #[allow(clippy::inline_always, clippy::missing_const_for_fn)]
     #[inline(always)]
     pub fn new_uninit() -> Self {
-        #[cfg(not(target_os = "cuda"))]
+        #[cfg(feature = "host")]
         {
             Self {
-                _dangling: core::ptr::NonNull::dangling().as_ptr(),
+                shared: core::ptr::NonNull::dangling().as_ptr(),
             }
         }
 
-        #[cfg(target_os = "cuda")]
+        #[cfg(feature = "device")]
         {
             let shared: *mut T;
 
@@ -37,8 +35,7 @@ impl<T: 'static> ThreadBlockShared<T> {
         }
     }
 
-    #[cfg(any(target_os = "cuda", doc))]
-    #[doc(cfg(target_os = "cuda"))]
+    #[cfg(feature = "device")]
     #[must_use]
     pub const fn as_mut_ptr(&self) -> *mut T {
         self.shared
@@ -46,8 +43,7 @@ impl<T: 'static> ThreadBlockShared<T> {
 }
 
 impl<T: 'static, const N: usize> ThreadBlockShared<[T; N]> {
-    #[cfg(any(target_os = "cuda", doc))]
-    #[doc(cfg(target_os = "cuda"))]
+    #[cfg(feature = "device")]
     /// # Safety
     ///
     /// The provided `index` must not be out of bounds.

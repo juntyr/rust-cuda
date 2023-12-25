@@ -6,7 +6,6 @@ mod replace;
 
 type ByteSliceOptionalArguments = Option<Box<[Option<Box<[u8]>>]>>;
 
-#[doc(cfg(feature = "host"))]
 #[allow(clippy::module_name_repetitions)]
 pub struct PtxJITCompiler {
     ptx_slices: Box<[PtxElement]>,
@@ -14,7 +13,6 @@ pub struct PtxJITCompiler {
     last_ptx: CString,
 }
 
-#[doc(cfg(feature = "host"))]
 pub enum PtxJITResult<'s> {
     Cached(&'s CStr),
     Recomputed(&'s CStr),

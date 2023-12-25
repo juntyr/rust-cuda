@@ -57,6 +57,7 @@ jobs:
       - name: Check feature powerset on the CPU
         run: |
           cargo hack check --feature-powerset --optional-deps \
+            --skip device \
             --keep-going
 
       - name: Check feature powerset on CUDA
@@ -174,6 +175,7 @@ jobs:
       - name: Check feature powerset on the CPU
         run: |
           cargo hack clippy --feature-powerset --optional-deps \
+            --skip device \
             --keep-going \
             -- -D warnings
       

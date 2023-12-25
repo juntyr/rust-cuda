@@ -19,8 +19,8 @@ extern crate alloc;
 fn main() {}
 
 #[repr(C)]
-#[derive(rc::const_type_layout::TypeLayout)]
-#[layout(crate = "rc::const_type_layout")]
+#[derive(rc::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::deps::const_type_layout")]
 pub struct Dummy(i32);
 
 #[derive(rc::common::LendRustToCuda)]
@@ -36,13 +36,13 @@ pub struct Wrapper<T> {
 pub struct Empty([u8; 0]);
 
 #[repr(C)]
-#[derive(rc::const_type_layout::TypeLayout)]
-#[layout(crate = "rc::const_type_layout")]
+#[derive(rc::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::deps::const_type_layout")]
 pub struct Tuple(u32, i32);
 
 #[repr(C)]
-#[derive(rc::const_type_layout::TypeLayout)]
-#[layout(crate = "rc::const_type_layout")]
+#[derive(rc::deps::const_type_layout::TypeLayout)]
+#[layout(crate = "rc::deps::const_type_layout")]
 pub struct Triple(i32, i32, i32);
 
 #[rc::common::kernel(pub use link! for impl)]
@@ -94,8 +94,6 @@ pub fn kernel<
 
 #[cfg(not(target_os = "cuda"))]
 mod host {
-    // use super::{link, kernel};
-
     // Link several instances of the generic CUDA kernel
     struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
     crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
