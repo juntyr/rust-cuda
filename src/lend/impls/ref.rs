@@ -7,7 +7,8 @@ use rustacuda::{error::CudaResult, memory::DeviceBox};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda},
-    safety::SafeDeviceCopy,
+    safety::PortableBitSemantics,
+    utils::ffi::DeviceConstPointer,
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
@@ -24,20 +25,14 @@ use crate::{
 #[repr(transparent)]
 #[derive(TypeLayout)]
 #[allow(clippy::module_name_repetitions)]
-pub struct RefCudaRepresentation<'a, T: 'a + SafeDeviceCopy + TypeGraphLayout> {
-    data: *const T,
+pub struct RefCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {
+    data: DeviceConstPointer<T>,
     _marker: PhantomData<&'a T>,
 }
 
-// Safety: This repr(C) struct only contains a device-owned pointer
-unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
-    for RefCudaRepresentation<'a, T>
-{
-}
-
-unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a T {
+unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a T {
     #[cfg(all(feature = "host", not(doc)))]
-    type CudaAllocation = crate::host::CudaDropWrapper<DeviceBox<SafeDeviceCopyWrapper<T>>>;
+    type CudaAllocation = CudaDropWrapper<DeviceBox<SafeDeviceCopyWrapper<T>>>;
     #[cfg(any(not(feature = "host"), doc))]
     type CudaAllocation = crate::alloc::SomeCudaAlloc;
     type CudaRepresentation = RefCudaRepresentation<'a, T>;
@@ -56,7 +51,7 @@ unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a T {
 
         Ok((
             DeviceAccessible::from(RefCudaRepresentation {
-                data: device_box.as_device_ptr().as_raw().cast(),
+                data: DeviceConstPointer(device_box.as_device_ptr().as_raw().cast()),
                 _marker: PhantomData::<&'a T>,
             }),
             CombinedCudaAlloc::new(device_box, alloc),
@@ -73,11 +68,13 @@ unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a T {
     }
 }
 
-unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for RefCudaRepresentation<'a, T> {
+unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> CudaAsRust
+    for RefCudaRepresentation<'a, T>
+{
     type RustRepresentation = &'a T;
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        &*this.data
+        &*this.data.0
     }
 }

@@ -1,7 +1,6 @@
 use const_type_layout::TypeGraphLayout;
 #[cfg(feature = "host")]
 use rustacuda::error::CudaError;
-use rustacuda_core::DeviceCopy;
 
 #[cfg(feature = "derive")]
 #[allow(clippy::module_name_repetitions)]
@@ -17,10 +16,7 @@ use crate::{
     host::{HostAndDeviceConstRef, HostAndDeviceOwned},
 };
 #[cfg(any(feature = "host", feature = "device"))]
-use crate::{
-    safety::{NoSafeAliasing, SafeDeviceCopy},
-    utils::ffi::DeviceAccessible,
-};
+use crate::{safety::PortableBitSemantics, utils::ffi::DeviceAccessible};
 
 mod impls;
 
@@ -120,7 +116,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
 /// # Safety
 ///
 /// This is an internal trait and should NEVER be implemented manually
-pub unsafe trait CudaAsRust: DeviceCopy + TypeGraphLayout {
+pub unsafe trait CudaAsRust: PortableBitSemantics + TypeGraphLayout {
     type RustRepresentation: RustToCuda<CudaRepresentation = Self>;
 
     #[doc(hidden)]
@@ -147,7 +143,7 @@ pub trait RustToCudaAsyncProxy<T>: RustToCudaAsync {
 
 #[cfg(feature = "host")]
 #[allow(clippy::module_name_repetitions)]
-pub trait LendToCuda: RustToCuda + NoSafeAliasing {
+pub trait LendToCuda: RustToCuda {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
     ///   [`DeviceConstRef`] inside the closure
@@ -167,7 +163,7 @@ pub trait LendToCuda: RustToCuda + NoSafeAliasing {
         inner: F,
     ) -> Result<O, E>;
 
-    /// Moves `self` to CUDA iff `self` is [`SafeDeviceCopy`]
+    /// Moves `self` to CUDA iff `self` has [`PortableBitSemantics`]
     ///
     /// # Errors
     ///
@@ -183,11 +179,11 @@ pub trait LendToCuda: RustToCuda + NoSafeAliasing {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: SafeDeviceCopy, CudaAllocation: EmptyCudaAlloc>;
+        Self: RustToCuda<CudaRepresentation: PortableBitSemantics, CudaAllocation: EmptyCudaAlloc>;
 }
 
 #[cfg(feature = "host")]
-impl<T: RustToCuda + NoSafeAliasing> LendToCuda for T {
+impl<T: RustToCuda> LendToCuda for T {
     fn lend_to_cuda<
         O,
         E: From<CudaError>,
@@ -219,7 +215,7 @@ impl<T: RustToCuda + NoSafeAliasing> LendToCuda for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: SafeDeviceCopy, CudaAllocation: EmptyCudaAlloc>,
+        Self: RustToCuda<CudaRepresentation: PortableBitSemantics, CudaAllocation: EmptyCudaAlloc>,
     {
         let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
@@ -232,7 +228,7 @@ impl<T: RustToCuda + NoSafeAliasing> LendToCuda for T {
 }
 
 #[cfg(feature = "device")]
-pub trait BorrowFromRust: RustToCuda + NoSafeAliasing {
+pub trait BorrowFromRust: RustToCuda {
     /// # Safety
     ///
     /// This function is only safe to call iff `cuda_repr` is the
@@ -254,11 +250,11 @@ pub trait BorrowFromRust: RustToCuda + NoSafeAliasing {
     ) -> O
     where
         Self: Sized,
-        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy;
+        <Self as RustToCuda>::CudaRepresentation: PortableBitSemantics;
 }
 
 #[cfg(feature = "device")]
-impl<T: RustToCuda + NoSafeAliasing> BorrowFromRust for T {
+impl<T: RustToCuda> BorrowFromRust for T {
     #[inline]
     unsafe fn with_borrow_from_rust<O, F: FnOnce(&Self) -> O>(
         cuda_repr: DeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
@@ -278,7 +274,7 @@ impl<T: RustToCuda + NoSafeAliasing> BorrowFromRust for T {
     ) -> O
     where
         Self: Sized,
-        <Self as RustToCuda>::CudaRepresentation: SafeDeviceCopy,
+        <Self as RustToCuda>::CudaRepresentation: PortableBitSemantics,
     {
         inner(CudaAsRust::as_rust(cuda_repr.as_mut()))
     }

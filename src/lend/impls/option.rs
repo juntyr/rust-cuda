@@ -7,7 +7,7 @@ use rustacuda::error::CudaResult;
 
 use crate::{
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync, RustToCudaAsyncProxy, RustToCudaProxy},
-    safety::SafeDeviceCopy,
+    safety::PortableBitSemantics,
     utils::{device_copy::SafeDeviceCopyWrapper, ffi::DeviceAccessible},
 };
 
@@ -22,10 +22,6 @@ pub struct OptionCudaRepresentation<T: CudaAsRust> {
     maybe: MaybeUninit<DeviceAccessible<T>>,
     present: bool,
 }
-
-// Safety: Since the CUDA representation of T is DeviceCopy,
-//         the full enum is also DeviceCopy
-unsafe impl<T: CudaAsRust> rustacuda_core::DeviceCopy for OptionCudaRepresentation<T> {}
 
 unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     type CudaAllocation = Option<<T as RustToCuda>::CudaAllocation>;
@@ -149,7 +145,7 @@ unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaProxy<Option<T>>
+impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaProxy<Option<T>>
     for Option<SafeDeviceCopyWrapper<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
@@ -167,7 +163,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaProxy<Option<T>>
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
+impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
     for Option<SafeDeviceCopyWrapper<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {

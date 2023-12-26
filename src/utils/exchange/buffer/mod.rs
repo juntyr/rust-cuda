@@ -9,7 +9,7 @@ use const_type_layout::TypeLayout;
 #[cfg(any(feature = "host", feature = "device"))]
 use const_type_layout::TypeGraphLayout;
 
-use crate::safety::SafeDeviceCopy;
+use crate::safety::PortableBitSemantics;
 
 #[cfg(any(feature = "host", feature = "device"))]
 use crate::{
@@ -35,8 +35,11 @@ mod host;
 
 #[cfg(any(feature = "host", feature = "device"))]
 #[allow(clippy::module_name_repetitions)]
-pub struct CudaExchangeBuffer<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
-{
+pub struct CudaExchangeBuffer<
+    T: PortableBitSemantics + TypeGraphLayout,
+    const M2D: bool,
+    const M2H: bool,
+> {
     #[cfg(feature = "host")]
     inner: host::CudaExchangeBufferHost<T, M2D, M2H>,
     #[cfg(all(feature = "device", not(feature = "host")))]
@@ -44,7 +47,7 @@ pub struct CudaExchangeBuffer<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bo
 }
 
 #[cfg(feature = "host")]
-impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: Clone + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBuffer<T, M2D, M2H>
 {
     /// # Errors
@@ -58,7 +61,7 @@ impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bo
 }
 
 #[cfg(feature = "host")]
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBuffer<T, M2D, M2H>
 {
     /// # Errors
@@ -72,7 +75,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
     for CudaExchangeBuffer<T, M2D, M2H>
 {
     type Target = [CudaExchangeItem<T, M2D, M2H>];
@@ -83,7 +86,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Dere
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> DerefMut
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> DerefMut
     for CudaExchangeBuffer<T, M2D, M2H>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -92,7 +95,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Dere
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
     for CudaExchangeBuffer<T, M2D, M2H>
 {
     type CudaAllocation = NoCudaAlloc;
@@ -121,8 +124,8 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCudaAsync
-    for CudaExchangeBuffer<T, M2D, M2H>
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    RustToCudaAsync for CudaExchangeBuffer<T, M2D, M2H>
 {
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
@@ -150,16 +153,13 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
 
 #[repr(transparent)]
 #[derive(Clone, Copy, TypeLayout)]
-pub struct CudaExchangeItem<T: SafeDeviceCopy, const M2D: bool, const M2H: bool>(T);
+pub struct CudaExchangeItem<
+    T: PortableBitSemantics + TypeGraphLayout,
+    const M2D: bool,
+    const M2H: bool,
+>(T);
 
-// Safety: Transparent newtype wrapper around [`SafeDeviceCopy`]
-//          is [`DeviceCopy`]
-unsafe impl<T: SafeDeviceCopy, const M2D: bool, const M2H: bool> rustacuda_core::DeviceCopy
-    for CudaExchangeItem<T, M2D, M2H>
-{
-}
-
-impl<T: SafeDeviceCopy, const M2D: bool> CudaExchangeItem<T, M2D, true> {
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool> CudaExchangeItem<T, M2D, true> {
     #[cfg(feature = "host")]
     pub const fn read(&self) -> &T {
         &self.0
@@ -171,7 +171,7 @@ impl<T: SafeDeviceCopy, const M2D: bool> CudaExchangeItem<T, M2D, true> {
     }
 }
 
-impl<T: SafeDeviceCopy, const M2H: bool> CudaExchangeItem<T, true, M2H> {
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2H: bool> CudaExchangeItem<T, true, M2H> {
     #[cfg(feature = "device")]
     pub const fn read(&self) -> &T {
         &self.0
@@ -183,13 +183,13 @@ impl<T: SafeDeviceCopy, const M2H: bool> CudaExchangeItem<T, true, M2H> {
     }
 }
 
-impl<T: SafeDeviceCopy> AsMut<T> for CudaExchangeItem<T, true, true> {
+impl<T: PortableBitSemantics + TypeGraphLayout> AsMut<T> for CudaExchangeItem<T, true, true> {
     fn as_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
 
-impl<T: SafeDeviceCopy> CudaExchangeItem<T, false, true> {
+impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true> {
     #[cfg(feature = "host")]
     pub const fn as_scratch(&self) -> &T {
         &self.0
@@ -201,7 +201,7 @@ impl<T: SafeDeviceCopy> CudaExchangeItem<T, false, true> {
     }
 }
 
-impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
+impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false> {
     #[cfg(feature = "device")]
     pub const fn as_scratch(&self) -> &T {
         &self.0
@@ -213,7 +213,7 @@ impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
     }
 }
 
-impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
+impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false> {
     #[cfg(feature = "host")]
     pub const fn as_uninit(&self) -> &MaybeUninit<T> {
         // Safety:
@@ -231,7 +231,7 @@ impl<T: SafeDeviceCopy> CudaExchangeItem<T, true, false> {
     }
 }
 
-impl<T: SafeDeviceCopy> CudaExchangeItem<T, false, true> {
+impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true> {
     #[cfg(feature = "device")]
     pub const fn as_uninit(&self) -> &MaybeUninit<T> {
         // Safety:

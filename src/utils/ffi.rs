@@ -7,20 +7,16 @@ use core::{
 #[cfg(feature = "host")]
 use std::{fmt, mem::MaybeUninit, ptr::copy_nonoverlapping};
 
-#[cfg(feature = "host")]
-use const_type_layout::TypeGraphLayout;
 use const_type_layout::TypeLayout;
-use rustacuda_core::DeviceCopy;
 
+use crate::safety::PortableBitSemantics;
 #[cfg(feature = "host")]
-use crate::{lend::CudaAsRust, safety::SafeDeviceCopy, utils::device_copy::SafeDeviceCopyWrapper};
+use crate::{lend::CudaAsRust, utils::device_copy::SafeDeviceCopyWrapper};
 
-#[repr(transparent)]
 #[cfg_attr(any(feature = "device", doc), derive(Debug))]
 #[derive(TypeLayout)]
-pub struct DeviceAccessible<T: ?Sized + DeviceCopy>(T);
-
-unsafe impl<T: ?Sized + DeviceCopy> DeviceCopy for DeviceAccessible<T> {}
+#[repr(transparent)]
+pub struct DeviceAccessible<T: ?Sized + PortableBitSemantics>(T);
 
 #[cfg(feature = "host")]
 impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
@@ -29,8 +25,9 @@ impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
     }
 }
 
+// TODO: should there be some copy bound here?
 #[cfg(feature = "host")]
-impl<T: SafeDeviceCopy + TypeGraphLayout> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
+impl<T: PortableBitSemantics> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
     fn from(value: &T) -> Self {
         let value = unsafe {
             let mut uninit = MaybeUninit::uninit();
@@ -43,7 +40,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> From<&T> for DeviceAccessible<SafeDevi
 }
 
 #[cfg(all(feature = "host", not(doc)))]
-impl<T: ?Sized + DeviceCopy + fmt::Debug> fmt::Debug for DeviceAccessible<T> {
+impl<T: ?Sized + PortableBitSemantics + fmt::Debug> fmt::Debug for DeviceAccessible<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(DeviceAccessible))
             .finish_non_exhaustive()
@@ -51,7 +48,7 @@ impl<T: ?Sized + DeviceCopy + fmt::Debug> fmt::Debug for DeviceAccessible<T> {
 }
 
 #[cfg(feature = "device")]
-impl<T: ?Sized + DeviceCopy> Deref for DeviceAccessible<T> {
+impl<T: ?Sized + PortableBitSemantics> Deref for DeviceAccessible<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -60,74 +57,155 @@ impl<T: ?Sized + DeviceCopy> Deref for DeviceAccessible<T> {
 }
 
 #[cfg(feature = "device")]
-impl<T: ?Sized + DeviceCopy> DerefMut for DeviceAccessible<T> {
+impl<T: ?Sized + PortableBitSemantics> DerefMut for DeviceAccessible<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
+#[derive(TypeLayout)]
 #[repr(transparent)]
-#[derive(Clone, Copy, TypeLayout)]
-pub struct DeviceConstRef<'r, T: DeviceCopy + 'r> {
+pub struct DeviceConstRef<'r, T: PortableBitSemantics + 'r> {
     #[cfg_attr(feature = "host", allow(dead_code))]
-    pub(crate) pointer: *const T,
+    pub(crate) pointer: DeviceConstPointer<T>,
     pub(crate) reference: PhantomData<&'r T>,
 }
 
-unsafe impl<'r, T: DeviceCopy> DeviceCopy for DeviceConstRef<'r, T> {}
+impl<'r, T: PortableBitSemantics> Copy for DeviceConstRef<'r, T> {}
 
-#[cfg(feature = "device")]
-impl<'r, T: DeviceCopy> AsRef<T> for DeviceConstRef<'r, T> {
-    fn as_ref(&self) -> &T {
-        unsafe { &*self.pointer }
+impl<'r, T: PortableBitSemantics> Clone for DeviceConstRef<'r, T> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 
-#[repr(transparent)]
+#[cfg(feature = "device")]
+impl<'r, T: PortableBitSemantics> AsRef<T> for DeviceConstRef<'r, T> {
+    fn as_ref(&self) -> &T {
+        unsafe { &*self.pointer.0 }
+    }
+}
+
 #[derive(TypeLayout)]
-pub struct DeviceMutRef<'r, T: DeviceCopy + 'r> {
+#[repr(transparent)]
+pub struct DeviceMutRef<'r, T: PortableBitSemantics + 'r> {
     #[cfg_attr(feature = "host", allow(dead_code))]
-    pub(crate) pointer: *mut T,
+    pub(crate) pointer: DeviceMutPointer<T>,
     pub(crate) reference: PhantomData<&'r mut T>,
 }
 
-unsafe impl<'r, T: DeviceCopy> DeviceCopy for DeviceMutRef<'r, T> {}
-
 #[cfg(feature = "device")]
-impl<'r, T: DeviceCopy> AsRef<T> for DeviceMutRef<'r, T> {
+impl<'r, T: PortableBitSemantics> AsRef<T> for DeviceMutRef<'r, T> {
     fn as_ref(&self) -> &T {
-        unsafe { &*self.pointer }
+        unsafe { &*self.pointer.0 }
     }
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: DeviceCopy> AsMut<T> for DeviceMutRef<'r, T> {
+impl<'r, T: PortableBitSemantics> AsMut<T> for DeviceMutRef<'r, T> {
     fn as_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.pointer }
+        unsafe { &mut *self.pointer.0 }
     }
 }
 
-#[repr(transparent)]
 #[derive(TypeLayout)]
-pub struct DeviceOwnedRef<'r, T: DeviceCopy> {
+#[repr(transparent)]
+pub struct DeviceOwnedRef<'r, T: PortableBitSemantics> {
     #[cfg_attr(feature = "host", allow(dead_code))]
-    pub(crate) pointer: *mut T,
+    pub(crate) pointer: DeviceOwnedPointer<T>,
     pub(crate) reference: PhantomData<&'r mut ()>,
     pub(crate) marker: PhantomData<T>,
 }
 
-unsafe impl<'r, T: DeviceCopy> DeviceCopy for DeviceOwnedRef<'r, T> {}
-
 #[cfg(feature = "device")]
-impl<'r, T: DeviceCopy> AsRef<T> for DeviceOwnedRef<'r, T> {
+impl<'r, T: PortableBitSemantics> AsRef<T> for DeviceOwnedRef<'r, T> {
     fn as_ref(&self) -> &T {
-        unsafe { &*self.pointer }
+        unsafe { &*self.pointer.0 }
     }
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: DeviceCopy> AsMut<T> for DeviceOwnedRef<'r, T> {
+impl<'r, T: PortableBitSemantics> AsMut<T> for DeviceOwnedRef<'r, T> {
     fn as_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.pointer }
+        unsafe { &mut *self.pointer.0 }
+    }
+}
+
+#[derive(TypeLayout)]
+#[repr(transparent)]
+pub struct DeviceConstPointer<T: ?Sized>(pub(crate) *const T);
+
+impl<T: ?Sized> Copy for DeviceConstPointer<T> {}
+
+impl<T: ?Sized> Clone for DeviceConstPointer<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> DeviceConstPointer<[T]> {
+    #[must_use]
+    pub fn into_raw_parts(self) -> (DeviceConstPointer<T>, usize) {
+        let (data, len) = self.0.to_raw_parts();
+        (DeviceConstPointer(data.cast()), len)
+    }
+}
+
+#[derive(TypeLayout)]
+#[repr(transparent)]
+pub struct DeviceMutPointer<T: ?Sized>(pub(crate) *mut T);
+
+impl<T: ?Sized> Copy for DeviceMutPointer<T> {}
+
+impl<T: ?Sized> Clone for DeviceMutPointer<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: ?Sized> DeviceMutPointer<T> {
+    #[must_use]
+    pub const fn as_const(self) -> DeviceConstPointer<T> {
+        DeviceConstPointer(self.0.cast_const())
+    }
+}
+
+impl<T> DeviceMutPointer<[T]> {
+    #[must_use]
+    pub fn into_raw_parts(self) -> (DeviceMutPointer<T>, usize) {
+        let (data, len) = self.0.to_raw_parts();
+        (DeviceMutPointer(data.cast()), len)
+    }
+}
+
+#[derive(TypeLayout)]
+#[repr(transparent)]
+pub struct DeviceOwnedPointer<T: ?Sized>(pub(crate) *mut T);
+
+impl<T: ?Sized> Copy for DeviceOwnedPointer<T> {}
+
+impl<T: ?Sized> Clone for DeviceOwnedPointer<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: ?Sized> DeviceOwnedPointer<T> {
+    #[must_use]
+    pub const fn as_const(self) -> DeviceConstPointer<T> {
+        DeviceConstPointer(self.0.cast_const())
+    }
+
+    #[must_use]
+    pub const fn as_mut(self) -> DeviceMutPointer<T> {
+        DeviceMutPointer(self.0)
+    }
+}
+
+impl<T> DeviceOwnedPointer<[T]> {
+    #[must_use]
+    pub fn into_raw_parts(self) -> (DeviceOwnedPointer<T>, usize) {
+        let (data, len) = self.0.to_raw_parts();
+        (DeviceOwnedPointer(data.cast()), len)
     }
 }

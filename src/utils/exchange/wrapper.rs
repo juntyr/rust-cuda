@@ -9,7 +9,7 @@ use std::{
 use rustacuda::{
     error::{CudaError, CudaResult},
     event::{Event, EventFlags, EventStatus},
-    memory::DeviceBox,
+    memory::{AsyncCopyDestination, CopyDestination, DeviceBox, LockedBox},
     stream::{Stream, StreamWaitEventFlags},
 };
 
@@ -17,25 +17,33 @@ use crate::{
     alloc::{CombinedCudaAlloc, EmptyCudaAlloc, NoCudaAlloc},
     host::{
         CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceConstRefAsync, HostAndDeviceMutRef,
-        HostAndDeviceMutRefAsync, HostDeviceBox, HostLockedBox,
+        HostAndDeviceMutRefAsync,
     },
     lend::{RustToCuda, RustToCudaAsync},
-    utils::ffi::DeviceAccessible,
+    utils::{device_copy::SafeDeviceCopyWrapper, ffi::DeviceAccessible},
 };
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWrapperOnHost<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: T,
-    device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    device_box: CudaDropWrapper<
+        DeviceBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
+    locked_cuda_repr: CudaDropWrapper<
+        LockedBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
     move_event: CudaDropWrapper<Event>,
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWrapperOnHostAsync<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: T,
-    device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    device_box: CudaDropWrapper<
+        DeviceBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
+    locked_cuda_repr: CudaDropWrapper<
+        LockedBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
     move_event: CudaDropWrapper<Event>,
     stream: PhantomData<&'stream Stream>,
     waker: Arc<Mutex<Option<Waker>>>,
@@ -44,8 +52,12 @@ pub struct ExchangeWrapperOnHostAsync<'stream, T: RustToCuda<CudaAllocation: Emp
 #[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWrapperOnDevice<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: T,
-    device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    device_box: CudaDropWrapper<
+        DeviceBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
+    locked_cuda_repr: CudaDropWrapper<
+        LockedBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
     null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NoCudaAlloc>,
     move_event: CudaDropWrapper<Event>,
 }
@@ -53,8 +65,12 @@ pub struct ExchangeWrapperOnDevice<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>
 #[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWrapperOnDeviceAsync<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: T,
-    device_box: HostDeviceBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    locked_cuda_repr: HostLockedBox<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    device_box: CudaDropWrapper<
+        DeviceBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
+    locked_cuda_repr: CudaDropWrapper<
+        LockedBox<SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>>,
+    >,
     null_alloc: CombinedCudaAlloc<<T as RustToCuda>::CudaAllocation, NoCudaAlloc>,
     move_event: CudaDropWrapper<Event>,
     stream: &'stream Stream,
@@ -67,12 +83,20 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
     /// CUDA
     pub fn new(value: T) -> CudaResult<Self> {
         // Safety: The uninitialised memory is never exposed
-        //         To access the device memory, [`Self::move_to_device`] has to be
-        // called first,           which initialised the memory.
-        let device_box = unsafe { DeviceBox::uninitialized() }?.into();
+        //         To access the device memory, [`Self::move_to_device`] has to
+        //          be called first, which initialised the memory.
+        let device_box = CudaDropWrapper::from(unsafe { DeviceBox::uninitialized() }?);
 
         let (cuda_repr, _null_alloc) = unsafe { value.borrow(NoCudaAlloc) }?;
-        let locked_cuda_repr = HostLockedBox::new(cuda_repr)?;
+        let locked_cuda_repr = unsafe {
+            let mut uninit = CudaDropWrapper::from(LockedBox::<
+                SafeDeviceCopyWrapper<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+            >::uninitialized()?);
+            uninit
+                .as_mut_ptr()
+                .write(SafeDeviceCopyWrapper::from(cuda_repr));
+            uninit
+        };
 
         let move_event = Event::new(EventFlags::DISABLE_TIMING)?.into();
 
@@ -98,9 +122,9 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
     /// CUDA
     pub fn move_to_device(mut self) -> CudaResult<ExchangeWrapperOnDevice<T>> {
         let (cuda_repr, null_alloc) = unsafe { self.value.borrow(NoCudaAlloc) }?;
-        *self.locked_cuda_repr = cuda_repr;
+        **self.locked_cuda_repr = SafeDeviceCopyWrapper::from(cuda_repr);
 
-        self.device_box.copy_from(&self.locked_cuda_repr)?;
+        self.device_box.copy_from(&**self.locked_cuda_repr)?;
 
         Ok(ExchangeWrapperOnDevice {
             value: self.value,
@@ -128,14 +152,14 @@ impl<T: RustToCudaAsync<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T
         stream: &Stream,
     ) -> CudaResult<ExchangeWrapperOnDeviceAsync<'_, T>> {
         let (cuda_repr, null_alloc) = unsafe { self.value.borrow_async(NoCudaAlloc, stream) }?;
-        *self.locked_cuda_repr = cuda_repr;
+        **self.locked_cuda_repr = SafeDeviceCopyWrapper::from(cuda_repr);
 
         // Safety: The device value is not safely exposed until either
         // - the passed-in [`Stream`] is synchronised
         // - the kernel is launched on the passed-in [`Stream`]
         unsafe {
             self.device_box
-                .async_copy_from(&self.locked_cuda_repr, stream)
+                .async_copy_from(&*self.locked_cuda_repr, stream)
         }?;
         self.move_event.record(stream)?;
 
@@ -316,7 +340,11 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
     ) -> HostAndDeviceConstRefAsync<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
         // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
         unsafe {
-            HostAndDeviceConstRefAsync::new(&self.device_box, &self.locked_cuda_repr, self.stream)
+            HostAndDeviceConstRefAsync::new(
+                &*self.device_box,
+                (**self.locked_cuda_repr).into_ref(),
+                self.stream,
+            )
         }
     }
 
@@ -327,7 +355,7 @@ impl<'stream, T: RustToCuda<CudaAllocation: EmptyCudaAlloc>>
         unsafe {
             HostAndDeviceMutRefAsync::new(
                 &mut self.device_box,
-                &mut self.locked_cuda_repr,
+                (**self.locked_cuda_repr).into_mut(),
                 self.stream,
             )
         }
@@ -470,14 +498,18 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
         &self,
     ) -> HostAndDeviceConstRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
         // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
-        unsafe { HostAndDeviceConstRef::new(&self.device_box, &self.locked_cuda_repr) }
+        unsafe {
+            HostAndDeviceConstRef::new(&self.device_box, (**self.locked_cuda_repr).into_ref())
+        }
     }
 
     pub fn as_mut(
         &mut self,
     ) -> HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
         // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
-        unsafe { HostAndDeviceMutRef::new(&mut self.device_box, &mut self.locked_cuda_repr) }
+        unsafe {
+            HostAndDeviceMutRef::new(&mut self.device_box, (**self.locked_cuda_repr).into_mut())
+        }
     }
 }
 

@@ -7,7 +7,8 @@ use rustacuda::{error::CudaResult, memory::DeviceBuffer};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda},
-    safety::SafeDeviceCopy,
+    safety::PortableBitSemantics,
+    utils::ffi::DeviceMutPointer,
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
@@ -22,21 +23,15 @@ use crate::{
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, TypeLayout)]
+#[derive(TypeLayout)]
 #[repr(C)]
-pub struct SliceRefMutCudaRepresentation<'a, T: 'a + SafeDeviceCopy + TypeGraphLayout> {
-    data: *mut T,
+pub struct SliceRefMutCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {
+    data: DeviceMutPointer<T>,
     len: usize,
     _marker: PhantomData<&'a mut [T]>,
 }
 
-// Safety: This repr(C) struct only contains a device-owned pointer and a usize
-unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
-    for SliceRefMutCudaRepresentation<'a, T>
-{
-}
-
-unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a mut [T] {
+unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mut [T] {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocation = crate::host::CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
     #[cfg(any(not(feature = "host"), doc))]
@@ -58,7 +53,7 @@ unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a mut [T] 
 
         Ok((
             DeviceAccessible::from(SliceRefMutCudaRepresentation {
-                data: device_buffer.as_mut_ptr().cast(),
+                data: DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
                 len: device_buffer.len(),
                 _marker: PhantomData::<&'a mut [T]>,
             }),
@@ -83,13 +78,13 @@ unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for &'a mut [T] 
     }
 }
 
-unsafe impl<'a, T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust
+unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> CudaAsRust
     for SliceRefMutCudaRepresentation<'a, T>
 {
     type RustRepresentation = &'a mut [T];
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        core::slice::from_raw_parts_mut(this.data, this.len)
+        core::slice::from_raw_parts_mut(this.data.0, this.len)
     }
 }

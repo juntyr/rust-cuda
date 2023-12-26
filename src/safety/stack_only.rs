@@ -64,23 +64,23 @@ macro_rules! stack_only_docs {
 #[cfg(not(doc))]
 stack_only_docs! {
     #[allow(clippy::module_name_repetitions)]
-    pub trait StackOnly: sealed::Sealed {}
+    pub trait StackOnly: sealed::StackOnly {}
 }
 #[cfg(doc)]
 stack_only_docs! {
-    pub use sealed::Sealed as StackOnly;
+    pub use sealed::StackOnly;
 }
 
 #[cfg(not(doc))]
-impl<T: sealed::Sealed> StackOnly for T {}
+impl<T: sealed::StackOnly> StackOnly for T {}
 
 mod sealed {
-    pub auto trait Sealed {}
+    pub auto trait StackOnly {}
 
-    impl<T> !Sealed for &T {}
-    impl<T> !Sealed for &mut T {}
-    impl<T> !Sealed for *const T {}
-    impl<T> !Sealed for *mut T {}
+    impl<T: ?Sized> !StackOnly for &T {}
+    impl<T: ?Sized> !StackOnly for &mut T {}
+    impl<T: ?Sized> !StackOnly for *const T {}
+    impl<T: ?Sized> !StackOnly for *mut T {}
 
-    impl<T> Sealed for core::marker::PhantomData<T> {}
+    impl<T> StackOnly for core::marker::PhantomData<T> {}
 }

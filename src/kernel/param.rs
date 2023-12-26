@@ -14,6 +14,7 @@ use crate::{
     alloc::EmptyCudaAlloc,
     kernel::{sealed, CudaKernelParameter},
     lend::RustToCuda,
+    safety::PortableBitSemantics,
     utils::ffi::{DeviceAccessible, DeviceConstRef, DeviceOwnedRef},
 };
 
@@ -36,20 +37,13 @@ impl<T> DerefMut for PtxJit<T> {
     }
 }
 
-pub struct PerThreadShallowCopy<
-    T: crate::safety::SafeDeviceCopy
-        + crate::safety::NoSafeAliasing
-        + const_type_layout::TypeGraphLayout,
-> {
+pub struct PerThreadShallowCopy<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics> {
     never: !,
     _marker: PhantomData<T>,
 }
 
-impl<
-        T: crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > Deref for PerThreadShallowCopy<T>
+impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics> Deref
+    for PerThreadShallowCopy<T>
 {
     type Target = T;
 
@@ -58,22 +52,16 @@ impl<
     }
 }
 
-impl<
-        T: crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > DerefMut for PerThreadShallowCopy<T>
+impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics> DerefMut
+    for PerThreadShallowCopy<T>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.never
     }
 }
 
-impl<
-        T: crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > CudaKernelParameter for PerThreadShallowCopy<T>
+impl<T: Copy + Send + crate::safety::StackOnly + crate::safety::PortableBitSemantics>
+    CudaKernelParameter for PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> = crate::utils::device_copy::SafeDeviceCopyWrapper<T>;
@@ -124,32 +112,19 @@ impl<
         inner(param)
     }
 }
-impl<
-        T: crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > sealed::Sealed for PerThreadShallowCopy<T>
+impl<T: Copy + Send + crate::safety::StackOnly + crate::safety::PortableBitSemantics> sealed::Sealed
+    for PerThreadShallowCopy<T>
 {
 }
 
-impl<
-        'a,
-        T: 'static
-            + crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > CudaKernelParameter for &'a PerThreadShallowCopy<T>
+impl<'a, T: 'static + Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics>
+    CudaKernelParameter for &'a PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<
-        'stream,
-        'b,
-        crate::utils::device_copy::SafeDeviceCopyWrapper<T>,
-    >;
+    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<'stream, 'b, T>;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
-    type FfiType<'stream, 'b> =
-        DeviceConstRef<'b, crate::utils::device_copy::SafeDeviceCopyWrapper<T>>;
+    type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
     #[cfg(feature = "host")]
     type SyncHostType = &'a T;
 
@@ -159,19 +134,7 @@ impl<
         _stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        let host_box = crate::host::HostDeviceBox::from(rustacuda::memory::DeviceBox::new(
-            crate::utils::device_copy::SafeDeviceCopyWrapper::from_ref(param),
-        )?);
-
-        // Safety: `host_box` contains exactly the device copy of `param`
-        let const_ref = unsafe {
-            crate::host::HostAndDeviceConstRef::new(
-                &host_box,
-                crate::utils::device_copy::SafeDeviceCopyWrapper::from_ref(param),
-            )
-        };
-
-        inner(const_ref.as_async())
+        crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| inner(const_ref.as_async()))
     }
 
     #[cfg(feature = "host")]
@@ -199,27 +162,18 @@ impl<
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        let param = param.as_ref().into_ref();
+        let param = param.as_ref();
 
         inner(param)
     }
 }
-impl<
-        'a,
-        T: crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > sealed::Sealed for &'a PerThreadShallowCopy<T>
+impl<'a, T: 'static + Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics>
+    sealed::Sealed for &'a PerThreadShallowCopy<T>
 {
 }
 
-impl<
-        'a,
-        T: 'static
-            + crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > CudaKernelParameter for &'a PtxJit<PerThreadShallowCopy<T>>
+impl<'a, T: 'static + Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics>
+    CudaKernelParameter for &'a PtxJit<PerThreadShallowCopy<T>>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> =
@@ -272,21 +226,21 @@ impl<
         )
     }
 }
-impl<
-        'a,
-        T: crate::safety::SafeDeviceCopy
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > sealed::Sealed for &'a PtxJit<PerThreadShallowCopy<T>>
+impl<'a, T: 'static + Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics>
+    sealed::Sealed for &'a PtxJit<PerThreadShallowCopy<T>>
 {
 }
 
-pub struct ShallowInteriorMutable<T: InteriorMutableSafeDeviceCopy> {
+pub struct ShallowInteriorMutable<
+    T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + InteriorMutableSync,
+> {
     never: !,
     _marker: PhantomData<T>,
 }
 
-impl<T: InteriorMutableSafeDeviceCopy> Deref for ShallowInteriorMutable<T> {
+impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + InteriorMutableSync> Deref
+    for ShallowInteriorMutable<T>
+{
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -294,19 +248,19 @@ impl<T: InteriorMutableSafeDeviceCopy> Deref for ShallowInteriorMutable<T> {
     }
 }
 
-impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
-    for &'a ShallowInteriorMutable<T>
+impl<
+        'a,
+        T: 'static
+            + crate::safety::StackOnly
+            + crate::safety::PortableBitSemantics
+            + InteriorMutableSync,
+    > CudaKernelParameter for &'a ShallowInteriorMutable<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<
-        'stream,
-        'b,
-        crate::utils::device_copy::SafeDeviceCopyWrapper<T>,
-    >;
+    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<'stream, 'b, T>;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
-    type FfiType<'stream, 'b> =
-        DeviceConstRef<'b, crate::utils::device_copy::SafeDeviceCopyWrapper<T>>;
+    type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
     #[cfg(feature = "host")]
     /// The kernel takes a mutable borrow of the interior mutable data to ensure
     /// the interior mutability is limited to just this kernel invocation.
@@ -318,25 +272,9 @@ impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
         _stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        let host_box = crate::host::HostDeviceBox::from(rustacuda::memory::DeviceBox::new(
-            crate::utils::device_copy::SafeDeviceCopyWrapper::from_ref(param),
-        )?);
-
-        // Safety: `host_box` contains exactly the device copy of `param`
-        let const_ref = unsafe {
-            crate::host::HostAndDeviceConstRef::new(
-                &host_box,
-                crate::utils::device_copy::SafeDeviceCopyWrapper::from_ref(param),
-            )
-        };
-
-        let result = inner(const_ref.as_async());
-
-        host_box.copy_to(crate::utils::device_copy::SafeDeviceCopyWrapper::from_mut(
-            param,
-        ))?;
-
-        result
+        crate::host::HostAndDeviceMutRef::with_new(param, |const_ref| {
+            inner(const_ref.as_ref().as_async())
+        })
     }
 
     #[cfg(feature = "host")]
@@ -364,24 +302,23 @@ impl<'a, T: 'static + InteriorMutableSafeDeviceCopy> CudaKernelParameter
         param: Self::FfiType<'static, 'static>,
         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
     ) -> O {
-        let param = param.as_ref().into_ref();
+        let param = param.as_ref();
 
         inner(param)
     }
 }
-impl<'a, T: InteriorMutableSafeDeviceCopy> sealed::Sealed for &'a ShallowInteriorMutable<T> {}
-
-pub trait InteriorMutableSafeDeviceCopy:
-    crate::safety::SafeDeviceCopy
-    + crate::safety::NoSafeAliasing
-    + const_type_layout::TypeGraphLayout
-    + sealed::Sealed
+impl<
+        'a,
+        T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + InteriorMutableSync,
+    > sealed::Sealed for &'a ShallowInteriorMutable<T>
 {
 }
 
+pub trait InteriorMutableSync: Sync + sealed::Sealed {}
+
 macro_rules! impl_atomic_interior_mutable {
     ($atomic:ident($interior:ty)) => {
-        impl InteriorMutableSafeDeviceCopy for core::sync::atomic::$atomic {}
+        impl InteriorMutableSync for core::sync::atomic::$atomic {}
         impl sealed::Sealed for core::sync::atomic::$atomic {}
     };
     ($($atomic:ident($interior:ty)),*) => {
@@ -395,27 +332,21 @@ impl_atomic_interior_mutable! {
     AtomicU8(u8), AtomicU16(u16), AtomicU32(u32), AtomicU64(u64), AtomicUsize(usize)
 }
 
-impl<
-        T: crate::safety::StackOnly
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > InteriorMutableSafeDeviceCopy for core::cell::SyncUnsafeCell<T>
+impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> InteriorMutableSync
+    for core::cell::SyncUnsafeCell<T>
 {
 }
-impl<
-        T: crate::safety::StackOnly
-            + crate::safety::NoSafeAliasing
-            + const_type_layout::TypeGraphLayout,
-    > sealed::Sealed for core::cell::SyncUnsafeCell<T>
+impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> sealed::Sealed
+    for core::cell::SyncUnsafeCell<T>
 {
 }
 
-pub struct SharedHeapPerThreadShallowCopy<T: RustToCuda + crate::safety::NoSafeAliasing> {
+pub struct SharedHeapPerThreadShallowCopy<T: RustToCuda> {
     never: !,
     _marker: PhantomData<T>,
 }
 
-impl<T: RustToCuda + crate::safety::NoSafeAliasing> Deref for SharedHeapPerThreadShallowCopy<T> {
+impl<T: RustToCuda> Deref for SharedHeapPerThreadShallowCopy<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -423,17 +354,11 @@ impl<T: RustToCuda + crate::safety::NoSafeAliasing> Deref for SharedHeapPerThrea
     }
 }
 
-impl<T: RustToCuda + crate::safety::NoSafeAliasing> DerefMut for SharedHeapPerThreadShallowCopy<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.never
-    }
-}
-
 impl<
         T: RustToCuda<
-                CudaRepresentation: 'static + crate::safety::SafeDeviceCopy,
-                CudaAllocation: EmptyCudaAlloc,
-            > + crate::safety::NoSafeAliasing,
+            CudaRepresentation: 'static + crate::safety::PortableBitSemantics,
+            CudaAllocation: EmptyCudaAlloc,
+        >,
     > CudaKernelParameter for SharedHeapPerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
@@ -488,16 +413,14 @@ impl<
 }
 impl<
         T: RustToCuda<
-                CudaRepresentation: crate::safety::SafeDeviceCopy,
-                CudaAllocation: EmptyCudaAlloc,
-            > + crate::safety::NoSafeAliasing,
+            CudaRepresentation: crate::safety::PortableBitSemantics,
+            CudaAllocation: EmptyCudaAlloc,
+        >,
     > sealed::Sealed for SharedHeapPerThreadShallowCopy<T>
 {
 }
 
-impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelParameter
-    for &'a SharedHeapPerThreadShallowCopy<T>
-{
+impl<'a, T: 'static + RustToCuda> CudaKernelParameter for &'a SharedHeapPerThreadShallowCopy<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<
         'stream,
@@ -548,16 +471,13 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust(param, inner) }
     }
 }
-impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
-    for &'a SharedHeapPerThreadShallowCopy<T>
-{
-}
+impl<'a, T: RustToCuda> sealed::Sealed for &'a SharedHeapPerThreadShallowCopy<T> {}
 
 impl<
         T: RustToCuda<
-                CudaRepresentation: 'static + crate::safety::SafeDeviceCopy,
-                CudaAllocation: EmptyCudaAlloc,
-            > + crate::safety::NoSafeAliasing,
+            CudaRepresentation: 'static + crate::safety::PortableBitSemantics,
+            CudaAllocation: EmptyCudaAlloc,
+        >,
     > CudaKernelParameter for PtxJit<SharedHeapPerThreadShallowCopy<T>>
 {
     #[cfg(feature = "host")]
@@ -616,14 +536,14 @@ impl<
 }
 impl<
         T: RustToCuda<
-                CudaRepresentation: crate::safety::SafeDeviceCopy,
-                CudaAllocation: EmptyCudaAlloc,
-            > + crate::safety::NoSafeAliasing,
+            CudaRepresentation: crate::safety::PortableBitSemantics,
+            CudaAllocation: EmptyCudaAlloc,
+        >,
     > sealed::Sealed for PtxJit<SharedHeapPerThreadShallowCopy<T>>
 {
 }
 
-impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelParameter
+impl<'a, T: 'static + RustToCuda> CudaKernelParameter
     for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>>
 {
     #[cfg(feature = "host")]
@@ -681,10 +601,7 @@ impl<'a, T: 'static + RustToCuda + crate::safety::NoSafeAliasing> CudaKernelPara
         )
     }
 }
-impl<'a, T: RustToCuda + crate::safety::NoSafeAliasing> sealed::Sealed
-    for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>>
-{
-}
+impl<'a, T: RustToCuda> sealed::Sealed for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>> {}
 
 #[cfg(feature = "host")]
 fn param_as_raw_bytes<T: ?Sized>(r: &T) -> NonNull<[u8]> {
@@ -703,34 +620,30 @@ fn emit_param_ptx_jit_marker<T: ?Sized, const INDEX: usize>(param: &T) {
 }
 
 mod private_shared {
+    use core::marker::PhantomData;
+
     use const_type_layout::{TypeGraphLayout, TypeLayout};
-    use rustacuda_core::DeviceCopy;
+
+    use crate::safety::PortableBitSemantics;
 
     #[doc(hidden)]
     #[derive(TypeLayout)]
     #[repr(C)]
-    pub struct ThreadBlockSharedFfi<T: 'static + TypeGraphLayout> {
-        pub(super) _marker: [T; 0],
+    pub struct ThreadBlockSharedFfi<T: 'static> {
+        pub(super) _dummy: [u8; 0],
+        pub(super) _marker: PhantomData<T>,
     }
 
-    // Safety: there is nothing to copy, this is just a zero-sized marker type
-    unsafe impl<T: 'static + TypeGraphLayout> DeviceCopy for ThreadBlockSharedFfi<T> {}
-
     #[doc(hidden)]
     #[derive(TypeLayout)]
     #[repr(C)]
-    pub struct ThreadBlockSharedSliceFfi<T: 'static + TypeGraphLayout> {
+    pub struct ThreadBlockSharedSliceFfi<T: 'static + PortableBitSemantics + TypeGraphLayout> {
         pub(super) len: usize,
         pub(super) _marker: [T; 0],
     }
-
-    // Safety: we only copy a usize, which implements `DeviceCopy`
-    unsafe impl<T: 'static + TypeGraphLayout> DeviceCopy for ThreadBlockSharedSliceFfi<T> {}
 }
 
-impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
-    for &'a mut crate::utils::shared::ThreadBlockShared<T>
-{
+impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::ThreadBlockShared<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockShared<T>;
     #[cfg(any(feature = "device", doc))]
@@ -765,7 +678,10 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
     fn async_to_ffi<'stream, 'b>(
         _param: Self::AsyncHostType<'stream, 'b>,
     ) -> Self::FfiType<'stream, 'b> {
-        private_shared::ThreadBlockSharedFfi { _marker: [] }
+        private_shared::ThreadBlockSharedFfi {
+            _dummy: [],
+            _marker: PhantomData::<T>,
+        }
     }
 
     #[cfg(feature = "device")]
@@ -780,12 +696,9 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
         inner(&mut param)
     }
 }
-impl<'a, T: 'static + TypeGraphLayout> sealed::Sealed
-    for &'a mut crate::utils::shared::ThreadBlockShared<T>
-{
-}
+impl<'a, T: 'static> sealed::Sealed for &'a mut crate::utils::shared::ThreadBlockShared<T> {}
 
-impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
+impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
     for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
     #[cfg(feature = "host")]
@@ -840,7 +753,7 @@ impl<'a, T: 'static + TypeGraphLayout> CudaKernelParameter
         }
     }
 }
-impl<'a, T: 'static + TypeGraphLayout> sealed::Sealed
+impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
     for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
 }

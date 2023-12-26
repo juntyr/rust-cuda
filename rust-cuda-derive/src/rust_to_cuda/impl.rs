@@ -12,7 +12,7 @@ pub fn cuda_struct_declaration(
     struct_fields_cuda: &syn::Fields,
     struct_semi_cuda: Option<syn::token::Semi>,
 ) -> TokenStream {
-    let (impl_generics, ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
+    let (_impl_generics, _ty_generics, where_clause) = struct_generics_cuda.split_for_impl();
 
     let struct_repr = if struct_attrs_cuda
         .iter()
@@ -41,10 +41,6 @@ pub fn cuda_struct_declaration(
         #(#struct_layout_attrs)*
         #[layout(crate = #const_type_layout_crate_path)]
         #struct_vis_cuda struct #struct_name_cuda #struct_generics_cuda #struct_fields_where_clause
-
-        // #[derive(DeviceCopy)] can interfer with type parameters
-        unsafe impl #impl_generics #crate_path::deps::rustacuda_core::DeviceCopy
-            for #struct_name_cuda #ty_generics #where_clause {}
     }
 }
 

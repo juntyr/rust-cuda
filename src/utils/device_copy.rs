@@ -5,7 +5,7 @@ use const_type_layout::{TypeGraphLayout, TypeLayout};
 use crate::{
     alloc::NoCudaAlloc,
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
-    safety::SafeDeviceCopy,
+    safety::PortableBitSemantics,
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
@@ -16,22 +16,17 @@ use crate::alloc::{CombinedCudaAlloc, CudaAlloc};
 
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
-pub struct SafeDeviceCopyWrapper<T>(T)
-where
-    T: SafeDeviceCopy + TypeGraphLayout;
+pub struct SafeDeviceCopyWrapper<T: PortableBitSemantics>(T);
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> rustacuda_core::DeviceCopy
-    for SafeDeviceCopyWrapper<T>
-{
-}
+unsafe impl<T: PortableBitSemantics> rustacuda_core::DeviceCopy for SafeDeviceCopyWrapper<T> {}
 
-impl<T: SafeDeviceCopy + TypeGraphLayout> From<T> for SafeDeviceCopyWrapper<T> {
+impl<T: PortableBitSemantics> From<T> for SafeDeviceCopyWrapper<T> {
     fn from(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
+impl<T: PortableBitSemantics> SafeDeviceCopyWrapper<T> {
     #[must_use]
     pub fn into_inner(self) -> T {
         self.0
@@ -86,7 +81,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for SafeDeviceCopyWrapper<T> {
     type CudaAllocation = NoCudaAlloc;
     type CudaRepresentation = Self;
 
@@ -114,7 +109,9 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCuda for SafeDeviceCopyWr
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
+    for SafeDeviceCopyWrapper<T>
+{
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(
@@ -141,7 +138,7 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaAsync for SafeDeviceC
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> CudaAsRust for SafeDeviceCopyWrapper<T> {
     type RustRepresentation = Self;
 
     #[cfg(feature = "device")]

@@ -12,23 +12,29 @@ use rustacuda::{
 use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc, NoCudaAlloc},
     host::CudaDropWrapper,
-    safety::SafeDeviceCopy,
-    utils::ffi::DeviceAccessible,
+    safety::PortableBitSemantics,
+    utils::{
+        device_copy::SafeDeviceCopyWrapper,
+        ffi::{DeviceAccessible, DeviceMutPointer},
+    },
 };
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaExchangeBufferHost<
-    T: SafeDeviceCopy + TypeGraphLayout,
+    T: PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,
     const M2H: bool,
 > {
-    host_buffer: CudaDropWrapper<LockedBuffer<CudaExchangeItem<T, M2D, M2H>>>,
-    device_buffer: UnsafeCell<CudaDropWrapper<DeviceBuffer<CudaExchangeItem<T, M2D, M2H>>>>,
+    host_buffer:
+        CudaDropWrapper<LockedBuffer<SafeDeviceCopyWrapper<CudaExchangeItem<T, M2D, M2H>>>>,
+    device_buffer: UnsafeCell<
+        CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<CudaExchangeItem<T, M2D, M2H>>>>,
+    >,
 }
 
-impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: Clone + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     /// # Errors
@@ -38,7 +44,10 @@ impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bo
         // Safety: CudaExchangeItem is a `repr(transparent)` wrapper around T
         let elem: &CudaExchangeItem<T, M2D, M2H> = unsafe { &*(elem as *const T).cast() };
 
-        let host_buffer = CudaDropWrapper::from(LockedBuffer::new(elem, capacity)?);
+        let host_buffer = CudaDropWrapper::from(LockedBuffer::new(
+            SafeDeviceCopyWrapper::from_ref(elem),
+            capacity,
+        )?);
         let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
         )?));
@@ -50,21 +59,26 @@ impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bo
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn from_vec(vec: Vec<T>) -> CudaResult<Self> {
-        let mut host_buffer_uninit =
-            CudaDropWrapper::from(unsafe { LockedBuffer::uninitialized(vec.len())? });
+        let host_buffer = unsafe {
+            let mut uninit: CudaDropWrapper<LockedBuffer<SafeDeviceCopyWrapper<_>>> =
+                CudaDropWrapper::from(LockedBuffer::uninitialized(vec.len())?);
 
-        for (src, dst) in vec.into_iter().zip(host_buffer_uninit.iter_mut()) {
-            *dst = CudaExchangeItem(src);
-        }
+            for (i, src) in vec.into_iter().enumerate() {
+                uninit
+                    .as_mut_ptr()
+                    .add(i)
+                    .write(SafeDeviceCopyWrapper::from(CudaExchangeItem(src)));
+            }
 
-        let host_buffer = host_buffer_uninit;
+            uninit
+        };
 
         let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
@@ -77,25 +91,25 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
     type Target = [CudaExchangeItem<T, M2D, M2H>];
 
     fn deref(&self) -> &Self::Target {
-        self.host_buffer.as_slice()
+        SafeDeviceCopyWrapper::into_slice(self.host_buffer.as_slice())
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> DerefMut
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> DerefMut
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.host_buffer.as_mut_slice()
+        SafeDeviceCopyWrapper::into_mut_slice(self.host_buffer.as_mut_slice())
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     #[allow(clippy::type_complexity)]
@@ -121,7 +135,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
 
         Ok((
             DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
-                device_buffer.as_mut_ptr(),
+                DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
                 device_buffer.len(),
             )),
             CombinedCudaAlloc::new(NoCudaAlloc, alloc),
@@ -148,7 +162,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     #[allow(clippy::type_complexity)]
@@ -176,7 +190,7 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
 
         Ok((
             DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
-                device_buffer.as_mut_ptr(),
+                DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
                 device_buffer.len(),
             )),
             CombinedCudaAlloc::new(NoCudaAlloc, alloc),

@@ -34,7 +34,5 @@ regex = { version = "1.10", optional = true }
 
 const-type-layout = { version = "0.2.1", features = ["derive"] }
 
-final = "0.1.1"
-
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-kernel = { path = "rust-cuda-kernel", optional = true }

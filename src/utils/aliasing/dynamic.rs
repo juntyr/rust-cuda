@@ -6,7 +6,6 @@ use core::{
 };
 
 use const_type_layout::TypeLayout;
-use rustacuda_core::DeviceCopy;
 
 use crate::{
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
@@ -27,10 +26,6 @@ impl<T> SplitSliceOverCudaThreadsDynamicStride<T> {
         Self { stride, inner }
     }
 }
-
-// Safety: If [`T`] is [`DeviceCopy`], then the newtype struct also is
-// [`DeviceCopy`]
-unsafe impl<T: DeviceCopy> DeviceCopy for SplitSliceOverCudaThreadsDynamicStride<T> {}
 
 #[cfg(feature = "device")]
 fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {

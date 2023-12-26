@@ -41,7 +41,7 @@ pub struct Empty([u8; 0]);
 pub struct Tuple(u32, i32);
 
 #[repr(C)]
-#[derive(rc::deps::const_type_layout::TypeLayout)]
+#[derive(Copy, Clone, rc::deps::const_type_layout::TypeLayout)]
 #[layout(crate = "rc::deps::const_type_layout")]
 pub struct Triple(i32, i32, i32);
 
@@ -58,8 +58,7 @@ pub fn kernel<
             CudaRepresentation: rc::safety::StackOnly,
             CudaAllocation: rc::alloc::EmptyCudaAlloc,
         >
-        + rc::safety::StackOnly
-        + rc::safety::NoSafeAliasing,
+        + rc::safety::StackOnly,
 >(
     _x: &rc::kernel::param::PerThreadShallowCopy<Dummy>,
     _z: &rc::kernel::param::SharedHeapPerThreadShallowCopy<Wrapper<T>>,

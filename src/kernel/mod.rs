@@ -6,7 +6,6 @@ use std::{
     ptr::NonNull,
 };
 
-use const_type_layout::TypeGraphLayout;
 #[cfg(feature = "host")]
 use rustacuda::{
     error::{CudaError, CudaResult},
@@ -28,6 +27,8 @@ mod ptx_jit;
 #[cfg(feature = "host")]
 use ptx_jit::{PtxJITCompiler, PtxJITResult};
 
+use crate::safety::PortableBitSemantics;
+
 pub mod param;
 
 mod sealed {
@@ -41,7 +42,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>;
     #[doc(hidden)]
-    type FfiType<'stream, 'b>: rustacuda_core::DeviceCopy + TypeGraphLayout;
+    type FfiType<'stream, 'b>: PortableBitSemantics;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b>;
 

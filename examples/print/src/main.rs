@@ -12,7 +12,7 @@
 
 extern crate alloc;
 
-#[derive(rust_cuda::deps::const_type_layout::TypeLayout)]
+#[derive(Copy, Clone, rust_cuda::deps::const_type_layout::TypeLayout)]
 #[layout(crate = "rust_cuda::deps::const_type_layout")]
 #[repr(C)]
 pub enum Action {

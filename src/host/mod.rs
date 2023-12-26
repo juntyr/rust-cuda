@@ -6,17 +6,22 @@ use std::{
 
 use rustacuda::{
     context::Context,
-    error::{CudaError, CudaResult},
+    error::CudaError,
     event::Event,
-    memory::{DeviceBox, DeviceBuffer, LockedBox, LockedBuffer},
+    memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBox, LockedBuffer},
     module::Module,
     stream::Stream,
 };
-use rustacuda_core::{DeviceCopy, DevicePointer};
 
 use crate::{
-    safety::SafeDeviceCopy,
-    utils::ffi::{DeviceConstRef, DeviceMutRef, DeviceOwnedRef},
+    safety::PortableBitSemantics,
+    utils::{
+        device_copy::SafeDeviceCopyWrapper,
+        ffi::{
+            DeviceConstPointer, DeviceConstRef, DeviceMutPointer, DeviceMutRef, DeviceOwnedPointer,
+            DeviceOwnedRef,
+        },
+    },
 };
 
 pub trait CudaDroppable: Sized {
@@ -56,20 +61,29 @@ impl<C: CudaDroppable> DerefMut for CudaDropWrapper<C> {
     }
 }
 
-macro_rules! impl_sealed_drop_collection {
-    ($type:ident) => {
-        impl<C: DeviceCopy> CudaDroppable for $type<C> {
-            fn drop(val: Self) -> Result<(), (CudaError, Self)> {
-                Self::drop(val)
-            }
-        }
-    };
+impl<T> CudaDroppable for DeviceBox<T> {
+    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+        Self::drop(val)
+    }
 }
 
-impl_sealed_drop_collection!(DeviceBuffer);
-impl_sealed_drop_collection!(DeviceBox);
-impl_sealed_drop_collection!(LockedBuffer);
-impl_sealed_drop_collection!(LockedBox);
+impl<T: rustacuda_core::DeviceCopy> CudaDroppable for DeviceBuffer<T> {
+    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+        Self::drop(val)
+    }
+}
+
+impl<T> CudaDroppable for LockedBox<T> {
+    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+        Self::drop(val)
+    }
+}
+
+impl<T: rustacuda_core::DeviceCopy> CudaDroppable for LockedBuffer<T> {
+    fn drop(val: Self) -> Result<(), (CudaError, Self)> {
+        Self::drop(val)
+    }
+}
 
 macro_rules! impl_sealed_drop_value {
     ($type:ident) => {
@@ -86,188 +100,20 @@ impl_sealed_drop_value!(Stream);
 impl_sealed_drop_value!(Context);
 impl_sealed_drop_value!(Event);
 
-#[repr(transparent)]
 #[allow(clippy::module_name_repetitions)]
-pub struct HostLockedBox<T: DeviceCopy>(*mut T);
-
-impl<T: DeviceCopy> HostLockedBox<T> {
-    /// # Errors
-    /// Returns a [`CudaError`] iff an error occurs inside CUDA
-    pub fn new(value: T) -> CudaResult<Self> {
-        // Safety: uninitialised memory is immediately written to without reading it
-        let locked_ptr = unsafe {
-            let locked_ptr: *mut T = LockedBox::into_raw(LockedBox::uninitialized()?);
-            locked_ptr.write(value);
-            locked_ptr
-        };
-
-        Ok(Self(locked_ptr))
-    }
-}
-
-impl<T: DeviceCopy> Deref for HostLockedBox<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*self.0 }
-    }
-}
-
-impl<T: DeviceCopy> DerefMut for HostLockedBox<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *self.0 }
-    }
-}
-
-impl<T: DeviceCopy> From<LockedBox<T>> for HostLockedBox<T> {
-    fn from(locked_box: LockedBox<T>) -> Self {
-        Self(LockedBox::into_raw(locked_box))
-    }
-}
-
-impl<T: DeviceCopy> From<HostLockedBox<T>> for LockedBox<T> {
-    fn from(host_locked_box: HostLockedBox<T>) -> Self {
-        // Safety: pointer comes from [`LockedBox::into_raw`]
-        //         i.e. this function completes the roundtrip
-        unsafe { Self::from_raw(host_locked_box.0) }
-    }
-}
-
-impl<T: DeviceCopy> Drop for HostLockedBox<T> {
-    fn drop(&mut self) {
-        // Safety: pointer comes from [`LockedBox::into_raw`]
-        //         i.e. this function completes the roundtrip
-        let locked_box = unsafe { LockedBox::from_raw(self.0) };
-
-        core::mem::drop(CudaDropWrapper::from(locked_box));
-    }
-}
-
-#[repr(transparent)]
-#[allow(clippy::module_name_repetitions)]
-pub struct HostDeviceBox<T: DeviceCopy>(DevicePointer<T>);
-
-impl<T: DeviceCopy> crate::alloc::CudaAlloc for HostDeviceBox<T> {}
-impl<T: DeviceCopy> crate::alloc::sealed::alloc::Sealed for HostDeviceBox<T> {}
-
-impl<T: DeviceCopy> HostDeviceBox<T> {
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] iff copying from `value` into `self` failed.
-    pub fn copy_from(&mut self, value: &T) -> CudaResult<()> {
-        // Safety: pointer comes from [`DeviceBox::into_device`]
-        //         i.e. this function completes the roundtrip
-        let mut device_box = unsafe { ManuallyDrop::new(DeviceBox::from_device(self.0)) };
-
-        rustacuda::memory::CopyDestination::copy_from(&mut *device_box, value)
-    }
-
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] iff copying from `self` into `value` failed.
-    pub fn copy_to(&self, value: &mut T) -> CudaResult<()> {
-        // Safety: pointer comes from [`DeviceBox::into_device`]
-        //         i.e. this function completes the roundtrip
-        let device_box = unsafe { ManuallyDrop::new(DeviceBox::from_device(self.0)) };
-
-        rustacuda::memory::CopyDestination::copy_to(&*device_box, value)
-    }
-
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] iff copying from `value` into `self` failed.
-    ///
-    /// # Safety
-    ///
-    /// To use the data inside the device box, either
-    /// - the passed-in [`Stream`] must be synchronised
-    /// - the kernel must be launched on the passed-in [`Stream`]
-    pub unsafe fn async_copy_from(
-        &mut self,
-        value: &HostLockedBox<T>,
-        stream: &Stream,
-    ) -> CudaResult<()> {
-        // Safety: pointer comes from [`DeviceBox::into_device`]
-        //         i.e. this function completes the roundtrip
-        let mut device_box = unsafe { ManuallyDrop::new(DeviceBox::from_device(self.0)) };
-        // Safety: pointer comes from [`LockedBox::into_raw`]
-        //         i.e. this function completes the roundtrip
-        let locked_box = unsafe { ManuallyDrop::new(LockedBox::from_raw(value.0)) };
-
-        unsafe {
-            rustacuda::memory::AsyncCopyDestination::async_copy_from(
-                &mut *device_box,
-                &*locked_box,
-                stream,
-            )
-        }
-    }
-
-    /// # Errors
-    ///
-    /// Returns a [`CudaError`] iff copying from `self` into `value` failed.
-    ///
-    /// # Safety
-    ///
-    /// To use the data inside `value`, the passed-in [`Stream`] must be
-    /// synchronised.
-    pub unsafe fn async_copy_to(
-        &self,
-        value: &mut HostLockedBox<T>,
-        stream: &Stream,
-    ) -> CudaResult<()> {
-        // Safety: pointer comes from [`DeviceBox::into_device`]
-        //         i.e. this function completes the roundtrip
-        let device_box = unsafe { ManuallyDrop::new(DeviceBox::from_device(self.0)) };
-        // Safety: pointer comes from [`LockedBox::into_raw`]
-        //         i.e. this function completes the roundtrip
-        let mut locked_box = unsafe { ManuallyDrop::new(LockedBox::from_raw(value.0)) };
-
-        unsafe {
-            rustacuda::memory::AsyncCopyDestination::async_copy_to(
-                &*device_box,
-                &mut *locked_box,
-                stream,
-            )
-        }
-    }
-}
-
-impl<T: DeviceCopy> From<DeviceBox<T>> for HostDeviceBox<T> {
-    fn from(device_box: DeviceBox<T>) -> Self {
-        Self(DeviceBox::into_device(device_box))
-    }
-}
-
-impl<T: DeviceCopy> From<HostDeviceBox<T>> for DeviceBox<T> {
-    fn from(host_device_box: HostDeviceBox<T>) -> Self {
-        // Safety: pointer comes from [`DeviceBox::into_device`]
-        //         i.e. this function completes the roundtrip
-        unsafe { Self::from_device(host_device_box.0) }
-    }
-}
-
-impl<T: DeviceCopy> Drop for HostDeviceBox<T> {
-    fn drop(&mut self) {
-        // Safety: pointer comes from [`DeviceBox::into_device`]
-        //         i.e. this function completes the roundtrip
-        let device_box = unsafe { DeviceBox::from_device(self.0) };
-
-        core::mem::drop(CudaDropWrapper::from(device_box));
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceMutRef<'a, T: DeviceCopy> {
-    device_box: &'a mut HostDeviceBox<T>,
+pub struct HostAndDeviceMutRef<'a, T: PortableBitSemantics> {
+    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
     host_ref: &'a mut T,
 }
 
-impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
+impl<'a, T: PortableBitSemantics> HostAndDeviceMutRef<'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub unsafe fn new(device_box: &'a mut HostDeviceBox<T>, host_ref: &'a mut T) -> Self {
+    pub unsafe fn new(
+        device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+        host_ref: &'a mut T,
+    ) -> Self {
         Self {
             device_box,
             host_ref,
@@ -286,7 +132,8 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
         host_ref: &mut T,
         inner: F,
     ) -> Result<O, E> {
-        let mut device_box: HostDeviceBox<_> = DeviceBox::new(host_ref)?.into();
+        let mut device_box =
+            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(host_ref))?);
 
         // Safety: `device_box` contains exactly the device copy of `host_ref`
         let result = inner(HostAndDeviceMutRef {
@@ -295,7 +142,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
         });
 
         // Copy back any changes made
-        device_box.copy_to(host_ref)?;
+        device_box.copy_to(SafeDeviceCopyWrapper::from_mut(host_ref))?;
 
         core::mem::drop(device_box);
 
@@ -308,7 +155,7 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
         'a: 'b,
     {
         DeviceMutRef {
-            pointer: self.device_box.0.as_raw_mut(),
+            pointer: DeviceMutPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
             reference: PhantomData,
         }
     }
@@ -354,24 +201,27 @@ impl<'a, T: DeviceCopy> HostAndDeviceMutRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceConstRef<'a, T: DeviceCopy> {
-    device_box: &'a HostDeviceBox<T>,
+pub struct HostAndDeviceConstRef<'a, T: PortableBitSemantics> {
+    device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
     host_ref: &'a T,
 }
 
-impl<'a, T: DeviceCopy> Clone for HostAndDeviceConstRef<'a, T> {
+impl<'a, T: PortableBitSemantics> Clone for HostAndDeviceConstRef<'a, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, T: DeviceCopy> Copy for HostAndDeviceConstRef<'a, T> {}
+impl<'a, T: PortableBitSemantics> Copy for HostAndDeviceConstRef<'a, T> {}
 
-impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
+impl<'a, T: PortableBitSemantics> HostAndDeviceConstRef<'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub const unsafe fn new(device_box: &'a HostDeviceBox<T>, host_ref: &'a T) -> Self {
+    pub const unsafe fn new(
+        device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
+        host_ref: &'a T,
+    ) -> Self {
         Self {
             device_box,
             host_ref,
@@ -390,7 +240,8 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
         host_ref: &T,
         inner: F,
     ) -> Result<O, E> {
-        let device_box: HostDeviceBox<_> = DeviceBox::new(host_ref)?.into();
+        let device_box =
+            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(host_ref))?);
 
         // Safety: `device_box` contains exactly the device copy of `host_ref`
         let result = inner(HostAndDeviceConstRef {
@@ -408,8 +259,10 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
     where
         'a: 'b,
     {
+        let mut hack = ManuallyDrop::new(unsafe { std::ptr::read(self.device_box) });
+
         DeviceConstRef {
-            pointer: self.device_box.0.as_raw(),
+            pointer: DeviceConstPointer(hack.as_device_ptr().as_raw().cast()),
             reference: PhantomData,
         }
     }
@@ -441,12 +294,12 @@ impl<'a, T: DeviceCopy> HostAndDeviceConstRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwned<'a, T: SafeDeviceCopy + DeviceCopy> {
-    device_box: &'a mut HostDeviceBox<T>,
+pub struct HostAndDeviceOwned<'a, T: PortableBitSemantics> {
+    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
     host_val: &'a mut T,
 }
 
-impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
+impl<'a, T: PortableBitSemantics> HostAndDeviceOwned<'a, T> {
     /// # Errors
     ///
     /// Returns a [`CudaError`] iff `value` cannot be moved
@@ -455,7 +308,8 @@ impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
         mut value: T,
         inner: F,
     ) -> Result<O, E> {
-        let mut device_box: HostDeviceBox<_> = DeviceBox::new(&value)?.into();
+        let mut device_box =
+            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(&value))?);
 
         // Safety: `device_box` contains exactly the device copy of `value`
         inner(HostAndDeviceOwned {
@@ -467,7 +321,7 @@ impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
     #[must_use]
     pub fn for_device(self) -> DeviceOwnedRef<'a, T> {
         DeviceOwnedRef {
-            pointer: self.device_box.0.as_raw_mut(),
+            pointer: DeviceOwnedPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
             marker: PhantomData::<T>,
             reference: PhantomData::<&'a mut ()>,
         }
@@ -489,18 +343,18 @@ impl<'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwned<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceMutRefAsync<'stream, 'a, T: DeviceCopy> {
-    device_box: &'a mut HostDeviceBox<T>,
+pub struct HostAndDeviceMutRefAsync<'stream, 'a, T: PortableBitSemantics> {
+    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
     host_ref: &'a mut T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: DeviceCopy> HostAndDeviceMutRefAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceMutRefAsync<'stream, 'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
     pub unsafe fn new(
-        device_box: &'a mut HostDeviceBox<T>,
+        device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
         host_ref: &'a mut T,
         stream: &'stream Stream,
     ) -> Self {
@@ -523,7 +377,7 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceMutRefAsync<'stream, 'a, T> {
         'a: 'b,
     {
         DeviceMutRef {
-            pointer: self.device_box.0.as_raw_mut(),
+            pointer: DeviceMutPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
             reference: PhantomData,
         }
     }
@@ -559,27 +413,27 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceMutRefAsync<'stream, 'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceConstRefAsync<'stream, 'a, T: DeviceCopy> {
-    device_box: &'a HostDeviceBox<T>,
+pub struct HostAndDeviceConstRefAsync<'stream, 'a, T: PortableBitSemantics> {
+    device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
     host_ref: &'a T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: DeviceCopy> Clone for HostAndDeviceConstRefAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics> Clone for HostAndDeviceConstRefAsync<'stream, 'a, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'stream, 'a, T: DeviceCopy> Copy for HostAndDeviceConstRefAsync<'stream, 'a, T> {}
+impl<'stream, 'a, T: PortableBitSemantics> Copy for HostAndDeviceConstRefAsync<'stream, 'a, T> {}
 
-impl<'stream, 'a, T: DeviceCopy> HostAndDeviceConstRefAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceConstRefAsync<'stream, 'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
     #[must_use]
     pub const unsafe fn new(
-        device_box: &'a HostDeviceBox<T>,
+        device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
         host_ref: &'a T,
         stream: &'stream Stream,
     ) -> Self {
@@ -601,8 +455,10 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceConstRefAsync<'stream, 'a, T> {
     where
         'a: 'b,
     {
+        let mut hack = ManuallyDrop::new(unsafe { std::ptr::read(self.device_box) });
+
         DeviceConstRef {
-            pointer: self.device_box.0.as_raw(),
+            pointer: DeviceConstPointer(hack.as_device_ptr().as_raw().cast()),
             reference: PhantomData,
         }
     }
@@ -622,13 +478,13 @@ impl<'stream, 'a, T: DeviceCopy> HostAndDeviceConstRefAsync<'stream, 'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> {
-    device_box: &'a mut HostDeviceBox<T>,
+pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: PortableBitSemantics> {
+    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
     host_val: &'a mut T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceOwnedAsync<'stream, 'a, T> {
     #[must_use]
     /// # Safety
     ///
@@ -636,7 +492,7 @@ impl<'stream, 'a, T: SafeDeviceCopy + DeviceCopy> HostAndDeviceOwnedAsync<'strea
     /// constructed-with [`Stream`]
     pub unsafe fn for_device_async(self) -> DeviceOwnedRef<'a, T> {
         DeviceOwnedRef {
-            pointer: self.device_box.0.as_raw_mut(),
+            pointer: DeviceOwnedPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
             marker: PhantomData::<T>,
             reference: PhantomData::<&'a mut ()>,
         }
