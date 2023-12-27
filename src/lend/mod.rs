@@ -6,17 +6,18 @@ use rustacuda::error::CudaError;
 #[allow(clippy::module_name_repetitions)]
 pub use rust_cuda_derive::LendRustToCuda;
 
-use crate::alloc::CudaAlloc;
-
+#[cfg(any(feature = "host", feature = "device", doc))]
+use crate::safety::StackOnly;
 #[cfg(feature = "device")]
 use crate::utils::ffi::{DeviceConstRef, DeviceOwnedRef};
+use crate::{alloc::CudaAlloc, safety::PortableBitSemantics};
+#[cfg(any(feature = "host", feature = "device"))]
+use crate::{alloc::EmptyCudaAlloc, utils::ffi::DeviceAccessible};
 #[cfg(feature = "host")]
 use crate::{
-    alloc::{CombinedCudaAlloc, EmptyCudaAlloc, NoCudaAlloc},
+    alloc::{CombinedCudaAlloc, NoCudaAlloc},
     host::{HostAndDeviceConstRef, HostAndDeviceOwned},
 };
-#[cfg(any(feature = "host", feature = "device"))]
-use crate::{safety::PortableBitSemantics, utils::ffi::DeviceAccessible};
 
 mod impls;
 
@@ -163,7 +164,7 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>;
 
-    /// Moves `self` to CUDA iff `self` has [`PortableBitSemantics`]
+    /// Moves `self` to CUDA iff `self` is [`StackOnly`].
     ///
     /// # Errors
     ///
@@ -179,7 +180,7 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: PortableBitSemantics, CudaAllocation: EmptyCudaAlloc>;
+        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
 }
 
 #[cfg(feature = "host")]
@@ -215,7 +216,7 @@ impl<T: RustToCuda> LendToCuda for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: PortableBitSemantics, CudaAllocation: EmptyCudaAlloc>,
+        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
     {
         let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
@@ -249,8 +250,7 @@ pub trait BorrowFromRust: RustToCuda {
         inner: F,
     ) -> O
     where
-        Self: Sized,
-        <Self as RustToCuda>::CudaRepresentation: PortableBitSemantics;
+        Self: Sized + RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
 }
 
 #[cfg(feature = "device")]
@@ -273,8 +273,7 @@ impl<T: RustToCuda> BorrowFromRust for T {
         inner: F,
     ) -> O
     where
-        Self: Sized,
-        <Self as RustToCuda>::CudaRepresentation: PortableBitSemantics,
+        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
     {
         inner(CudaAsRust::as_rust(cuda_repr.as_mut()))
     }

@@ -6,10 +6,9 @@ use core::{
 
 use const_type_layout::TypeLayout;
 
-#[cfg(any(feature = "host", feature = "device"))]
 use const_type_layout::TypeGraphLayout;
 
-use crate::safety::PortableBitSemantics;
+use crate::safety::{PortableBitSemantics, StackOnly};
 
 #[cfg(any(feature = "host", feature = "device"))]
 use crate::{
@@ -36,7 +35,7 @@ mod host;
 #[cfg(any(feature = "host", feature = "device"))]
 #[allow(clippy::module_name_repetitions)]
 pub struct CudaExchangeBuffer<
-    T: PortableBitSemantics + TypeGraphLayout,
+    T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,
     const M2H: bool,
 > {
@@ -47,8 +46,11 @@ pub struct CudaExchangeBuffer<
 }
 
 #[cfg(feature = "host")]
-impl<T: Clone + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
-    CudaExchangeBuffer<T, M2D, M2H>
+impl<
+        T: Clone + StackOnly + PortableBitSemantics + TypeGraphLayout,
+        const M2D: bool,
+        const M2H: bool,
+    > CudaExchangeBuffer<T, M2D, M2H>
 {
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -61,7 +63,7 @@ impl<T: Clone + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M
 }
 
 #[cfg(feature = "host")]
-impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBuffer<T, M2D, M2H>
 {
     /// # Errors
@@ -75,7 +77,7 @@ impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
     for CudaExchangeBuffer<T, M2D, M2H>
 {
     type Target = [CudaExchangeItem<T, M2D, M2H>];
@@ -86,8 +88,8 @@ impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> DerefMut
-    for CudaExchangeBuffer<T, M2D, M2H>
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    DerefMut for CudaExchangeBuffer<T, M2D, M2H>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
@@ -95,8 +97,8 @@ impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
-    for CudaExchangeBuffer<T, M2D, M2H>
+unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    RustToCuda for CudaExchangeBuffer<T, M2D, M2H>
 {
     type CudaAllocation = NoCudaAlloc;
     type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
@@ -124,7 +126,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2
 }
 
 #[cfg(any(feature = "host", feature = "device"))]
-unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     RustToCudaAsync for CudaExchangeBuffer<T, M2D, M2H>
 {
     #[cfg(feature = "host")]
@@ -154,12 +156,14 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2
 #[repr(transparent)]
 #[derive(Clone, Copy, TypeLayout)]
 pub struct CudaExchangeItem<
-    T: PortableBitSemantics + TypeGraphLayout,
+    T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,
     const M2H: bool,
 >(T);
 
-impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool> CudaExchangeItem<T, M2D, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool>
+    CudaExchangeItem<T, M2D, true>
+{
     #[cfg(feature = "host")]
     pub const fn read(&self) -> &T {
         &self.0
@@ -171,7 +175,9 @@ impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool> CudaExchangeIte
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout, const M2H: bool> CudaExchangeItem<T, true, M2H> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2H: bool>
+    CudaExchangeItem<T, true, M2H>
+{
     #[cfg(feature = "device")]
     pub const fn read(&self) -> &T {
         &self.0
@@ -183,13 +189,15 @@ impl<T: PortableBitSemantics + TypeGraphLayout, const M2H: bool> CudaExchangeIte
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> AsMut<T> for CudaExchangeItem<T, true, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout> AsMut<T>
+    for CudaExchangeItem<T, true, true>
+{
     fn as_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true> {
     #[cfg(feature = "host")]
     pub const fn as_scratch(&self) -> &T {
         &self.0
@@ -201,7 +209,7 @@ impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true>
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false> {
     #[cfg(feature = "device")]
     pub const fn as_scratch(&self) -> &T {
         &self.0
@@ -213,13 +221,13 @@ impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false>
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false> {
     #[cfg(feature = "host")]
     pub const fn as_uninit(&self) -> &MaybeUninit<T> {
         // Safety:
         // - MaybeUninit is a transparent newtype union
         // - CudaExchangeItem is a transparent newtype
-        unsafe { &*(self as *const Self).cast() }
+        unsafe { &*core::ptr::from_ref(self).cast() }
     }
 
     #[cfg(feature = "host")]
@@ -227,17 +235,17 @@ impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, true, false>
         // Safety:
         // - MaybeUninit is a transparent newtype union
         // - CudaExchangeItem is a transparent newtype
-        unsafe { &mut *(self as *mut Self).cast() }
+        unsafe { &mut *core::ptr::from_mut(self).cast() }
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true> {
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true> {
     #[cfg(feature = "device")]
     pub const fn as_uninit(&self) -> &MaybeUninit<T> {
         // Safety:
         // - MaybeUninit is a transparent newtype union
         // - CudaExchangeItem is a transparent newtype
-        unsafe { &*(self as *const Self).cast() }
+        unsafe { &*core::ptr::from_ref(self).cast() }
     }
 
     #[cfg(feature = "device")]
@@ -245,6 +253,6 @@ impl<T: PortableBitSemantics + TypeGraphLayout> CudaExchangeItem<T, false, true>
         // Safety:
         // - MaybeUninit is a transparent newtype union
         // - CudaExchangeItem is a transparent newtype
-        unsafe { &mut *(self as *mut Self).cast() }
+        unsafe { &mut *core::ptr::from_mut(self).cast() }
     }
 }

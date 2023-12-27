@@ -109,7 +109,7 @@ pub fn swap_field_type_and_filter_attrs(
     } else {
         field_ty = parse_quote! {
             #crate_path::utils::ffi::DeviceAccessible<
-                #crate_path::utils::device_copy::SafeDeviceCopyWrapper<#field_ty>
+                #crate_path::utils::adapter::RustToCudaWithPortableBitCopySemantics<#field_ty>
             >
         };
 

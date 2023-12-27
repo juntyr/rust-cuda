@@ -18,7 +18,7 @@ use crate::utils::ffi::DeviceAccessible;
 use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc},
     host::CudaDropWrapper,
-    utils::device_copy::SafeDeviceCopyWrapper,
+    utils::adapter::DeviceCopyWithPortableBitSemantics,
 };
 
 #[doc(hidden)]
@@ -32,7 +32,7 @@ pub struct RefCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLay
 
 unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a T {
     #[cfg(all(feature = "host", not(doc)))]
-    type CudaAllocation = CudaDropWrapper<DeviceBox<SafeDeviceCopyWrapper<T>>>;
+    type CudaAllocation = CudaDropWrapper<DeviceBox<DeviceCopyWithPortableBitSemantics<T>>>;
     #[cfg(any(not(feature = "host"), doc))]
     type CudaAllocation = crate::alloc::SomeCudaAlloc;
     type CudaRepresentation = RefCudaRepresentation<'a, T>;
@@ -46,8 +46,9 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a T 
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let mut device_box =
-            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(&**self))?);
+        let mut device_box = CudaDropWrapper::from(DeviceBox::new(
+            DeviceCopyWithPortableBitSemantics::from_ref(&**self),
+        )?);
 
         Ok((
             DeviceAccessible::from(RefCudaRepresentation {

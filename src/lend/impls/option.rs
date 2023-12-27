@@ -8,7 +8,7 @@ use rustacuda::error::CudaResult;
 use crate::{
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync, RustToCudaAsyncProxy, RustToCudaProxy},
     safety::PortableBitSemantics,
-    utils::{device_copy::SafeDeviceCopyWrapper, ffi::DeviceAccessible},
+    utils::{adapter::RustToCudaWithPortableBitCopySemantics, ffi::DeviceAccessible},
 };
 
 #[cfg(feature = "host")]
@@ -145,38 +145,36 @@ unsafe impl<T: CudaAsRust> CudaAsRust for OptionCudaRepresentation<T> {
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaProxy<Option<T>>
-    for Option<SafeDeviceCopyWrapper<T>>
+impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaProxy<Option<T>>
+    for Option<RustToCudaWithPortableBitCopySemantics<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
-        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
-        unsafe { &*(val as *const Option<T>).cast() }
+        // Safety: [`RustToCudaWithPortableBitCopySemantics`] is a transparent newtype
+        unsafe { &*core::ptr::from_ref(val).cast() }
     }
 
     fn from_mut(val: &mut Option<T>) -> &mut Self {
-        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
-        unsafe { &mut *(val as *mut Option<T>).cast() }
+        // Safety: [`RustToCudaWithPortableBitCopySemantics`] is a transparent newtype
+        unsafe { &mut *core::ptr::from_mut(val).cast() }
     }
 
     fn into(self) -> Option<T> {
-        self.map(SafeDeviceCopyWrapper::into_inner)
+        self.map(RustToCudaWithPortableBitCopySemantics::into_inner)
     }
 }
 
-impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
-    for Option<SafeDeviceCopyWrapper<T>>
+impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
+    for Option<RustToCudaWithPortableBitCopySemantics<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
-        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
-        unsafe { &*(val as *const Option<T>).cast() }
+        <Self as RustToCudaProxy<Option<T>>>::from_ref(val)
     }
 
     fn from_mut(val: &mut Option<T>) -> &mut Self {
-        // Safety: [`SafeDeviceCopyWrapper`] is a transparent newtype
-        unsafe { &mut *(val as *mut Option<T>).cast() }
+        <Self as RustToCudaProxy<Option<T>>>::from_mut(val)
     }
 
     fn into(self) -> Option<T> {
-        self.map(SafeDeviceCopyWrapper::into_inner)
+        <Self as RustToCudaProxy<Option<T>>>::into(self)
     }
 }

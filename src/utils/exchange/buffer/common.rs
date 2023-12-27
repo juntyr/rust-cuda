@@ -1,6 +1,10 @@
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
-use crate::{lend::CudaAsRust, safety::PortableBitSemantics, utils::ffi::DeviceMutPointer};
+use crate::{
+    lend::CudaAsRust,
+    safety::{PortableBitSemantics, StackOnly},
+    utils::ffi::DeviceMutPointer,
+};
 
 use super::{CudaExchangeBuffer, CudaExchangeItem};
 
@@ -9,7 +13,7 @@ use super::{CudaExchangeBuffer, CudaExchangeItem};
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct CudaExchangeBufferCudaRepresentation<
-    T: PortableBitSemantics + TypeGraphLayout,
+    T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,
     const M2H: bool,
 >(
@@ -17,8 +21,8 @@ pub struct CudaExchangeBufferCudaRepresentation<
     pub(super) usize,
 );
 
-unsafe impl<T: PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> CudaAsRust
-    for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
+unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    CudaAsRust for CudaExchangeBufferCudaRepresentation<T, M2D, M2H>
 {
     type RustRepresentation = CudaExchangeBuffer<T, M2D, M2H>;
 

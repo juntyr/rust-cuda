@@ -23,7 +23,7 @@ fn main() {}
 #[layout(crate = "rc::deps::const_type_layout")]
 pub struct Dummy(i32);
 
-#[derive(rc::lend::LendRustToCuda)]
+#[derive(Clone, rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
 #[allow(dead_code)]
 pub struct Wrapper<T> {
@@ -31,7 +31,7 @@ pub struct Wrapper<T> {
     inner: T,
 }
 
-#[derive(rc::lend::LendRustToCuda)]
+#[derive(Clone, rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
 pub struct Empty([u8; 0]);
 
@@ -54,6 +54,9 @@ pub struct Triple(i32, i32, i32);
 pub fn kernel<
     'a,
     T: 'static
+        + Send
+        + Sync
+        + Clone
         + rc::lend::RustToCuda<
             CudaRepresentation: rc::safety::StackOnly,
             CudaAllocation: rc::alloc::EmptyCudaAlloc,
@@ -96,7 +99,7 @@ mod host {
     // Link several instances of the generic CUDA kernel
     struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
     crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
-    crate::link! { impl kernel<'a, rc::utils::device_copy::SafeDeviceCopyWrapper<u64>> for KernelPtx }
+    crate::link! { impl kernel<'a, rc::utils::adapter::RustToCudaWithPortableBitCopySemantics<u64>> for KernelPtx }
 }
 
 #[cfg(target_os = "cuda")]

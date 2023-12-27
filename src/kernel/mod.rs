@@ -226,9 +226,9 @@ impl RawPtxKernel {
     /// Returns a [`CudaError`] if `ptx` is not a valid PTX source, or it does
     ///  not contain an entry point named `entry_point`.
     pub fn new(ptx: &CStr, entry_point: &CStr) -> CudaResult<Self> {
-        let module = Box::new(Module::load_from_string(ptx)?);
+        let module: Box<Module> = Box::new(Module::load_from_string(ptx)?);
 
-        let function = unsafe { &*(module.as_ref() as *const Module) }.get_function(entry_point);
+        let function = unsafe { &*std::ptr::from_ref(module.as_ref()) }.get_function(entry_point);
 
         let function = match function {
             Ok(function) => function,

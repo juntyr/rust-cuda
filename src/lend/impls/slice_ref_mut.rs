@@ -18,7 +18,7 @@ use crate::utils::ffi::DeviceAccessible;
 use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc},
     host::CudaDropWrapper,
-    utils::device_copy::SafeDeviceCopyWrapper,
+    utils::adapter::DeviceCopyWithPortableBitSemantics,
 };
 
 #[doc(hidden)]
@@ -33,7 +33,8 @@ pub struct SliceRefMutCudaRepresentation<'a, T: 'a + PortableBitSemantics + Type
 
 unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mut [T] {
     #[cfg(all(feature = "host", not(doc)))]
-    type CudaAllocation = crate::host::CudaDropWrapper<DeviceBuffer<SafeDeviceCopyWrapper<T>>>;
+    type CudaAllocation =
+        crate::host::CudaDropWrapper<DeviceBuffer<DeviceCopyWithPortableBitSemantics<T>>>;
     #[cfg(any(not(feature = "host"), doc))]
     type CudaAllocation = crate::alloc::SomeCudaAlloc;
     type CudaRepresentation = SliceRefMutCudaRepresentation<'a, T>;
@@ -48,7 +49,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mu
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let mut device_buffer = CudaDropWrapper::from(DeviceBuffer::from_slice(
-            SafeDeviceCopyWrapper::from_slice(self),
+            DeviceCopyWithPortableBitSemantics::from_slice(self),
         )?);
 
         Ok((
@@ -70,7 +71,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mu
 
         let (alloc_front, alloc_tail) = alloc.split();
 
-        alloc_front.copy_to(SafeDeviceCopyWrapper::from_mut_slice(self))?;
+        alloc_front.copy_to(DeviceCopyWithPortableBitSemantics::from_mut_slice(self))?;
 
         core::mem::drop(alloc_front);
 

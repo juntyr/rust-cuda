@@ -4,6 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use const_type_layout::TypeGraphLayout;
 use rustacuda::{
     context::Context,
     error::CudaError,
@@ -16,7 +17,7 @@ use rustacuda::{
 use crate::{
     safety::PortableBitSemantics,
     utils::{
-        device_copy::SafeDeviceCopyWrapper,
+        adapter::DeviceCopyWithPortableBitSemantics,
         ffi::{
             DeviceConstPointer, DeviceConstRef, DeviceMutPointer, DeviceMutRef, DeviceOwnedPointer,
             DeviceOwnedRef,
@@ -101,17 +102,17 @@ impl_sealed_drop_value!(Context);
 impl_sealed_drop_value!(Event);
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceMutRef<'a, T: PortableBitSemantics> {
-    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+pub struct HostAndDeviceMutRef<'a, T: PortableBitSemantics + TypeGraphLayout> {
+    device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_ref: &'a mut T,
 }
 
-impl<'a, T: PortableBitSemantics> HostAndDeviceMutRef<'a, T> {
+impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
     pub unsafe fn new(
-        device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+        device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a mut T,
     ) -> Self {
         Self {
@@ -132,8 +133,9 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceMutRef<'a, T> {
         host_ref: &mut T,
         inner: F,
     ) -> Result<O, E> {
-        let mut device_box =
-            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(host_ref))?);
+        let mut device_box = CudaDropWrapper::from(DeviceBox::new(
+            DeviceCopyWithPortableBitSemantics::from_ref(host_ref),
+        )?);
 
         // Safety: `device_box` contains exactly the device copy of `host_ref`
         let result = inner(HostAndDeviceMutRef {
@@ -142,7 +144,7 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceMutRef<'a, T> {
         });
 
         // Copy back any changes made
-        device_box.copy_to(SafeDeviceCopyWrapper::from_mut(host_ref))?;
+        device_box.copy_to(DeviceCopyWithPortableBitSemantics::from_mut(host_ref))?;
 
         core::mem::drop(device_box);
 
@@ -201,25 +203,25 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceMutRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceConstRef<'a, T: PortableBitSemantics> {
-    device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
+pub struct HostAndDeviceConstRef<'a, T: PortableBitSemantics + TypeGraphLayout> {
+    device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_ref: &'a T,
 }
 
-impl<'a, T: PortableBitSemantics> Clone for HostAndDeviceConstRef<'a, T> {
+impl<'a, T: PortableBitSemantics + TypeGraphLayout> Clone for HostAndDeviceConstRef<'a, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, T: PortableBitSemantics> Copy for HostAndDeviceConstRef<'a, T> {}
+impl<'a, T: PortableBitSemantics + TypeGraphLayout> Copy for HostAndDeviceConstRef<'a, T> {}
 
-impl<'a, T: PortableBitSemantics> HostAndDeviceConstRef<'a, T> {
+impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
     pub const unsafe fn new(
-        device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
+        device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a T,
     ) -> Self {
         Self {
@@ -240,8 +242,9 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceConstRef<'a, T> {
         host_ref: &T,
         inner: F,
     ) -> Result<O, E> {
-        let device_box =
-            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(host_ref))?);
+        let device_box = CudaDropWrapper::from(DeviceBox::new(
+            DeviceCopyWithPortableBitSemantics::from_ref(host_ref),
+        )?);
 
         // Safety: `device_box` contains exactly the device copy of `host_ref`
         let result = inner(HostAndDeviceConstRef {
@@ -294,12 +297,12 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceConstRef<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwned<'a, T: PortableBitSemantics> {
-    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+pub struct HostAndDeviceOwned<'a, T: PortableBitSemantics + TypeGraphLayout> {
+    device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_val: &'a mut T,
 }
 
-impl<'a, T: PortableBitSemantics> HostAndDeviceOwned<'a, T> {
+impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     /// # Errors
     ///
     /// Returns a [`CudaError`] iff `value` cannot be moved
@@ -308,8 +311,9 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceOwned<'a, T> {
         mut value: T,
         inner: F,
     ) -> Result<O, E> {
-        let mut device_box =
-            CudaDropWrapper::from(DeviceBox::new(SafeDeviceCopyWrapper::from_ref(&value))?);
+        let mut device_box = CudaDropWrapper::from(DeviceBox::new(
+            DeviceCopyWithPortableBitSemantics::from_ref(&value),
+        )?);
 
         // Safety: `device_box` contains exactly the device copy of `value`
         inner(HostAndDeviceOwned {
@@ -343,18 +347,20 @@ impl<'a, T: PortableBitSemantics> HostAndDeviceOwned<'a, T> {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceMutRefAsync<'stream, 'a, T: PortableBitSemantics> {
-    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+pub struct HostAndDeviceMutRefAsync<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> {
+    device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_ref: &'a mut T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceMutRefAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
+    HostAndDeviceMutRefAsync<'stream, 'a, T>
+{
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
     pub unsafe fn new(
-        device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+        device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a mut T,
         stream: &'stream Stream,
     ) -> Self {
@@ -413,27 +419,34 @@ impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceMutRefAsync<'stream, 'a,
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceConstRefAsync<'stream, 'a, T: PortableBitSemantics> {
-    device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
+pub struct HostAndDeviceConstRefAsync<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> {
+    device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_ref: &'a T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: PortableBitSemantics> Clone for HostAndDeviceConstRefAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> Clone
+    for HostAndDeviceConstRefAsync<'stream, 'a, T>
+{
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'stream, 'a, T: PortableBitSemantics> Copy for HostAndDeviceConstRefAsync<'stream, 'a, T> {}
+impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> Copy
+    for HostAndDeviceConstRefAsync<'stream, 'a, T>
+{
+}
 
-impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceConstRefAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
+    HostAndDeviceConstRefAsync<'stream, 'a, T>
+{
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
     #[must_use]
     pub const unsafe fn new(
-        device_box: &'a DeviceBox<SafeDeviceCopyWrapper<T>>,
+        device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a T,
         stream: &'stream Stream,
     ) -> Self {
@@ -478,13 +491,15 @@ impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceConstRefAsync<'stream, '
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: PortableBitSemantics> {
-    device_box: &'a mut DeviceBox<SafeDeviceCopyWrapper<T>>,
+pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> {
+    device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_val: &'a mut T,
     stream: PhantomData<&'stream Stream>,
 }
 
-impl<'stream, 'a, T: PortableBitSemantics> HostAndDeviceOwnedAsync<'stream, 'a, T> {
+impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
+    HostAndDeviceOwnedAsync<'stream, 'a, T>
+{
     #[must_use]
     /// # Safety
     ///

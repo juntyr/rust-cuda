@@ -5,18 +5,18 @@ use core::{
     ops::{Deref, DerefMut},
 };
 #[cfg(feature = "host")]
-use std::{fmt, mem::MaybeUninit, ptr::copy_nonoverlapping};
+use std::fmt;
 
-use const_type_layout::TypeLayout;
+use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 use crate::safety::PortableBitSemantics;
 #[cfg(feature = "host")]
-use crate::{lend::CudaAsRust, utils::device_copy::SafeDeviceCopyWrapper};
+use crate::{lend::CudaAsRust, utils::adapter::RustToCudaWithPortableBitCopySemantics};
 
 #[cfg_attr(any(feature = "device", doc), derive(Debug))]
 #[derive(TypeLayout)]
 #[repr(transparent)]
-pub struct DeviceAccessible<T: ?Sized + PortableBitSemantics>(T);
+pub struct DeviceAccessible<T: ?Sized + PortableBitSemantics + TypeGraphLayout>(T);
 
 #[cfg(feature = "host")]
 impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
@@ -25,22 +25,19 @@ impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
     }
 }
 
-// TODO: should there be some copy bound here?
 #[cfg(feature = "host")]
-impl<T: PortableBitSemantics> From<&T> for DeviceAccessible<SafeDeviceCopyWrapper<T>> {
+impl<T: Copy + PortableBitSemantics + TypeGraphLayout> From<&T>
+    for DeviceAccessible<RustToCudaWithPortableBitCopySemantics<T>>
+{
     fn from(value: &T) -> Self {
-        let value = unsafe {
-            let mut uninit = MaybeUninit::uninit();
-            copy_nonoverlapping(value, uninit.as_mut_ptr(), 1);
-            uninit.assume_init()
-        };
-
-        Self(SafeDeviceCopyWrapper::from(value))
+        Self(RustToCudaWithPortableBitCopySemantics::from_copy(value))
     }
 }
 
 #[cfg(all(feature = "host", not(doc)))]
-impl<T: ?Sized + PortableBitSemantics + fmt::Debug> fmt::Debug for DeviceAccessible<T> {
+impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout + fmt::Debug> fmt::Debug
+    for DeviceAccessible<T>
+{
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(DeviceAccessible))
             .finish_non_exhaustive()
@@ -48,7 +45,7 @@ impl<T: ?Sized + PortableBitSemantics + fmt::Debug> fmt::Debug for DeviceAccessi
 }
 
 #[cfg(feature = "device")]
-impl<T: ?Sized + PortableBitSemantics> Deref for DeviceAccessible<T> {
+impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout> Deref for DeviceAccessible<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -57,7 +54,7 @@ impl<T: ?Sized + PortableBitSemantics> Deref for DeviceAccessible<T> {
 }
 
 #[cfg(feature = "device")]
-impl<T: ?Sized + PortableBitSemantics> DerefMut for DeviceAccessible<T> {
+impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout> DerefMut for DeviceAccessible<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
