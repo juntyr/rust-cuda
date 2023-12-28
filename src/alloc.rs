@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 
-pub trait EmptyCudaAlloc: sealed::empty::Sealed {}
+pub trait EmptyCudaAlloc: From<NoCudaAlloc> + Into<NoCudaAlloc> + sealed::empty::Sealed {}
 
 pub trait CudaAlloc: sealed::alloc::Sealed {}
 
@@ -29,6 +29,21 @@ impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> EmptyCudaAllo
 impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> sealed::empty::Sealed
     for CombinedCudaAlloc<A, B>
 {
+}
+impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> From<NoCudaAlloc>
+    for CombinedCudaAlloc<A, B>
+{
+    fn from(_: NoCudaAlloc) -> Self {
+        Self(A::from(NoCudaAlloc), B::from(NoCudaAlloc))
+    }
+}
+impl<A: CudaAlloc + EmptyCudaAlloc, B: CudaAlloc + EmptyCudaAlloc> From<CombinedCudaAlloc<A, B>>
+    for NoCudaAlloc
+{
+    fn from(val: CombinedCudaAlloc<A, B>) -> Self {
+        let _: (Self, Self) = (val.0.into(), val.1.into());
+        Self
+    }
 }
 impl<A: CudaAlloc, B: CudaAlloc> CombinedCudaAlloc<A, B> {
     #[must_use]

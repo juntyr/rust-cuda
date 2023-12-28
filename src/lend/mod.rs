@@ -17,6 +17,7 @@ use crate::{alloc::EmptyCudaAlloc, utils::ffi::DeviceAccessible};
 use crate::{
     alloc::{CombinedCudaAlloc, NoCudaAlloc},
     host::{HostAndDeviceConstRef, HostAndDeviceOwned},
+    utils::r#async::{Async, CudaAsync},
 };
 
 mod impls;
@@ -72,6 +73,8 @@ pub unsafe trait RustToCuda {
 /// This is an internal trait and should ONLY be derived automatically using
 /// `#[derive(LendRustToCuda)]`
 pub unsafe trait RustToCudaAsync: RustToCuda {
+    type CudaAllocationAsync: CudaAlloc;
+
     #[doc(hidden)]
     #[cfg(feature = "host")]
     /// # Errors
@@ -81,11 +84,19 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     ///
     /// # Safety
     ///
-    /// This is an internal function and should NEVER be called manually
+    /// This is an internal function and should NEVER be called manually.
+    ///
     /// The returned
     /// [`Self::CudaRepresentation`](RustToCuda::CudaRepresentation) must NEVER
     /// be accessed on the  CPU  as it contains a GPU-resident copy of
     /// `self`.
+    ///
+    /// Since this method may perform asynchronous computation but returns its
+    /// result immediately, this result must only be used to construct compound
+    /// asynchronous computations before it has been synchronized on.
+    ///
+    /// Similarly, `&self` should remain borrowed until synchronisation has
+    /// been performed.
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(
         &self,
@@ -93,7 +104,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )>;
 
     #[doc(hidden)]
@@ -105,11 +116,17 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     ///
     /// # Safety
     ///
-    /// This is an internal function and should NEVER be called manually
+    /// This is an internal function and should NEVER be called manually.
+    ///
+    /// Since this method may perform asynchronous computation but returns
+    /// immediately, `&mut self` not be used until it has been synchronized on.
+    ///
+    /// Therefore, `&mut self` should remain mutably borrowed until
+    /// synchronisation has been performed.
     #[allow(clippy::type_complexity)]
     unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<A>;
 }
@@ -221,6 +238,116 @@ impl<T: RustToCuda> LendToCuda for T {
         let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
         let result = HostAndDeviceOwned::with_new(cuda_repr, inner);
+
+        core::mem::drop(alloc);
+
+        result
+    }
+}
+
+#[cfg(feature = "host")]
+#[allow(clippy::module_name_repetitions)]
+pub trait LendToCudaAsync: RustToCudaAsync {
+    /// Lends an immutable copy of `&self` to CUDA:
+    /// - code in the CUDA kernel can only access `&self` through the
+    ///   [`DeviceConstRef`] inside the closure
+    /// - after the closure, `&self` will not have changed
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CudaError`] iff an error occurs inside CUDA
+    fn lend_to_cuda_async<
+        'stream,
+        O,
+        E: From<CudaError>,
+        F: FnOnce(
+            Async<
+                'stream,
+                HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            >,
+        ) -> Result<O, E>,
+    >(
+        &self,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: F,
+    ) -> Result<O, E>;
+
+    /// Moves `self` to CUDA iff `self` is [`StackOnly`].
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CudaError`] iff an error occurs inside CUDA
+    fn move_to_cuda_async<
+        'stream,
+        O,
+        E: From<CudaError>,
+        F: FnOnce(
+            Async<
+                'stream,
+                HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            >,
+        ) -> Result<O, E>,
+    >(
+        self,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: F,
+    ) -> Result<O, E>
+    where
+        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
+}
+
+#[cfg(feature = "host")]
+impl<T: RustToCudaAsync> LendToCudaAsync for T {
+    fn lend_to_cuda_async<
+        'stream,
+        O,
+        E: From<CudaError>,
+        F: FnOnce(
+            Async<
+                'stream,
+                HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            >,
+        ) -> Result<O, E>,
+    >(
+        &self,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: F,
+    ) -> Result<O, E> {
+        let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
+
+        let result = HostAndDeviceConstRef::with_new(&cuda_repr, |const_ref| {
+            inner(Async::new(const_ref, stream)?)
+        });
+
+        core::mem::drop(cuda_repr);
+        core::mem::drop(alloc);
+
+        result
+    }
+
+    fn move_to_cuda_async<
+        'stream,
+        O,
+        E: From<CudaError>,
+        F: FnOnce(
+            Async<
+                'stream,
+                HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+            >,
+        ) -> Result<O, E>,
+    >(
+        self,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: F,
+    ) -> Result<O, E>
+    where
+        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
+    {
+        let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
+
+        let result = HostAndDeviceOwned::with_new(cuda_repr, |owned_ref| {
+            inner(Async::new(owned_ref, stream)?)
+        });
 
         core::mem::drop(alloc);
 

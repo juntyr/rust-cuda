@@ -1,13 +1,16 @@
-use crate::{deps::alloc::boxed::Box, utils::ffi::DeviceOwnedPointer};
+#[cfg(feature = "host")]
+use std::mem::ManuallyDrop;
 
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBox};
+use rustacuda::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
 
 use crate::{
-    lend::{CudaAsRust, RustToCuda},
+    deps::alloc::boxed::Box,
+    lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
     safety::PortableBitSemantics,
+    utils::ffi::DeviceOwnedPointer,
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
@@ -66,6 +69,103 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {
         alloc_front.copy_to(DeviceCopyWithPortableBitSemantics::from_mut(&mut **self))?;
 
         core::mem::drop(alloc_front);
+
+        Ok(alloc_tail)
+    }
+}
+
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T> {
+    #[cfg(all(feature = "host", not(doc)))]
+    type CudaAllocationAsync = CombinedCudaAlloc<
+        CudaDropWrapper<LockedBox<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>>,
+        CudaDropWrapper<DeviceBox<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>>,
+    >;
+    #[cfg(any(not(feature = "host"), doc))]
+    type CudaAllocationAsync = crate::alloc::SomeCudaAlloc;
+
+    #[cfg(feature = "host")]
+    unsafe fn borrow_async<A: CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        DeviceAccessible<Self::CudaRepresentation>,
+        CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
+    )> {
+        use rustacuda::memory::AsyncCopyDestination;
+
+        let locked_box = unsafe {
+            let mut uninit = CudaDropWrapper::from(LockedBox::<
+                DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
+            >::uninitialized()?);
+            std::ptr::copy_nonoverlapping(
+                std::ptr::from_ref::<T>(&**self)
+                    .cast::<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>(),
+                uninit.as_mut_ptr(),
+                1,
+            );
+            uninit
+        };
+
+        let mut device_box = CudaDropWrapper::from(DeviceBox::<
+            DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
+        >::uninitialized()?);
+        device_box.async_copy_from(&*locked_box, stream)?;
+
+        Ok((
+            DeviceAccessible::from(BoxCudaRepresentation(DeviceOwnedPointer(
+                device_box.as_device_ptr().as_raw_mut().cast(),
+            ))),
+            CombinedCudaAlloc::new(CombinedCudaAlloc::new(locked_box, device_box), alloc),
+        ))
+    }
+
+    #[cfg(feature = "host")]
+    unsafe fn restore_async<A: CudaAlloc>(
+        &mut self,
+        alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
+        stream: &rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<A> {
+        use rustacuda::memory::AsyncCopyDestination;
+
+        struct PromiseSend<T>(T);
+        #[allow(clippy::non_send_fields_in_send_ty)]
+        unsafe impl<T> Send for PromiseSend<T> {}
+
+        let (alloc_front, alloc_tail) = alloc.split();
+        let (mut locked_box, device_box) = alloc_front.split();
+
+        device_box.async_copy_to(&mut *locked_box, stream)?;
+
+        {
+            // TODO: express this unsafe-rich completion safely
+            //       by explicitly capturing &mut self until the
+            //       async restore has completed
+            let self_ptr: *mut T = std::ptr::from_mut(self);
+
+            let self_ptr = PromiseSend(self_ptr);
+            let locked_box = PromiseSend(locked_box);
+            let device_box = PromiseSend(device_box);
+
+            stream.add_callback(Box::new(move |res| {
+                let self_ptr: PromiseSend<_> = self_ptr;
+
+                std::mem::drop(device_box);
+                if res == Ok(()) {
+                    // Safety: The precondition of this method guarantees that
+                    //         &mut self has been borrowed until after this
+                    //         completion is run
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            locked_box.0.as_ptr().cast::<T>(),
+                            self_ptr.0,
+                            1,
+                        );
+                    }
+                }
+                std::mem::drop(locked_box);
+            }))
+        }?;
 
         Ok(alloc_tail)
     }

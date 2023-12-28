@@ -129,6 +129,8 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
 unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     RustToCudaAsync for CudaExchangeBuffer<T, M2D, M2H>
 {
+    type CudaAllocationAsync = NoCudaAlloc;
+
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(

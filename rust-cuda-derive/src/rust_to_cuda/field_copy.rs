@@ -12,6 +12,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     cuda_repr_field_ty: &CudaReprFieldTy,
 
     mut combined_cuda_alloc_type: TokenStream,
+    mut combined_cuda_alloc_async_type: TokenStream,
 
     r2c_field_declarations: &mut Vec<TokenStream>,
     r2c_field_async_declarations: &mut Vec<TokenStream>,
@@ -20,7 +21,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     r2c_field_async_destructors: &mut Vec<TokenStream>,
 
     c2r_field_initialisations: &mut Vec<TokenStream>,
-) -> TokenStream {
+) -> (TokenStream, TokenStream) {
     #[allow(clippy::option_if_let_else)]
     let field_accessor = match &field.ident {
         Some(ident) => quote! { #ident },
@@ -61,6 +62,12 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 #crate_path::alloc::CombinedCudaAlloc<
                     <#field_ty as #crate_path::lend::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
+                >
+            };
+            combined_cuda_alloc_async_type = quote! {
+                #crate_path::alloc::CombinedCudaAlloc<
+                    <#field_ty as #crate_path::lend::RustToCudaAsync>::CudaAllocationAsync,
+                    #combined_cuda_alloc_async_type
                 >
             };
 
@@ -107,6 +114,12 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 #crate_path::alloc::CombinedCudaAlloc<
                     <#proxy_ty as #crate_path::lend::RustToCuda>::CudaAllocation,
                     #combined_cuda_alloc_type
+                >
+            };
+            combined_cuda_alloc_async_type = quote! {
+                #crate_path::alloc::CombinedCudaAlloc<
+                    <#proxy_ty as #crate_path::lend::RustToCudaAsync>::CudaAllocationAsync,
+                    #combined_cuda_alloc_async_type
                 >
             };
 
@@ -160,5 +173,5 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
         },
     }
 
-    combined_cuda_alloc_type
+    (combined_cuda_alloc_type, combined_cuda_alloc_async_type)
 }

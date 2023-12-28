@@ -33,6 +33,9 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     let mut combined_cuda_alloc_type: TokenStream = quote! {
         #crate_path::alloc::NoCudaAlloc
     };
+    let mut combined_cuda_alloc_async_type: TokenStream = quote! {
+        #crate_path::alloc::NoCudaAlloc
+    };
     let mut r2c_field_declarations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_async_declarations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_initialisations: Vec<TokenStream> = Vec::new();
@@ -57,19 +60,21 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
                 let cuda_repr_field_ty =
                     field_ty::swap_field_type_and_filter_attrs(&crate_path, field);
 
-                combined_cuda_alloc_type = field_copy::impl_field_copy_init_and_expand_alloc_type(
-                    &crate_path,
-                    field,
-                    field_index,
-                    &cuda_repr_field_ty,
-                    combined_cuda_alloc_type,
-                    &mut r2c_field_declarations,
-                    &mut r2c_field_async_declarations,
-                    &mut r2c_field_initialisations,
-                    &mut r2c_field_destructors_reverse,
-                    &mut r2c_field_async_destructors_reverse,
-                    &mut c2r_field_initialisations,
-                );
+                (combined_cuda_alloc_type, combined_cuda_alloc_async_type) =
+                    field_copy::impl_field_copy_init_and_expand_alloc_type(
+                        &crate_path,
+                        field,
+                        field_index,
+                        &cuda_repr_field_ty,
+                        combined_cuda_alloc_type,
+                        combined_cuda_alloc_async_type,
+                        &mut r2c_field_declarations,
+                        &mut r2c_field_async_declarations,
+                        &mut r2c_field_initialisations,
+                        &mut r2c_field_destructors_reverse,
+                        &mut r2c_field_async_destructors_reverse,
+                        &mut c2r_field_initialisations,
+                    );
             }
 
             // The fields must be deallocated in the reverse order of their allocation
@@ -110,6 +115,7 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
             &struct_name_cuda,
             &struct_generics_cuda_async,
             &struct_fields_cuda,
+            &combined_cuda_alloc_async_type,
             &r2c_field_async_declarations,
             &r2c_field_initialisations,
             &r2c_field_async_destructors,

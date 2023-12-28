@@ -129,6 +129,8 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCuda
 unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
     for RustToCudaWithPortableBitCopySemantics<T>
 {
+    type CudaAllocationAsync = NoCudaAlloc;
+
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(

@@ -79,6 +79,8 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 }
 
 unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
+    type CudaAllocationAsync = Option<<T as RustToCudaAsync>::CudaAllocationAsync>;
+
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<A: CudaAlloc>(
@@ -87,7 +89,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
         stream: &rustacuda::stream::Stream,
     ) -> CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
         let (cuda_repr, alloc) = match self {
             None => (
@@ -118,7 +120,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     #[cfg(feature = "host")]
     unsafe fn restore_async<A: CudaAlloc>(
         &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &rustacuda::stream::Stream,
     ) -> CudaResult<A> {
         let (alloc_front, alloc_tail) = alloc.split();
