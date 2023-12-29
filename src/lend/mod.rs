@@ -124,11 +124,11 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     /// Therefore, `&mut self` should remain mutably borrowed until
     /// synchronisation has been performed.
     #[allow(clippy::type_complexity)]
-    unsafe fn restore_async<A: CudaAlloc>(
+    unsafe fn restore_async<'stream, A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &rustacuda::stream::Stream,
-    ) -> rustacuda::error::CudaResult<A>;
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(Async<'stream, (), &mut Self>, A)>;
 }
 
 /// # Safety
@@ -179,7 +179,9 @@ pub trait LendToCuda: RustToCuda {
     >(
         &self,
         inner: F,
-    ) -> Result<O, E>;
+    ) -> Result<O, E>
+    where
+        Self: Sync;
 
     /// Moves `self` to CUDA iff `self` is [`StackOnly`].
     ///
@@ -197,7 +199,7 @@ pub trait LendToCuda: RustToCuda {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
+        Self: Send + RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
 }
 
 #[cfg(feature = "host")]
@@ -211,7 +213,10 @@ impl<T: RustToCuda> LendToCuda for T {
     >(
         &self,
         inner: F,
-    ) -> Result<O, E> {
+    ) -> Result<O, E>
+    where
+        Self: Sync,
+    {
         let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, inner);
@@ -233,7 +238,7 @@ impl<T: RustToCuda> LendToCuda for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
+        Self: Send + RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
     {
         let (cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
 
@@ -264,13 +269,16 @@ pub trait LendToCudaAsync: RustToCudaAsync {
             Async<
                 'stream,
                 HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                &Self,
             >,
         ) -> Result<O, E>,
     >(
         &self,
         stream: &'stream rustacuda::stream::Stream,
         inner: F,
-    ) -> Result<O, E>;
+    ) -> Result<O, E>
+    where
+        Self: Sync;
 
     /// Moves `self` to CUDA iff `self` is [`StackOnly`].
     ///
@@ -293,7 +301,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
+        Self: Send + RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>;
 }
 
 #[cfg(feature = "host")]
@@ -306,17 +314,21 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
             Async<
                 'stream,
                 HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                &Self,
             >,
         ) -> Result<O, E>,
     >(
         &self,
         stream: &'stream rustacuda::stream::Stream,
         inner: F,
-    ) -> Result<O, E> {
+    ) -> Result<O, E>
+    where
+        Self: Sync,
+    {
         let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
 
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, |const_ref| {
-            inner(Async::new(const_ref, stream)?)
+            inner(Async::new(const_ref, stream, self, |_self| Ok(()))?)
         });
 
         core::mem::drop(cuda_repr);
@@ -341,12 +353,12 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         inner: F,
     ) -> Result<O, E>
     where
-        Self: RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
+        Self: Send + RustToCuda<CudaRepresentation: StackOnly, CudaAllocation: EmptyCudaAlloc>,
     {
         let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
 
         let result = HostAndDeviceOwned::with_new(cuda_repr, |owned_ref| {
-            inner(Async::new(owned_ref, stream)?)
+            inner(Async::new(owned_ref, stream, (), |()| Ok(()))?)
         });
 
         core::mem::drop(alloc);
