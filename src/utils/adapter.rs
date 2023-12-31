@@ -146,14 +146,28 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
     }
 
     #[cfg(feature = "host")]
-    unsafe fn restore_async<A: CudaAlloc>(
-        &mut self,
+    unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
-        _stream: &rustacuda::stream::Stream,
-    ) -> rustacuda::error::CudaResult<A> {
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        crate::utils::r#async::Async<
+            'stream,
+            owning_ref::BoxRefMut<'a, O, Self>,
+            Self::CudaAllocationAsync,
+        >,
+        A,
+    )> {
         let (_alloc_front, alloc_tail): (NoCudaAlloc, A) = alloc.split();
 
-        Ok(alloc_tail)
+        let r#async = crate::utils::r#async::Async::pending(
+            this,
+            stream,
+            NoCudaAlloc,
+            |_this, NoCudaAlloc| Ok(()),
+        )?;
+
+        Ok((r#async, alloc_tail))
     }
 }
 

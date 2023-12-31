@@ -21,7 +21,7 @@ use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc},
     host::CudaDropWrapper,
     utils::adapter::DeviceCopyWithPortableBitSemantics,
-    utils::r#async::{Async, CudaAsync},
+    utils::r#async::Async,
 };
 
 #[doc(hidden)]
@@ -75,7 +75,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {
     }
 }
 
-unsafe impl<T: Send + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T> {
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T> {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocationAsync = CombinedCudaAlloc<
         CudaDropWrapper<LockedBox<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>>,
@@ -122,80 +122,41 @@ unsafe impl<T: Send + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync fo
     }
 
     #[cfg(feature = "host")]
-    unsafe fn restore_async<'stream, A: CudaAlloc>(
-        &mut self,
+    unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &'stream rustacuda::stream::Stream,
-    ) -> CudaResult<(Async<'stream, (), &mut std::boxed::Box<T>>, A)> {
+    ) -> CudaResult<(
+        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::CudaAllocationAsync>,
+        A,
+    )> {
         use rustacuda::memory::AsyncCopyDestination;
-
-        struct PromiseSend<T>(T);
-        #[allow(clippy::non_send_fields_in_send_ty)]
-        unsafe impl<T> Send for PromiseSend<T> {}
 
         let (alloc_front, alloc_tail) = alloc.split();
         let (mut locked_box, device_box) = alloc_front.split();
 
         device_box.async_copy_to(&mut *locked_box, stream)?;
 
-        let locked_box = PromiseSend(locked_box);
-        let device_box = PromiseSend(device_box);
+        let r#async = crate::utils::r#async::Async::pending(
+            this,
+            stream,
+            CombinedCudaAlloc::new(locked_box, device_box),
+            move |this, alloc| {
+                let data: &mut T = &mut *this;
+                let (locked_box, device_box) = alloc.split();
 
-        let r#async =
-            <crate::utils::r#async::Async<(), &mut Self> as crate::utils::r#async::CudaAsync<
-                (),
-                &mut Self,
-            >>::new((), stream, self, |data: &mut Self| {
-                // TODO: we cannot actually drop here since that would invoke a CUDA function
                 std::mem::drop(device_box);
                 // Safety: equivalent to *data = *locked_box since
                 //         LockedBox<ManuallyDrop<T>> doesn't drop T
                 unsafe {
-                    std::ptr::copy_nonoverlapping(
-                        locked_box.0.as_ptr().cast::<T>(),
-                        &mut **data,
-                        1,
-                    );
+                    std::ptr::copy_nonoverlapping(locked_box.as_ptr().cast::<T>(), data, 1);
                 }
-                // TODO: we cannot actually drop here since that would invoke a CUDA function
                 std::mem::drop(locked_box);
                 Ok(())
-            })?;
-        // std::mem::drop(r#async);
+            },
+        )?;
 
         Ok((r#async, alloc_tail))
-
-        // {
-        //     // TODO: express this unsafe-rich completion safely
-        //     //       by explicitly capturing &mut self until the
-        //     //       async restore has completed
-        //     let self_ptr: *mut T = std::ptr::from_mut(self);
-
-        //     let self_ptr = PromiseSend(self_ptr);
-        //     let locked_box = PromiseSend(locked_box);
-        //     let device_box = PromiseSend(device_box);
-
-        //     stream.add_callback(Box::new(move |res| {
-        //         let self_ptr: PromiseSend<_> = self_ptr;
-
-        //         std::mem::drop(device_box);
-        //         if res == Ok(()) {
-        //             // Safety: The precondition of this method guarantees that
-        //             //         &mut self has been borrowed until after this
-        //             //         completion is run
-        //             unsafe {
-        //                 std::ptr::copy_nonoverlapping(
-        //                     locked_box.0.as_ptr().cast::<T>(),
-        //                     self_ptr.0,
-        //                     1,
-        //                 );
-        //             }
-        //         }
-        //         std::mem::drop(locked_box);
-        //     }))
-        // }?;
-
-        // Ok(alloc_tail)
     }
 }
 

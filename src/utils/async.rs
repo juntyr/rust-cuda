@@ -1,8 +1,5 @@
 #[cfg(feature = "host")]
-use std::{
-    future::Future, future::IntoFuture, future::Ready, marker::PhantomData, sync::Arc, sync::Mutex,
-    task::Poll, task::Waker,
-};
+use std::{future::Future, future::IntoFuture, marker::PhantomData, task::Poll};
 
 #[cfg(feature = "host")]
 use rustacuda::{
@@ -14,20 +11,73 @@ use rustacuda::{
 use crate::host::CudaDropWrapper;
 
 #[cfg(feature = "host")]
-#[allow(clippy::module_name_repetitions)]
-pub trait CudaAsync<'stream, T, C: Send = ()>: Sized + IntoFuture<Output = CudaResult<T>> {
-    /// Wraps a still-asynchronous `value` which is being computed on `stream`
+pub struct Async<'stream, T, C> {
+    _stream: PhantomData<&'stream Stream>,
+    value: T,
+    status: AsyncStatus<T, C>,
+}
+
+#[cfg(feature = "host")]
+enum AsyncStatus<T, C> {
+    #[allow(clippy::type_complexity)]
+    Processing {
+        receiver: oneshot::Receiver<CudaResult<()>>,
+        capture: C,
+        on_completion: Box<dyn FnOnce(&mut T, C) -> CudaResult<()>>,
+        event: CudaDropWrapper<Event>,
+    },
+    Completed {
+        result: CudaResult<()>,
+    },
+}
+
+// TODO: completion is NOT allowed to make any cuda calls
+#[cfg(feature = "host")]
+impl<'stream, T, C> Async<'stream, T, C> {
+    /// Wraps a `value` which is ready on `stream`.
+    #[must_use]
+    pub const fn ready(value: T, stream: &'stream Stream) -> Self {
+        let _ = stream;
+
+        Self {
+            _stream: PhantomData::<&'stream Stream>,
+            value,
+            status: AsyncStatus::Completed { result: Ok(()) },
+        }
+    }
+
+    /// Wraps a still-pending `value` which is being computed on `stream`
     /// such that its computation can be synchronised on.
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
-    fn new(
+    pub fn pending(
         value: T,
         stream: &'stream Stream,
         capture: C,
-        on_completion: impl Send + FnOnce(C) -> CudaResult<()>,
-    ) -> CudaResult<Self>;
+        on_completion: impl FnOnce(&mut T, C) -> CudaResult<()> + 'static,
+    ) -> CudaResult<Self> {
+        let event = CudaDropWrapper::from(Event::new(
+            EventFlags::DISABLE_TIMING | EventFlags::BLOCKING_SYNC,
+        )?);
+
+        let (sender, receiver) = oneshot::channel();
+
+        stream.add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
+        event.record(stream)?;
+
+        Ok(Self {
+            _stream: PhantomData::<&'stream Stream>,
+            value,
+            status: AsyncStatus::Processing {
+                capture,
+                receiver,
+                on_completion: Box::new(on_completion),
+                event,
+            },
+        })
+    }
 
     /// Synchronises on this computation to block until it has completed and
     /// the inner value can be safely returned and again be used in synchronous
@@ -36,203 +86,84 @@ pub trait CudaAsync<'stream, T, C: Send = ()>: Sized + IntoFuture<Output = CudaR
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
-    fn synchronize(self) -> CudaResult<T>;
+    pub fn synchronize(mut self) -> CudaResult<T> {
+        let (receiver, capture, on_completion) = match self.status {
+            AsyncStatus::Completed { result } => return result.map(|()| self.value),
+            AsyncStatus::Processing {
+                receiver,
+                capture,
+                on_completion,
+                event: _,
+            } => (receiver, capture, on_completion),
+        };
+
+        match receiver.recv() {
+            Ok(Ok(())) => (),
+            Ok(Err(err)) => return Err(err),
+            Err(oneshot::RecvError) => return Err(CudaError::AlreadyAcquired),
+        }
+
+        on_completion(&mut self.value, capture)?;
+
+        Ok(self.value)
+    }
 
     /// Moves the asynchronous data move to a different [`Stream`].
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
-    fn move_to_stream<'stream_new>(
-        self,
-        stream: &'stream_new Stream,
-    ) -> CudaResult<impl CudaAsync<'stream_new, T, C>>;
-}
-
-#[cfg(feature = "host")]
-pub struct Sync<T> {
-    value: T,
-}
-
-#[cfg(feature = "host")]
-impl<'stream, T, C: Send> CudaAsync<'stream, T, C> for Sync<T> {
-    fn new(
-        value: T,
-        _stream: &'stream Stream,
-        capture: C,
-        on_completion: impl Send + FnOnce(C) -> CudaResult<()>,
-    ) -> CudaResult<Self> {
-        on_completion(capture)?;
-
-        Ok(Self { value })
-    }
-
-    fn synchronize(self) -> CudaResult<T> {
-        Ok(self.value)
-    }
-
-    #[allow(refining_impl_trait)]
-    fn move_to_stream(self, _stream: &Stream) -> CudaResult<Self> {
-        Ok(self)
-    }
-}
-
-#[cfg(feature = "host")]
-impl<T> IntoFuture for Sync<T> {
-    type IntoFuture = Ready<CudaResult<T>>;
-    type Output = CudaResult<T>;
-
-    fn into_future(self) -> Self::IntoFuture {
-        std::future::ready(Ok(self.value))
-    }
-}
-
-#[cfg(feature = "host")]
-pub struct Async<'stream, T, C = ()> {
-    _stream: PhantomData<&'stream Stream>,
-    event: CudaDropWrapper<Event>,
-    value: T,
-    status: Arc<Mutex<AsyncStatus<C>>>,
-}
-
-// This could also be expressed as a
-//  https://docs.rs/oneshot/latest/oneshot/index.html channel
-#[cfg(feature = "host")]
-enum AsyncStatus<C> {
-    Processing { waker: Option<Waker>, capture: C },
-    Completed { result: CudaResult<()> },
-}
-
-// TODO: completion is NOT allowed to make any cuda calls
-#[cfg(feature = "host")]
-impl<'stream, T, C: Send> CudaAsync<'stream, T, C> for Async<'stream, T, C> {
-    fn new(
-        value: T,
-        stream: &'stream Stream,
-        capture: C,
-        on_completion: impl Send + FnOnce(C) -> CudaResult<()>,
-    ) -> CudaResult<Self> {
-        let event = CudaDropWrapper::from(Event::new(
-            EventFlags::DISABLE_TIMING | EventFlags::BLOCKING_SYNC,
-        )?);
-
-        let status = Arc::new(Mutex::new(AsyncStatus::Processing {
-            waker: None,
-            capture,
-        }));
-
-        let status_callback = status.clone();
-        stream.add_callback(Box::new(move |res| {
-            let Ok(mut status) = status_callback.lock() else {
-                return;
-            };
-
-            let old_status =
-                std::mem::replace(&mut *status, AsyncStatus::Completed { result: Ok(()) });
-
-            let AsyncStatus::Processing { mut waker, capture } = old_status else {
-                // this path should never be taken
-                *status = old_status;
-                return;
-            };
-
-            if let Err(err) = res {
-                *status = AsyncStatus::Completed { result: Err(err) };
-            } else if let Err(err) = on_completion(capture) {
-                *status = AsyncStatus::Completed { result: Err(err) };
-            }
-
-            if let Some(waker) = waker.take() {
-                waker.wake();
-            }
-        }))?;
-
-        event.record(stream)?;
-
-        Ok(Self {
-            _stream: PhantomData::<&'stream Stream>,
-            event,
-            value,
-            status,
-        })
-    }
-
-    fn synchronize(self) -> CudaResult<T> {
-        let Ok(status) = self.status.lock() else {
-            return Err(CudaError::OperatingSystemError);
-        };
-
-        if let AsyncStatus::Completed { result } = &*status {
-            return result.map(|()| self.value);
-        }
-
-        std::mem::drop(status);
-
-        self.event.synchronize()?;
-
-        let Ok(status) = self.status.lock() else {
-            return Err(CudaError::OperatingSystemError);
-        };
-
-        match &*status {
-            AsyncStatus::Completed { result } => result.map(|()| self.value),
-            AsyncStatus::Processing { .. } => Err(CudaError::NotReady),
-        }
-    }
-
-    #[allow(refining_impl_trait)]
-    fn move_to_stream<'stream_new>(
-        self,
+    pub fn move_to_stream<'stream_new>(
+        mut self,
         stream: &'stream_new Stream,
     ) -> CudaResult<Async<'stream_new, T, C>> {
-        let Ok(status) = self.status.lock() else {
-            return Err(CudaError::OperatingSystemError);
+        let (receiver, capture, on_completion, event) = match self.status {
+            AsyncStatus::Completed { .. } => {
+                return Ok(Async {
+                    _stream: PhantomData::<&'stream_new Stream>,
+                    value: self.value,
+                    status: self.status,
+                })
+            },
+            AsyncStatus::Processing {
+                receiver,
+                capture,
+                on_completion,
+                event,
+            } => (receiver, capture, on_completion, event),
         };
 
-        if let AsyncStatus::Completed { result } = &*status {
-            #[allow(clippy::let_unit_value)]
-            let () = (*result)?;
+        match receiver.try_recv() {
+            Ok(Ok(())) => (),
+            Ok(Err(err)) => return Err(err),
+            Err(oneshot::TryRecvError::Empty) => {
+                stream.wait_event(&event, StreamWaitEventFlags::DEFAULT)?;
 
-            std::mem::drop(status);
+                return Ok(Async {
+                    _stream: PhantomData::<&'stream_new Stream>,
+                    value: self.value,
+                    status: AsyncStatus::Processing {
+                        receiver,
+                        capture,
+                        on_completion,
+                        event,
+                    },
+                });
+            },
+            Err(oneshot::TryRecvError::Disconnected) => return Err(CudaError::AlreadyAcquired),
+        };
 
-            // the computation has completed, so the result is available on any stream
-            return Ok(Async {
-                _stream: PhantomData::<&'stream_new Stream>,
-                event: self.event,
-                value: self.value,
-                status: self.status,
-            });
-        }
-
-        std::mem::drop(status);
-
-        stream.wait_event(&self.event, StreamWaitEventFlags::DEFAULT)?;
-        self.event.record(stream)?;
-
-        // add a new waker callback since the waker may have received a spurious
-        //  wake-up from when the computation completed on the original stream
-        let waker_callback = self.status.clone();
-        stream.add_callback(Box::new(move |_| {
-            if let Ok(mut status) = waker_callback.lock() {
-                if let AsyncStatus::Processing { waker, .. } = &mut *status {
-                    if let Some(waker) = waker.take() {
-                        waker.wake();
-                    }
-                }
-            }
-        }))?;
+        on_completion(&mut self.value, capture)?;
 
         Ok(Async {
             _stream: PhantomData::<&'stream_new Stream>,
-            event: self.event,
             value: self.value,
-            status: self.status,
+            status: AsyncStatus::Completed { result: Ok(()) },
         })
     }
-}
 
-#[cfg(feature = "host")]
-impl<'stream, T, C> Async<'stream, T, C> {
+    #[allow(clippy::missing_errors_doc)] // FIXME
+    #[allow(clippy::type_complexity)] // FIXME
     /// # Safety
     ///
     /// The returned inner value of type `T` may not yet have completed its
@@ -241,8 +172,69 @@ impl<'stream, T, C> Async<'stream, T, C> {
     /// This method must only be used to construct a larger asynchronous
     /// computation out of smaller ones that have all been submitted to the
     /// same [`Stream`].
-    pub unsafe fn unwrap_unchecked(self) -> T {
-        self.value
+    pub unsafe fn unwrap_unchecked(
+        self,
+    ) -> CudaResult<(T, Option<(C, Box<dyn FnOnce(&mut T, C) -> CudaResult<()>>)>)> {
+        match self.status {
+            AsyncStatus::Completed { result: Ok(()) } => Ok((self.value, None)),
+            AsyncStatus::Completed { result: Err(err) } => Err(err),
+            AsyncStatus::Processing {
+                receiver: _,
+                capture,
+                on_completion,
+                event: _,
+            } => Ok((self.value, Some((capture, on_completion)))),
+        }
+    }
+}
+
+#[cfg(feature = "host")]
+struct AsyncFuture<'stream, T, C> {
+    _stream: PhantomData<&'stream Stream>,
+    value: Option<T>,
+    #[allow(clippy::type_complexity)]
+    capture_on_completion: Option<(C, Box<dyn FnOnce(&mut T, C) -> CudaResult<()> + 'static>)>,
+    status: AsyncStatus<T, ()>,
+}
+
+#[cfg(feature = "host")]
+impl<'stream, T, C> Future for AsyncFuture<'stream, T, C> {
+    type Output = CudaResult<T>;
+
+    fn poll(
+        self: core::pin::Pin<&mut Self>,
+        cx: &mut core::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        // Safety: this function does not move out of `this`
+        let this = unsafe { self.get_unchecked_mut() };
+
+        match &mut this.status {
+            AsyncStatus::Processing {
+                receiver,
+                capture: (),
+                on_completion: _,
+                event: _,
+            } => match std::pin::Pin::new(receiver).poll(cx) {
+                Poll::Ready(Ok(Ok(()))) => (),
+                Poll::Ready(Ok(Err(err))) => return Poll::Ready(Err(err)),
+                Poll::Ready(Err(oneshot::RecvError)) => {
+                    return Poll::Ready(Err(CudaError::AlreadyAcquired))
+                },
+                Poll::Pending => return Poll::Pending,
+            },
+            AsyncStatus::Completed { result: Ok(()) } => (),
+            AsyncStatus::Completed { result: Err(err) } => return Poll::Ready(Err(*err)),
+        }
+
+        let Some(mut value) = this.value.take() else {
+            return Poll::Ready(Err(CudaError::AlreadyAcquired));
+        };
+
+        if let Some((capture, on_completion)) = this.capture_on_completion.take() {
+            on_completion(&mut value, capture)?;
+        }
+
+        Poll::Ready(Ok(value))
     }
 }
 
@@ -253,36 +245,29 @@ impl<'stream, T, C> IntoFuture for Async<'stream, T, C> {
     type IntoFuture = impl Future<Output = Self::Output>;
 
     fn into_future(self) -> Self::IntoFuture {
-        let mut wrapper = Some(self);
-
-        std::future::poll_fn(move |cx| {
-            let poll = match &wrapper {
-                #[allow(clippy::option_if_let_else)]
-                Some(Async {
-                    status: status_mutex,
-                    ..
-                }) => match status_mutex.lock() {
-                    Ok(mut status_guard) => match &mut *status_guard {
-                        AsyncStatus::Completed { result: Ok(()) } => Poll::Ready(Ok(())),
-                        AsyncStatus::Completed { result: Err(err) } => Poll::Ready(Err(*err)),
-                        AsyncStatus::Processing { waker, .. } => {
-                            *waker = Some(cx.waker().clone());
-                            Poll::Pending
-                        },
-                    },
-                    Err(_) => Poll::Ready(Err(CudaError::OperatingSystemError)),
+        let (capture_on_completion, status) = match self.status {
+            AsyncStatus::Completed { result } => (None, AsyncStatus::Completed { result }),
+            AsyncStatus::Processing {
+                receiver,
+                capture,
+                on_completion,
+                event,
+            } => (
+                Some((capture, on_completion)),
+                AsyncStatus::Processing {
+                    receiver,
+                    capture: (),
+                    on_completion: Box::new(|_self, ()| Ok(())),
+                    event,
                 },
-                None => Poll::Ready(Err(CudaError::AlreadyAcquired)),
-            };
+            ),
+        };
 
-            match poll {
-                Poll::Ready(Ok(())) => match wrapper.take() {
-                    Some(Async { value, .. }) => Poll::Ready(Ok(value)),
-                    None => Poll::Ready(Err(CudaError::AlreadyAcquired)),
-                },
-                Poll::Ready(Err(err)) => Poll::Ready(Err(err)),
-                Poll::Pending => Poll::Pending,
-            }
-        })
+        AsyncFuture {
+            _stream: PhantomData::<&'stream Stream>,
+            value: Some(self.value),
+            capture_on_completion,
+            status,
+        }
     }
 }

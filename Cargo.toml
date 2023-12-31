@@ -21,7 +21,7 @@ rust-version = "1.75" # nightly
 default = []
 derive = ["dep:rustacuda_derive", "dep:rust-cuda-derive"]
 device = []
-host = ["dep:rustacuda", "dep:regex"]
+host = ["dep:rustacuda", "dep:regex", "dep:oneshot"]
 kernel = ["dep:rust-cuda-kernel"]
 
 [dependencies]
@@ -33,6 +33,9 @@ rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc
 regex = { version = "1.10", optional = true }
 
 const-type-layout = { version = "0.2.1", features = ["derive"] }
+
+safer_owning_ref = { version = "0.5" }
+oneshot = { version = "0.1", optional = true, features = ["std", "async"] }
 
 rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
 rust-cuda-kernel = { path = "rust-cuda-kernel", optional = true }

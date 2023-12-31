@@ -12,7 +12,10 @@ use crate::{
 };
 
 #[cfg(feature = "host")]
-use crate::alloc::{CombinedCudaAlloc, CudaAlloc};
+use crate::{
+    alloc::{CombinedCudaAlloc, CudaAlloc},
+    utils::r#async::Async,
+};
 
 #[doc(hidden)]
 #[allow(clippy::module_name_repetitions)]
@@ -118,18 +121,59 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     }
 
     #[cfg(feature = "host")]
-    unsafe fn restore_async<A: CudaAlloc>(
-        &mut self,
+    unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        mut this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &rustacuda::stream::Stream,
-    ) -> CudaResult<A> {
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> CudaResult<(
+        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::CudaAllocationAsync>,
+        A,
+    )> {
         let (alloc_front, alloc_tail) = alloc.split();
 
-        match (self, alloc_front) {
-            (Some(value), Some(alloc_front)) => {
-                value.restore_async(CombinedCudaAlloc::new(alloc_front, alloc_tail), stream)
-            },
-            _ => Ok(alloc_tail),
+        if let (Some(_), Some(alloc_front)) = (&mut *this, alloc_front) {
+            let this_backup = unsafe { std::mem::ManuallyDrop::new(std::ptr::read(&this)) };
+
+            #[allow(clippy::option_if_let_else)]
+            let (r#async, alloc_tail) = RustToCudaAsync::restore_async(
+                this.map_mut(|value| match value {
+                    Some(value) => value,
+                    None => unreachable!(), // TODO
+                }),
+                CombinedCudaAlloc::new(alloc_front, alloc_tail),
+                stream,
+            )?;
+
+            let (value, capture_on_completion) = unsafe { r#async.unwrap_unchecked()? };
+
+            std::mem::forget(value);
+            let this = std::mem::ManuallyDrop::into_inner(this_backup);
+
+            if let Some((capture, on_completion)) = capture_on_completion {
+                let r#async = Async::pending(this, stream, Some(capture), |this, capture| {
+                    let mut value_backup = unsafe {
+                        std::mem::ManuallyDrop::new(std::ptr::read(this).map_mut(
+                            |value| match value {
+                                Some(value) => value,
+                                None => unreachable!(), // TODO
+                            },
+                        ))
+                    };
+
+                    if let (Some(_), Some(capture)) = (&mut **this, capture) {
+                        on_completion(&mut value_backup, capture)?;
+                    }
+
+                    Ok(())
+                })?;
+                Ok((r#async, alloc_tail))
+            } else {
+                let r#async = Async::ready(this, stream);
+                Ok((r#async, alloc_tail))
+            }
+        } else {
+            let r#async = Async::ready(this, stream);
+            Ok((r#async, alloc_tail))
         }
     }
 }
@@ -165,7 +209,7 @@ impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaProxy<Option<T>
     }
 }
 
-impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
+impl<T: Copy + Send + PortableBitSemantics + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
     for Option<RustToCudaWithPortableBitCopySemantics<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
