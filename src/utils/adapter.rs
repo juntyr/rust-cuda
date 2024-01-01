@@ -130,19 +130,24 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
     for RustToCudaWithPortableBitCopySemantics<T>
 {
     type CudaAllocationAsync = NoCudaAlloc;
+    #[cfg(feature = "host")]
+    type RestoreAsyncCapture = ();
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: CudaAlloc>(
+    unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        _stream: &rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
+        crate::utils::r#async::Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
         let alloc = CombinedCudaAlloc::new(NoCudaAlloc, alloc);
-        Ok((DeviceAccessible::from(*self), alloc))
+        Ok((
+            crate::utils::r#async::Async::ready(DeviceAccessible::from(*self), stream),
+            alloc,
+        ))
     }
 
     #[cfg(feature = "host")]
@@ -154,18 +159,14 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
         crate::utils::r#async::Async<
             'stream,
             owning_ref::BoxRefMut<'a, O, Self>,
-            Self::CudaAllocationAsync,
+            Self::RestoreAsyncCapture,
+            Self,
         >,
         A,
     )> {
         let (_alloc_front, alloc_tail): (NoCudaAlloc, A) = alloc.split();
 
-        let r#async = crate::utils::r#async::Async::pending(
-            this,
-            stream,
-            NoCudaAlloc,
-            |_this, NoCudaAlloc| Ok(()),
-        )?;
+        let r#async = crate::utils::r#async::Async::pending(this, stream, (), |_this, ()| Ok(()))?;
 
         Ok((r#async, alloc_tail))
     }

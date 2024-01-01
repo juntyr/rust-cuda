@@ -83,41 +83,65 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 
 unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     type CudaAllocationAsync = Option<<T as RustToCudaAsync>::CudaAllocationAsync>;
+    #[cfg(feature = "host")]
+    type RestoreAsyncCapture = (
+        <T as RustToCudaAsync>::RestoreAsyncCapture,
+        Box<
+            dyn FnOnce(&mut T, <T as RustToCudaAsync>::RestoreAsyncCapture) -> CudaResult<()>
+                + 'static,
+        >,
+    );
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: CudaAlloc>(
+    unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
     ) -> CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
+        Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
         let (cuda_repr, alloc) = match self {
             None => (
-                OptionCudaRepresentation {
-                    maybe: MaybeUninit::uninit(),
-                    present: false,
-                },
+                Async::ready(
+                    DeviceAccessible::from(OptionCudaRepresentation {
+                        maybe: MaybeUninit::uninit(),
+                        present: false,
+                    }),
+                    stream,
+                ),
                 CombinedCudaAlloc::new(None, alloc),
             ),
             Some(value) => {
                 let (cuda_repr, alloc) = value.borrow_async(alloc, stream)?;
 
-                let (alloc_front, alloc_tail) = alloc.split();
+                let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
-                (
-                    OptionCudaRepresentation {
-                        maybe: MaybeUninit::new(cuda_repr),
-                        present: true,
-                    },
-                    CombinedCudaAlloc::new(Some(alloc_front), alloc_tail),
-                )
+                let (alloc_front, alloc_tail) = alloc.split();
+                let alloc = CombinedCudaAlloc::new(Some(alloc_front), alloc_tail);
+
+                let option_cuda_repr = DeviceAccessible::from(OptionCudaRepresentation {
+                    maybe: MaybeUninit::new(cuda_repr),
+                    present: true,
+                });
+
+                let r#async = if let Some((capture, on_completion)) = capture_on_completion {
+                    Async::pending(option_cuda_repr, stream, self, |option_cuda_repr, this| {
+                        // if let Some(capture) = this {
+                        //     on_completion(todo!(), capture)?;
+                        // }
+                        Ok(())
+                    })?
+                } else {
+                    Async::ready(option_cuda_repr, stream)
+                };
+
+                (r#async, alloc)
             },
         };
 
-        Ok((DeviceAccessible::from(cuda_repr), alloc))
+        Ok((cuda_repr, alloc))
     }
 
     #[cfg(feature = "host")]
@@ -126,7 +150,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &'stream rustacuda::stream::Stream,
     ) -> CudaResult<(
-        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::CudaAllocationAsync>,
+        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::RestoreAsyncCapture, Self>,
         A,
     )> {
         let (alloc_front, alloc_tail) = alloc.split();
@@ -150,22 +174,18 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
             let this = std::mem::ManuallyDrop::into_inner(this_backup);
 
             if let Some((capture, on_completion)) = capture_on_completion {
-                let r#async = Async::pending(this, stream, Some(capture), |this, capture| {
-                    let mut value_backup = unsafe {
-                        std::mem::ManuallyDrop::new(std::ptr::read(this).map_mut(
-                            |value| match value {
-                                Some(value) => value,
-                                None => unreachable!(), // TODO
-                            },
-                        ))
-                    };
+                let r#async = Async::pending(
+                    this,
+                    stream,
+                    (capture, on_completion),
+                    |this: &mut Self, (capture, on_completion)| {
+                        if let Some(value) = this {
+                            on_completion(value, capture)?;
+                        }
 
-                    if let (Some(_), Some(capture)) = (&mut **this, capture) {
-                        on_completion(&mut value_backup, capture)?;
-                    }
-
-                    Ok(())
-                })?;
+                        Ok(())
+                    },
+                )?;
                 Ok((r#async, alloc_tail))
             } else {
                 let r#async = Async::ready(this, stream);

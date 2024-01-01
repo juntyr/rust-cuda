@@ -77,6 +77,10 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
+    type RestoreAsyncCapture;
+
+    #[doc(hidden)]
+    #[cfg(feature = "host")]
     /// # Errors
     ///
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -98,12 +102,12 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     /// Similarly, `&self` should remain borrowed until synchronisation has
     /// been performed.
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: CudaAlloc>(
+    unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
+        Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )>;
 
@@ -129,7 +133,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::CudaAllocationAsync>,
+        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::RestoreAsyncCapture, Self>,
         A,
     )>;
 }
@@ -296,7 +300,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
             Async<
                 'stream,
                 HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-                (),
+                Self,
             >,
         ) -> Result<O, E>,
     >(
@@ -331,10 +335,20 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
     {
         let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
 
+        let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, |const_ref| {
-            inner(Async::pending(const_ref, stream, self, |_ref, _self| {
-                Ok(())
-            })?)
+            let r#async = if let Some((capture, on_completion)) = capture_on_completion {
+                Async::pending(const_ref, stream, self, |const_ref, this| {
+                    // TODO
+                    // on_completion(const_ref.for_host(), this)
+                    Ok(())
+                })?
+            } else {
+                Async::ready(const_ref, stream)
+            };
+
+            inner(r#async)
         });
 
         core::mem::drop(cuda_repr);
@@ -351,7 +365,7 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
             Async<
                 'stream,
                 HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-                (),
+                Self,
             >,
         ) -> Result<O, E>,
     >(
@@ -364,8 +378,18 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
     {
         let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
 
+        let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+
         let result = HostAndDeviceOwned::with_new(cuda_repr, |owned_ref| {
-            inner(Async::pending(owned_ref, stream, (), |_ref, ()| Ok(()))?)
+            let r#async = if let Some((capture, on_completion)) = capture_on_completion {
+                Async::pending(owned_ref, stream, self, |owned_ref, this| {
+                    on_completion(owned_ref.for_async_completion(), &this)
+                })?
+            } else {
+                Async::ready(owned_ref, stream)
+            };
+
+            inner(r#async)
         });
 
         core::mem::drop(alloc);

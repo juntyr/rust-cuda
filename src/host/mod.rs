@@ -337,6 +337,11 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     }
 
     #[must_use]
+    pub(crate) fn for_async_completion(&mut self) -> &mut T {
+        self.host_val
+    }
+
+    #[must_use]
     pub fn into_async<'stream>(self) -> HostAndDeviceOwnedAsync<'stream, 'a, T> {
         HostAndDeviceOwnedAsync {
             device_box: self.device_box,

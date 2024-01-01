@@ -1,11 +1,13 @@
 use core::marker::PhantomData;
+#[cfg(feature = "host")]
+use std::mem::ManuallyDrop;
 
-use crate::{deps::alloc::boxed::Box, utils::ffi::DeviceOwnedPointer};
+use crate::{deps::alloc::boxed::Box, lend::RustToCudaAsync, utils::ffi::DeviceOwnedPointer};
 
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBuffer};
+use rustacuda::{error::CudaResult, memory::DeviceBuffer, memory::LockedBuffer};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda},
@@ -20,6 +22,7 @@ use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc},
     host::CudaDropWrapper,
     utils::adapter::DeviceCopyWithPortableBitSemantics,
+    utils::r#async::Async,
 };
 
 #[doc(hidden)]
@@ -77,6 +80,105 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<[T]> {
         core::mem::drop(alloc_front);
 
         Ok(alloc_tail)
+    }
+}
+
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<[T]> {
+    #[cfg(all(feature = "host", not(doc)))]
+    type CudaAllocationAsync = CombinedCudaAlloc<
+        CudaDropWrapper<LockedBuffer<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>>,
+        CudaDropWrapper<DeviceBuffer<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>>,
+    >;
+    #[cfg(any(not(feature = "host"), doc))]
+    type CudaAllocationAsync = crate::alloc::SomeCudaAlloc;
+    #[cfg(feature = "host")]
+    type RestoreAsyncCapture = Self::CudaAllocationAsync;
+
+    #[cfg(feature = "host")]
+    unsafe fn borrow_async<'stream, A: CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
+        CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
+    )> {
+        use rustacuda::memory::AsyncCopyDestination;
+
+        let locked_buffer = unsafe {
+            let mut uninit = CudaDropWrapper::from(LockedBuffer::<
+                DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
+            >::uninitialized(self.len())?);
+            std::ptr::copy_nonoverlapping(
+                self.as_ref()
+                    .as_ptr()
+                    .cast::<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>(),
+                uninit.as_mut_ptr(),
+                self.len(),
+            );
+            uninit
+        };
+
+        let mut device_buffer = CudaDropWrapper::from(DeviceBuffer::<
+            DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
+        >::uninitialized(self.len())?);
+        device_buffer.async_copy_from(&*locked_buffer, stream)?;
+
+        Ok((
+            Async::pending(
+                DeviceAccessible::from(BoxedSliceCudaRepresentation {
+                    data: DeviceOwnedPointer(device_buffer.as_mut_ptr().cast()),
+                    len: device_buffer.len(),
+                    _marker: PhantomData::<T>,
+                }),
+                stream,
+                self,
+                |_cuda_repr, _self| Ok(()),
+            )?,
+            CombinedCudaAlloc::new(CombinedCudaAlloc::new(locked_buffer, device_buffer), alloc),
+        ))
+    }
+
+    #[cfg(feature = "host")]
+    unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        this: owning_ref::BoxRefMut<'a, O, Self>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> CudaResult<(
+        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::RestoreAsyncCapture, Self>,
+        A,
+    )> {
+        use rustacuda::memory::AsyncCopyDestination;
+
+        let (alloc_front, alloc_tail) = alloc.split();
+        let (mut locked_buffer, device_buffer) = alloc_front.split();
+
+        device_buffer.async_copy_to(&mut *locked_buffer, stream)?;
+
+        let r#async = crate::utils::r#async::Async::pending(
+            this,
+            stream,
+            CombinedCudaAlloc::new(locked_buffer, device_buffer),
+            move |this: &mut Self, alloc| {
+                let data: &mut [T] = &mut *this;
+                let (locked_buffer, device_buffer) = alloc.split();
+
+                std::mem::drop(device_buffer);
+                // Safety: equivalent to data.copy_from_slice(&*locked_buffer)
+                //         since LockedBox<ManuallyDrop<T>> doesn't drop T
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        locked_buffer.as_ptr().cast::<T>(),
+                        data.as_mut_ptr(),
+                        data.len(),
+                    );
+                }
+                std::mem::drop(locked_buffer);
+                Ok(())
+            },
+        )?;
+
+        Ok((r#async, alloc_tail))
     }
 }
 

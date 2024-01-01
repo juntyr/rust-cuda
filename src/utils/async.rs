@@ -1,5 +1,5 @@
 #[cfg(feature = "host")]
-use std::{future::Future, future::IntoFuture, marker::PhantomData, task::Poll};
+use std::{borrow::BorrowMut, future::Future, future::IntoFuture, marker::PhantomData, task::Poll};
 
 #[cfg(feature = "host")]
 use rustacuda::{
@@ -11,19 +11,19 @@ use rustacuda::{
 use crate::host::CudaDropWrapper;
 
 #[cfg(feature = "host")]
-pub struct Async<'stream, T, C> {
+pub struct Async<'stream, T: BorrowMut<B>, C, B: ?Sized = T> {
     _stream: PhantomData<&'stream Stream>,
     value: T,
-    status: AsyncStatus<T, C>,
+    status: AsyncStatus<C, B>,
 }
 
 #[cfg(feature = "host")]
-enum AsyncStatus<T, C> {
+enum AsyncStatus<C, B: ?Sized> {
     #[allow(clippy::type_complexity)]
     Processing {
         receiver: oneshot::Receiver<CudaResult<()>>,
         capture: C,
-        on_completion: Box<dyn FnOnce(&mut T, C) -> CudaResult<()>>,
+        on_completion: Box<dyn FnOnce(&mut B, C) -> CudaResult<()>>,
         event: CudaDropWrapper<Event>,
     },
     Completed {
@@ -33,7 +33,7 @@ enum AsyncStatus<T, C> {
 
 // TODO: completion is NOT allowed to make any cuda calls
 #[cfg(feature = "host")]
-impl<'stream, T, C> Async<'stream, T, C> {
+impl<'stream, T: BorrowMut<B>, C, B: ?Sized> Async<'stream, T, C, B> {
     /// Wraps a `value` which is ready on `stream`.
     #[must_use]
     pub const fn ready(value: T, stream: &'stream Stream) -> Self {
@@ -56,7 +56,7 @@ impl<'stream, T, C> Async<'stream, T, C> {
         value: T,
         stream: &'stream Stream,
         capture: C,
-        on_completion: impl FnOnce(&mut T, C) -> CudaResult<()> + 'static,
+        on_completion: impl FnOnce(&mut B, C) -> CudaResult<()> + 'static,
     ) -> CudaResult<Self> {
         let event = CudaDropWrapper::from(Event::new(
             EventFlags::DISABLE_TIMING | EventFlags::BLOCKING_SYNC,
@@ -103,7 +103,7 @@ impl<'stream, T, C> Async<'stream, T, C> {
             Err(oneshot::RecvError) => return Err(CudaError::AlreadyAcquired),
         }
 
-        on_completion(&mut self.value, capture)?;
+        on_completion(self.value.borrow_mut(), capture)?;
 
         Ok(self.value)
     }
@@ -116,7 +116,7 @@ impl<'stream, T, C> Async<'stream, T, C> {
     pub fn move_to_stream<'stream_new>(
         mut self,
         stream: &'stream_new Stream,
-    ) -> CudaResult<Async<'stream_new, T, C>> {
+    ) -> CudaResult<Async<'stream_new, T, C, B>> {
         let (receiver, capture, on_completion, event) = match self.status {
             AsyncStatus::Completed { .. } => {
                 return Ok(Async {
@@ -153,7 +153,7 @@ impl<'stream, T, C> Async<'stream, T, C> {
             Err(oneshot::TryRecvError::Disconnected) => return Err(CudaError::AlreadyAcquired),
         };
 
-        on_completion(&mut self.value, capture)?;
+        on_completion(self.value.borrow_mut(), capture)?;
 
         Ok(Async {
             _stream: PhantomData::<&'stream_new Stream>,
@@ -174,7 +174,10 @@ impl<'stream, T, C> Async<'stream, T, C> {
     /// same [`Stream`].
     pub unsafe fn unwrap_unchecked(
         self,
-    ) -> CudaResult<(T, Option<(C, Box<dyn FnOnce(&mut T, C) -> CudaResult<()>>)>)> {
+    ) -> CudaResult<(
+        T,
+        Option<(C, Box<dyn FnOnce(&mut B, C) -> CudaResult<()> + 'static>)>,
+    )> {
         match self.status {
             AsyncStatus::Completed { result: Ok(()) } => Ok((self.value, None)),
             AsyncStatus::Completed { result: Err(err) } => Err(err),
@@ -189,16 +192,16 @@ impl<'stream, T, C> Async<'stream, T, C> {
 }
 
 #[cfg(feature = "host")]
-struct AsyncFuture<'stream, T, C> {
+struct AsyncFuture<'stream, T: BorrowMut<B>, C, B: ?Sized> {
     _stream: PhantomData<&'stream Stream>,
     value: Option<T>,
     #[allow(clippy::type_complexity)]
-    capture_on_completion: Option<(C, Box<dyn FnOnce(&mut T, C) -> CudaResult<()> + 'static>)>,
-    status: AsyncStatus<T, ()>,
+    capture_on_completion: Option<(C, Box<dyn FnOnce(&mut B, C) -> CudaResult<()> + 'static>)>,
+    status: AsyncStatus<(), B>,
 }
 
 #[cfg(feature = "host")]
-impl<'stream, T, C> Future for AsyncFuture<'stream, T, C> {
+impl<'stream, T: BorrowMut<B>, C, B: ?Sized> Future for AsyncFuture<'stream, T, C, B> {
     type Output = CudaResult<T>;
 
     fn poll(
@@ -231,7 +234,7 @@ impl<'stream, T, C> Future for AsyncFuture<'stream, T, C> {
         };
 
         if let Some((capture, on_completion)) = this.capture_on_completion.take() {
-            on_completion(&mut value, capture)?;
+            on_completion(value.borrow_mut(), capture)?;
         }
 
         Poll::Ready(Ok(value))
@@ -239,7 +242,7 @@ impl<'stream, T, C> Future for AsyncFuture<'stream, T, C> {
 }
 
 #[cfg(feature = "host")]
-impl<'stream, T, C> IntoFuture for Async<'stream, T, C> {
+impl<'stream, T: BorrowMut<B>, C, B: ?Sized> IntoFuture for Async<'stream, T, C, B> {
     type Output = CudaResult<T>;
 
     type IntoFuture = impl Future<Output = Self::Output>;
