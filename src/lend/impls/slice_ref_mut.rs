@@ -79,6 +79,9 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mu
     }
 }
 
+// &mut [T] cannot implement RustToCudaAsync since the slice, potentially with
+//  garbage data, would remain accessible after failing a mutable restore
+
 unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> CudaAsRust
     for SliceRefMutCudaRepresentation<'a, T>
 {
