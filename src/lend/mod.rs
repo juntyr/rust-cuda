@@ -17,7 +17,7 @@ use crate::{alloc::EmptyCudaAlloc, utils::ffi::DeviceAccessible};
 use crate::{
     alloc::{CombinedCudaAlloc, NoCudaAlloc},
     host::{HostAndDeviceConstRef, HostAndDeviceOwned},
-    utils::r#async::Async,
+    utils::r#async::{Async, CompletionFnMut, NoCompletion},
 };
 
 mod impls;
@@ -77,10 +77,6 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
-    type RestoreAsyncCapture;
-
-    #[doc(hidden)]
-    #[cfg(feature = "host")]
     /// # Errors
     ///
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -107,7 +103,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         alloc: A,
         stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
+        Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )>;
 
@@ -133,7 +129,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::RestoreAsyncCapture, Self>,
+        Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )>;
 }
@@ -274,9 +270,9 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         E: From<CudaError>,
         F: FnOnce(
             Async<
+                '_,
                 'stream,
                 HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-                &Self,
             >,
         ) -> Result<O, E>,
     >(
@@ -296,11 +292,11 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         'stream,
         O,
         E: From<CudaError>,
-        F: FnOnce(
+        F: for<'a> FnOnce(
             Async<
+                'a,
                 'stream,
                 HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-                Self,
             >,
         ) -> Result<O, E>,
     >(
@@ -320,9 +316,9 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         E: From<CudaError>,
         F: FnOnce(
             Async<
+                '_,
                 'stream,
                 HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-                &Self,
             >,
         ) -> Result<O, E>,
     >(
@@ -338,12 +334,8 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, |const_ref| {
-            let r#async = if let Some((capture, on_completion)) = capture_on_completion {
-                Async::pending(const_ref, stream, self, |const_ref, this| {
-                    // TODO
-                    // on_completion(const_ref.for_host(), this)
-                    Ok(())
-                })?
+            let r#async = if matches!(capture_on_completion, Some(NoCompletion)) {
+                Async::pending(const_ref, stream, NoCompletion)?
             } else {
                 Async::ready(const_ref, stream)
             };
@@ -361,11 +353,11 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         'stream,
         O,
         E: From<CudaError>,
-        F: FnOnce(
+        F: for<'a> FnOnce(
             Async<
+                'a,
                 'stream,
                 HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
-                Self,
             >,
         ) -> Result<O, E>,
     >(
@@ -381,15 +373,11 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
         let result = HostAndDeviceOwned::with_new(cuda_repr, |owned_ref| {
-            let r#async = if let Some((capture, on_completion)) = capture_on_completion {
-                Async::pending(owned_ref, stream, self, |owned_ref, this| {
-                    on_completion(owned_ref.for_async_completion(), &this)
-                })?
+            if matches!(capture_on_completion, Some(NoCompletion)) {
+                inner(Async::pending(owned_ref, stream, NoCompletion)?)
             } else {
-                Async::ready(owned_ref, stream)
-            };
-
-            inner(r#async)
+                inner(Async::ready(owned_ref, stream))
+            }
         });
 
         core::mem::drop(alloc);

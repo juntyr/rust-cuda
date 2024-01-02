@@ -14,7 +14,7 @@ use crate::{
 #[cfg(feature = "host")]
 use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc},
-    utils::r#async::Async,
+    utils::r#async::{Async, CompletionFnMut, NoCompletion},
 };
 
 #[doc(hidden)]
@@ -83,14 +83,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
 
 unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     type CudaAllocationAsync = Option<<T as RustToCudaAsync>::CudaAllocationAsync>;
-    #[cfg(feature = "host")]
-    type RestoreAsyncCapture = (
-        <T as RustToCudaAsync>::RestoreAsyncCapture,
-        Box<
-            dyn FnOnce(&mut T, <T as RustToCudaAsync>::RestoreAsyncCapture) -> CudaResult<()>
-                + 'static,
-        >,
-    );
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
@@ -99,7 +91,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
         alloc: A,
         stream: &'stream rustacuda::stream::Stream,
     ) -> CudaResult<(
-        Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
+        Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
         let (cuda_repr, alloc) = match self {
@@ -126,13 +118,8 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
                     present: true,
                 });
 
-                let r#async = if let Some((capture, on_completion)) = capture_on_completion {
-                    Async::pending(option_cuda_repr, stream, self, |option_cuda_repr, this| {
-                        // if let Some(capture) = this {
-                        //     on_completion(todo!(), capture)?;
-                        // }
-                        Ok(())
-                    })?
+                let r#async = if matches!(capture_on_completion, Some(NoCompletion)) {
+                    Async::pending(option_cuda_repr, stream, NoCompletion)?
                 } else {
                     Async::ready(option_cuda_repr, stream)
                 };
@@ -150,7 +137,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &'stream rustacuda::stream::Stream,
     ) -> CudaResult<(
-        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::RestoreAsyncCapture, Self>,
+        Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )> {
         let (alloc_front, alloc_tail) = alloc.split();
@@ -168,23 +155,22 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
                 stream,
             )?;
 
-            let (value, capture_on_completion) = unsafe { r#async.unwrap_unchecked()? };
+            let (value, on_completion) = unsafe { r#async.unwrap_unchecked()? };
 
             std::mem::forget(value);
             let this = std::mem::ManuallyDrop::into_inner(this_backup);
 
-            if let Some((capture, on_completion)) = capture_on_completion {
-                let r#async = Async::pending(
+            if let Some(on_completion) = on_completion {
+                let r#async = Async::<_, CompletionFnMut<'a, Self>>::pending(
                     this,
                     stream,
-                    (capture, on_completion),
-                    |this: &mut Self, (capture, on_completion)| {
+                    Box::new(|this: &mut Self| {
                         if let Some(value) = this {
-                            on_completion(value, capture)?;
+                            on_completion(value)?;
                         }
 
                         Ok(())
-                    },
+                    }),
                 )?;
                 Ok((r#async, alloc_tail))
             } else {

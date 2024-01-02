@@ -22,6 +22,8 @@ use crate::{
     host::CudaDropWrapper,
     utils::adapter::DeviceCopyWithPortableBitSemantics,
     utils::r#async::Async,
+    utils::r#async::CompletionFnMut,
+    utils::r#async::NoCompletion,
 };
 
 #[doc(hidden)]
@@ -83,8 +85,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
     >;
     #[cfg(any(not(feature = "host"), doc))]
     type CudaAllocationAsync = crate::alloc::SomeCudaAlloc;
-    #[cfg(feature = "host")]
-    type RestoreAsyncCapture = Self::CudaAllocationAsync;
 
     #[cfg(feature = "host")]
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
@@ -92,7 +92,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
         alloc: A,
         stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        Async<'stream, DeviceAccessible<Self::CudaRepresentation>, &Self>,
+        Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
         use rustacuda::memory::AsyncCopyDestination;
@@ -121,8 +121,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
                     device_box.as_device_ptr().as_raw_mut().cast(),
                 ))),
                 stream,
-                self,
-                |_cuda_repr, _self| Ok(()),
+                NoCompletion,
             )?,
             CombinedCudaAlloc::new(CombinedCudaAlloc::new(locked_box, device_box), alloc),
         ))
@@ -134,7 +133,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: &'stream rustacuda::stream::Stream,
     ) -> CudaResult<(
-        Async<'stream, owning_ref::BoxRefMut<'a, O, Self>, Self::RestoreAsyncCapture, Self>,
+        Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )> {
         use rustacuda::memory::AsyncCopyDestination;
@@ -144,14 +143,11 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
 
         device_box.async_copy_to(&mut *locked_box, stream)?;
 
-        let r#async = crate::utils::r#async::Async::pending(
+        let r#async = crate::utils::r#async::Async::<_, CompletionFnMut<'a, Self>>::pending(
             this,
             stream,
-            CombinedCudaAlloc::new(locked_box, device_box),
-            move |this: &mut Self, alloc| {
+            Box::new(move |this: &mut Self| {
                 let data: &mut T = &mut *this;
-                let (locked_box, device_box) = alloc.split();
-
                 std::mem::drop(device_box);
                 // Safety: equivalent to *data = *locked_box since
                 //         LockedBox<ManuallyDrop<T>> doesn't drop T
@@ -160,7 +156,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
                 }
                 std::mem::drop(locked_box);
                 Ok(())
-            },
+            }),
         )?;
 
         Ok((r#async, alloc_tail))
