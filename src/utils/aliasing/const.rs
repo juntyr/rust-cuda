@@ -219,29 +219,71 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: crate::alloc::CudaAlloc>(
+    unsafe fn borrow_async<'stream, A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
-        stream: &rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
+        crate::utils::r#async::Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         crate::alloc::CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        let (cuda_repr, alloc) = self.0.borrow_async(alloc, stream)?;
+        let (r#async, alloc) = self.0.borrow_async(alloc, stream)?;
+        let (cuda_repr, completion) = unsafe { r#async.unwrap_unchecked()? };
 
-        Ok((
-            DeviceAccessible::from(SplitSliceOverCudaThreadsConstStride::new(cuda_repr)),
-            alloc,
-        ))
+        let cuda_repr =
+            DeviceAccessible::from(SplitSliceOverCudaThreadsConstStride::new(cuda_repr));
+
+        let r#async = if matches!(completion, Some(crate::utils::r#async::NoCompletion)) {
+            crate::utils::r#async::Async::pending(
+                cuda_repr,
+                stream,
+                crate::utils::r#async::NoCompletion,
+            )?
+        } else {
+            crate::utils::r#async::Async::ready(cuda_repr, stream)
+        };
+
+        Ok((r#async, alloc))
     }
 
     #[cfg(feature = "host")]
-    unsafe fn restore_async<A: crate::alloc::CudaAlloc>(
-        &mut self,
+    unsafe fn restore_async<'a, 'stream, A: crate::alloc::CudaAlloc, O>(
+        this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: crate::alloc::CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &rustacuda::stream::Stream,
-    ) -> rustacuda::error::CudaResult<A> {
-        self.0.restore_async(alloc, stream)
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        crate::utils::r#async::Async<
+            'a,
+            'stream,
+            owning_ref::BoxRefMut<'a, O, Self>,
+            crate::utils::r#async::CompletionFnMut<'a, Self>,
+        >,
+        A,
+    )> {
+        let this_backup = unsafe { std::mem::ManuallyDrop::new(std::ptr::read(&this)) };
+
+        let (r#async, alloc_tail) =
+            T::restore_async(this.map_mut(|this| &mut this.0), alloc, stream)?;
+
+        let (inner, on_completion) = unsafe { r#async.unwrap_unchecked()? };
+
+        std::mem::forget(inner);
+        let this = std::mem::ManuallyDrop::into_inner(this_backup);
+
+        if let Some(on_completion) = on_completion {
+            let r#async = crate::utils::r#async::Async::<
+                _,
+                crate::utils::r#async::CompletionFnMut<'a, Self>,
+            >::pending(
+                this,
+                stream,
+                Box::new(|this: &mut Self| on_completion(&mut this.0)),
+            )?;
+            Ok((r#async, alloc_tail))
+        } else {
+            let r#async = crate::utils::r#async::Async::ready(this, stream);
+            Ok((r#async, alloc_tail))
+        }
     }
 }
 
