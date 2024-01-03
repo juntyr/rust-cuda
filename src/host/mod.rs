@@ -22,6 +22,7 @@ use crate::{
             DeviceConstPointer, DeviceConstRef, DeviceMutPointer, DeviceMutRef, DeviceOwnedPointer,
             DeviceOwnedRef,
         },
+        r#async::{Async, NoCompletion},
     },
 };
 
@@ -190,15 +191,20 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn as_async<'stream, 'b>(&'b mut self) -> HostAndDeviceMutRefAsync<'stream, 'b, T>
+    pub fn as_async<'b, 'stream>(
+        &'b mut self,
+        stream: &'stream Stream,
+    ) -> Async<'b, 'stream, HostAndDeviceMutRef<'b, T>, NoCompletion>
     where
         'a: 'b,
     {
-        HostAndDeviceMutRefAsync {
-            device_box: self.device_box,
-            host_ref: self.host_ref,
-            stream: PhantomData::<&'stream Stream>,
-        }
+        Async::ready(
+            HostAndDeviceMutRef {
+                device_box: self.device_box,
+                host_ref: self.host_ref,
+            },
+            stream,
+        )
     }
 }
 
@@ -284,15 +290,20 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     }
 
     #[must_use]
-    pub const fn as_async<'stream, 'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
+    pub const fn as_async<'b, 'stream>(
+        &'b self,
+        stream: &'stream Stream,
+    ) -> Async<'b, 'stream, HostAndDeviceConstRef<'b, T>, NoCompletion>
     where
         'a: 'b,
     {
-        HostAndDeviceConstRefAsync {
-            device_box: self.device_box,
-            host_ref: self.host_ref,
-            stream: PhantomData::<&'stream Stream>,
-        }
+        Async::ready(
+            HostAndDeviceConstRef {
+                device_box: self.device_box,
+                host_ref: self.host_ref,
+            },
+            stream,
+        )
     }
 }
 
@@ -337,178 +348,10 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     }
 
     #[must_use]
-    pub fn into_async<'stream>(self) -> HostAndDeviceOwnedAsync<'stream, 'a, T> {
-        HostAndDeviceOwnedAsync {
-            device_box: self.device_box,
-            host_val: self.host_val,
-            stream: PhantomData::<&'stream Stream>,
-        }
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceMutRefAsync<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> {
-    device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-    host_ref: &'a mut T,
-    stream: PhantomData<&'stream Stream>,
-}
-
-impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
-    HostAndDeviceMutRefAsync<'stream, 'a, T>
-{
-    /// # Safety
-    ///
-    /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub unsafe fn new(
-        device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-        host_ref: &'a mut T,
-    ) -> Self {
-        Self {
-            device_box,
-            host_ref,
-            stream: PhantomData::<&'stream Stream>,
-        }
-    }
-
-    #[must_use]
-    /// # Safety
-    ///
-    /// The returned [`DeviceMutRef`] must only be used on the constructed-with
-    /// [`Stream`]
-    pub unsafe fn for_device_async<'b>(&'b mut self) -> DeviceMutRef<'a, T>
-    where
-        'a: 'b,
-    {
-        DeviceMutRef {
-            pointer: DeviceMutPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
-            reference: PhantomData,
-        }
-    }
-
-    #[must_use]
-    pub fn for_host<'b: 'a>(&'b self) -> &'a T {
-        self.host_ref
-    }
-
-    #[must_use]
-    pub fn as_ref<'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
-    where
-        'a: 'b,
-    {
-        HostAndDeviceConstRefAsync {
-            device_box: self.device_box,
-            host_ref: self.host_ref,
-            stream: self.stream,
-        }
-    }
-
-    #[must_use]
-    pub fn as_mut<'b>(&'b mut self) -> HostAndDeviceMutRefAsync<'stream, 'b, T>
-    where
-        'a: 'b,
-    {
-        HostAndDeviceMutRefAsync {
-            device_box: self.device_box,
-            host_ref: self.host_ref,
-            stream: self.stream,
-        }
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceConstRefAsync<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> {
-    device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-    host_ref: &'a T,
-    stream: PhantomData<&'stream Stream>,
-}
-
-impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> Clone
-    for HostAndDeviceConstRefAsync<'stream, 'a, T>
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> Copy
-    for HostAndDeviceConstRefAsync<'stream, 'a, T>
-{
-}
-
-impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
-    HostAndDeviceConstRefAsync<'stream, 'a, T>
-{
-    /// # Safety
-    ///
-    /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    #[must_use]
-    pub const unsafe fn new(
-        device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-        host_ref: &'a T,
-    ) -> Self {
-        Self {
-            device_box,
-            host_ref,
-            stream: PhantomData::<&'stream Stream>,
-        }
-    }
-
-    #[must_use]
-    /// # Safety
-    ///
-    /// The returned [`DeviceConstRef`] must only be used on the
-    /// constructed-with [`Stream`]
-    pub unsafe fn for_device_async<'b>(&'b self) -> DeviceConstRef<'a, T>
-    where
-        'a: 'b,
-    {
-        let mut hack = ManuallyDrop::new(unsafe { std::ptr::read(self.device_box) });
-
-        DeviceConstRef {
-            pointer: DeviceConstPointer(hack.as_device_ptr().as_raw().cast()),
-            reference: PhantomData,
-        }
-    }
-
-    #[must_use]
-    pub const fn for_host(&'a self) -> &'a T {
-        self.host_ref
-    }
-
-    #[must_use]
-    pub const fn as_ref<'b>(&'b self) -> HostAndDeviceConstRefAsync<'stream, 'b, T>
-    where
-        'a: 'b,
-    {
-        *self
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct HostAndDeviceOwnedAsync<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout> {
-    device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-    host_val: &'a mut T,
-    stream: PhantomData<&'stream Stream>,
-}
-
-impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
-    HostAndDeviceOwnedAsync<'stream, 'a, T>
-{
-    #[must_use]
-    /// # Safety
-    ///
-    /// The returned [`DeviceOwnedRef`] must only be used on the
-    /// constructed-with [`Stream`]
-    pub unsafe fn for_device_async(self) -> DeviceOwnedRef<'a, T> {
-        DeviceOwnedRef {
-            pointer: DeviceOwnedPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
-            marker: PhantomData::<T>,
-            reference: PhantomData::<&'a mut ()>,
-        }
-    }
-
-    #[must_use]
-    pub fn for_host(&self) -> &T {
-        self.host_val
+    pub const fn into_async<'stream>(
+        self,
+        stream: &'stream Stream,
+    ) -> Async<'a, 'stream, Self, NoCompletion> {
+        Async::ready(self, stream)
     }
 }

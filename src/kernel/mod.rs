@@ -67,9 +67,9 @@ pub trait CudaKernelParameter: sealed::Sealed {
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b>;
+    ) -> Result<Self::FfiType<'stream, 'b>, E>;
 
     #[doc(hidden)]
     #[cfg(feature = "device")]
@@ -377,7 +377,7 @@ macro_rules! impl_typed_kernel_launch {
                 shared_memory_size,
                 &[
                     $(core::ptr::from_mut(
-                        &mut $T::async_to_ffi($arg)
+                        &mut $T::async_to_ffi($arg)?
                     ).cast::<core::ffi::c_void>()),*
                 ],
             ) }

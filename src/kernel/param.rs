@@ -102,10 +102,10 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        param
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        Ok(param)
     }
 
     #[cfg(feature = "device")]
@@ -138,7 +138,12 @@ impl<
     > CudaKernelParameter for &'a PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<'stream, 'b, T>;
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+        'b,
+        'stream,
+        crate::host::HostAndDeviceConstRef<'b, T>,
+        crate::utils::r#async::NoCompletion,
+    >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
     type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
@@ -148,10 +153,12 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| inner(const_ref.as_async()))
+        crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| {
+            inner(const_ref.as_async(stream))
+        })
     }
 
     #[cfg(feature = "host")]
@@ -168,10 +175,12 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        unsafe { param.for_device_async() }
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
+            unsafe { param.unwrap_unchecked()? };
+        Ok(param.for_device())
     }
 
     #[cfg(feature = "device")]
@@ -228,6 +237,7 @@ impl<
         param: &Self::AsyncHostType<'_, '_>,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
+        let param = unsafe { param.unwrap_ref_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -237,9 +247,9 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
         <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
     }
 
@@ -303,7 +313,12 @@ impl<
     > CudaKernelParameter for &'a ShallowInteriorMutable<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<'stream, 'b, T>;
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+        'b,
+        'stream,
+        crate::host::HostAndDeviceConstRef<'b, T>,
+        crate::utils::r#async::NoCompletion,
+    >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
     type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
@@ -315,11 +330,11 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
         crate::host::HostAndDeviceMutRef::with_new(param, |const_ref| {
-            inner(const_ref.as_ref().as_async())
+            inner(const_ref.as_ref().as_async(stream))
         })
     }
 
@@ -337,10 +352,12 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        unsafe { param.for_device_async() }
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
+            unsafe { param.unwrap_unchecked()? };
+        Ok(param.for_device())
     }
 
     #[cfg(feature = "device")]
@@ -414,10 +431,14 @@ impl<
     > CudaKernelParameter for SharedHeapPerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceOwnedAsync<
-        'stream,
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
         'b,
-        DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+        'stream,
+        crate::host::HostAndDeviceOwned<
+            'b,
+            DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+        >,
+        crate::utils::r#async::NoCompletion,
     >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = T;
@@ -429,10 +450,10 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        crate::lend::LendToCuda::move_to_cuda(param, |param| inner(param.into_async()))
+        crate::lend::LendToCuda::move_to_cuda(param, |param| inner(param.into_async(stream)))
     }
 
     #[cfg(feature = "host")]
@@ -449,10 +470,12 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        unsafe { param.for_device_async() }
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
+            unsafe { param.unwrap_unchecked()? };
+        Ok(param.for_device())
     }
 
     #[cfg(feature = "device")]
@@ -478,10 +501,14 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     for &'a SharedHeapPerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::host::HostAndDeviceConstRefAsync<
-        'stream,
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
         'b,
-        DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+        'stream,
+        crate::host::HostAndDeviceConstRef<
+            'b,
+            DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+        >,
+        crate::utils::r#async::NoCompletion,
     >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
@@ -493,10 +520,10 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     #[cfg(feature = "host")]
     fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        crate::lend::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async()))
+        crate::lend::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async(stream)))
     }
 
     #[cfg(feature = "host")]
@@ -513,10 +540,12 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        unsafe { param.for_device_async() }
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
+            unsafe { param.unwrap_unchecked()? };
+        Ok(param.for_device())
     }
 
     #[cfg(feature = "device")]
@@ -565,13 +594,14 @@ impl<
         param: &Self::AsyncHostType<'_, '_>,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
+        let param = unsafe { param.unwrap_ref_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
         <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
     }
 
@@ -634,6 +664,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         param: &Self::AsyncHostType<'_, '_>,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
+        let param = unsafe { param.unwrap_ref_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -643,9 +674,9 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
         <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
     }
 
@@ -738,13 +769,13 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         _param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        private_shared::ThreadBlockSharedFfi {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        Ok(private_shared::ThreadBlockSharedFfi {
             _dummy: [],
             _marker: PhantomData::<T>,
-        }
+        })
     }
 
     #[cfg(feature = "device")]
@@ -795,13 +826,13 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b>(
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
-    ) -> Self::FfiType<'stream, 'b> {
-        private_shared::ThreadBlockSharedSliceFfi {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        Ok(private_shared::ThreadBlockSharedSliceFfi {
             len: param.len(),
             _marker: [],
-        }
+        })
     }
 
     #[cfg(feature = "device")]

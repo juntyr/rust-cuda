@@ -8,10 +8,7 @@ use rustacuda::{
 
 use crate::{
     alloc::{EmptyCudaAlloc, NoCudaAlloc},
-    host::{
-        CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceConstRefAsync, HostAndDeviceMutRef,
-        HostAndDeviceMutRefAsync,
-    },
+    host::{CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceMutRef},
     lend::{RustToCuda, RustToCudaAsync},
     utils::{
         adapter::DeviceCopyWithPortableBitSemantics,
@@ -356,35 +353,37 @@ impl<
     #[must_use]
     pub fn as_ref_async(
         &self,
-    ) -> HostAndDeviceConstRefAsync<
-        'stream,
-        '_,
-        DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
-    > {
+    ) -> Async<'_, 'stream, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>, NoCompletion>
+    {
         let this = unsafe { self.unwrap_ref_unchecked() };
 
-        // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
-        unsafe {
-            HostAndDeviceConstRefAsync::new(
-                &*(this.device_box),
-                (**(this.locked_cuda_repr)).into_ref(),
-            )
-        }
+        todo!()
+
+        // Safety: `device_box` contains exactly the device copy of
+        // `locked_cuda_repr` unsafe {
+        //     HostAndDeviceConstRefAsync::new(
+        //         &*(this.device_box),
+        //         (**(this.locked_cuda_repr)).into_ref(),
+        //     )
+        // }
     }
 
     // TODO: replace by async borrow map mut
     #[must_use]
     pub fn as_mut_async(
         &mut self,
-    ) -> HostAndDeviceMutRefAsync<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
+    ) -> Async<'_, 'stream, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>, NoCompletion>
+    {
         let this = unsafe { self.unwrap_mut_unchecked() };
 
-        // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
-        unsafe {
-            HostAndDeviceMutRefAsync::new(
-                &mut *(this.device_box),
-                (**(this.locked_cuda_repr)).into_mut(),
-            )
-        }
+        todo!()
+
+        // Safety: `device_box` contains exactly the device copy of
+        // `locked_cuda_repr` unsafe {
+        //     HostAndDeviceMutRefAsync::new(
+        //         &mut *(this.device_box),
+        //         (**(this.locked_cuda_repr)).into_mut(),
+        //     )
+        // }
     }
 }
