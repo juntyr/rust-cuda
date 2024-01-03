@@ -34,6 +34,9 @@ pub mod param;
 mod sealed {
     #[doc(hidden)]
     pub trait Sealed {}
+
+    #[cfg(feature = "host")]
+    pub struct Token;
 }
 
 pub trait CudaKernelParameter: sealed::Sealed {
@@ -58,17 +61,22 @@ pub trait CudaKernelParameter: sealed::Sealed {
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         param: &Self::AsyncHostType<'_, '_>,
+        token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(param: &Self::AsyncHostType<'_, '_>) -> std::alloc::Layout;
+    fn shared_layout_for_async(
+        param: &Self::AsyncHostType<'_, '_>,
+        token: sealed::Token,
+    ) -> std::alloc::Layout;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>;
 
     #[doc(hidden)]
@@ -139,10 +147,10 @@ macro_rules! impl_launcher_launch {
             self.kernel.$launch_async::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
     };
-    (impl $func:ident () + ($($other:ident),*) $inner:block) => {
+    (impl $func:ident () + ($($other:expr),*) $inner:block) => {
         $inner
     };
-    (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:ident),*) $inner:block) => {
+    (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:expr),*) $inner:block) => {
         $T0::$func($arg0 $(, $other)*, |$arg0| {
             impl_launcher_launch! { impl $func ($($arg: $T),*) + ($($other),*) $inner }
         })
@@ -353,7 +361,7 @@ macro_rules! impl_typed_kernel_launch {
             Kernel: FnOnce(&mut Launcher<'stream, 'kernel, Kernel>, $($T),*),
         {
             let function = if config.ptx_jit {
-                impl_typed_kernel_launch! { impl with_async_as_ptx_jit ref ($($arg: $T),*) + () {
+                impl_typed_kernel_launch! { impl with_async_as_ptx_jit ref ($($arg: $T),*) + (sealed::Token) {
                     self.compile_with_ptx_jit_args(Some(&[$($arg),*]))
                 } }?
             } else {
@@ -363,7 +371,7 @@ macro_rules! impl_typed_kernel_launch {
             #[allow(unused_mut)]
             let mut shared_memory_size = crate::utils::shared::SharedMemorySize::new();
             $(
-                shared_memory_size.add($T::shared_layout_for_async(&$arg));
+                shared_memory_size.add($T::shared_layout_for_async(&$arg, sealed::Token));
             )*
             let Ok(shared_memory_size) = u32::try_from(shared_memory_size.total()) else {
                 // FIXME: this should really be InvalidConfiguration = 9
@@ -377,24 +385,24 @@ macro_rules! impl_typed_kernel_launch {
                 shared_memory_size,
                 &[
                     $(core::ptr::from_mut(
-                        &mut $T::async_to_ffi($arg)?
+                        &mut $T::async_to_ffi($arg, sealed::Token)?
                     ).cast::<core::ffi::c_void>()),*
                 ],
             ) }
         }
     };
-    (impl $func:ident () + ($($other:ident),*) $inner:block) => {
+    (impl $func:ident () + ($($other:expr),*) $inner:block) => {
         $inner
     };
-    (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:ident),*) $inner:block) => {
+    (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:expr),*) $inner:block) => {
         $T0::$func($arg0 $(, $other)*, |$arg0| {
             impl_typed_kernel_launch! { impl $func ($($arg: $T),*) + ($($other),*) $inner }
         })
     };
-    (impl $func:ident ref () + ($($other:ident),*) $inner:block) => {
+    (impl $func:ident ref () + ($($other:expr),*) $inner:block) => {
         $inner
     };
-    (impl $func:ident ref ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:ident),*) $inner:block) => {
+    (impl $func:ident ref ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:expr),*) $inner:block) => {
         $T0::$func(&$arg0 $(, $other)*, |$arg0| {
             impl_typed_kernel_launch! { impl $func ref ($($arg: $T),*) + ($($other),*) $inner }
         })

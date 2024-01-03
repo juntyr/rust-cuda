@@ -152,8 +152,9 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         result
     }
 
+    #[allow(dead_code)] // FIXME
     #[must_use]
-    pub fn for_device<'b>(&'b mut self) -> DeviceMutRef<'a, T>
+    pub(crate) fn for_device<'b>(&'b mut self) -> DeviceMutRef<'a, T>
     where
         'a: 'b,
     {
@@ -163,8 +164,9 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         }
     }
 
+    #[allow(dead_code)] // FIXME
     #[must_use]
-    pub fn for_host<'b: 'a>(&'b self) -> &'a T {
+    pub(crate) fn for_host<'b: 'a>(&'b self) -> &'a T {
         self.host_ref
     }
 
@@ -264,7 +266,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     }
 
     #[must_use]
-    pub fn for_device<'b>(&'b self) -> DeviceConstRef<'a, T>
+    pub(crate) fn for_device<'b>(&'b self) -> DeviceConstRef<'a, T>
     where
         'a: 'b,
     {
@@ -277,7 +279,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     }
 
     #[must_use]
-    pub const fn for_host(&'a self) -> &'a T {
+    pub(crate) const fn for_host(&'a self) -> &'a T {
         self.host_ref
     }
 
@@ -334,7 +336,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     }
 
     #[must_use]
-    pub fn for_device(self) -> DeviceOwnedRef<'a, T> {
+    pub(crate) fn for_device(self) -> DeviceOwnedRef<'a, T> {
         DeviceOwnedRef {
             pointer: DeviceOwnedPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
             marker: PhantomData::<T>,
@@ -343,7 +345,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     }
 
     #[must_use]
-    pub fn for_host(&self) -> &T {
+    pub(crate) fn for_host(&self) -> &T {
         self.host_val
     }
 

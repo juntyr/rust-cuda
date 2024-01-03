@@ -91,19 +91,24 @@ impl<
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         Ok(param)
     }
@@ -164,19 +169,24 @@ impl<
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
             unsafe { param.unwrap_unchecked()? };
@@ -235,6 +245,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         let param = unsafe { param.unwrap_ref_unchecked() };
@@ -242,15 +253,19 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param, token)
     }
 
     #[cfg(feature = "device")]
@@ -341,19 +356,24 @@ impl<
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
             unsafe { param.unwrap_unchecked()? };
@@ -459,19 +479,24 @@ impl<
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
             unsafe { param.unwrap_unchecked()? };
@@ -529,19 +554,24 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
             unsafe { param.unwrap_unchecked()? };
@@ -592,6 +622,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         let param = unsafe { param.unwrap_ref_unchecked() };
@@ -601,12 +632,16 @@ impl<
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param, token)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
@@ -662,6 +697,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         let param = unsafe { param.unwrap_ref_unchecked() };
@@ -669,15 +705,19 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param)
+        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param, token)
     }
 
     #[cfg(feature = "device")]
@@ -758,19 +798,24 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(_param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         Layout::new::<()>()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         _param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         Ok(private_shared::ThreadBlockSharedFfi {
             _dummy: [],
@@ -815,19 +860,24 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     #[cfg(feature = "host")]
     fn with_async_as_ptx_jit<O>(
         _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(param: &Self::AsyncHostType<'_, '_>) -> Layout {
+    fn shared_layout_for_async(
+        param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
         param.layout()
     }
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
         Ok(private_shared::ThreadBlockSharedSliceFfi {
             len: param.len(),
