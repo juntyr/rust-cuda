@@ -223,6 +223,32 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
             } => Ok((self.value, Some(completion))),
         }
     }
+
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub const unsafe fn unwrap_ref_unchecked(&self) -> &T {
+        &self.value
+    }
+
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub unsafe fn unwrap_mut_unchecked(&mut self) -> &mut T {
+        &mut self.value
+    }
 }
 
 #[cfg(feature = "host")]

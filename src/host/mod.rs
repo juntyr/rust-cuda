@@ -362,10 +362,7 @@ impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
     pub unsafe fn new(
         device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a mut T,
-        stream: &'stream Stream,
     ) -> Self {
-        let _ = stream;
-
         Self {
             device_box,
             host_ref,
@@ -448,10 +445,7 @@ impl<'stream, 'a, T: PortableBitSemantics + TypeGraphLayout>
     pub const unsafe fn new(
         device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a T,
-        stream: &'stream Stream,
     ) -> Self {
-        let _ = stream;
-
         Self {
             device_box,
             host_ref,

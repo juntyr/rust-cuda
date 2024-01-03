@@ -16,6 +16,7 @@ use crate::{
     utils::{
         adapter::DeviceCopyWithPortableBitSemantics,
         ffi::{DeviceAccessible, DeviceMutPointer},
+        r#async::{Async, CompletionFnMut, NoCompletion},
     },
 };
 
@@ -174,12 +175,12 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     #[allow(clippy::type_complexity)]
-    pub unsafe fn borrow_async<A: CudaAlloc>(
+    pub unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>,
+        Async<'_, 'stream, DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>>,
         CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
         // Safety: device_buffer is inside an UnsafeCell
@@ -196,33 +197,49 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
             )?;
         }
 
-        Ok((
-            DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
-                DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
-                device_buffer.len(),
-            )),
-            CombinedCudaAlloc::new(NoCudaAlloc, alloc),
-        ))
+        let cuda_repr = DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
+            DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
+            device_buffer.len(),
+        ));
+
+        let r#async = if M2D {
+            Async::pending(cuda_repr, stream, NoCompletion)?
+        } else {
+            Async::ready(cuda_repr, stream)
+        };
+
+        Ok((r#async, CombinedCudaAlloc::new(NoCudaAlloc, alloc)))
     }
 
     #[allow(clippy::type_complexity)]
-    pub unsafe fn restore_async<A: CudaAlloc>(
-        &mut self,
+    pub unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        mut this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
-        stream: &rustacuda::stream::Stream,
-    ) -> rustacuda::error::CudaResult<A> {
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
+        A,
+    )> {
         let (_alloc_front, alloc_tail) = alloc.split();
 
         if M2H {
             // Only move the buffer contents back to the host if needed
 
+            let this: &mut Self = &mut this;
+
             rustacuda::memory::AsyncCopyDestination::async_copy_to(
-                &***self.device_buffer.get_mut(),
-                self.host_buffer.as_mut_slice(),
+                &***this.device_buffer.get_mut(),
+                this.host_buffer.as_mut_slice(),
                 stream,
             )?;
         }
 
-        Ok(alloc_tail)
+        let r#async = if M2H {
+            Async::<_, CompletionFnMut<'a, Self>>::pending(this, stream, Box::new(|_this| Ok(())))?
+        } else {
+            Async::ready(this, stream)
+        };
+
+        Ok((r#async, alloc_tail))
     }
 }

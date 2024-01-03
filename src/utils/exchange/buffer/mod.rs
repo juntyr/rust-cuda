@@ -20,6 +20,7 @@ use crate::{
 use crate::{
     alloc::{CombinedCudaAlloc, CudaAlloc},
     utils::ffi::DeviceAccessible,
+    utils::r#async::{Async, CompletionFnMut},
 };
 
 #[cfg(any(feature = "host", feature = "device"))]
@@ -133,25 +134,51 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow_async<A: CudaAlloc>(
+    unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &rustacuda::stream::Stream,
+        stream: &'stream rustacuda::stream::Stream,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
+        CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
         self.inner.borrow_async(alloc, stream)
     }
 
     #[cfg(feature = "host")]
     #[allow(clippy::type_complexity)]
-    unsafe fn restore_async<A: CudaAlloc>(
-        &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
-        stream: &rustacuda::stream::Stream,
-    ) -> rustacuda::error::CudaResult<A> {
-        self.inner.restore_async(alloc, stream)
+    unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        this: owning_ref::BoxRefMut<'a, O, Self>,
+        alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
+        stream: &'stream rustacuda::stream::Stream,
+    ) -> rustacuda::error::CudaResult<(
+        Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
+        A,
+    )> {
+        let this_backup = unsafe { std::mem::ManuallyDrop::new(std::ptr::read(&this)) };
+
+        let (r#async, alloc_tail) = host::CudaExchangeBufferHost::restore_async(
+            this.map_mut(|this| &mut this.inner),
+            alloc,
+            stream,
+        )?;
+
+        let (inner, on_completion) = unsafe { r#async.unwrap_unchecked()? };
+
+        std::mem::forget(inner);
+        let this = std::mem::ManuallyDrop::into_inner(this_backup);
+
+        if let Some(on_completion) = on_completion {
+            let r#async = Async::<_, CompletionFnMut<'a, Self>>::pending(
+                this,
+                stream,
+                Box::new(|this: &mut Self| on_completion(&mut this.inner)),
+            )?;
+            Ok((r#async, alloc_tail))
+        } else {
+            let r#async = Async::ready(this, stream);
+            Ok((r#async, alloc_tail))
+        }
     }
 }
 
