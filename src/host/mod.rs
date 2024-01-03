@@ -109,19 +109,6 @@ pub struct HostAndDeviceMutRef<'a, T: PortableBitSemantics + TypeGraphLayout> {
 }
 
 impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
-    /// # Safety
-    ///
-    /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub unsafe fn new(
-        device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-        host_ref: &'a mut T,
-    ) -> Self {
-        Self {
-            device_box,
-            host_ref,
-        }
-    }
-
     /// # Errors
     ///
     /// Returns a [`CudaError`] iff `value` cannot be moved
@@ -150,6 +137,19 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         core::mem::drop(device_box);
 
         result
+    }
+
+    /// # Safety
+    ///
+    /// `device_box` must contain EXACTLY the device copy of `host_ref`
+    pub unsafe fn new_unchecked(
+        device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
+        host_ref: &'a mut T,
+    ) -> Self {
+        Self {
+            device_box,
+            host_ref,
+        }
     }
 
     #[allow(dead_code)] // FIXME
@@ -225,19 +225,6 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> Clone for HostAndDeviceConst
 impl<'a, T: PortableBitSemantics + TypeGraphLayout> Copy for HostAndDeviceConstRef<'a, T> {}
 
 impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T> {
-    /// # Safety
-    ///
-    /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub const unsafe fn new(
-        device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
-        host_ref: &'a T,
-    ) -> Self {
-        Self {
-            device_box,
-            host_ref,
-        }
-    }
-
     /// # Errors
     ///
     /// Returns a [`CudaError`] iff `value` cannot be moved
@@ -263,6 +250,19 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
         core::mem::drop(device_box);
 
         result
+    }
+
+    /// # Safety
+    ///
+    /// `device_box` must contain EXACTLY the device copy of `host_ref`
+    pub const unsafe fn new_unchecked(
+        device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
+        host_ref: &'a T,
+    ) -> Self {
+        Self {
+            device_box,
+            host_ref,
+        }
     }
 
     #[must_use]

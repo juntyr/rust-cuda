@@ -206,7 +206,10 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
     ) -> HostAndDeviceConstRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
         // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
         unsafe {
-            HostAndDeviceConstRef::new(&self.device_box, (**self.locked_cuda_repr).into_ref())
+            HostAndDeviceConstRef::new_unchecked(
+                &self.device_box,
+                (**self.locked_cuda_repr).into_ref(),
+            )
         }
     }
 
@@ -216,7 +219,10 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
     ) -> HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
         // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
         unsafe {
-            HostAndDeviceMutRef::new(&mut self.device_box, (**self.locked_cuda_repr).into_mut())
+            HostAndDeviceMutRef::new_unchecked(
+                &mut self.device_box,
+                (**self.locked_cuda_repr).into_mut(),
+            )
         }
     }
 }

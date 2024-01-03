@@ -6,7 +6,7 @@ use const_type_layout::{TypeGraphLayout, TypeLayout};
 use rustacuda::error::CudaResult;
 
 use crate::{
-    lend::{CudaAsRust, RustToCuda, RustToCudaAsync, RustToCudaAsyncProxy, RustToCudaProxy},
+    lend::{CudaAsRust, RustToCuda, RustToCudaAsync, RustToCudaProxy},
     safety::PortableBitSemantics,
     utils::{adapter::RustToCudaWithPortableBitCopySemantics, ffi::DeviceAccessible},
 };
@@ -212,21 +212,5 @@ impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaProxy<Option<T>
 
     fn into(self) -> Option<T> {
         self.map(RustToCudaWithPortableBitCopySemantics::into_inner)
-    }
-}
-
-impl<T: Copy + Send + PortableBitSemantics + TypeGraphLayout> RustToCudaAsyncProxy<Option<T>>
-    for Option<RustToCudaWithPortableBitCopySemantics<T>>
-{
-    fn from_ref(val: &Option<T>) -> &Self {
-        <Self as RustToCudaProxy<Option<T>>>::from_ref(val)
-    }
-
-    fn from_mut(val: &mut Option<T>) -> &mut Self {
-        <Self as RustToCudaProxy<Option<T>>>::from_mut(val)
-    }
-
-    fn into(self) -> Option<T> {
-        <Self as RustToCudaProxy<Option<T>>>::into(self)
     }
 }
