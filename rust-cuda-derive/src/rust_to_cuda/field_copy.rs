@@ -16,9 +16,11 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
     r2c_field_declarations: &mut Vec<TokenStream>,
     r2c_field_async_declarations: &mut Vec<TokenStream>,
+    r2c_field_async_completions: &mut Vec<syn::Ident>,
     r2c_field_initialisations: &mut Vec<TokenStream>,
     r2c_field_destructors: &mut Vec<TokenStream>,
     r2c_field_async_destructors: &mut Vec<TokenStream>,
+    r2c_field_async_completion_calls: &mut Vec<TokenStream>,
 
     c2r_field_initialisations: &mut Vec<TokenStream>,
 ) -> (TokenStream, TokenStream) {
@@ -31,6 +33,11 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
     let field_repr_ident = match &field.ident {
         Some(ident) => format_ident!("field_{}_repr", ident),
         None => format_ident!("field_{}_repr", field_index),
+    };
+    #[allow(clippy::option_if_let_else)]
+    let field_completion_ident = match &field.ident {
+        Some(ident) => format_ident!("field_{}_completion", ident),
+        None => format_ident!("field_{}_completion", field_index),
     };
     let optional_field_ident = field.ident.as_ref().map(|ident| quote! { #ident: });
 
@@ -83,6 +90,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                     alloc_front,
                     stream,
                 )?;
+                let (#field_repr_ident, #field_completion_ident) = #field_repr_ident.unwrap_unchecked()?;
             });
 
             r2c_field_initialisations.push(quote! {
@@ -96,12 +104,28 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 )?;
             });
             r2c_field_async_destructors.push(quote! {
-                let alloc_front = #crate_path::lend::RustToCudaAsync::restore_async(
-                    &mut self.#field_accessor,
+                let this_backup = unsafe {
+                    ::core::mem::ManuallyDrop::new(::core::ptr::read(&this))
+                };
+                let (r#async, alloc_front) = #crate_path::lend::RustToCudaAsync::restore_async(
+                    this.map_mut(|this| &mut this.#field_accessor),
                     alloc_front,
                     stream,
                 )?;
+                let (value, #field_completion_ident) = r#async.unwrap_unchecked()?;
+                ::core::mem::forget(value);
+                let this = ::core::mem::ManuallyDrop::into_inner(this_backup);
             });
+
+            r2c_field_async_completion_calls.push(quote! {
+                #crate_path::utils::r#async::Completion::<
+                    #crate_path::deps::owning_ref::BoxRefMut<'a, CudaRestoreOwner, _>
+                >::complete(
+                    #field_completion_ident, &mut this.#field_accessor,
+                )?;
+            });
+
+            r2c_field_async_completions.push(field_completion_ident);
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident {
@@ -139,6 +163,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                     alloc_front,
                     stream,
                 )?;
+                let (#field_repr_ident, #field_completion_ident) = #field_repr_ident.unwrap_unchecked()?;
             });
 
             r2c_field_initialisations.push(quote! {
@@ -154,14 +179,32 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 )?;
             });
             r2c_field_async_destructors.push(quote! {
-                let alloc_front = #crate_path::lend::RustToCudaAsync::restore_async(
-                    <
-                        #proxy_ty as #crate_path::lend::RustToCudaAsyncProxy<#field_ty>
-                    >::from_mut(&mut self.#field_accessor),
+                let this_backup = unsafe {
+                    ::core::mem::ManuallyDrop::new(::core::ptr::read(&this))
+                };
+                let (r#async, alloc_front) = #crate_path::lend::RustToCudaAsync::restore_async(
+                    this.map_mut(|this| <
+                        #proxy_ty as #crate_path::lend::RustToCudaProxyAsync<#field_ty>
+                    >::from_mut(&mut this.#field_accessor)),
                     alloc_front,
                     stream,
                 )?;
+                let (value, #field_completion_ident) = r#async.unwrap_unchecked()?;
+                ::core::mem::forget(value);
+                let this = ::core::mem::ManuallyDrop::into_inner(this_backup);
             });
+
+            r2c_field_async_completion_calls.push(quote! {
+                #crate_path::utils::r#async::Completion::<
+                    #crate_path::deps::owning_ref::BoxRefMut<'a, CudaRestoreOwner, _>
+                >::complete(
+                    #field_completion_ident, <
+                        #proxy_ty as #crate_path::lend::RustToCudaProxyAsync<#field_ty>
+                    >::from_mut(&mut this.#field_accessor),
+                )?;
+            });
+
+            r2c_field_async_completions.push(field_completion_ident);
 
             c2r_field_initialisations.push(quote! {
                 #optional_field_ident {

@@ -24,7 +24,7 @@ fn main() {}
 pub struct Dummy(i32);
 
 #[derive(Clone, rc::lend::LendRustToCuda)]
-#[cuda(crate = "rc", async = false)]
+#[cuda(crate = "rc")]
 #[allow(dead_code)]
 pub struct Wrapper<T> {
     #[cuda(embed)]
@@ -32,7 +32,7 @@ pub struct Wrapper<T> {
 }
 
 #[derive(Clone, rc::lend::LendRustToCuda)]
-#[cuda(crate = "rc", async = false)]
+#[cuda(crate = "rc")]
 pub struct Empty([u8; 0]);
 
 #[repr(C)]

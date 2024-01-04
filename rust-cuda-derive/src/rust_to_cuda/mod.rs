@@ -38,9 +38,11 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     };
     let mut r2c_field_declarations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_async_declarations: Vec<TokenStream> = Vec::new();
+    let mut r2c_field_async_completions: Vec<syn::Ident> = Vec::new();
     let mut r2c_field_initialisations: Vec<TokenStream> = Vec::new();
     let mut r2c_field_destructors: Vec<TokenStream> = Vec::new();
     let mut r2c_field_async_destructors: Vec<TokenStream> = Vec::new();
+    let mut r2c_field_async_completion_calls: Vec<TokenStream> = Vec::new();
 
     let mut c2r_field_initialisations: Vec<TokenStream> = Vec::new();
 
@@ -70,9 +72,11 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
                         combined_cuda_alloc_async_type,
                         &mut r2c_field_declarations,
                         &mut r2c_field_async_declarations,
+                        &mut r2c_field_async_completions,
                         &mut r2c_field_initialisations,
                         &mut r2c_field_destructors_reverse,
                         &mut r2c_field_async_destructors_reverse,
+                        &mut r2c_field_async_completion_calls,
                         &mut c2r_field_initialisations,
                     );
             }
@@ -117,8 +121,10 @@ pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
             &struct_fields_cuda,
             &combined_cuda_alloc_async_type,
             &r2c_field_async_declarations,
+            &r2c_field_async_completions,
             &r2c_field_initialisations,
             &r2c_field_async_destructors,
+            &r2c_field_async_completion_calls,
         )
     } else {
         TokenStream::new()

@@ -16,7 +16,7 @@ pub struct NoCompletion;
 pub type CompletionFnMut<'a, T> = Box<dyn FnOnce(&mut T) -> CudaResult<()> + 'a>;
 
 #[cfg(feature = "host")]
-pub trait Completion<T: BorrowMut<Self::Completed>>: sealed::Sealed {
+pub trait Completion<T: ?Sized + BorrowMut<Self::Completed>>: sealed::Sealed {
     type Completed: ?Sized;
 
     #[allow(clippy::missing_errors_doc)] // FIXME
@@ -28,9 +28,10 @@ mod sealed {
 }
 
 #[cfg(feature = "host")]
-impl<T> Completion<T> for NoCompletion {
+impl<T: ?Sized> Completion<T> for NoCompletion {
     type Completed = T;
 
+    #[inline]
     fn complete(self, _completed: &mut Self::Completed) -> CudaResult<()> {
         Ok(())
     }
@@ -39,15 +40,28 @@ impl<T> Completion<T> for NoCompletion {
 impl sealed::Sealed for NoCompletion {}
 
 #[cfg(feature = "host")]
-impl<'a, T: BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<'a, B> {
+impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<'a, B> {
     type Completed = B;
 
+    #[inline]
     fn complete(self, completed: &mut Self::Completed) -> CudaResult<()> {
         (self)(completed)
     }
 }
 #[cfg(feature = "host")]
 impl<'a, T: ?Sized> sealed::Sealed for CompletionFnMut<'a, T> {}
+
+#[cfg(feature = "host")]
+impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Option<C> {
+    type Completed = C::Completed;
+
+    #[inline]
+    fn complete(self, completed: &mut Self::Completed) -> CudaResult<()> {
+        self.map_or(Ok(()), |completion| completion.complete(completed))
+    }
+}
+#[cfg(feature = "host")]
+impl<C> sealed::Sealed for Option<C> {}
 
 #[cfg(feature = "host")]
 pub struct Async<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T> = NoCompletion> {

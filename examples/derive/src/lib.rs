@@ -3,14 +3,14 @@
 #![feature(offset_of)]
 
 #[derive(rc::lend::LendRustToCuda)]
-#[cuda(crate = "rc", async = false)]
+#[cuda(crate = "rc")]
 struct Inner<T: Copy> {
     #[cuda(embed)]
     inner: T,
 }
 
 #[derive(rc::lend::LendRustToCuda)]
-#[cuda(crate = "rc", async = false)]
+#[cuda(crate = "rc")]
 struct Outer<T: Copy> {
     #[cuda(embed)]
     inner: Inner<T>,
