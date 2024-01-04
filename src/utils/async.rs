@@ -119,6 +119,10 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// the inner value can be safely returned and again be used in synchronous
     /// operations.
     ///
+    /// Calling `synchronize` after the computation has completed, e.g. after
+    /// calling [`rustacuda::stream::Stream::synchronize`], should be very
+    /// cheap.
+    ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
@@ -224,30 +228,12 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
         }
     }
 
-    /// # Safety
-    ///
-    /// The returned reference to the inner value of type `T` may not yet have
-    /// completed its asynchronous work and may thus be in an inconsistent
-    /// state.
-    ///
-    /// This method must only be used to construct a larger asynchronous
-    /// computation out of smaller ones that have all been submitted to the
-    /// same [`Stream`].
-    pub const unsafe fn unwrap_ref_unchecked(&self) -> &T {
-        &self.value
+    pub const fn as_ref(&self) -> AsyncProj<'_, 'stream, &T> {
+        AsyncProj::new(&self.value)
     }
 
-    /// # Safety
-    ///
-    /// The returned reference to the inner value of type `T` may not yet have
-    /// completed its asynchronous work and may thus be in an inconsistent
-    /// state.
-    ///
-    /// This method must only be used to construct a larger asynchronous
-    /// computation out of smaller ones that have all been submitted to the
-    /// same [`Stream`].
-    pub unsafe fn unwrap_mut_unchecked(&mut self) -> &mut T {
-        &mut self.value
+    pub fn as_mut(&mut self) -> AsyncProj<'_, 'stream, &mut T> {
+        AsyncProj::new(&mut self.value)
     }
 }
 
@@ -338,5 +324,39 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
             completion,
             status,
         }
+    }
+}
+
+#[cfg(feature = "host")]
+#[allow(clippy::module_name_repetitions)]
+#[derive(Copy, Clone)]
+pub struct AsyncProj<'a, 'stream, T: 'a> {
+    _capture: PhantomData<&'a ()>,
+    _stream: PhantomData<&'stream Stream>,
+    value: T,
+}
+
+#[cfg(feature = "host")]
+impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
+    #[must_use]
+    pub(crate) const fn new(value: T) -> Self {
+        Self {
+            _capture: PhantomData::<&'a ()>,
+            _stream: PhantomData::<&'stream Stream>,
+            value,
+        }
+    }
+
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub(crate) unsafe fn unwrap_unchecked(self) -> T {
+        self.value
     }
 }

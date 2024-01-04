@@ -13,7 +13,7 @@ use crate::{
     utils::{
         adapter::DeviceCopyWithPortableBitSemantics,
         ffi::DeviceAccessible,
-        r#async::{Async, CompletionFnMut, NoCompletion},
+        r#async::{Async, AsyncProj, CompletionFnMut, NoCompletion},
     },
 };
 
@@ -355,41 +355,39 @@ impl<
         }
     }
 
-    // TODO: replace by async borrow map
     #[must_use]
     pub fn as_ref_async(
         &self,
-    ) -> Async<'_, 'stream, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>, NoCompletion>
-    {
-        let this = unsafe { self.unwrap_ref_unchecked() };
+    ) -> AsyncProj<
+        '_,
+        'stream,
+        HostAndDeviceConstRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    > {
+        let this = unsafe { self.as_ref().unwrap_unchecked() };
 
-        todo!()
-
-        // Safety: `device_box` contains exactly the device copy of
-        // `locked_cuda_repr` unsafe {
-        //     HostAndDeviceConstRefAsync::new(
-        //         &*(this.device_box),
-        //         (**(this.locked_cuda_repr)).into_ref(),
-        //     )
-        // }
+        AsyncProj::new(unsafe {
+            HostAndDeviceConstRef::new_unchecked(
+                &*(this.device_box),
+                (**(this.locked_cuda_repr)).into_ref(),
+            )
+        })
     }
 
-    // TODO: replace by async borrow map mut
     #[must_use]
     pub fn as_mut_async(
         &mut self,
-    ) -> Async<'_, 'stream, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>, NoCompletion>
-    {
-        let this = unsafe { self.unwrap_mut_unchecked() };
+    ) -> AsyncProj<
+        '_,
+        'stream,
+        HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+    > {
+        let this = unsafe { self.as_mut().unwrap_unchecked() };
 
-        todo!()
-
-        // Safety: `device_box` contains exactly the device copy of
-        // `locked_cuda_repr` unsafe {
-        //     HostAndDeviceMutRefAsync::new(
-        //         &mut *(this.device_box),
-        //         (**(this.locked_cuda_repr)).into_mut(),
-        //     )
-        // }
+        AsyncProj::new(unsafe {
+            HostAndDeviceMutRef::new_unchecked(
+                &mut *(this.device_box),
+                (**(this.locked_cuda_repr)).into_mut(),
+            )
+        })
     }
 }

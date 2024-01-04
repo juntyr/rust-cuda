@@ -143,11 +143,10 @@ impl<
     > CudaKernelParameter for &'a PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        crate::host::HostAndDeviceConstRef<'b, T>,
-        crate::utils::r#async::NoCompletion,
+        &'b crate::host::HostAndDeviceConstRef<'b, T>,
     >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
@@ -162,7 +161,7 @@ impl<
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
         crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| {
-            inner(const_ref.as_async(stream))
+            inner(const_ref.as_async(stream).as_ref())
         })
     }
 
@@ -188,8 +187,7 @@ impl<
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
-            unsafe { param.unwrap_unchecked()? };
+        let param = unsafe { param.unwrap_unchecked() };
         Ok(param.for_device())
     }
 
@@ -248,7 +246,7 @@ impl<
         _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
-        let param = unsafe { param.unwrap_ref_unchecked() };
+        let param = unsafe { param.unwrap_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -328,11 +326,10 @@ impl<
     > CudaKernelParameter for &'a ShallowInteriorMutable<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        crate::host::HostAndDeviceConstRef<'b, T>,
-        crate::utils::r#async::NoCompletion,
+        &'b crate::host::HostAndDeviceConstRef<'b, T>,
     >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
@@ -349,7 +346,7 @@ impl<
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
         crate::host::HostAndDeviceMutRef::with_new(param, |const_ref| {
-            inner(const_ref.as_ref().as_async(stream))
+            inner(const_ref.as_ref().as_async(stream).as_ref())
         })
     }
 
@@ -375,8 +372,7 @@ impl<
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
-            unsafe { param.unwrap_unchecked()? };
+        let param = unsafe { param.unwrap_unchecked() };
         Ok(param.for_device())
     }
 
@@ -526,14 +522,13 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     for &'a SharedHeapPerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        crate::host::HostAndDeviceConstRef<
+        &'b crate::host::HostAndDeviceConstRef<
             'b,
             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
         >,
-        crate::utils::r#async::NoCompletion,
     >;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T;
@@ -548,7 +543,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        crate::lend::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async(stream)))
+        crate::lend::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async(stream).as_ref()))
     }
 
     #[cfg(feature = "host")]
@@ -573,8 +568,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
-            unsafe { param.unwrap_unchecked()? };
+        let param = unsafe { param.unwrap_unchecked() };
         Ok(param.for_device())
     }
 
@@ -625,7 +619,7 @@ impl<
         _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
-        let param = unsafe { param.unwrap_ref_unchecked() };
+        let param = unsafe { param.as_ref().unwrap_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -700,7 +694,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
     ) -> O {
-        let param = unsafe { param.unwrap_ref_unchecked() };
+        let param = unsafe { param.unwrap_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
