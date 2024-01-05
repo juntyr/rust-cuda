@@ -256,7 +256,13 @@ pub trait LendToCudaAsync: RustToCudaAsync {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
     ///   [`DeviceConstRef`] inside the closure
-    /// - after the closure, `&self` will not have changed
+    /// - after the closure, `&self` will not have changed, i.e. interior
+    ///   mutability is not handled by this method
+    ///
+    /// Since the [`HostAndDeviceConstRef`] is wrapped in an [`Async`] with
+    /// [`NoCompletion`], this [`Async`] can be safely dropped or forgotten
+    /// without changing any behaviour. Therefore, this [`Async`] does *not*
+    /// need to be returned from the `inner` closure.
     ///
     /// # Errors
     ///
@@ -270,6 +276,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
                 '_,
                 'stream,
                 HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                NoCompletion,
             >,
         ) -> Result<O, E>,
     >(
@@ -281,6 +288,11 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         Self: Sync;
 
     /// Moves `self` to CUDA iff `self` is [`StackOnly`].
+    ///
+    /// Since the [`HostAndDeviceOwned`] is wrapped in an [`Async`] with
+    /// [`NoCompletion`], this [`Async`] can be safely dropped or forgotten
+    /// without changing any behaviour. Therefore, this [`Async`] does *not*
+    /// need to be returned from the `inner` closure.
     ///
     /// # Errors
     ///
@@ -294,6 +306,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
                 'a,
                 'stream,
                 HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                NoCompletion,
             >,
         ) -> Result<O, E>,
     >(
@@ -316,6 +329,7 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
                 '_,
                 'stream,
                 HostAndDeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                NoCompletion,
             >,
         ) -> Result<O, E>,
     >(
@@ -355,6 +369,7 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
                 'a,
                 'stream,
                 HostAndDeviceOwned<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                NoCompletion,
             >,
         ) -> Result<O, E>,
     >(

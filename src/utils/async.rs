@@ -19,6 +19,9 @@ pub type CompletionFnMut<'a, T> = Box<dyn FnOnce(&mut T) -> CudaResult<()> + 'a>
 pub trait Completion<T: ?Sized + BorrowMut<Self::Completed>>: sealed::Sealed {
     type Completed: ?Sized;
 
+    #[doc(hidden)]
+    fn synchronize_on_drop(&self) -> bool;
+
     #[allow(clippy::missing_errors_doc)] // FIXME
     fn complete(self, completed: &mut Self::Completed) -> CudaResult<()>;
 }
@@ -30,6 +33,11 @@ mod sealed {
 #[cfg(feature = "host")]
 impl<T: ?Sized> Completion<T> for NoCompletion {
     type Completed = T;
+
+    #[inline]
+    fn synchronize_on_drop(&self) -> bool {
+        false
+    }
 
     #[inline]
     fn complete(self, _completed: &mut Self::Completed) -> CudaResult<()> {
@@ -44,6 +52,11 @@ impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<
     type Completed = B;
 
     #[inline]
+    fn synchronize_on_drop(&self) -> bool {
+        true
+    }
+
+    #[inline]
     fn complete(self, completed: &mut Self::Completed) -> CudaResult<()> {
         (self)(completed)
     }
@@ -54,6 +67,11 @@ impl<'a, T: ?Sized> sealed::Sealed for CompletionFnMut<'a, T> {}
 #[cfg(feature = "host")]
 impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Option<C> {
     type Completed = C::Completed;
+
+    #[inline]
+    fn synchronize_on_drop(&self) -> bool {
+        self.as_ref().map_or(false, Completion::synchronize_on_drop)
+    }
 
     #[inline]
     fn complete(self, completed: &mut Self::Completed) -> CudaResult<()> {
@@ -107,9 +125,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn pending(value: T, stream: &'stream Stream, completion: C) -> CudaResult<Self> {
-        let event = CudaDropWrapper::from(Event::new(
-            EventFlags::DISABLE_TIMING | EventFlags::BLOCKING_SYNC,
-        )?);
+        let event = CudaDropWrapper::from(Event::new(EventFlags::DISABLE_TIMING)?);
 
         let (sender, receiver) = oneshot::channel();
 
@@ -140,9 +156,11 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
-    pub fn synchronize(mut self) -> CudaResult<T> {
-        let (receiver, completion) = match self.status {
-            AsyncStatus::Completed { result } => return result.map(|()| self.value),
+    pub fn synchronize(self) -> CudaResult<T> {
+        let (mut value, status) = self.destructure_into_parts();
+
+        let (receiver, completion) = match status {
+            AsyncStatus::Completed { result } => return result.map(|()| value),
             AsyncStatus::Processing {
                 receiver,
                 completion,
@@ -157,9 +175,9 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
             Err(oneshot::RecvError) => return Err(CudaError::AlreadyAcquired),
         }
 
-        completion.complete(self.value.borrow_mut())?;
+        completion.complete(value.borrow_mut())?;
 
-        Ok(self.value)
+        Ok(value)
     }
 
     /// Moves the asynchronous data move to a different [`Stream`].
@@ -168,15 +186,17 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn move_to_stream<'stream_new>(
-        mut self,
+        self,
         stream: &'stream_new Stream,
     ) -> CudaResult<Async<'a, 'stream_new, T, C>> {
-        let (receiver, completion, event) = match self.status {
+        let (mut value, status) = self.destructure_into_parts();
+
+        let (receiver, completion, event) = match status {
             AsyncStatus::Completed { .. } => {
                 return Ok(Async {
                     _stream: PhantomData::<&'stream_new Stream>,
-                    value: self.value,
-                    status: self.status,
+                    value,
+                    status,
                     _capture: PhantomData::<&'a ()>,
                 })
             },
@@ -196,7 +216,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
 
                 return Ok(Async {
                     _stream: PhantomData::<&'stream_new Stream>,
-                    value: self.value,
+                    value,
                     status: AsyncStatus::Processing {
                         receiver,
                         completion,
@@ -209,11 +229,11 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
             Err(oneshot::TryRecvError::Disconnected) => return Err(CudaError::AlreadyAcquired),
         };
 
-        completion.complete(self.value.borrow_mut())?;
+        completion.complete(value.borrow_mut())?;
 
         Ok(Async {
             _stream: PhantomData::<&'stream_new Stream>,
-            value: self.value,
+            value,
             status: AsyncStatus::Completed { result: Ok(()) },
             _capture: PhantomData::<&'a ()>,
         })
@@ -230,15 +250,17 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// computation out of smaller ones that have all been submitted to the
     /// same [`Stream`].
     pub unsafe fn unwrap_unchecked(self) -> CudaResult<(T, Option<C>)> {
-        match self.status {
-            AsyncStatus::Completed { result: Ok(()) } => Ok((self.value, None)),
+        let (value, status) = self.destructure_into_parts();
+
+        match status {
+            AsyncStatus::Completed { result: Ok(()) } => Ok((value, None)),
             AsyncStatus::Completed { result: Err(err) } => Err(err),
             AsyncStatus::Processing {
                 receiver: _,
                 completion,
                 event: _,
                 _capture,
-            } => Ok((self.value, Some(completion))),
+            } => Ok((value, Some(completion))),
         }
     }
 
@@ -248,6 +270,34 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
 
     pub fn as_mut(&mut self) -> AsyncProj<'_, 'stream, &mut T> {
         AsyncProj::new(&mut self.value)
+    }
+
+    #[must_use]
+    fn destructure_into_parts(self) -> (T, AsyncStatus<'a, T, C>) {
+        let this = std::mem::ManuallyDrop::new(self);
+
+        // Safety: we destructure self into its droppable components,
+        //         value and status, without dropping self itself
+        unsafe { (std::ptr::read(&this.value), (std::ptr::read(&this.status))) }
+    }
+}
+
+#[cfg(feature = "host")]
+impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'a, 'stream, T, C> {
+    fn drop(&mut self) {
+        let AsyncStatus::Processing {
+            receiver,
+            completion,
+            event: _,
+            _capture,
+        } = std::mem::replace(&mut self.status, AsyncStatus::Completed { result: Ok(()) })
+        else {
+            return;
+        };
+
+        if completion.synchronize_on_drop() && receiver.recv() == Ok(Ok(())) {
+            let _ = completion.complete(self.value.borrow_mut());
+        }
     }
 }
 
@@ -311,8 +361,9 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
     type IntoFuture = impl Future<Output = Self::Output>;
 
     fn into_future(self) -> Self::IntoFuture {
-        let (completion, status): (Option<C>, AsyncStatus<'a, T, NoCompletion>) = match self.status
-        {
+        let (value, status) = self.destructure_into_parts();
+
+        let (completion, status): (Option<C>, AsyncStatus<'a, T, NoCompletion>) = match status {
             AsyncStatus::Completed { result } => {
                 (None, AsyncStatus::Completed::<T, NoCompletion> { result })
             },
@@ -334,9 +385,38 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
 
         AsyncFuture {
             _stream: PhantomData::<&'stream Stream>,
-            value: Some(self.value),
+            value: Some(value),
             completion,
             status,
+        }
+    }
+}
+
+#[cfg(feature = "host")]
+impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop
+    for AsyncFuture<'a, 'stream, T, C>
+{
+    fn drop(&mut self) {
+        let Some(mut value) = self.value.take() else {
+            return;
+        };
+
+        let AsyncStatus::Processing {
+            receiver,
+            completion: NoCompletion,
+            event: _,
+            _capture,
+        } = std::mem::replace(&mut self.status, AsyncStatus::Completed { result: Ok(()) })
+        else {
+            return;
+        };
+
+        let Some(completion) = self.completion.take() else {
+            return;
+        };
+
+        if completion.synchronize_on_drop() && receiver.recv() == Ok(Ok(())) {
+            let _ = completion.complete(value.borrow_mut());
         }
     }
 }
