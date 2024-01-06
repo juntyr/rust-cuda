@@ -240,7 +240,6 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     }
 
     #[allow(clippy::missing_errors_doc)] // FIXME
-    #[allow(clippy::type_complexity)] // FIXME
     /// # Safety
     ///
     /// The returned inner value of type `T` may not yet have completed its
@@ -452,5 +451,47 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
     /// same [`Stream`].
     pub(crate) unsafe fn unwrap_unchecked(self) -> T {
         self.value
+    }
+}
+
+#[cfg(feature = "host")]
+impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a T> {
+    #[must_use]
+    pub const fn as_ref<'b>(&'b self) -> AsyncProj<'b, 'stream, &'b T>
+    where
+        'a: 'b,
+    {
+        AsyncProj {
+            _capture: PhantomData::<&'b ()>,
+            _stream: PhantomData::<&'stream Stream>,
+            value: self.value,
+        }
+    }
+}
+
+#[cfg(feature = "host")]
+impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
+    #[must_use]
+    pub fn as_ref<'b>(&'b self) -> AsyncProj<'b, 'stream, &'b T>
+    where
+        'a: 'b,
+    {
+        AsyncProj {
+            _capture: PhantomData::<&'b ()>,
+            _stream: PhantomData::<&'stream Stream>,
+            value: self.value,
+        }
+    }
+
+    #[must_use]
+    pub fn as_mut<'b>(&'b mut self) -> AsyncProj<'b, 'stream, &'b mut T>
+    where
+        'a: 'b,
+    {
+        AsyncProj {
+            _capture: PhantomData::<&'b ()>,
+            _stream: PhantomData::<&'stream Stream>,
+            value: self.value,
+        }
     }
 }

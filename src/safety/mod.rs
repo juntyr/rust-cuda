@@ -8,6 +8,6 @@ pub mod kernel_signature;
 #[doc(hidden)]
 pub mod type_layout;
 
-pub use aliasing::NoSafeAliasing;
+pub use aliasing::SafeMutableAliasing;
 pub use portable::PortableBitSemantics;
 pub use stack_only::StackOnly;

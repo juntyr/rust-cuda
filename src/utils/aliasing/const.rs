@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[repr(transparent)]
-#[derive(Clone, TypeLayout)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, TypeLayout)]
 pub struct SplitSliceOverCudaThreadsConstStride<T, const STRIDE: usize>(T);
 
 impl<T, const STRIDE: usize> SplitSliceOverCudaThreadsConstStride<T, STRIDE> {

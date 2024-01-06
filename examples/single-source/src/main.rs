@@ -64,9 +64,9 @@ pub fn kernel<
         + rc::safety::StackOnly,
 >(
     _x: &rc::kernel::param::PerThreadShallowCopy<Dummy>,
-    _z: &rc::kernel::param::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    _z: &rc::kernel::param::DeepPerThreadBorrow<Wrapper<T>>,
     _v @ _w: &'a rc::kernel::param::ShallowInteriorMutable<core::sync::atomic::AtomicU64>,
-    _: rc::kernel::param::SharedHeapPerThreadShallowCopy<Wrapper<T>>,
+    _: rc::kernel::param::DeepPerThreadBorrow<Wrapper<T>>,
     q @ Triple(s, mut __t, _u): rc::kernel::param::PerThreadShallowCopy<Triple>,
     shared3: &mut rc::utils::shared::ThreadBlockShared<u32>,
     dynamic: &mut rc::utils::shared::ThreadBlockSharedSlice<Dummy>,

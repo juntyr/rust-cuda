@@ -14,8 +14,8 @@ use crate::{
     alloc::EmptyCudaAlloc,
     kernel::{sealed, CudaKernelParameter},
     lend::RustToCuda,
-    safety::PortableBitSemantics,
-    utils::ffi::{DeviceAccessible, DeviceConstRef, DeviceOwnedRef},
+    safety::{PortableBitSemantics, SafeMutableAliasing},
+    utils::ffi::{DeviceAccessible, DeviceConstRef, DeviceMutRef, DeviceOwnedRef},
 };
 
 pub struct PtxJit<T> {
@@ -424,12 +424,12 @@ impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> s
 {
 }
 
-pub struct SharedHeapPerThreadShallowCopy<T: RustToCuda> {
+pub struct DeepPerThreadBorrow<T: RustToCuda> {
     never: !,
     _marker: PhantomData<T>,
 }
 
-impl<T: RustToCuda> Deref for SharedHeapPerThreadShallowCopy<T> {
+impl<T: RustToCuda> Deref for DeepPerThreadBorrow<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -444,7 +444,7 @@ impl<
                 CudaRepresentation: 'static + crate::safety::StackOnly,
                 CudaAllocation: EmptyCudaAlloc,
             >,
-    > CudaKernelParameter for SharedHeapPerThreadShallowCopy<T>
+    > CudaKernelParameter for DeepPerThreadBorrow<T>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
@@ -514,13 +514,11 @@ impl<
                 CudaRepresentation: 'static + crate::safety::StackOnly,
                 CudaAllocation: EmptyCudaAlloc,
             >,
-    > sealed::Sealed for SharedHeapPerThreadShallowCopy<T>
+    > sealed::Sealed for DeepPerThreadBorrow<T>
 {
 }
 
-impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
-    for &'a SharedHeapPerThreadShallowCopy<T>
-{
+impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
@@ -580,7 +578,78 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust(param, inner) }
     }
 }
-impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a SharedHeapPerThreadShallowCopy<T> {}
+impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a DeepPerThreadBorrow<T> {}
+
+impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
+    for &'a mut DeepPerThreadBorrow<T>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
+        'b,
+        'stream,
+        &'b mut crate::host::HostAndDeviceMutRef<
+            'b,
+            DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+        >,
+    >;
+    #[cfg(any(feature = "device", doc))]
+    type DeviceType<'b> = &'b mut T;
+    type FfiType<'stream, 'b> =
+        DeviceMutRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
+    #[cfg(feature = "host")]
+    type SyncHostType = &'a mut T;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        crate::lend::LendToCuda::lend_to_cuda_mut(param, |mut param| {
+            // FIXME: express the same with param.as_async(stream).as_mut()
+            let _ = stream;
+            inner(crate::utils::r#async::AsyncProj::new(&mut param.as_mut()))
+        })
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        inner(None)
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
+        Layout::new::<()>()
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+        param: Self::AsyncHostType<'stream, 'b>,
+        _token: sealed::Token,
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        let param = unsafe { param.unwrap_unchecked() };
+        Ok(param.for_device())
+    }
+
+    #[cfg(feature = "device")]
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust_mut(param, inner) }
+    }
+}
+impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+    for &'a mut DeepPerThreadBorrow<T>
+{
+}
 
 impl<
         T: Send
@@ -589,18 +658,17 @@ impl<
                 CudaRepresentation: 'static + crate::safety::StackOnly,
                 CudaAllocation: EmptyCudaAlloc,
             >,
-    > CudaKernelParameter for PtxJit<SharedHeapPerThreadShallowCopy<T>>
+    > CudaKernelParameter for PtxJit<DeepPerThreadBorrow<T>>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> =
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+        <DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> =
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type DeviceType<'b> = <DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
     type FfiType<'stream, 'b> =
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+        <DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
     #[cfg(feature = "host")]
-    type SyncHostType = <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
+    type SyncHostType = <DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
     fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
@@ -608,9 +676,7 @@ impl<
         stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(
-            param, stream, inner,
-        )
+        <DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(param, stream, inner)
     }
 
     #[cfg(feature = "host")]
@@ -628,7 +694,7 @@ impl<
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param, token)
+        <DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
     }
 
     #[cfg(feature = "host")]
@@ -646,7 +712,7 @@ impl<
     ) -> O {
         emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
 
-        <SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+        <DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
             param, inner,
         )
     }
@@ -658,24 +724,22 @@ impl<
                 CudaRepresentation: 'static + crate::safety::StackOnly,
                 CudaAllocation: EmptyCudaAlloc,
             >,
-    > sealed::Sealed for PtxJit<SharedHeapPerThreadShallowCopy<T>>
+    > sealed::Sealed for PtxJit<DeepPerThreadBorrow<T>>
 {
 }
 
 impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
-    for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>>
+    for &'a PtxJit<DeepPerThreadBorrow<T>>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> =
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> =
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type DeviceType<'b> = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
     type FfiType<'stream, 'b> =
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
     #[cfg(feature = "host")]
-    type SyncHostType =
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
+    type SyncHostType = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
     fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
@@ -683,9 +747,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         stream: &'stream rustacuda::stream::Stream,
         inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E> {
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(
-            param, stream, inner,
-        )
+        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(param, stream, inner)
     }
 
     #[cfg(feature = "host")]
@@ -711,7 +773,7 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param, token)
+        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
     }
 
     #[cfg(feature = "device")]
@@ -721,13 +783,77 @@ impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
     ) -> O {
         emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
 
-        <&'a SharedHeapPerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
             param, inner,
         )
     }
 }
-impl<'a, T: 'static + Sync + RustToCuda> sealed::Sealed
-    for &'a PtxJit<SharedHeapPerThreadShallowCopy<T>>
+impl<'a, T: 'static + Sync + RustToCuda> sealed::Sealed for &'a PtxJit<DeepPerThreadBorrow<T>> {}
+
+impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
+    for &'a mut PtxJit<DeepPerThreadBorrow<T>>
+{
+    #[cfg(feature = "host")]
+    type AsyncHostType<'stream, 'b> =
+        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+    #[cfg(any(feature = "device", doc))]
+    type DeviceType<'b> = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
+    type FfiType<'stream, 'b> =
+        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+    #[cfg(feature = "host")]
+    type SyncHostType = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
+
+    #[cfg(feature = "host")]
+    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+        param: Self::SyncHostType,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    ) -> Result<O, E> {
+        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(
+            param, stream, inner,
+        )
+    }
+
+    #[cfg(feature = "host")]
+    fn with_async_as_ptx_jit<O>(
+        param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+    ) -> O {
+        let param = unsafe { param.as_ref().unwrap_unchecked() };
+        inner(Some(&param_as_raw_bytes(param.for_host())))
+    }
+
+    #[cfg(feature = "host")]
+    fn shared_layout_for_async(
+        _param: &Self::AsyncHostType<'_, '_>,
+        _token: sealed::Token,
+    ) -> Layout {
+        Layout::new::<()>()
+    }
+
+    #[cfg(feature = "host")]
+    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+        param: Self::AsyncHostType<'stream, 'b>,
+        token: sealed::Token,
+    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
+    }
+
+    #[cfg(feature = "device")]
+    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'static>,
+        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+    ) -> O {
+        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+
+        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+            param, inner,
+        )
+    }
+}
+impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+    for &'a mut PtxJit<DeepPerThreadBorrow<T>>
 {
 }
 

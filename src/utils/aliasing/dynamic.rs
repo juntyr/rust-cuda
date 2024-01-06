@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[repr(C)]
-#[derive(Clone, TypeLayout)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, TypeLayout)]
 pub struct SplitSliceOverCudaThreadsDynamicStride<T> {
     stride: usize,
     inner: T,

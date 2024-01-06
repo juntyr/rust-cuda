@@ -10,6 +10,7 @@ use crate::{
     alloc::{EmptyCudaAlloc, NoCudaAlloc},
     host::{CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceMutRef},
     lend::{RustToCuda, RustToCudaAsync},
+    safety::SafeMutableAliasing,
     utils::{
         adapter::DeviceCopyWithPortableBitSemantics,
         ffi::DeviceAccessible,
@@ -85,15 +86,9 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
         })
     }
 
-    // TODO: safety constraint?
     /// Moves the data synchronously to the CUDA device, where it can then be
     /// lent out immutably via [`ExchangeWrapperOnDevice::as_ref`], or mutably
     /// via [`ExchangeWrapperOnDevice::as_mut`].
-    ///
-    /// To avoid aliasing, each CUDA thread will get access to its own shallow
-    /// copy of the data. Hence,
-    /// - any shallow changes to the data will NOT be reflected back to the CPU
-    /// - any deep changes to the data WILL be reflected back to the CPU
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -118,13 +113,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
     ExchangeWrapperOnHost<T>
 {
     #[allow(clippy::needless_lifetimes)] // keep 'stream explicit
-    // TODO: safety constraint?
     /// Moves the data asynchronously to the CUDA device.
-    ///
-    /// To avoid aliasing, each CUDA thread will get access to its own shallow
-    /// copy of the data. Hence,
-    /// - any shallow changes to the data will NOT be reflected back to the CPU
-    /// - any deep changes to the data WILL be reflected back to the CPU
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -174,13 +163,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> DerefMut for ExchangeWrapper
 }
 
 impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
-    // TODO: safety constraint?
     /// Moves the data synchronously back to the host CPU device.
-    ///
-    /// To avoid aliasing, each CUDA thread only got access to its own shallow
-    /// copy of the data. Hence,
-    /// - any shallow changes to the data will NOT be reflected back to the CPU
-    /// - any deep changes to the data WILL be reflected back to the CPU
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -216,7 +199,10 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
     #[must_use]
     pub fn as_mut(
         &mut self,
-    ) -> HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> {
+    ) -> HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>
+    where
+        T: SafeMutableAliasing,
+    {
         // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
         unsafe {
             HostAndDeviceMutRef::new_unchecked(
@@ -231,13 +217,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
     ExchangeWrapperOnDevice<T>
 {
     #[allow(clippy::needless_lifetimes)] // keep 'stream explicit
-    // TODO: safety constraint?
     /// Moves the data asynchronously back to the host CPU device.
-    ///
-    /// To avoid aliasing, each CUDA thread only got access to its own shallow
-    /// copy of the data. Hence,
-    /// - any shallow changes to the data will NOT be reflected back to the CPU
-    /// - any deep changes to the data WILL be reflected back to the CPU
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -295,13 +275,7 @@ impl<
         T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: EmptyCudaAlloc>,
     > Async<'a, 'stream, ExchangeWrapperOnDevice<T>, NoCompletion>
 {
-    // TODO: safety constraint?
     /// Moves the data asynchronously back to the host CPU device.
-    ///
-    /// To avoid aliasing, each CUDA thread only got access to its own shallow
-    /// copy of the data. Hence,
-    /// - any shallow changes to the data will NOT be reflected back to the CPU
-    /// - any deep changes to the data WILL be reflected back to the CPU
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
@@ -380,7 +354,10 @@ impl<
         '_,
         'stream,
         HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
-    > {
+    >
+    where
+        T: SafeMutableAliasing,
+    {
         let this = unsafe { self.as_mut().unwrap_unchecked() };
 
         AsyncProj::new(unsafe {

@@ -7,16 +7,16 @@ use rustacuda::error::CudaError;
 pub use rust_cuda_derive::LendRustToCuda;
 
 #[cfg(any(feature = "host", feature = "device", doc))]
-use crate::safety::StackOnly;
+use crate::safety::{SafeMutableAliasing, StackOnly};
 #[cfg(feature = "device")]
-use crate::utils::ffi::{DeviceConstRef, DeviceOwnedRef};
+use crate::utils::ffi::{DeviceConstRef, DeviceMutRef, DeviceOwnedRef};
 use crate::{alloc::CudaAlloc, safety::PortableBitSemantics};
 #[cfg(any(feature = "host", feature = "device"))]
 use crate::{alloc::EmptyCudaAlloc, utils::ffi::DeviceAccessible};
 #[cfg(feature = "host")]
 use crate::{
     alloc::{CombinedCudaAlloc, NoCudaAlloc},
-    host::{HostAndDeviceConstRef, HostAndDeviceOwned},
+    host::{HostAndDeviceConstRef, HostAndDeviceMutRef, HostAndDeviceOwned},
     utils::r#async::{Async, CompletionFnMut, NoCompletion},
 };
 
@@ -162,7 +162,7 @@ impl<T, P: RustToCudaAsync + RustToCudaProxy<T>> RustToCudaAsyncProxy<T> for P {
 #[cfg(feature = "host")]
 #[allow(clippy::module_name_repetitions)]
 pub trait LendToCuda: RustToCuda {
-    /// Lends an immutable copy of `&self` to CUDA:
+    /// Lends an immutable borrow of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
     ///   [`DeviceConstRef`] inside the closure
     /// - after the closure, `&self` will not have changed
@@ -183,7 +183,30 @@ pub trait LendToCuda: RustToCuda {
     where
         Self: Sync;
 
-    /// Moves `self` to CUDA iff `self` is [`StackOnly`].
+    /// Lends a mutable borrow of `&mut self` to CUDA iff `Self` is
+    /// [`SafeMutableAliasing`]:
+    /// - code in the CUDA kernel can only access `&mut self` through the
+    ///   `DeviceMutRef` inside the closure
+    /// - after the closure, `&mut self` will reflect the changes from the
+    ///   kernel execution
+    ///
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    fn lend_to_cuda_mut<
+        O,
+        E: From<CudaError>,
+        F: FnOnce(
+            HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> Result<O, E>,
+    >(
+        &mut self,
+        inner: F,
+    ) -> Result<O, E>
+    where
+        Self: Sync + SafeMutableAliasing;
+
+    /// Moves `self` to CUDA iff `Self` is [`StackOnly`].
     ///
     /// # Errors
     ///
@@ -223,6 +246,30 @@ impl<T: RustToCuda> LendToCuda for T {
 
         core::mem::drop(cuda_repr);
         core::mem::drop(alloc);
+
+        result
+    }
+
+    fn lend_to_cuda_mut<
+        O,
+        E: From<CudaError>,
+        F: FnOnce(
+            HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        ) -> Result<O, E>,
+    >(
+        &mut self,
+        inner: F,
+    ) -> Result<O, E>
+    where
+        Self: Sync + SafeMutableAliasing,
+    {
+        let (mut cuda_repr, alloc) = unsafe { self.borrow(NoCudaAlloc) }?;
+
+        let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, inner);
+
+        core::mem::drop(cuda_repr);
+
+        let _: NoCudaAlloc = unsafe { self.restore(alloc) }?;
 
         result
     }
@@ -286,6 +333,45 @@ pub trait LendToCudaAsync: RustToCudaAsync {
     ) -> Result<O, E>
     where
         Self: Sync;
+
+    #[allow(clippy::type_complexity)]
+    /// Lends a mutable borrow of `&mut self` to CUDA iff `Self` is
+    /// [`SafeMutableAliasing`]:
+    /// - code in the CUDA kernel can only access `&mut self` through the
+    ///   `DeviceMutRef` inside the closure
+    /// - after the closure, `&mut self` will reflect the changes from the
+    ///   kernel execution
+    ///
+    /// # Errors
+    ///
+    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    fn lend_to_cuda_mut_async<
+        'a,
+        'stream,
+        O,
+        E: From<CudaError>,
+        F: for<'b> FnOnce(
+            Async<
+                'b,
+                'stream,
+                HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                NoCompletion,
+            >,
+        ) -> Result<O, E>,
+        T: 'a,
+    >(
+        this: owning_ref::BoxRefMut<'a, T, Self>,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: F,
+    ) -> Result<
+        (
+            Async<'a, 'stream, owning_ref::BoxRefMut<'a, T, Self>, CompletionFnMut<'a, Self>>,
+            O,
+        ),
+        E,
+    >
+    where
+        Self: Sync + SafeMutableAliasing;
 
     /// Moves `self` to CUDA iff `self` is [`StackOnly`].
     ///
@@ -360,6 +446,55 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         result
     }
 
+    fn lend_to_cuda_mut_async<
+        'a,
+        'stream,
+        O,
+        E: From<CudaError>,
+        F: for<'b> FnOnce(
+            Async<
+                'b,
+                'stream,
+                HostAndDeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+                NoCompletion,
+            >,
+        ) -> Result<O, E>,
+        S: 'a,
+    >(
+        this: owning_ref::BoxRefMut<'a, S, Self>,
+        stream: &'stream rustacuda::stream::Stream,
+        inner: F,
+    ) -> Result<
+        (
+            Async<'a, 'stream, owning_ref::BoxRefMut<'a, S, Self>, CompletionFnMut<'a, Self>>,
+            O,
+        ),
+        E,
+    >
+    where
+        Self: Sync + SafeMutableAliasing,
+    {
+        let (cuda_repr, alloc) = unsafe { this.borrow_async(NoCudaAlloc, stream) }?;
+
+        let (mut cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+
+        let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, |mut_ref| {
+            let r#async = if matches!(capture_on_completion, Some(NoCompletion)) {
+                Async::pending(mut_ref, stream, NoCompletion)?
+            } else {
+                Async::ready(mut_ref, stream)
+            };
+
+            inner(r#async)
+        });
+
+        core::mem::drop(cuda_repr);
+
+        let (r#async, _): (_, NoCudaAlloc) = unsafe { Self::restore_async(this, alloc, stream) }?;
+
+        result.map(|ok| (r#async, ok))
+    }
+
     fn move_to_cuda_async<
         'stream,
         O,
@@ -403,12 +538,24 @@ pub trait BorrowFromRust: RustToCuda {
     /// # Safety
     ///
     /// This function is only safe to call iff `cuda_repr` is the
-    ///  [`DeviceConstRef`] borrowed on the CPU using the corresponding
-    ///  [`LendToCuda::lend_to_cuda`].
+    /// [`DeviceConstRef`] borrowed on the CPU using the corresponding
+    /// [`LendToCuda::lend_to_cuda`].
     unsafe fn with_borrow_from_rust<O, F: FnOnce(&Self) -> O>(
         cuda_repr: DeviceConstRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
         inner: F,
     ) -> O;
+
+    /// # Safety
+    ///
+    /// This function is only safe to call iff `cuda_repr_mut` is the
+    /// [`DeviceMutRef`] borrowed on the CPU using the corresponding
+    /// [`LendToCuda::lend_to_cuda_mut`].
+    unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
+        cuda_repr_mut: DeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        inner: F,
+    ) -> O
+    where
+        Self: SafeMutableAliasing;
 
     /// # Safety
     ///
@@ -435,6 +582,22 @@ impl<T: RustToCuda> BorrowFromRust for T {
         let rust_repr = core::mem::ManuallyDrop::new(CudaAsRust::as_rust(cuda_repr.as_ref()));
 
         inner(&rust_repr)
+    }
+
+    #[inline]
+    unsafe fn with_borrow_from_rust_mut<O, F: FnOnce(&mut Self) -> O>(
+        mut cuda_repr_mut: DeviceMutRef<DeviceAccessible<<Self as RustToCuda>::CudaRepresentation>>,
+        inner: F,
+    ) -> O
+    where
+        Self: SafeMutableAliasing,
+    {
+        // `rust_repr` must never be dropped as we do NOT own any of the
+        //  heap memory it might reference
+        let mut rust_repr_mut =
+            core::mem::ManuallyDrop::new(CudaAsRust::as_rust(cuda_repr_mut.as_mut()));
+
+        inner(&mut rust_repr_mut)
     }
 
     #[inline]
