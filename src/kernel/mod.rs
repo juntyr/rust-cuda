@@ -39,52 +39,76 @@ mod sealed {
     pub struct Token;
 }
 
+#[cfg(feature = "host")]
+pub trait WithNewAsync<'stream, P: ?Sized + CudaKernelParameter, O, E: From<rustacuda::error::CudaError>> {
+    fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E> where P: 'b;
+}
+
+#[cfg(feature = "host")]
+impl<'stream, P: ?Sized + CudaKernelParameter, O, E: From<rustacuda::error::CudaError>, F: for<'b> FnOnce(P::AsyncHostType<'stream, 'b>) -> Result<O, E>> WithNewAsync<'stream, P, O, E> for F {
+    fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E> where P: 'b {
+        (self)(param)
+    }
+}
+
+#[cfg(feature = "device")]
+pub trait WithFfiAsDevice<P: ?Sized + CudaKernelParameter, O> {
+    fn with<'b>(self, param: P::DeviceType<'b>) -> O where P: 'b;
+}
+
+#[cfg(feature = "device")]
+impl<P: ?Sized + CudaKernelParameter, O, F: for<'b> FnOnce(P::DeviceType<'b>) -> O> WithFfiAsDevice<P, O> for F {
+    fn with<'b>(self, param: P::DeviceType<'b>) -> O where P: 'b {
+        (self)(param)
+    }
+}
+
 pub trait CudaKernelParameter: sealed::Sealed {
     #[cfg(feature = "host")]
     type SyncHostType;
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b>;
+    type AsyncHostType<'stream, 'b> where Self: 'b;
     #[doc(hidden)]
-    type FfiType<'stream, 'b>: PortableBitSemantics;
+    type FfiType<'stream, 'b>: PortableBitSemantics where Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b>;
+    type DeviceType<'b> where Self: 'b;
 
     #[cfg(feature = "host")]
     #[allow(clippy::missing_errors_doc)] // FIXME
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E>;
+        inner: impl WithNewAsync<'stream, Self, O, E>,
+    ) -> Result<O, E> where Self: 'param;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        param: &Self::AsyncHostType<'_, '_>,
+    fn with_async_as_ptx_jit<'stream, 'b, O>(
+        param: &Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O;
+    ) -> O where Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        param: &Self::AsyncHostType<'_, '_>,
+    fn shared_layout_for_async<'stream, 'b>(
+        param: &Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
-    ) -> std::alloc::Layout;
+    ) -> std::alloc::Layout where Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E>;
+    ) -> Result<Self::FfiType<'stream, 'b>, E> where Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O;
+    unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'short>,
+        inner: impl WithFfiAsDevice<Self, O>,
+    ) -> O where Self: 'short;
 }
 
 #[cfg(feature = "host")]
@@ -151,7 +175,7 @@ macro_rules! impl_launcher_launch {
         $inner
     };
     (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:expr),*) $inner:block) => {
-        $T0::$func($arg0 $(, $other)*, |$arg0| {
+        $T0::$func($arg0 $(, $other)*, |$arg0: <$T0 as CudaKernelParameter>::AsyncHostType<'stream, '_>| {
             impl_launcher_launch! { impl $func ($($arg: $T),*) + ($($other),*) $inner }
         })
     };
@@ -395,7 +419,7 @@ macro_rules! impl_typed_kernel_launch {
         $inner
     };
     (impl $func:ident ($arg0:ident : $T0:ident $(, $arg:ident : $T:ident)*) + ($($other:expr),*) $inner:block) => {
-        $T0::$func($arg0 $(, $other)*, |$arg0| {
+        $T0::$func($arg0 $(, $other)*, |$arg0: <$T0 as CudaKernelParameter>::AsyncHostType<'stream, '_>| {
             impl_typed_kernel_launch! { impl $func ($($arg: $T),*) + ($($other),*) $inner }
         })
     };

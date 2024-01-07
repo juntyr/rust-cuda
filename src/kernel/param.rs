@@ -72,36 +72,36 @@ impl<
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> =
-        crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T>;
+        crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T> where Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = T;
-    type FfiType<'stream, 'b> = crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T>;
+    type DeviceType<'b> = T where Self: 'b;
+    type FfiType<'stream, 'b> = crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T> where Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        inner(crate::utils::adapter::RustToCudaWithPortableBitCopySemantics::from(param))
+        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+    ) -> Result<O, E> where Self: 'param {
+        inner.with(crate::utils::adapter::RustToCudaWithPortableBitCopySemantics::from(param))
     }
 
     #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
+    fn with_async_as_ptx_jit<'stream, 'b, O>(
+        _param: &Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
+    ) -> O where Self: 'b {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
+    fn shared_layout_for_async<'stream, 'b>(
+        _param: &Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
-    ) -> Layout {
+    ) -> Layout where Self: 'b {
         Layout::new::<()>()
     }
 
@@ -109,18 +109,18 @@ impl<
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> where Self: 'b {
         Ok(param)
     }
 
     #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
+    unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'short>,
+        inner: impl super::WithFfiAsDevice<Self, O>,
+    ) -> O where Self: 'short {
         let param = param.into_inner();
 
-        inner(param)
+        inner.with(param)
     }
 }
 impl<
@@ -135,8 +135,7 @@ impl<
 
 impl<
         'a,
-        T: 'static
-            + Sync
+        T: Sync
             + crate::safety::StackOnly
             + crate::safety::PortableBitSemantics
             + TypeGraphLayout,
@@ -147,38 +146,38 @@ impl<
         'b,
         'stream,
         &'b crate::host::HostAndDeviceConstRef<'b, T>,
-    >;
+    > where Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b T;
-    type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
+    type DeviceType<'b> = &'b T where Self: 'b;
+    type FfiType<'stream, 'b> = DeviceConstRef<'b, T> where Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = &'a T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
+        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+    ) -> Result<O, E> where Self: 'param {
         crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| {
-            inner(const_ref.as_async(stream).as_ref())
+            inner.with(const_ref.as_async(stream).as_ref())
         })
     }
 
     #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
+    fn with_async_as_ptx_jit<'stream, 'b, O>(
+        _param: &Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
+    ) -> O where Self: 'b {
         inner(None)
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
+    fn shared_layout_for_async<'stream, 'b>(
+        _param: &Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
-    ) -> Layout {
+    ) -> Layout where Self: 'b {
         Layout::new::<()>()
     }
 
@@ -186,25 +185,24 @@ impl<
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> where Self: 'b {
         let param = unsafe { param.unwrap_unchecked() };
         Ok(param.for_device())
     }
 
     #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
+    unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'short>,
+        inner: impl super::WithFfiAsDevice<Self, O>,
+    ) -> O where Self: 'short {
         let param = param.as_ref();
 
-        inner(param)
+        inner.with(param)
     }
 }
 impl<
         'a,
-        T: 'static
-            + Sync
+        T: Sync
             + crate::safety::StackOnly
             + crate::safety::PortableBitSemantics
             + TypeGraphLayout,
@@ -214,8 +212,7 @@ impl<
 
 impl<
         'a,
-        T: 'static
-            + Sync
+        T: Sync
             + crate::safety::StackOnly
             + crate::safety::PortableBitSemantics
             + TypeGraphLayout,
@@ -223,38 +220,40 @@ impl<
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b> =
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b> where Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>;
+    type DeviceType<'b> = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b> where Self: 'b;
     type FfiType<'stream, 'b> =
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b> where Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::with_new_async(param, stream, inner)
+        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+    ) -> Result<O, E> where Self: 'param {
+        crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| {
+            inner.with(const_ref.as_async(stream).as_ref())
+        })
     }
 
     #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        param: &Self::AsyncHostType<'_, '_>,
+    fn with_async_as_ptx_jit<'stream, 'b, O>(
+        param: &Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
+    ) -> O where Self: 'b {
         let param = unsafe { param.unwrap_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
     #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
+    fn shared_layout_for_async<'stream, 'b>(
+        _param: &Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
-    ) -> Layout {
+    ) -> Layout where Self: 'b {
         Layout::new::<()>()
     }
 
@@ -262,26 +261,25 @@ impl<
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
+    ) -> Result<Self::FfiType<'stream, 'b>, E> where Self: 'b {
         <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::async_to_ffi(param, token)
     }
 
     #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
+    unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
+        param: Self::FfiType<'static, 'short>,
+        inner: impl super::WithFfiAsDevice<Self, O>,
+    ) -> O where Self: 'short {
         emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
 
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
-            param, inner,
-        )
+        let param = param.as_ref();
+
+        inner.with(param)
     }
 }
 impl<
         'a,
-        T: 'static
-            + Sync
+        T: Sync
             + crate::safety::StackOnly
             + crate::safety::PortableBitSemantics
             + TypeGraphLayout,
@@ -289,573 +287,573 @@ impl<
 {
 }
 
-pub struct ShallowInteriorMutable<
-    T: Sync
-        + crate::safety::StackOnly
-        + crate::safety::PortableBitSemantics
-        + TypeGraphLayout
-        + InteriorMutableSync,
-> {
-    never: !,
-    _marker: PhantomData<T>,
-}
+// pub struct ShallowInteriorMutable<
+//     T: Sync
+//         + crate::safety::StackOnly
+//         + crate::safety::PortableBitSemantics
+//         + TypeGraphLayout
+//         + InteriorMutableSync,
+// > {
+//     never: !,
+//     _marker: PhantomData<T>,
+// }
 
-impl<
-        T: Sync
-            + crate::safety::StackOnly
-            + crate::safety::PortableBitSemantics
-            + TypeGraphLayout
-            + InteriorMutableSync,
-    > Deref for ShallowInteriorMutable<T>
-{
-    type Target = T;
+// impl<
+//         T: Sync
+//             + crate::safety::StackOnly
+//             + crate::safety::PortableBitSemantics
+//             + TypeGraphLayout
+//             + InteriorMutableSync,
+//     > Deref for ShallowInteriorMutable<T>
+// {
+//     type Target = T;
 
-    fn deref(&self) -> &Self::Target {
-        self.never
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         self.never
+//     }
+// }
 
-impl<
-        'a,
-        T: 'static
-            + Sync
-            + crate::safety::StackOnly
-            + crate::safety::PortableBitSemantics
-            + TypeGraphLayout
-            + InteriorMutableSync,
-    > CudaKernelParameter for &'a ShallowInteriorMutable<T>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
-        'b,
-        'stream,
-        &'b crate::host::HostAndDeviceConstRef<'b, T>,
-    >;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b T;
-    type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
-    #[cfg(feature = "host")]
-    /// The kernel takes a mutable borrow of the interior mutable data to ensure
-    /// the interior mutability is limited to just this kernel invocation.
-    type SyncHostType = &'a mut T;
+// impl<
+//         'a,
+//         T: 'static
+//             + Sync
+//             + crate::safety::StackOnly
+//             + crate::safety::PortableBitSemantics
+//             + TypeGraphLayout
+//             + InteriorMutableSync,
+//     > CudaKernelParameter for &'a ShallowInteriorMutable<T>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
+//         'b,
+//         'stream,
+//         &'b crate::host::HostAndDeviceConstRef<'b, T>,
+//     >;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = &'b T;
+//     type FfiType<'stream, 'b> = DeviceConstRef<'b, T>;
+//     #[cfg(feature = "host")]
+//     /// The kernel takes a mutable borrow of the interior mutable data to ensure
+//     /// the interior mutability is limited to just this kernel invocation.
+//     type SyncHostType = &'a mut T;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        crate::host::HostAndDeviceMutRef::with_new(param, |const_ref| {
-            inner(const_ref.as_ref().as_async(stream).as_ref())
-        })
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         crate::host::HostAndDeviceMutRef::with_new(param, |const_ref| {
+//             inner.with(const_ref.as_ref().as_async(stream).as_ref())
+//         })
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        inner(None)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         inner(None)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let param = unsafe { param.unwrap_unchecked() };
-        Ok(param.for_device())
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         _token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         let param = unsafe { param.unwrap_unchecked() };
+//         Ok(param.for_device())
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        let param = param.as_ref();
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         let param = param.as_ref();
 
-        inner(param)
-    }
-}
-impl<
-        'a,
-        T: crate::safety::StackOnly
-            + Sync
-            + crate::safety::PortableBitSemantics
-            + TypeGraphLayout
-            + InteriorMutableSync,
-    > sealed::Sealed for &'a ShallowInteriorMutable<T>
-{
-}
+//         inner(param)
+//     }
+// }
+// impl<
+//         'a,
+//         T: crate::safety::StackOnly
+//             + Sync
+//             + crate::safety::PortableBitSemantics
+//             + TypeGraphLayout
+//             + InteriorMutableSync,
+//     > sealed::Sealed for &'a ShallowInteriorMutable<T>
+// {
+// }
 
-pub trait InteriorMutableSync: Sync + sealed::Sealed {}
+// pub trait InteriorMutableSync: Sync + sealed::Sealed {}
 
-macro_rules! impl_atomic_interior_mutable {
-    ($atomic:ident($interior:ty)) => {
-        impl InteriorMutableSync for core::sync::atomic::$atomic {}
-        impl sealed::Sealed for core::sync::atomic::$atomic {}
-    };
-    ($($atomic:ident($interior:ty)),*) => {
-        $(impl_atomic_interior_mutable! { $atomic($interior) })*
-    }
-}
+// macro_rules! impl_atomic_interior_mutable {
+//     ($atomic:ident($interior:ty)) => {
+//         impl InteriorMutableSync for core::sync::atomic::$atomic {}
+//         impl sealed::Sealed for core::sync::atomic::$atomic {}
+//     };
+//     ($($atomic:ident($interior:ty)),*) => {
+//         $(impl_atomic_interior_mutable! { $atomic($interior) })*
+//     }
+// }
 
-impl_atomic_interior_mutable! {
-    AtomicBool(bool),
-    AtomicI8(i8), AtomicI16(i16), AtomicI32(i32), AtomicI64(i64), AtomicIsize(isize),
-    AtomicU8(u8), AtomicU16(u16), AtomicU32(u32), AtomicU64(u64), AtomicUsize(usize)
-}
+// impl_atomic_interior_mutable! {
+//     AtomicBool(bool),
+//     AtomicI8(i8), AtomicI16(i16), AtomicI32(i32), AtomicI64(i64), AtomicIsize(isize),
+//     AtomicU8(u8), AtomicU16(u16), AtomicU32(u32), AtomicU64(u64), AtomicUsize(usize)
+// }
 
-impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> InteriorMutableSync
-    for core::cell::SyncUnsafeCell<T>
-{
-}
-impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> sealed::Sealed
-    for core::cell::SyncUnsafeCell<T>
-{
-}
+// impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> InteriorMutableSync
+//     for core::cell::SyncUnsafeCell<T>
+// {
+// }
+// impl<T: crate::safety::StackOnly + crate::safety::PortableBitSemantics + Sync> sealed::Sealed
+//     for core::cell::SyncUnsafeCell<T>
+// {
+// }
 
-pub struct DeepPerThreadBorrow<T: RustToCuda> {
-    never: !,
-    _marker: PhantomData<T>,
-}
+// pub struct DeepPerThreadBorrow<T: RustToCuda> {
+//     never: !,
+//     _marker: PhantomData<T>,
+// }
 
-impl<T: RustToCuda> Deref for DeepPerThreadBorrow<T> {
-    type Target = T;
+// impl<T: RustToCuda> Deref for DeepPerThreadBorrow<T> {
+//     type Target = T;
 
-    fn deref(&self) -> &Self::Target {
-        self.never
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         self.never
+//     }
+// }
 
-impl<
-        T: Send
-            + Clone
-            + RustToCuda<
-                CudaRepresentation: 'static + crate::safety::StackOnly,
-                CudaAllocation: EmptyCudaAlloc,
-            >,
-    > CudaKernelParameter for DeepPerThreadBorrow<T>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
-        'b,
-        'stream,
-        crate::host::HostAndDeviceOwned<
-            'b,
-            DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
-        >,
-        crate::utils::r#async::NoCompletion,
-    >;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = T;
-    type FfiType<'stream, 'b> =
-        DeviceOwnedRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
-    #[cfg(feature = "host")]
-    type SyncHostType = T;
+// impl<
+//         T: Send
+//             + Clone
+//             + RustToCuda<
+//                 CudaRepresentation: 'static + crate::safety::StackOnly,
+//                 CudaAllocation: EmptyCudaAlloc,
+//             >,
+//     > CudaKernelParameter for DeepPerThreadBorrow<T>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+//         'b,
+//         'stream,
+//         crate::host::HostAndDeviceOwned<
+//             'b,
+//             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+//         >,
+//         crate::utils::r#async::NoCompletion,
+//     >;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = T;
+//     type FfiType<'stream, 'b> =
+//         DeviceOwnedRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = T;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        crate::lend::LendToCuda::move_to_cuda(param, |param| inner(param.into_async(stream)))
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         crate::lend::LendToCuda::move_to_cuda(param, |param| inner.with(param.into_async(stream)))
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        inner(None)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         inner(None)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
-            unsafe { param.unwrap_unchecked()? };
-        Ok(param.for_device())
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         _token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         let (param, _completion): (_, Option<crate::utils::r#async::NoCompletion>) =
+//             unsafe { param.unwrap_unchecked()? };
+//         Ok(param.for_device())
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        unsafe { crate::lend::BorrowFromRust::with_moved_from_rust(param, inner) }
-    }
-}
-impl<
-        T: Send
-            + Clone
-            + RustToCuda<
-                CudaRepresentation: 'static + crate::safety::StackOnly,
-                CudaAllocation: EmptyCudaAlloc,
-            >,
-    > sealed::Sealed for DeepPerThreadBorrow<T>
-{
-}
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         unsafe { crate::lend::BorrowFromRust::with_moved_from_rust(param, inner) }
+//     }
+// }
+// impl<
+//         T: Send
+//             + Clone
+//             + RustToCuda<
+//                 CudaRepresentation: 'static + crate::safety::StackOnly,
+//                 CudaAllocation: EmptyCudaAlloc,
+//             >,
+//     > sealed::Sealed for DeepPerThreadBorrow<T>
+// {
+// }
 
-impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
-        'b,
-        'stream,
-        &'b crate::host::HostAndDeviceConstRef<
-            'b,
-            DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
-        >,
-    >;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b T;
-    type FfiType<'stream, 'b> =
-        DeviceConstRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
-    #[cfg(feature = "host")]
-    type SyncHostType = &'a T;
+// impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
+//         'b,
+//         'stream,
+//         &'b crate::host::HostAndDeviceConstRef<
+//             'b,
+//             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+//         >,
+//     >;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = &'b T;
+//     type FfiType<'stream, 'b> =
+//         DeviceConstRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = &'a T;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        crate::lend::LendToCuda::lend_to_cuda(param, |param| inner(param.as_async(stream).as_ref()))
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         crate::lend::LendToCuda::lend_to_cuda(param, |param| inner.with(param.as_async(stream).as_ref()))
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        inner(None)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         inner(None)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let param = unsafe { param.unwrap_unchecked() };
-        Ok(param.for_device())
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         _token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         let param = unsafe { param.unwrap_unchecked() };
+//         Ok(param.for_device())
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust(param, inner) }
-    }
-}
-impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a DeepPerThreadBorrow<T> {}
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust(param, inner) }
+//     }
+// }
+// impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a DeepPerThreadBorrow<T> {}
 
-impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
-    for &'a mut DeepPerThreadBorrow<T>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
-        'b,
-        'stream,
-        &'b mut crate::host::HostAndDeviceMutRef<
-            'b,
-            DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
-        >,
-    >;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b mut T;
-    type FfiType<'stream, 'b> =
-        DeviceMutRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
-    #[cfg(feature = "host")]
-    type SyncHostType = &'a mut T;
+// impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
+//     for &'a mut DeepPerThreadBorrow<T>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
+//         'b,
+//         'stream,
+//         &'b mut crate::host::HostAndDeviceMutRef<
+//             'b,
+//             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
+//         >,
+//     >;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = &'b mut T;
+//     type FfiType<'stream, 'b> =
+//         DeviceMutRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = &'a mut T;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        crate::lend::LendToCuda::lend_to_cuda_mut(param, |mut param| {
-            // FIXME: express the same with param.as_async(stream).as_mut()
-            let _ = stream;
-            inner(crate::utils::r#async::AsyncProj::new(&mut param.as_mut()))
-        })
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         crate::lend::LendToCuda::lend_to_cuda_mut(param, |mut param| {
+//             // FIXME: express the same with param.as_async(stream).as_mut()
+//             let _ = stream;
+//             inner.with(crate::utils::r#async::AsyncProj::new(&mut param.as_mut()))
+//         })
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        inner(None)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         inner(None)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        let param = unsafe { param.unwrap_unchecked() };
-        Ok(param.for_device())
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         _token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         let param = unsafe { param.unwrap_unchecked() };
+//         Ok(param.for_device())
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust_mut(param, inner) }
-    }
-}
-impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &'a mut DeepPerThreadBorrow<T>
-{
-}
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         unsafe { crate::lend::BorrowFromRust::with_borrow_from_rust_mut(param, inner) }
+//     }
+// }
+// impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+//     for &'a mut DeepPerThreadBorrow<T>
+// {
+// }
 
-impl<
-        T: Send
-            + Clone
-            + RustToCuda<
-                CudaRepresentation: 'static + crate::safety::StackOnly,
-                CudaAllocation: EmptyCudaAlloc,
-            >,
-    > CudaKernelParameter for PtxJit<DeepPerThreadBorrow<T>>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
-    type FfiType<'stream, 'b> =
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
-    #[cfg(feature = "host")]
-    type SyncHostType = <DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
+// impl<
+//         T: Send
+//             + Clone
+//             + RustToCuda<
+//                 CudaRepresentation: 'static + crate::safety::StackOnly,
+//                 CudaAllocation: EmptyCudaAlloc,
+//             >,
+//     > CudaKernelParameter for PtxJit<DeepPerThreadBorrow<T>>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> =
+//         <DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = <DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
+//     type FfiType<'stream, 'b> =
+//         <DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = <DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(param, stream, inner)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         <DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(param, stream, |param: <DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, '_>| inner.with(param))
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        let param = unsafe { param.as_ref().unwrap_unchecked() };
-        inner(Some(&param_as_raw_bytes(param.for_host())))
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         let param = unsafe { param.as_ref().unwrap_unchecked() };
+//         inner(Some(&param_as_raw_bytes(param.for_host())))
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         <DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
 
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
-            param, inner,
-        )
-    }
-}
-impl<
-        T: Send
-            + Clone
-            + RustToCuda<
-                CudaRepresentation: 'static + crate::safety::StackOnly,
-                CudaAllocation: EmptyCudaAlloc,
-            >,
-    > sealed::Sealed for PtxJit<DeepPerThreadBorrow<T>>
-{
-}
+//         <DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+//             param, inner,
+//         )
+//     }
+// }
+// impl<
+//         T: Send
+//             + Clone
+//             + RustToCuda<
+//                 CudaRepresentation: 'static + crate::safety::StackOnly,
+//                 CudaAllocation: EmptyCudaAlloc,
+//             >,
+//     > sealed::Sealed for PtxJit<DeepPerThreadBorrow<T>>
+// {
+// }
 
-impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
-    for &'a PtxJit<DeepPerThreadBorrow<T>>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
-    type FfiType<'stream, 'b> =
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
-    #[cfg(feature = "host")]
-    type SyncHostType = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
+// impl<'a, T: 'static + Sync + RustToCuda> CudaKernelParameter
+//     for &'a PtxJit<DeepPerThreadBorrow<T>>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> =
+//         <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
+//     type FfiType<'stream, 'b> =
+//         <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(param, stream, inner)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(param, stream, |param: <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, '_>| inner.with(param))
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        let param = unsafe { param.unwrap_unchecked() };
-        inner(Some(&param_as_raw_bytes(param.for_host())))
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         let param = unsafe { param.unwrap_unchecked() };
+//         inner(Some(&param_as_raw_bytes(param.for_host())))
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
 
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
-            param, inner,
-        )
-    }
-}
-impl<'a, T: 'static + Sync + RustToCuda> sealed::Sealed for &'a PtxJit<DeepPerThreadBorrow<T>> {}
+//         <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+//             param, inner,
+//         )
+//     }
+// }
+// impl<'a, T: 'static + Sync + RustToCuda> sealed::Sealed for &'a PtxJit<DeepPerThreadBorrow<T>> {}
 
-impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
-    for &'a mut PtxJit<DeepPerThreadBorrow<T>>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
-    type FfiType<'stream, 'b> =
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
-    #[cfg(feature = "host")]
-    type SyncHostType = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
+// impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
+//     for &'a mut PtxJit<DeepPerThreadBorrow<T>>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> =
+//         <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>;
+//     type FfiType<'stream, 'b> =
+//         <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(
-            param, stream, inner,
-        )
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::with_new_async(
+//             param, stream, |param: <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, '_>| inner.with(param),
+//         )
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        let param = unsafe { param.as_ref().unwrap_unchecked() };
-        inner(Some(&param_as_raw_bytes(param.for_host())))
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         let param = unsafe { param.as_ref().unwrap_unchecked() };
+//         inner(Some(&param_as_raw_bytes(param.for_host())))
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::async_to_ffi(param, token)
+//     }
 
-    #[cfg(feature = "device")]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
+//     #[cfg(feature = "device")]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         emit_param_ptx_jit_marker::<_, PARAM>(param.as_ref());
 
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
-            param, inner,
-        )
-    }
-}
-impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &'a mut PtxJit<DeepPerThreadBorrow<T>>
-{
-}
+//         <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::with_ffi_as_device::<O, PARAM>(
+//             param, inner,
+//         )
+//     }
+// }
+// impl<'a, T: 'static + Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+//     for &'a mut PtxJit<DeepPerThreadBorrow<T>>
+// {
+// }
 
 #[cfg(feature = "host")]
 fn param_as_raw_bytes<T: ?Sized>(r: &T) -> NonNull<[u8]> {
@@ -873,151 +871,151 @@ fn emit_param_ptx_jit_marker<T: ?Sized, const INDEX: usize>(param: &T) {
     }
 }
 
-mod private_shared {
-    use core::marker::PhantomData;
+// mod private_shared {
+//     use core::marker::PhantomData;
 
-    use const_type_layout::{TypeGraphLayout, TypeLayout};
+//     use const_type_layout::{TypeGraphLayout, TypeLayout};
 
-    use crate::safety::PortableBitSemantics;
+//     use crate::safety::PortableBitSemantics;
 
-    #[doc(hidden)]
-    #[derive(TypeLayout)]
-    #[repr(C)]
-    pub struct ThreadBlockSharedFfi<T: 'static> {
-        pub(super) _dummy: [u8; 0],
-        pub(super) _marker: PhantomData<T>,
-    }
+//     #[doc(hidden)]
+//     #[derive(TypeLayout)]
+//     #[repr(C)]
+//     pub struct ThreadBlockSharedFfi<T: 'static> {
+//         pub(super) _dummy: [u8; 0],
+//         pub(super) _marker: PhantomData<T>,
+//     }
 
-    #[doc(hidden)]
-    #[derive(TypeLayout)]
-    #[repr(C)]
-    pub struct ThreadBlockSharedSliceFfi<T: 'static + PortableBitSemantics + TypeGraphLayout> {
-        pub(super) len: usize,
-        pub(super) _marker: [T; 0],
-    }
-}
+//     #[doc(hidden)]
+//     #[derive(TypeLayout)]
+//     #[repr(C)]
+//     pub struct ThreadBlockSharedSliceFfi<T: 'static + PortableBitSemantics + TypeGraphLayout> {
+//         pub(super) len: usize,
+//         pub(super) _marker: [T; 0],
+//     }
+// }
 
-impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::ThreadBlockShared<T> {
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockShared<T>;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b mut crate::utils::shared::ThreadBlockShared<T>;
-    type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedFfi<T>;
-    #[cfg(feature = "host")]
-    type SyncHostType = Self;
+// impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::ThreadBlockShared<T> {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockShared<T>;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = &'b mut crate::utils::shared::ThreadBlockShared<T>;
+//     type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedFfi<T>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = Self;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        inner(param)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         _stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         inner.with(param)
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        inner(None)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         inner(None)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        Layout::new::<()>()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         Layout::new::<()>()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        _param: Self::AsyncHostType<'stream, 'b>,
-        _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        Ok(private_shared::ThreadBlockSharedFfi {
-            _dummy: [],
-            _marker: PhantomData::<T>,
-        })
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         _param: Self::AsyncHostType<'stream, 'b>,
+//         _token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         Ok(private_shared::ThreadBlockSharedFfi {
+//             _dummy: [],
+//             _marker: PhantomData::<T>,
+//         })
+//     }
 
-    #[cfg(feature = "device")]
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        _param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        let mut param = crate::utils::shared::ThreadBlockShared::new_uninit();
+//     #[cfg(feature = "device")]
+//     #[allow(clippy::inline_always)]
+//     #[inline(always)]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         _param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         let mut param = crate::utils::shared::ThreadBlockShared::new_uninit();
 
-        inner(&mut param)
-    }
-}
-impl<'a, T: 'static> sealed::Sealed for &'a mut crate::utils::shared::ThreadBlockShared<T> {}
+//         inner(&mut param)
+//     }
+// }
+// impl<'a, T: 'static> sealed::Sealed for &'a mut crate::utils::shared::ThreadBlockShared<T> {}
 
-impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
-    for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
-{
-    #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T>;
-    #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T>;
-    type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedSliceFfi<T>;
-    #[cfg(feature = "host")]
-    type SyncHostType = Self;
+// impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
+//     for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
+// {
+//     #[cfg(feature = "host")]
+//     type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T>;
+//     #[cfg(any(feature = "device", doc))]
+//     type DeviceType<'b> = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T>;
+//     type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedSliceFfi<T>;
+//     #[cfg(feature = "host")]
+//     type SyncHostType = Self;
 
-    #[cfg(feature = "host")]
-    fn with_new_async<'stream, O, E: From<rustacuda::error::CudaError>>(
-        param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
-        inner: impl for<'b> FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
-    ) -> Result<O, E> {
-        inner(param)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+//         param: Self::SyncHostType,
+//         _stream: &'stream rustacuda::stream::Stream,
+//         inner: impl super::WithNewAsync<'stream, Self, O, E>,
+//     ) -> Result<O, E> where Self: 'param {
+//         inner.with(param)
+//     }
 
-    #[cfg(feature = "host")]
-    fn with_async_as_ptx_jit<O>(
-        _param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-        inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O {
-        inner(None)
-    }
+//     #[cfg(feature = "host")]
+//     fn with_async_as_ptx_jit<O>(
+//         _param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
+//     ) -> O {
+//         inner(None)
+//     }
 
-    #[cfg(feature = "host")]
-    fn shared_layout_for_async(
-        param: &Self::AsyncHostType<'_, '_>,
-        _token: sealed::Token,
-    ) -> Layout {
-        param.layout()
-    }
+//     #[cfg(feature = "host")]
+//     fn shared_layout_for_async(
+//         param: &Self::AsyncHostType<'_, '_>,
+//         _token: sealed::Token,
+//     ) -> Layout {
+//         param.layout()
+//     }
 
-    #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
-        _token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> {
-        Ok(private_shared::ThreadBlockSharedSliceFfi {
-            len: param.len(),
-            _marker: [],
-        })
-    }
+//     #[cfg(feature = "host")]
+//     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+//         param: Self::AsyncHostType<'stream, 'b>,
+//         _token: sealed::Token,
+//     ) -> Result<Self::FfiType<'stream, 'b>, E> {
+//         Ok(private_shared::ThreadBlockSharedSliceFfi {
+//             len: param.len(),
+//             _marker: [],
+//         })
+//     }
 
-    #[cfg(feature = "device")]
-    #[allow(clippy::inline_always)]
-    #[inline(always)]
-    unsafe fn with_ffi_as_device<O, const PARAM: usize>(
-        param: Self::FfiType<'static, 'static>,
-        inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
-    ) -> O {
-        unsafe {
-            crate::utils::shared::ThreadBlockSharedSlice::with_uninit_for_len(param.len, inner)
-        }
-    }
-}
-impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
-    for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
-{
-}
+//     #[cfg(feature = "device")]
+//     #[allow(clippy::inline_always)]
+//     #[inline(always)]
+//     unsafe fn with_ffi_as_device<O, const PARAM: usize>(
+//         param: Self::FfiType<'static, 'static>,
+//         inner: impl for<'b> FnOnce(Self::DeviceType<'b>) -> O,
+//     ) -> O {
+//         unsafe {
+//             crate::utils::shared::ThreadBlockSharedSlice::with_uninit_for_len(param.len, inner)
+//         }
+//     }
+// }
+// impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
+//     for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
+// {
+// }
