@@ -1,4 +1,5 @@
-pub(crate) extern crate alloc;
+#[doc(hidden)]
+pub extern crate alloc;
 
 pub extern crate const_type_layout;
 

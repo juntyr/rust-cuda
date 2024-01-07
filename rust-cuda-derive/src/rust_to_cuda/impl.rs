@@ -170,7 +170,7 @@ pub fn rust_to_cuda_async_trait(
                 #crate_path::utils::r#async::Async::<
                     _, #crate_path::utils::r#async::CompletionFnMut<Self>,
                 >::pending(
-                    this, stream, Box::new(|this| {
+                    this, stream, #crate_path::deps::alloc::boxed::Box::new(|this| {
                         #(#r2c_field_async_completion_calls)*
                         Ok(())
                     }),
