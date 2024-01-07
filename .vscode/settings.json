@@ -6,6 +6,7 @@
     "rust-analyzer.cargo.allFeatures": false,
     "rust-analyzer.cargo.features": [
         "derive",
+        "final",
         "host",
         "kernel"
     ],

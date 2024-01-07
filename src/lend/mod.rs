@@ -428,10 +428,10 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
     {
         let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
 
-        let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+        let (cuda_repr, completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
         let result = HostAndDeviceConstRef::with_new(&cuda_repr, |const_ref| {
-            let r#async = if matches!(capture_on_completion, Some(NoCompletion)) {
+            let r#async = if matches!(completion, Some(NoCompletion)) {
                 Async::pending(const_ref, stream, NoCompletion)?
             } else {
                 Async::ready(const_ref, stream)
@@ -476,10 +476,10 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
     {
         let (cuda_repr, alloc) = unsafe { this.borrow_async(NoCudaAlloc, stream) }?;
 
-        let (mut cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+        let (mut cuda_repr, completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
         let result = HostAndDeviceMutRef::with_new(&mut cuda_repr, |mut_ref| {
-            let r#async = if matches!(capture_on_completion, Some(NoCompletion)) {
+            let r#async = if matches!(completion, Some(NoCompletion)) {
                 Async::pending(mut_ref, stream, NoCompletion)?
             } else {
                 Async::ready(mut_ref, stream)
@@ -517,10 +517,10 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
     {
         let (cuda_repr, alloc) = unsafe { self.borrow_async(NoCudaAlloc, stream) }?;
 
-        let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+        let (cuda_repr, completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
         let result = HostAndDeviceOwned::with_new(cuda_repr, |owned_ref| {
-            if matches!(capture_on_completion, Some(NoCompletion)) {
+            if matches!(completion, Some(NoCompletion)) {
                 inner(Async::pending(owned_ref, stream, NoCompletion)?)
             } else {
                 inner(Async::ready(owned_ref, stream))

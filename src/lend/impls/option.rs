@@ -108,7 +108,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
             Some(value) => {
                 let (cuda_repr, alloc) = value.borrow_async(alloc, stream)?;
 
-                let (cuda_repr, capture_on_completion) = unsafe { cuda_repr.unwrap_unchecked()? };
+                let (cuda_repr, completion) = unsafe { cuda_repr.unwrap_unchecked()? };
 
                 let (alloc_front, alloc_tail) = alloc.split();
                 let alloc = CombinedCudaAlloc::new(Some(alloc_front), alloc_tail);
@@ -118,7 +118,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
                     present: true,
                 });
 
-                let r#async = if matches!(capture_on_completion, Some(NoCompletion)) {
+                let r#async = if matches!(completion, Some(NoCompletion)) {
                     Async::pending(option_cuda_repr, stream, NoCompletion)?
                 } else {
                     Async::ready(option_cuda_repr, stream)
