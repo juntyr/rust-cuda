@@ -158,7 +158,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
             r2c_field_async_declarations.push(quote! {
                 let (#field_repr_ident, alloc_front) = #crate_path::lend::RustToCudaAsync::borrow_async(
                     <
-                        #proxy_ty as #crate_path::lend::RustToCudaAsyncProxy<#field_ty>
+                        #proxy_ty as #crate_path::lend::RustToCudaProxy<#field_ty>
                     >::from_ref(&self.#field_accessor),
                     alloc_front,
                     stream,
@@ -184,7 +184,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                 };
                 let (r#async, alloc_front) = #crate_path::lend::RustToCudaAsync::restore_async(
                     this.map_mut(|this| <
-                        #proxy_ty as #crate_path::lend::RustToCudaProxyAsync<#field_ty>
+                        #proxy_ty as #crate_path::lend::RustToCudaProxy<#field_ty>
                     >::from_mut(&mut this.#field_accessor)),
                     alloc_front,
                     stream,
@@ -199,7 +199,7 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
                     #crate_path::deps::owning_ref::BoxRefMut<'a, CudaRestoreOwner, _>
                 >::complete(
                     #field_completion_ident, <
-                        #proxy_ty as #crate_path::lend::RustToCudaProxyAsync<#field_ty>
+                        #proxy_ty as #crate_path::lend::RustToCudaProxy<#field_ty>
                     >::from_mut(&mut this.#field_accessor),
                 )?;
             });

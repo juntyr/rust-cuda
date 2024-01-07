@@ -155,10 +155,6 @@ pub trait RustToCudaProxy<T>: RustToCuda {
     fn into(self) -> T;
 }
 
-pub trait RustToCudaAsyncProxy<T>: RustToCudaAsync + RustToCudaProxy<T> {}
-
-impl<T, P: RustToCudaAsync + RustToCudaProxy<T>> RustToCudaAsyncProxy<T> for P {}
-
 #[cfg(feature = "host")]
 #[allow(clippy::module_name_repetitions)]
 pub trait LendToCuda: RustToCuda {
