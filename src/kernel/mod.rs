@@ -39,12 +39,13 @@ mod sealed {
     pub struct Token;
 }
 
-#[cfg(feature = "host")]
+#[cfg(feature = "host")] // FIXME: make private?
 pub trait WithNewAsync<'stream, P: ?Sized + CudaKernelParameter, O, E: From<rustacuda::error::CudaError>> {
+    #[allow(clippy::missing_errors_doc)] // FIXME
     fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E> where P: 'b;
 }
 
-#[cfg(feature = "host")]
+#[cfg(feature = "host")] // FIXME: make private?
 impl<'stream, P: ?Sized + CudaKernelParameter, O, E: From<rustacuda::error::CudaError>, F: for<'b> FnOnce(P::AsyncHostType<'stream, 'b>) -> Result<O, E>> WithNewAsync<'stream, P, O, E> for F {
     fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E> where P: 'b {
         (self)(param)
