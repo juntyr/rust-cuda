@@ -1,5 +1,5 @@
 use std::{
-    cell::SyncUnsafeCell,
+    cell::UnsafeCell,
     ops::{Deref, DerefMut},
 };
 
@@ -31,7 +31,7 @@ pub struct CudaExchangeBufferHost<
     host_buffer: CudaDropWrapper<
         LockedBuffer<DeviceCopyWithPortableBitSemantics<CudaExchangeItem<T, M2D, M2H>>>,
     >,
-    device_buffer: SyncUnsafeCell<
+    device_buffer: UnsafeCell<
         CudaDropWrapper<
             DeviceBuffer<DeviceCopyWithPortableBitSemantics<CudaExchangeItem<T, M2D, M2H>>>,
         >,
@@ -55,7 +55,7 @@ impl<
             DeviceCopyWithPortableBitSemantics::from_ref(elem),
             capacity,
         )?);
-        let device_buffer = SyncUnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
+        let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
         )?));
 
@@ -89,7 +89,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
             uninit
         };
 
-        let device_buffer = SyncUnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
+        let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
         )?));
 
@@ -129,7 +129,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>,
         CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
-        // Safety: device_buffer is inside an SyncUnsafeCell
+        // Safety: device_buffer is inside an UnsafeCell
         //         borrow checks must be satisfied through LendToCuda
         let device_buffer = &mut *self.device_buffer.get();
 
@@ -183,7 +183,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         Async<'_, 'stream, DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>>,
         CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
-        // Safety: device_buffer is inside an SyncUnsafeCell
+        // Safety: device_buffer is inside an UnsafeCell
         //         borrow checks must be satisfied through LendToCuda
         let device_buffer = &mut *self.device_buffer.get();
 

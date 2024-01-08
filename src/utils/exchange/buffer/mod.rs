@@ -46,6 +46,14 @@ pub struct CudaExchangeBuffer<
     inner: device::CudaExchangeBufferDevice<T, M2D, M2H>,
 }
 
+unsafe impl<
+        T: StackOnly + PortableBitSemantics + TypeGraphLayout + Sync,
+        const M2D: bool,
+        const M2H: bool,
+    > Sync for CudaExchangeBuffer<T, M2D, M2H>
+{
+}
+
 #[cfg(feature = "host")]
 impl<
         T: Clone + StackOnly + PortableBitSemantics + TypeGraphLayout,
