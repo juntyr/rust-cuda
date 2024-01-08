@@ -40,26 +40,51 @@ mod sealed {
 }
 
 #[cfg(feature = "host")] // FIXME: make private?
-pub trait WithNewAsync<'stream, P: ?Sized + CudaKernelParameter, O, E: From<rustacuda::error::CudaError>> {
+pub trait WithNewAsync<
+    'stream,
+    P: ?Sized + CudaKernelParameter,
+    O,
+    E: From<rustacuda::error::CudaError>,
+>
+{
     #[allow(clippy::missing_errors_doc)] // FIXME
-    fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E> where P: 'b;
+    fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E>
+    where
+        P: 'b;
 }
 
 #[cfg(feature = "host")] // FIXME: make private?
-impl<'stream, P: ?Sized + CudaKernelParameter, O, E: From<rustacuda::error::CudaError>, F: for<'b> FnOnce(P::AsyncHostType<'stream, 'b>) -> Result<O, E>> WithNewAsync<'stream, P, O, E> for F {
-    fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E> where P: 'b {
+impl<
+        'stream,
+        P: ?Sized + CudaKernelParameter,
+        O,
+        E: From<rustacuda::error::CudaError>,
+        F: for<'b> FnOnce(P::AsyncHostType<'stream, 'b>) -> Result<O, E>,
+    > WithNewAsync<'stream, P, O, E> for F
+{
+    fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E>
+    where
+        P: 'b,
+    {
         (self)(param)
     }
 }
 
 #[cfg(feature = "device")]
 pub trait WithFfiAsDevice<P: ?Sized + CudaKernelParameter, O> {
-    fn with<'b>(self, param: P::DeviceType<'b>) -> O where P: 'b;
+    fn with<'b>(self, param: P::DeviceType<'b>) -> O
+    where
+        P: 'b;
 }
 
 #[cfg(feature = "device")]
-impl<P: ?Sized + CudaKernelParameter, O, F: for<'b> FnOnce(P::DeviceType<'b>) -> O> WithFfiAsDevice<P, O> for F {
-    fn with<'b>(self, param: P::DeviceType<'b>) -> O where P: 'b {
+impl<P: ?Sized + CudaKernelParameter, O, F: for<'b> FnOnce(P::DeviceType<'b>) -> O>
+    WithFfiAsDevice<P, O> for F
+{
+    fn with<'b>(self, param: P::DeviceType<'b>) -> O
+    where
+        P: 'b,
+    {
         (self)(param)
     }
 }
@@ -68,11 +93,17 @@ pub trait CudaKernelParameter: sealed::Sealed {
     #[cfg(feature = "host")]
     type SyncHostType;
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+    where
+        Self: 'b;
     #[doc(hidden)]
-    type FfiType<'stream, 'b>: PortableBitSemantics where Self: 'b;
+    type FfiType<'stream, 'b>: PortableBitSemantics
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> where Self: 'b;
+    type DeviceType<'b>
+    where
+        Self: 'b;
 
     #[cfg(feature = "host")]
     #[allow(clippy::missing_errors_doc)] // FIXME
@@ -80,7 +111,9 @@ pub trait CudaKernelParameter: sealed::Sealed {
         param: Self::SyncHostType,
         stream: &'stream rustacuda::stream::Stream,
         inner: impl WithNewAsync<'stream, Self, O, E>,
-    ) -> Result<O, E> where Self: 'param;
+    ) -> Result<O, E>
+    where
+        Self: 'param;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
@@ -88,28 +121,36 @@ pub trait CudaKernelParameter: sealed::Sealed {
         param: &Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
         inner: impl for<'p> FnOnce(Option<&'p NonNull<[u8]>>) -> O,
-    ) -> O where Self: 'b;
+    ) -> O
+    where
+        Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
     fn shared_layout_for_async<'stream, 'b>(
         param: &Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
-    ) -> std::alloc::Layout where Self: 'b;
+    ) -> std::alloc::Layout
+    where
+        Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
-    ) -> Result<Self::FfiType<'stream, 'b>, E> where Self: 'b;
+    ) -> Result<Self::FfiType<'stream, 'b>, E>
+    where
+        Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "device")]
     unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
         param: Self::FfiType<'static, 'short>,
         inner: impl WithFfiAsDevice<Self, O>,
-    ) -> O where Self: 'short;
+    ) -> O
+    where
+        Self: 'short;
 }
 
 #[cfg(feature = "host")]

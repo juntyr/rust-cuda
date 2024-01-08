@@ -52,7 +52,9 @@ pub(in super::super) fn quote_cuda_wrapper(
                     <
                         #specialised_ty as #crate_path::kernel::CudaKernelParameter
                     >::with_ffi_as_device::<_, #i>(
-                        #pat, |#pat| { #inner }
+                        #pat, |#pat: <
+                            #specialised_ty as #crate_path::kernel::CudaKernelParameter
+                        >::DeviceType::<'_>| { #inner }
                     )
                 }
             }
