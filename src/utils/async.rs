@@ -455,6 +455,33 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
 }
 
 #[cfg(feature = "host")]
+impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
+    #[must_use]
+    pub const fn proj_ref<'b>(&'b self) -> AsyncProj<'b, 'stream, &'b T>
+    where
+        'a: 'b,
+    {
+        AsyncProj {
+            _capture: PhantomData::<&'b ()>,
+            _stream: PhantomData::<&'stream Stream>,
+            value: &self.value,
+        }
+    }
+
+    #[must_use]
+    pub fn proj_mut<'b>(&'b mut self) -> AsyncProj<'b, 'stream, &'b mut T>
+    where
+        'a: 'b,
+    {
+        AsyncProj {
+            _capture: PhantomData::<&'b ()>,
+            _stream: PhantomData::<&'stream Stream>,
+            value: &mut self.value,
+        }
+    }
+}
+
+#[cfg(feature = "host")]
 impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a T> {
     #[must_use]
     pub const fn as_ref<'b>(&'b self) -> AsyncProj<'b, 'stream, &'b T>

@@ -71,8 +71,7 @@ impl<
     > CudaKernelParameter for PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T> where Self: 'b;
+    type AsyncHostType<'stream, 'b> = T where Self: 'b;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = T where Self: 'b;
     type FfiType<'stream, 'b> = crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T> where Self: 'b;
@@ -88,7 +87,7 @@ impl<
     where
         Self: 'b,
     {
-        inner.with(crate::utils::adapter::RustToCudaWithPortableBitCopySemantics::from(param))
+        inner.with(param)
     }
 
     #[cfg(feature = "host")]
@@ -122,7 +121,7 @@ impl<
     where
         Self: 'b,
     {
-        Ok(param)
+        Ok(crate::utils::adapter::RustToCudaWithPortableBitCopySemantics::from(param))
     }
 
     #[cfg(feature = "device")]
