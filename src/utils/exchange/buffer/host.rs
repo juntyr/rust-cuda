@@ -77,9 +77,11 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
             let mut uninit: CudaDropWrapper<LockedBuffer<DeviceCopyWithPortableBitSemantics<_>>> =
                 CudaDropWrapper::from(LockedBuffer::uninitialized(vec.len())?);
 
+            let uninit_ptr: *mut DeviceCopyWithPortableBitSemantics<CudaExchangeItem<T, M2D, M2H>> =
+                uninit.as_mut_ptr();
+
             for (i, src) in vec.into_iter().enumerate() {
-                uninit
-                    .as_mut_ptr()
+                uninit_ptr
                     .add(i)
                     .write(DeviceCopyWithPortableBitSemantics::from(CudaExchangeItem(
                         src,
