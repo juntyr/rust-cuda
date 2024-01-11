@@ -83,7 +83,7 @@ pub fn swap_field_type_and_filter_attrs(
                         _ => {
                             emit_error!(
                                 meta.span(),
-                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
+                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
                                 #[cuda(embed = \"<type>\")] field attribute"
                             );
                         }
@@ -92,7 +92,7 @@ pub fn swap_field_type_and_filter_attrs(
             } else {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
+                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
                     #[cuda(embed = \"<type>\")] field attribute."
                 );
             }
