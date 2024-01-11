@@ -1,5 +1,7 @@
 #![allow(clippy::trait_duplication_in_bounds)]
 
+use core::ops::{Deref, DerefMut};
+
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 use crate::{
@@ -25,6 +27,24 @@ impl<T: Copy + PortableBitSemantics + TypeGraphLayout> From<T>
 {
     fn from(value: T) -> Self {
         Self(value)
+    }
+}
+
+impl<T: Copy + PortableBitSemantics + TypeGraphLayout> Deref
+    for RustToCudaWithPortableBitCopySemantics<T>
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: Copy + PortableBitSemantics + TypeGraphLayout> DerefMut
+    for RustToCudaWithPortableBitCopySemantics<T>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -200,6 +220,24 @@ impl<T: Clone + PortableBitSemantics + TypeGraphLayout> From<T>
     }
 }
 
+impl<T: Clone + PortableBitSemantics + TypeGraphLayout> Deref
+    for RustToCudaWithPortableBitCloneSemantics<T>
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: Clone + PortableBitSemantics + TypeGraphLayout> DerefMut
+    for RustToCudaWithPortableBitCloneSemantics<T>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCudaWithPortableBitCloneSemantics<T> {
     #[must_use]
     pub fn from_clone(value: &T) -> Self {
@@ -371,6 +409,20 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> rustacuda_core::DeviceCop
 impl<T: PortableBitSemantics + TypeGraphLayout> From<T> for DeviceCopyWithPortableBitSemantics<T> {
     fn from(value: T) -> Self {
         Self(value)
+    }
+}
+
+impl<T: PortableBitSemantics + TypeGraphLayout> Deref for DeviceCopyWithPortableBitSemantics<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: PortableBitSemantics + TypeGraphLayout> DerefMut for DeviceCopyWithPortableBitSemantics<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
