@@ -202,12 +202,12 @@ impl<T: Clone + PortableBitSemantics + TypeGraphLayout> From<T>
 
 impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCudaWithPortableBitCloneSemantics<T> {
     #[must_use]
-    pub const fn from_clone(value: &T) -> Self {
+    pub fn from_clone(value: &T) -> Self {
         Self(value.clone())
     }
 
     #[must_use]
-    pub const fn into_inner(self) -> T {
+    pub fn into_inner(self) -> T {
         self.0
     }
 
