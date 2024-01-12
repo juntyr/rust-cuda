@@ -152,7 +152,6 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         }
     }
 
-    #[allow(dead_code)] // FIXME
     #[must_use]
     pub(crate) fn for_device<'b>(&'b mut self) -> DeviceMutRef<'a, T>
     where
@@ -164,7 +163,6 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         }
     }
 
-    #[allow(dead_code)] // FIXME
     #[must_use]
     pub(crate) fn for_host<'b: 'a>(&'b self) -> &'a T {
         self.host_ref

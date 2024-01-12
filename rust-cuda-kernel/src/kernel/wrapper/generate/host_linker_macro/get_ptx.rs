@@ -80,10 +80,24 @@ pub(super) fn quote_get_ptx(
             .collect::<Vec<_>>()
     };
 
+    let private_func_params = func_params
+        .iter()
+        .map(|param| {
+            let mut private = syn::Ident::clone(param);
+            private.set_span(proc_macro::Span::def_site().into());
+            private
+        })
+        .collect::<Vec<_>>();
+
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
-            #[allow(unused_imports)]
-            use __rust_cuda_ffi_safe_assert::#args;
+            #args_trait
+
+            extern "C" { #(
+                #[allow(dead_code)]
+                #[deny(improper_ctypes)]
+                static #private_func_params: #cpu_func_lifetime_erased_types;
+            )* }
 
             #crate_path::kernel::link_kernel!{
                 #func_ident #func_ident_hash #crate_name #crate_manifest_dir #generic_start_token
@@ -94,19 +108,6 @@ pub(super) fn quote_get_ptx(
             #matching_kernel_assert
 
             #(#type_layout_asserts)*
-
-            #[deny(improper_ctypes)]
-            mod __rust_cuda_ffi_safe_assert {
-                #[allow(unused_imports)]
-                use super::*;
-
-                #args_trait
-
-                extern "C" { #(
-                    #[allow(dead_code)]
-                    static #func_params: #cpu_func_lifetime_erased_types;
-                )* }
-            }
 
             PTX_CSTR
         }

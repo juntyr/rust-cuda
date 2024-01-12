@@ -61,6 +61,15 @@ pub(in super::super) fn quote_cuda_wrapper(
         },
     );
 
+    let private_func_params = func_params
+        .iter()
+        .map(|param| {
+            let mut private = syn::Ident::clone(param);
+            private.set_span(proc_macro::Span::def_site().into());
+            private
+        })
+        .collect::<Vec<_>>();
+
     quote! {
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_function(#func_ident)]
@@ -68,6 +77,12 @@ pub(in super::super) fn quote_cuda_wrapper(
         #[allow(unused_unsafe)]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ffi_inputs),*) {
+            extern "C" { #(
+                #[allow(dead_code)]
+                #[deny(improper_ctypes)]
+                static #private_func_params: #ffi_types;
+            )* }
+
             unsafe {
                 // Initialise the dynamically-sized thread-block shared memory
                 //  and the thread-local offset pointer that points to it
@@ -87,17 +102,6 @@ pub(in super::super) fn quote_cuda_wrapper(
             )*
             unsafe {
                 ::core::arch::asm!(#KERNEL_TYPE_USE_END_CANARY);
-            }
-
-            #[deny(improper_ctypes)]
-            mod __rust_cuda_ffi_safe_assert {
-                #[allow(unused_imports)]
-                use super::*;
-
-                extern "C" { #(
-                    #[allow(dead_code)]
-                    static #func_params: #ffi_types;
-                )* }
             }
 
             #ffi_param_ptx_jit_wrap
