@@ -340,7 +340,7 @@ impl<
     ) -> AsyncProj<
         '_,
         'stream,
-        HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
+        HostAndDeviceMutRef<'_, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>,
     >
     where
         T: SafeMutableAliasing,

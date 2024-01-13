@@ -156,7 +156,7 @@ impl<
     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        &'b crate::host::HostAndDeviceConstRef<'b, T>,
+        crate::host::HostAndDeviceConstRef<'b, T>,
     > where Self: 'b;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T where Self: 'b;
@@ -173,8 +173,9 @@ impl<
     where
         Self: 'b,
     {
+        let _ = stream;
         crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| {
-            inner.with(const_ref.as_async(stream).as_ref())
+            inner.with(unsafe { crate::utils::r#async::AsyncProj::new(const_ref, None) })
         })
     }
 
@@ -257,9 +258,10 @@ impl<
     where
         Self: 'b,
     {
+        let _ = stream;
         // FIXME: forward impl
         crate::host::HostAndDeviceConstRef::with_new(param, |const_ref| {
-            inner.with(const_ref.as_async(stream).as_ref())
+            inner.with(unsafe { crate::utils::r#async::AsyncProj::new(const_ref, None) })
         })
     }
 
@@ -272,7 +274,8 @@ impl<
     where
         Self: 'b,
     {
-        let param = unsafe { param.unwrap_ref_unchecked() };
+        let param_ref = param.proj_ref();
+        let param = unsafe { param_ref.unwrap_ref_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -360,7 +363,7 @@ impl<
     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        &'b crate::host::HostAndDeviceConstRef<'b, T>
+        crate::host::HostAndDeviceConstRef<'b, T>
     > where Self: 'b;
     #[cfg(any(feature = "device", doc))]
     type DeviceType<'b> = &'b T where Self: 'b;
@@ -379,8 +382,9 @@ impl<
     where
         Self: 'b,
     {
-        crate::host::HostAndDeviceMutRef::with_new(param, |const_ref| {
-            inner.with(const_ref.as_ref().as_async(stream).as_ref())
+        let _ = stream;
+        crate::host::HostAndDeviceMutRef::with_new(param, |mut_ref| {
+            inner.with(unsafe { crate::utils::r#async::AsyncProj::new(mut_ref.as_ref(), None) })
         })
     }
 
@@ -580,7 +584,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        &'b crate::host::HostAndDeviceConstRef<
+        crate::host::HostAndDeviceConstRef<
             'b,
             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
         >,
@@ -601,8 +605,9 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     where
         Self: 'b,
     {
+        let _ = stream;
         crate::lend::LendToCuda::lend_to_cuda(param, |param| {
-            inner.with(param.as_async(stream).as_ref())
+            inner.with(unsafe { crate::utils::r#async::AsyncProj::new(param, None) })
         })
     }
 
@@ -663,7 +668,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
-        &'b mut crate::host::HostAndDeviceMutRef<
+        crate::host::HostAndDeviceMutRef<
             'b,
             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
         >,
@@ -690,7 +695,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
             inner.with({
                 // Safety: this projection cannot be moved to a different stream
                 //         without first exiting lend_to_cuda_mut and synchronizing
-                unsafe { crate::utils::r#async::AsyncProj::new(&mut param.into_mut(), None) }
+                unsafe { crate::utils::r#async::AsyncProj::new(param.into_mut(), None) }
             })
         })
     }
@@ -727,7 +732,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
         Self: 'b,
     {
         param.record_mut_use()?;
-        let param = unsafe { param.unwrap_unchecked() };
+        let mut param = unsafe { param.unwrap_unchecked() };
         Ok(param.for_device())
     }
 
@@ -858,8 +863,9 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
         Self: 'b,
     {
         // FIXME: forward impl
+        let _ = stream;
         crate::lend::LendToCuda::lend_to_cuda(param, |param| {
-            inner.with(param.as_async(stream).as_ref())
+            inner.with(unsafe { crate::utils::r#async::AsyncProj::new(param, None) })
         })
     }
 
@@ -872,7 +878,8 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     where
         Self: 'b,
     {
-        let param = unsafe { param.unwrap_ref_unchecked() };
+        let param_ref = param.proj_ref();
+        let param = unsafe { param_ref.unwrap_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -945,7 +952,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
             inner.with({
                 // Safety: this projection cannot be moved to a different stream
                 //         without first exiting lend_to_cuda_mut and synchronizing
-                unsafe { crate::utils::r#async::AsyncProj::new(&mut param.into_mut(), None) }
+                unsafe { crate::utils::r#async::AsyncProj::new(param.into_mut(), None) }
             })
         })
     }
@@ -959,7 +966,8 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     where
         Self: 'b,
     {
-        let param = unsafe { param.as_ref().unwrap_unchecked() };
+        let param_ref = param.proj_ref();
+        let param = unsafe { param_ref.unwrap_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
