@@ -87,7 +87,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
 
     /// Moves the data synchronously to the CUDA device, where it can then be
     /// lent out immutably via [`ExchangeWrapperOnDevice::as_ref`], or mutably
-    /// via [`ExchangeWrapperOnDevice::as_mut`].
+    /// via [`ExchangeWrapperOnDevice::as_mut_async`](Async::as_mut_async).
     ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
