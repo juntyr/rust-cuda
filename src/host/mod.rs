@@ -230,6 +230,17 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
+    pub(crate) unsafe fn as_mut<'b>(&'b mut self) -> HostAndDeviceMutRef<'b, T>
+    where
+        'a: 'b,
+    {
+        HostAndDeviceMutRef {
+            device_box: self.device_box,
+            host_ref: self.host_ref,
+        }
+    }
+
+    #[must_use]
     pub fn into_mut<'b>(self) -> HostAndDeviceMutRef<'b, T>
     where
         'a: 'b,

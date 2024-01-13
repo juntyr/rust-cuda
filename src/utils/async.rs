@@ -334,6 +334,82 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
 }
 
 #[cfg(feature = "host")]
+impl<
+        'a,
+        'stream,
+        T: crate::safety::PortableBitSemantics + const_type_layout::TypeGraphLayout,
+        C: Completion<crate::host::HostAndDeviceConstRef<'a, T>>,
+    > Async<'a, 'stream, crate::host::HostAndDeviceConstRef<'a, T>, C>
+where
+    crate::host::HostAndDeviceConstRef<'a, T>: BorrowMut<C::Completed>,
+{
+    pub const fn extract_ref(
+        &self,
+    ) -> AsyncProj<'_, 'stream, crate::host::HostAndDeviceConstRef<'_, T>> {
+        // Safety: this projection captures this async
+        unsafe { AsyncProj::new(self.value.as_ref(), None) }
+    }
+}
+
+#[cfg(feature = "host")]
+impl<
+        'a,
+        'stream,
+        T: crate::safety::PortableBitSemantics + const_type_layout::TypeGraphLayout,
+        C: Completion<crate::host::HostAndDeviceMutRef<'a, T>>,
+    > Async<'a, 'stream, crate::host::HostAndDeviceMutRef<'a, T>, C>
+where
+    crate::host::HostAndDeviceMutRef<'a, T>: BorrowMut<C::Completed>,
+{
+    pub fn extract_ref(&self) -> AsyncProj<'_, 'stream, crate::host::HostAndDeviceConstRef<'_, T>> {
+        // Safety: this projection captures this async
+        unsafe { AsyncProj::new(self.value.as_ref(), None) }
+    }
+
+    pub fn extract_mut(
+        &mut self,
+    ) -> AsyncProj<'_, 'stream, crate::host::HostAndDeviceMutRef<'_, T>> {
+        // Safety: this projection captures this async
+        unsafe {
+            AsyncProj::new(
+                self.value.as_mut(),
+                Some(Box::new(|| {
+                    let completion = match &mut self.status {
+                        AsyncStatus::Completed { result } => {
+                            (*result)?;
+                            C::no_op()
+                        },
+                        AsyncStatus::Processing {
+                            receiver: _,
+                            completion,
+                            event: _,
+                            _capture,
+                        } => std::mem::replace(completion, C::no_op()),
+                    };
+
+                    let event = CudaDropWrapper::from(Event::new(EventFlags::DISABLE_TIMING)?);
+
+                    let (sender, receiver) = oneshot::channel();
+
+                    self.stream
+                        .add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
+                    event.record(&self.stream)?;
+
+                    self.status = AsyncStatus::Processing {
+                        receiver,
+                        completion,
+                        event: Some(event),
+                        _capture: PhantomData,
+                    };
+
+                    Ok(())
+                })),
+            )
+        }
+    }
+}
+
+#[cfg(feature = "host")]
 impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'a, 'stream, T, C> {
     fn drop(&mut self) {
         let AsyncStatus::Processing {
