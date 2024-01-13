@@ -200,7 +200,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDyn
     unsafe fn borrow_async<'stream, A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
     ) -> rustacuda::error::CudaResult<(
         crate::utils::r#async::Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         crate::alloc::CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
@@ -230,7 +230,7 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDyn
     unsafe fn restore_async<'a, 'stream, A: crate::alloc::CudaAlloc, O>(
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: crate::alloc::CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
     ) -> rustacuda::error::CudaResult<(
         crate::utils::r#async::Async<
             'a,

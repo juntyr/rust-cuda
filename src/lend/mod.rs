@@ -101,7 +101,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
     ) -> rustacuda::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
@@ -127,7 +127,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
     ) -> rustacuda::error::CudaResult<(
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
@@ -324,7 +324,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         ) -> Result<O, E>,
     >(
         &self,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: F,
     ) -> Result<O, E>
     where
@@ -357,7 +357,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         T: 'a,
     >(
         this: owning_ref::BoxRefMut<'a, T, Self>,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: F,
     ) -> Result<
         (
@@ -393,7 +393,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
         ) -> Result<O, E>,
     >(
         self,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: F,
     ) -> Result<O, E>
     where
@@ -416,7 +416,7 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         ) -> Result<O, E>,
     >(
         &self,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: F,
     ) -> Result<O, E>
     where
@@ -458,7 +458,7 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         S: 'a,
     >(
         this: owning_ref::BoxRefMut<'a, S, Self>,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: F,
     ) -> Result<
         (
@@ -505,7 +505,7 @@ impl<T: RustToCudaAsync> LendToCudaAsync for T {
         ) -> Result<O, E>,
     >(
         self,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: F,
     ) -> Result<O, E>
     where

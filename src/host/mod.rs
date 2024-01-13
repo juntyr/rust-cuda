@@ -11,7 +11,6 @@ use rustacuda::{
     event::Event,
     memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBox, LockedBuffer},
     module::Module,
-    stream::Stream,
 };
 
 use crate::{
@@ -25,6 +24,33 @@ use crate::{
         r#async::{Async, NoCompletion},
     },
 };
+
+#[repr(transparent)]
+pub struct Stream {
+    stream: rustacuda::stream::Stream,
+}
+
+impl Deref for Stream {
+    type Target = rustacuda::stream::Stream;
+
+    fn deref(&self) -> &Self::Target {
+        &self.stream
+    }
+}
+
+impl Stream {
+    pub fn with<O>(
+        stream: &mut rustacuda::stream::Stream,
+        inner: impl for<'stream> FnOnce(&'stream Self) -> O,
+    ) -> O {
+        // Safety:
+        //  - Stream is a newtype wrapper around rustacuda::stream::Stream
+        //  - we forge a unique lifetime for a unique reference
+        let stream = unsafe { &*std::ptr::from_ref(stream).cast() };
+
+        inner(stream)
+    }
+}
 
 pub trait CudaDroppable: Sized {
     #[allow(clippy::missing_errors_doc)]
@@ -88,7 +114,7 @@ impl<T: rustacuda_core::DeviceCopy> CudaDroppable for LockedBuffer<T> {
 }
 
 macro_rules! impl_sealed_drop_value {
-    ($type:ident) => {
+    ($type:ty) => {
         impl CudaDroppable for $type {
             fn drop(val: Self) -> Result<(), (CudaError, Self)> {
                 Self::drop(val)
@@ -98,7 +124,7 @@ macro_rules! impl_sealed_drop_value {
 }
 
 impl_sealed_drop_value!(Module);
-impl_sealed_drop_value!(Stream);
+impl_sealed_drop_value!(rustacuda::stream::Stream);
 impl_sealed_drop_value!(Context);
 impl_sealed_drop_value!(Event);
 
@@ -142,7 +168,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub unsafe fn new_unchecked(
+    pub(crate) unsafe fn new_unchecked(
         device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a mut T,
     ) -> Self {
@@ -180,7 +206,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn as_mut<'b>(&'b mut self) -> HostAndDeviceMutRef<'b, T>
+    pub fn into_mut<'b>(self) -> HostAndDeviceMutRef<'b, T>
     where
         'a: 'b,
     {
@@ -191,20 +217,14 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn as_async<'b, 'stream>(
-        &'b mut self,
+    pub fn into_async<'b, 'stream>(
+        self,
         stream: &'stream Stream,
     ) -> Async<'b, 'stream, HostAndDeviceMutRef<'b, T>, NoCompletion>
     where
         'a: 'b,
     {
-        Async::ready(
-            HostAndDeviceMutRef {
-                device_box: self.device_box,
-                host_ref: self.host_ref,
-            },
-            stream,
-        )
+        Async::ready(self.into_mut(), stream)
     }
 }
 
@@ -253,7 +273,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     /// # Safety
     ///
     /// `device_box` must contain EXACTLY the device copy of `host_ref`
-    pub const unsafe fn new_unchecked(
+    pub(crate) const unsafe fn new_unchecked(
         device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
         host_ref: &'a T,
     ) -> Self {

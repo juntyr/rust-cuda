@@ -81,7 +81,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        _stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -167,7 +167,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -251,7 +251,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -272,7 +272,7 @@ impl<
     where
         Self: 'b,
     {
-        let param = unsafe { param.unwrap_unchecked() };
+        let param = unsafe { param.unwrap_ref_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -373,7 +373,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -509,7 +509,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -595,7 +595,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -678,16 +678,20 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
     {
-        crate::lend::LendToCuda::lend_to_cuda_mut(param, |mut param| {
-            // FIXME: express the same with param.as_async(stream).as_mut()
+        crate::lend::LendToCuda::lend_to_cuda_mut(param, |param| {
+            // FIXME: express the same with param.into_async(stream).as_mut()
             let _ = stream;
-            inner.with(crate::utils::r#async::AsyncProj::new(&mut param.as_mut()))
+            inner.with({
+                // Safety: this projection cannot be moved to a different stream
+                //         without first exiting lend_to_cuda_mut and synchronizing
+                unsafe { crate::utils::r#async::AsyncProj::new(&mut param.into_mut(), None) }
+            })
         })
     }
 
@@ -716,12 +720,13 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
 
     #[cfg(feature = "host")]
     fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
-        param: Self::AsyncHostType<'stream, 'b>,
+        mut param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
     where
         Self: 'b,
     {
+        param.record_mut_use()?;
         let param = unsafe { param.unwrap_unchecked() };
         Ok(param.for_device())
     }
@@ -763,7 +768,7 @@ impl<
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -846,7 +851,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -867,7 +872,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     where
         Self: 'b,
     {
-        let param = unsafe { param.unwrap_unchecked() };
+        let param = unsafe { param.unwrap_ref_unchecked() };
         inner(Some(&param_as_raw_bytes(param.for_host())))
     }
 
@@ -927,17 +932,21 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
     {
         // FIXME: forward impl
-        crate::lend::LendToCuda::lend_to_cuda_mut(param, |mut param| {
+        crate::lend::LendToCuda::lend_to_cuda_mut(param, |param| {
             // FIXME: express the same with param.as_async(stream).as_mut()
             let _ = stream;
-            inner.with(crate::utils::r#async::AsyncProj::new(&mut param.as_mut()))
+            inner.with({
+                // Safety: this projection cannot be moved to a different stream
+                //         without first exiting lend_to_cuda_mut and synchronizing
+                unsafe { crate::utils::r#async::AsyncProj::new(&mut param.into_mut(), None) }
+            })
         })
     }
 
@@ -1049,7 +1058,7 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        _stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -1126,7 +1135,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     #[cfg(feature = "host")]
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        _stream: &'stream rustacuda::stream::Stream,
+        _stream: &'stream crate::host::Stream,
         inner: impl super::WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where

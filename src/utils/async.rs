@@ -3,12 +3,12 @@ use std::{borrow::BorrowMut, future::Future, future::IntoFuture, marker::Phantom
 
 #[cfg(feature = "host")]
 use rustacuda::{
-    error::CudaError, error::CudaResult, event::Event, event::EventFlags, stream::Stream,
+    error::CudaError, error::CudaResult, event::Event, event::EventFlags,
     stream::StreamWaitEventFlags,
 };
 
 #[cfg(feature = "host")]
-use crate::host::CudaDropWrapper;
+use crate::host::{CudaDropWrapper, Stream};
 
 #[cfg(feature = "host")]
 pub struct NoCompletion;
@@ -18,6 +18,8 @@ pub type CompletionFnMut<'a, T> = Box<dyn FnOnce(&mut T) -> CudaResult<()> + 'a>
 #[cfg(feature = "host")]
 pub trait Completion<T: ?Sized + BorrowMut<Self::Completed>>: sealed::Sealed {
     type Completed: ?Sized;
+
+    fn no_op() -> Self;
 
     #[doc(hidden)]
     fn synchronize_on_drop(&self) -> bool;
@@ -33,6 +35,11 @@ mod sealed {
 #[cfg(feature = "host")]
 impl<T: ?Sized> Completion<T> for NoCompletion {
     type Completed = T;
+
+    #[inline]
+    fn no_op() -> Self {
+        Self
+    }
 
     #[inline]
     fn synchronize_on_drop(&self) -> bool {
@@ -52,6 +59,11 @@ impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<
     type Completed = B;
 
     #[inline]
+    fn no_op() -> Self {
+        Box::new(|_value| Ok(()))
+    }
+
+    #[inline]
     fn synchronize_on_drop(&self) -> bool {
         true
     }
@@ -69,6 +81,11 @@ impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Op
     type Completed = C::Completed;
 
     #[inline]
+    fn no_op() -> Self {
+        None
+    }
+
+    #[inline]
     fn synchronize_on_drop(&self) -> bool {
         self.as_ref().map_or(false, Completion::synchronize_on_drop)
     }
@@ -83,7 +100,7 @@ impl<C> sealed::Sealed for Option<C> {}
 
 #[cfg(feature = "host")]
 pub struct Async<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T> = NoCompletion> {
-    _stream: PhantomData<&'stream Stream>,
+    stream: &'stream Stream,
     value: T,
     status: AsyncStatus<'a, T, C>,
     _capture: PhantomData<&'a ()>,
@@ -95,7 +112,7 @@ enum AsyncStatus<'a, T: BorrowMut<C::Completed>, C: Completion<T>> {
     Processing {
         receiver: oneshot::Receiver<CudaResult<()>>,
         completion: C,
-        event: CudaDropWrapper<Event>,
+        event: Option<CudaDropWrapper<Event>>,
         _capture: PhantomData<&'a T>,
     },
     Completed {
@@ -108,10 +125,8 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// Wraps a `value` which is ready on `stream`.
     #[must_use]
     pub const fn ready(value: T, stream: &'stream Stream) -> Self {
-        let _ = stream;
-
         Self {
-            _stream: PhantomData::<&'stream Stream>,
+            stream,
             value,
             status: AsyncStatus::Completed { result: Ok(()) },
             _capture: PhantomData::<&'a ()>,
@@ -125,20 +140,16 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn pending(value: T, stream: &'stream Stream, completion: C) -> CudaResult<Self> {
-        let event = CudaDropWrapper::from(Event::new(EventFlags::DISABLE_TIMING)?);
-
         let (sender, receiver) = oneshot::channel();
-
         stream.add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
-        event.record(stream)?;
 
         Ok(Self {
-            _stream: PhantomData::<&'stream Stream>,
+            stream,
             value,
             status: AsyncStatus::Processing {
                 receiver,
                 completion,
-                event,
+                event: None,
                 _capture: PhantomData::<&'a T>,
             },
             _capture: PhantomData::<&'a ()>,
@@ -157,7 +168,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn synchronize(self) -> CudaResult<T> {
-        let (mut value, status) = self.destructure_into_parts();
+        let (_stream, mut value, status) = self.destructure_into_parts();
 
         let (receiver, completion) = match status {
             AsyncStatus::Completed { result } => return result.map(|()| value),
@@ -182,6 +193,11 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
 
     /// Moves the asynchronous data move to a different [`Stream`].
     ///
+    /// This method always adds a synchronisation barrier between the old and
+    /// and the new [`Stream`] to ensure that any usages of this [`Async`]
+    /// computations on the old [`Stream`] have completed before they can be
+    /// used on the new one.
+    ///
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
@@ -189,52 +205,45 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
         self,
         stream: &'stream_new Stream,
     ) -> CudaResult<Async<'a, 'stream_new, T, C>> {
-        let (mut value, status) = self.destructure_into_parts();
+        let (old_stream, mut value, status) = self.destructure_into_parts();
 
-        let (receiver, completion, event) = match status {
-            AsyncStatus::Completed { .. } => {
-                return Ok(Async {
-                    _stream: PhantomData::<&'stream_new Stream>,
-                    value,
-                    status,
-                    _capture: PhantomData::<&'a ()>,
-                })
+        let completion = match status {
+            AsyncStatus::Completed { result } => {
+                result?;
+                C::no_op()
             },
             AsyncStatus::Processing {
                 receiver,
                 completion,
-                event,
+                event: _,
                 _capture,
-            } => (receiver, completion, event),
-        };
-
-        match receiver.try_recv() {
-            Ok(Ok(())) => (),
-            Ok(Err(err)) => return Err(err),
-            Err(oneshot::TryRecvError::Empty) => {
-                stream.wait_event(&event, StreamWaitEventFlags::DEFAULT)?;
-
-                return Ok(Async {
-                    _stream: PhantomData::<&'stream_new Stream>,
-                    value,
-                    status: AsyncStatus::Processing {
-                        receiver,
-                        completion,
-                        event,
-                        _capture: PhantomData::<&'a T>,
-                    },
-                    _capture: PhantomData::<&'a ()>,
-                });
+            } => match receiver.try_recv() {
+                Ok(Ok(())) => {
+                    completion.complete(value.borrow_mut())?;
+                    C::no_op()
+                },
+                Ok(Err(err)) => return Err(err),
+                Err(oneshot::TryRecvError::Empty) => completion,
+                Err(oneshot::TryRecvError::Disconnected) => return Err(CudaError::AlreadyAcquired),
             },
-            Err(oneshot::TryRecvError::Disconnected) => return Err(CudaError::AlreadyAcquired),
         };
 
-        completion.complete(value.borrow_mut())?;
+        let event = CudaDropWrapper::from(Event::new(EventFlags::DISABLE_TIMING)?);
+        event.record(old_stream)?;
+        stream.wait_event(&event, StreamWaitEventFlags::DEFAULT)?;
+
+        let (sender, receiver) = oneshot::channel();
+        stream.add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
 
         Ok(Async {
-            _stream: PhantomData::<&'stream_new Stream>,
+            stream,
             value,
-            status: AsyncStatus::Completed { result: Ok(()) },
+            status: AsyncStatus::Processing {
+                receiver,
+                completion,
+                event: Some(event),
+                _capture: PhantomData::<&'a T>,
+            },
             _capture: PhantomData::<&'a ()>,
         })
     }
@@ -249,7 +258,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// computation out of smaller ones that have all been submitted to the
     /// same [`Stream`].
     pub unsafe fn unwrap_unchecked(self) -> CudaResult<(T, Option<C>)> {
-        let (value, status) = self.destructure_into_parts();
+        let (_stream, value, status) = self.destructure_into_parts();
 
         match status {
             AsyncStatus::Completed { result: Ok(()) } => Ok((value, None)),
@@ -264,20 +273,63 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     }
 
     pub const fn as_ref(&self) -> AsyncProj<'_, 'stream, &T> {
-        AsyncProj::new(&self.value)
+        // Safety: this projection captures this async
+        unsafe { AsyncProj::new(&self.value, None) }
     }
 
     pub fn as_mut(&mut self) -> AsyncProj<'_, 'stream, &mut T> {
-        AsyncProj::new(&mut self.value)
+        // Safety: this projection captures this async
+        unsafe {
+            AsyncProj::new(
+                &mut self.value,
+                Some(Box::new(|| {
+                    let completion = match &mut self.status {
+                        AsyncStatus::Completed { result } => {
+                            (*result)?;
+                            C::no_op()
+                        },
+                        AsyncStatus::Processing {
+                            receiver: _,
+                            completion,
+                            event: _,
+                            _capture,
+                        } => std::mem::replace(completion, C::no_op()),
+                    };
+
+                    let event = CudaDropWrapper::from(Event::new(EventFlags::DISABLE_TIMING)?);
+
+                    let (sender, receiver) = oneshot::channel();
+
+                    self.stream
+                        .add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
+                    event.record(self.stream)?;
+
+                    self.status = AsyncStatus::Processing {
+                        receiver,
+                        completion,
+                        event: Some(event),
+                        _capture: PhantomData::<&'a T>,
+                    };
+
+                    Ok(())
+                })),
+            )
+        }
     }
 
     #[must_use]
-    fn destructure_into_parts(self) -> (T, AsyncStatus<'a, T, C>) {
+    fn destructure_into_parts(self) -> (&'stream Stream, T, AsyncStatus<'a, T, C>) {
         let this = std::mem::ManuallyDrop::new(self);
 
         // Safety: we destructure self into its droppable components,
         //         value and status, without dropping self itself
-        unsafe { (std::ptr::read(&this.value), (std::ptr::read(&this.status))) }
+        unsafe {
+            (
+                this.stream,
+                std::ptr::read(&this.value),
+                (std::ptr::read(&this.status)),
+            )
+        }
     }
 }
 
@@ -360,7 +412,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
     type IntoFuture = impl Future<Output = Self::Output>;
 
     fn into_future(self) -> Self::IntoFuture {
-        let (value, status) = self.destructure_into_parts();
+        let (_stream, value, status) = self.destructure_into_parts();
 
         let (completion, status): (Option<C>, AsyncStatus<'a, T, NoCompletion>) = match status {
             AsyncStatus::Completed { result } => {
@@ -422,21 +474,30 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop
 
 #[cfg(feature = "host")]
 #[allow(clippy::module_name_repetitions)]
-#[derive(Copy, Clone)]
 pub struct AsyncProj<'a, 'stream, T: 'a> {
     _capture: PhantomData<&'a ()>,
     _stream: PhantomData<&'stream Stream>,
     value: T,
+    use_callback: Option<Box<dyn FnMut() -> CudaResult<()> + 'a>>,
 }
 
 #[cfg(feature = "host")]
 impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
     #[must_use]
-    pub(crate) const fn new(value: T) -> Self {
+    /// # Safety
+    ///
+    /// This projection must either capture an existing [`Async`] or come from
+    /// a source that ensures that the projected value can never (async) move
+    /// to a different [`Stream`].
+    pub(crate) const unsafe fn new(
+        value: T,
+        use_callback: Option<Box<dyn FnMut() -> CudaResult<()> + 'a>>,
+    ) -> Self {
         Self {
             _capture: PhantomData::<&'a ()>,
             _stream: PhantomData::<&'stream Stream>,
             value,
+            use_callback,
         }
     }
 
@@ -452,6 +513,22 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
     pub(crate) unsafe fn unwrap_unchecked(self) -> T {
         self.value
     }
+
+    #[allow(clippy::type_complexity)]
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub(crate) unsafe fn unwrap_unchecked_with_use(
+        self,
+    ) -> (T, Option<Box<dyn FnMut() -> CudaResult<()> + 'a>>) {
+        (self.value, self.use_callback)
+    }
 }
 
 #[cfg(feature = "host")]
@@ -465,6 +542,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
             _capture: PhantomData::<&'b ()>,
             _stream: PhantomData::<&'stream Stream>,
             value: &self.value,
+            use_callback: None,
         }
     }
 
@@ -477,7 +555,17 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
             _capture: PhantomData::<&'b ()>,
             _stream: PhantomData::<&'stream Stream>,
             value: &mut self.value,
+            use_callback: self.use_callback.as_mut().map(|use_callback| {
+                let use_callback: Box<dyn FnMut() -> CudaResult<()>> = Box::new(use_callback);
+                use_callback
+            }),
         }
+    }
+
+    pub(crate) fn record_mut_use(&mut self) -> CudaResult<()> {
+        self.use_callback
+            .as_mut()
+            .map_or(Ok(()), |use_callback| use_callback())
     }
 }
 
@@ -492,7 +580,21 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a T> {
             _capture: PhantomData::<&'b ()>,
             _stream: PhantomData::<&'stream Stream>,
             value: self.value,
+            use_callback: None,
         }
+    }
+
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `&T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub(crate) const unsafe fn unwrap_ref_unchecked(&self) -> &T {
+        self.value
     }
 }
 
@@ -507,6 +609,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
             _capture: PhantomData::<&'b ()>,
             _stream: PhantomData::<&'stream Stream>,
             value: self.value,
+            use_callback: None,
         }
     }
 
@@ -519,6 +622,38 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
             _capture: PhantomData::<&'b ()>,
             _stream: PhantomData::<&'stream Stream>,
             value: self.value,
+            use_callback: self.use_callback.as_mut().map(|use_callback| {
+                let use_callback: Box<dyn FnMut() -> CudaResult<()>> = Box::new(use_callback);
+                use_callback
+            }),
         }
+    }
+
+    #[allow(dead_code)] // FIXME
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `&T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub(crate) unsafe fn unwrap_ref_unchecked(&self) -> &T {
+        self.value
+    }
+
+    #[allow(dead_code)] // FIXME
+    /// # Safety
+    ///
+    /// The returned reference to the inner value of type `&T` may not yet have
+    /// completed its asynchronous work and may thus be in an inconsistent
+    /// state.
+    ///
+    /// This method must only be used to construct a larger asynchronous
+    /// computation out of smaller ones that have all been submitted to the
+    /// same [`Stream`].
+    pub(crate) unsafe fn unwrap_mut_unchecked(&mut self) -> &mut T {
+        self.value
     }
 }

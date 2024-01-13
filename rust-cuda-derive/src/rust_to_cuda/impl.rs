@@ -191,7 +191,7 @@ pub fn rust_to_cuda_async_trait(
             unsafe fn borrow_async<'stream, CudaAllocType: #crate_path::alloc::CudaAlloc>(
                 &self,
                 alloc: CudaAllocType,
-                stream: &'stream #crate_path::deps::rustacuda::stream::Stream,
+                stream: &'stream #crate_path::host::Stream,
             ) -> #crate_path::deps::rustacuda::error::CudaResult<(
                 #crate_path::utils::r#async::Async<
                     '_, 'stream,
@@ -219,7 +219,7 @@ pub fn rust_to_cuda_async_trait(
                 alloc: #crate_path::alloc::CombinedCudaAlloc<
                     Self::CudaAllocationAsync, CudaAllocType
                 >,
-                stream: &'stream #crate_path::deps::rustacuda::stream::Stream,
+                stream: &'stream #crate_path::host::Stream,
             ) -> #crate_path::deps::rustacuda::error::CudaResult<(
                 #crate_path::utils::r#async::Async<
                     'a, 'stream,

@@ -82,6 +82,9 @@ pub(in super::super) fn quote_cuda_generic_function(
         )
         .collect::<Vec<_>>();
 
+    let generic_start_token = generic_start_token.unwrap_or_default();
+    let generic_close_token = generic_close_token.unwrap_or_default();
+
     quote! {
         #[cfg(target_os = "cuda")]
         #(#func_attrs)*

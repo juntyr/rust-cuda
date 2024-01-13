@@ -3,12 +3,11 @@ use std::ops::{Deref, DerefMut};
 use rustacuda::{
     error::CudaResult,
     memory::{AsyncCopyDestination, CopyDestination, DeviceBox, LockedBox},
-    stream::Stream,
 };
 
 use crate::{
     alloc::{EmptyCudaAlloc, NoCudaAlloc},
-    host::{CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceMutRef},
+    host::{CudaDropWrapper, HostAndDeviceConstRef, HostAndDeviceMutRef, Stream},
     lend::{RustToCuda, RustToCudaAsync},
     safety::SafeMutableAliasing,
     utils::{
@@ -195,22 +194,6 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
             )
         }
     }
-
-    #[must_use]
-    pub fn as_mut(
-        &mut self,
-    ) -> HostAndDeviceMutRef<DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>
-    where
-        T: SafeMutableAliasing,
-    {
-        // Safety: `device_box` contains exactly the device copy of `locked_cuda_repr`
-        unsafe {
-            HostAndDeviceMutRef::new_unchecked(
-                &mut self.device_box,
-                (**self.locked_cuda_repr).into_mut(),
-            )
-        }
-    }
 }
 
 impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: EmptyCudaAlloc>>
@@ -339,12 +322,16 @@ impl<
     > {
         let this = unsafe { self.as_ref().unwrap_unchecked() };
 
-        AsyncProj::new(unsafe {
-            HostAndDeviceConstRef::new_unchecked(
-                &*(this.device_box),
-                (**(this.locked_cuda_repr)).into_ref(),
+        // Safety: this projection captures this async
+        unsafe {
+            AsyncProj::new(
+                HostAndDeviceConstRef::new_unchecked(
+                    &*(this.device_box),
+                    (**(this.locked_cuda_repr)).into_ref(),
+                ),
+                None,
             )
-        })
+        }
     }
 
     #[must_use]
@@ -358,13 +345,17 @@ impl<
     where
         T: SafeMutableAliasing,
     {
-        let this = unsafe { self.as_mut().unwrap_unchecked() };
+        let (this, use_callback) = unsafe { self.as_mut().unwrap_unchecked_with_use() };
 
-        AsyncProj::new(unsafe {
-            HostAndDeviceMutRef::new_unchecked(
-                &mut *(this.device_box),
-                (**(this.locked_cuda_repr)).into_mut(),
+        // Safety: this projection captures this async
+        unsafe {
+            AsyncProj::new(
+                HostAndDeviceMutRef::new_unchecked(
+                    &mut *(this.device_box),
+                    (**(this.locked_cuda_repr)).into_mut(),
+                ),
+                use_callback,
             )
-        })
+        }
     }
 }

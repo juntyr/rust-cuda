@@ -88,7 +88,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
     ) -> rustacuda::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
@@ -132,7 +132,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
     unsafe fn restore_async<'b, 'stream, A: CudaAlloc, O>(
         this: owning_ref::BoxRefMut<'b, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
     ) -> CudaResult<(
         Async<'b, 'stream, owning_ref::BoxRefMut<'b, O, Self>, CompletionFnMut<'b, Self>>,
         A,

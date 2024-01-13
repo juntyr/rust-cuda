@@ -55,7 +55,7 @@ fn main() -> rust_cuda::deps::rustacuda::error::CudaResult<()> {
     );
 
     // Create a new CUDA stream to submit kernels to
-    let stream =
+    let mut stream =
         rust_cuda::host::CudaDropWrapper::from(rust_cuda::deps::rustacuda::stream::Stream::new(
             rust_cuda::deps::rustacuda::stream::StreamFlags::NON_BLOCKING,
             None,
@@ -70,12 +70,14 @@ fn main() -> rust_cuda::deps::rustacuda::error::CudaResult<()> {
     };
 
     // Launch the CUDA kernel on the stream and synchronise to its completion
-    println!("Launching print kernel ...");
-    kernel.launch1(&stream, &config, Action::Print)?;
-    println!("Launching panic kernel ...");
-    kernel.launch1(&stream, &config, Action::Panic)?;
-    println!("Launching alloc error kernel ...");
-    kernel.launch1(&stream, &config, Action::AllocError)?;
+    rust_cuda::host::Stream::with(&mut stream, |stream| {
+        println!("Launching print kernel ...");
+        kernel.launch1(stream, &config, Action::Print)?;
+        println!("Launching panic kernel ...");
+        kernel.launch1(stream, &config, Action::Panic)?;
+        println!("Launching alloc error kernel ...");
+        kernel.launch1(stream, &config, Action::AllocError)
+    })?;
 
     Ok(())
 }

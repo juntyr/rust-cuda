@@ -11,7 +11,6 @@ use rustacuda::{
     error::{CudaError, CudaResult},
     function::Function,
     module::Module,
-    stream::Stream,
 };
 
 #[cfg(feature = "kernel")]
@@ -27,6 +26,8 @@ mod ptx_jit;
 #[cfg(feature = "host")]
 use ptx_jit::{PtxJITCompiler, PtxJITResult};
 
+#[cfg(feature = "host")]
+use crate::host::Stream;
 use crate::safety::PortableBitSemantics;
 
 pub mod param;
@@ -109,7 +110,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
     #[allow(clippy::missing_errors_doc)] // FIXME
     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream rustacuda::stream::Stream,
+        stream: &'stream crate::host::Stream,
         inner: impl WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -206,7 +207,9 @@ macro_rules! impl_launcher_launch {
         pub fn $launch_async<$($T: CudaKernelParameter),*>(
             &mut self,
             $($arg: $T::AsyncHostType<'stream, '_>),*
-        ) -> CudaResult<()>
+        ) -> CudaResult<crate::utils::r#async::Async<
+            'static, 'stream, (), crate::utils::r#async::NoCompletion,
+        >>
         where
             Kernel: FnOnce(&mut Launcher<'stream, '_, Kernel>, $($T),*),
         {
@@ -375,13 +378,10 @@ macro_rules! impl_typed_kernel_launch {
                 config,
                 $($arg,)*
                 |kernel, stream, config, $($arg),*| {
-                    let result = kernel.$launch_async::<$($T),*>(stream, config, $($arg),*);
+                    let r#async = kernel.$launch_async::<$($T),*>(stream, config, $($arg),*)?;
 
                     // important: always synchronise here, this function is sync!
-                    match (stream.synchronize(), result) {
-                        (Ok(()), result) => result,
-                        (Err(_), Err(err)) | (Err(err), Ok(())) => Err(err),
-                    }
+                    r#async.synchronize()
                 },
             )
         }
@@ -422,7 +422,29 @@ macro_rules! impl_typed_kernel_launch {
             stream: &'stream Stream,
             config: &LaunchConfig,
             $($arg: $T::AsyncHostType<'stream, '_>),*
-        ) -> CudaResult<()>
+        ) -> CudaResult<crate::utils::r#async::Async<
+            'static, 'stream, (), crate::utils::r#async::NoCompletion,
+        >>
+        // launch_async does not need to capture its parameters until kernel completion:
+        //  - moved parameters are moved and cannot be used again, deallocation will sync
+        //  - immutably borrowed parameters can be shared across multiple kernel launches
+        //  - mutably borrowed parameters are more tricky:
+        //    - Rust's borrowing rules ensure that a single mutable reference cannot be
+        //      passed into multiple parameters of the kernel (no mutable aliasing)
+        //    - CUDA guarantees that kernels launched on the same stream are executed
+        //      sequentially, so even immediate resubmissions for the same mutable data
+        //      will not have temporally overlapping mutation on the same stream
+        //    - however, we have to guarantee that mutable data cannot be used on several
+        //      different streams at the same time
+        //      - Async::move_to_stream always adds a synchronisation barrier between the
+        //        old and the new stream to ensure that all uses on the old stream happen
+        //        strictly before all uses on the new stream
+        //      - async launches take AsyncProj<&mut HostAndDeviceMutRef<..>>, which either
+        //        captures an Async, which must be moved to a different stream explicitly,
+        //        or contains data that cannot async move to a different stream without
+        //      - any use of a mutable borrow in an async kernel launch adds a sync barrier
+        //        on the launch stream s.t. the borrow is only complete once the kernel has
+        //        completed
         where
             Kernel: FnOnce(&mut Launcher<'stream, 'kernel, Kernel>, $($T),*),
         {
@@ -454,7 +476,11 @@ macro_rules! impl_typed_kernel_launch {
                         &mut $T::async_to_ffi($arg, sealed::Token)?
                     ).cast::<core::ffi::c_void>()),*
                 ],
-            ) }
+            ) }?;
+
+            crate::utils::r#async::Async::pending(
+                (), stream, crate::utils::r#async::NoCompletion,
+            )
         }
     };
     (impl $func:ident () + ($($other:expr),*) $inner:block) => {
