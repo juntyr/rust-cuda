@@ -25,30 +25,54 @@ use crate::{
     },
 };
 
+type InvariantLifetime<'brand> = PhantomData<fn(&'brand ()) -> &'brand ()>;
+
+#[derive(Copy, Clone)]
 #[repr(transparent)]
-pub struct Stream {
-    stream: rustacuda::stream::Stream,
+pub struct Stream<'stream> {
+    stream: &'stream rustacuda::stream::Stream,
+    _brand: InvariantLifetime<'stream>,
 }
 
-impl Deref for Stream {
+impl<'stream> Deref for Stream<'stream> {
     type Target = rustacuda::stream::Stream;
 
     fn deref(&self) -> &Self::Target {
-        &self.stream
+        self.stream
     }
 }
 
-impl Stream {
+impl<'stream> Stream<'stream> {
+    #[allow(clippy::needless_pass_by_ref_mut)]
+    /// Create a new uniquely branded [`Stream`], which can bind async
+    /// operations to the [`Stream`] that they are computed on.
+    ///
+    /// The uniqueness guarantees are provided by using branded types,
+    /// as inspired by the Ghost Cell paper by Yanovski, J., Dang, H.-H.,
+    /// Jung, R., and Dreyer, D.: <https://doi.org/10.1145/3473597>.
+    ///
+    /// # Examples
+    ///
+    /// The following example shows that two [`Stream`]'s with different
+    /// `'stream` lifetime brands cannot be used interchangeably.
+    ///
+    /// ```rust, compile_fail
+    /// use rust_cuda::host::Stream;
+    ///
+    /// fn check_same<'stream>(_stream_a: Stream<'stream>, _stream_b: Stream<'stream>) {}
+    ///
+    /// fn two_streams<'stream_a, 'stream_b>(stream_a: Stream<'stream_a>, stream_b: Stream<'stream_b>) {
+    ///     check_same(stream_a, stream_b);
+    /// }
+    /// ```
     pub fn with<O>(
         stream: &mut rustacuda::stream::Stream,
-        inner: impl for<'stream> FnOnce(&'stream Self) -> O,
+        inner: impl for<'new_stream> FnOnce(Stream<'new_stream>) -> O,
     ) -> O {
-        // Safety:
-        //  - Stream is a newtype wrapper around rustacuda::stream::Stream
-        //  - we forge a unique lifetime for a unique reference
-        let stream = unsafe { &*std::ptr::from_ref(stream).cast() };
-
-        inner(stream)
+        inner(Stream {
+            stream,
+            _brand: InvariantLifetime::default(),
+        })
     }
 }
 
@@ -219,7 +243,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     #[must_use]
     pub fn into_async<'b, 'stream>(
         self,
-        stream: &'stream Stream,
+        stream: Stream<'stream>,
     ) -> Async<'b, 'stream, HostAndDeviceMutRef<'b, T>, NoCompletion>
     where
         'a: 'b,
@@ -312,7 +336,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     #[must_use]
     pub const fn as_async<'b, 'stream>(
         &'b self,
-        stream: &'stream Stream,
+        stream: Stream<'stream>,
     ) -> Async<'b, 'stream, HostAndDeviceConstRef<'b, T>, NoCompletion>
     where
         'a: 'b,
@@ -370,7 +394,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     #[must_use]
     pub const fn into_async<'stream>(
         self,
-        stream: &'stream Stream,
+        stream: Stream<'stream>,
     ) -> Async<'a, 'stream, Self, NoCompletion> {
         Async::ready(self, stream)
     }

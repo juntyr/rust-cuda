@@ -110,7 +110,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
     #[allow(clippy::missing_errors_doc)] // FIXME
     fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
-        stream: &'stream crate::host::Stream,
+        stream: crate::host::Stream<'stream>,
         inner: impl WithNewAsync<'stream, Self, O, E>,
     ) -> Result<O, E>
     where
@@ -156,7 +156,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
 
 #[cfg(feature = "host")]
 pub struct Launcher<'stream, 'kernel, Kernel> {
-    pub stream: &'stream Stream,
+    pub stream: Stream<'stream>,
     pub kernel: &'kernel mut TypedPtxKernel<Kernel>,
     pub config: LaunchConfig,
 }
@@ -366,7 +366,7 @@ macro_rules! impl_typed_kernel_launch {
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch<'kernel, 'stream, $($T: CudaKernelParameter),*>(
             &'kernel mut self,
-            stream: &'stream Stream,
+            stream: Stream<'stream>,
             config: &LaunchConfig,
             $($arg: $T::SyncHostType),*
         ) -> CudaResult<()>
@@ -396,12 +396,12 @@ macro_rules! impl_typed_kernel_launch {
             $($T: CudaKernelParameter),*
         >(
             &'kernel mut self,
-            stream: &'stream Stream,
+            stream: Stream<'stream>,
             config: &LaunchConfig,
             $($arg: $T::SyncHostType,)*
             inner: impl FnOnce(
                 &'kernel mut Self,
-                &'stream Stream,
+                Stream<'stream>,
                 &LaunchConfig,
                 $($T::AsyncHostType<'stream, '_>),*
             ) -> Result<Ok, Err>,
@@ -419,7 +419,7 @@ macro_rules! impl_typed_kernel_launch {
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch_async<'kernel, 'stream, $($T: CudaKernelParameter),*>(
             &'kernel mut self,
-            stream: &'stream Stream,
+            stream: Stream<'stream>,
             config: &LaunchConfig,
             $($arg: $T::AsyncHostType<'stream, '_>),*
         ) -> CudaResult<crate::utils::r#async::Async<

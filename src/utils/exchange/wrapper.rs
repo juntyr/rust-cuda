@@ -119,7 +119,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
     /// CUDA
     pub fn move_to_device_async<'stream>(
         mut self,
-        stream: &'stream Stream,
+        stream: Stream<'stream>,
     ) -> CudaResult<Async<'static, 'stream, ExchangeWrapperOnDevice<T>, NoCompletion>> {
         let (cuda_repr, _null_alloc) = unsafe { self.value.borrow_async(NoCudaAlloc, stream) }?;
         let (cuda_repr, _completion): (_, Option<NoCompletion>) =
@@ -132,7 +132,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
         // - the kernel is launched on the passed-in [`Stream`]
         unsafe {
             self.device_box
-                .async_copy_from(&*self.locked_cuda_repr, stream)
+                .async_copy_from(&*self.locked_cuda_repr, &stream)
         }?;
 
         Async::pending(
@@ -207,7 +207,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
     /// CUDA
     pub fn move_to_host_async<'stream>(
         self,
-        stream: &'stream Stream,
+        stream: Stream<'stream>,
     ) -> CudaResult<
         Async<
             'static,
@@ -265,7 +265,7 @@ impl<
     /// CUDA
     pub fn move_to_host_async(
         self,
-        stream: &'stream Stream,
+        stream: Stream<'stream>,
     ) -> CudaResult<
         Async<
             'static,

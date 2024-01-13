@@ -100,7 +100,7 @@ impl<C> sealed::Sealed for Option<C> {}
 
 #[cfg(feature = "host")]
 pub struct Async<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T> = NoCompletion> {
-    stream: &'stream Stream,
+    stream: Stream<'stream>,
     value: T,
     status: AsyncStatus<'a, T, C>,
     _capture: PhantomData<&'a ()>,
@@ -124,7 +124,7 @@ enum AsyncStatus<'a, T: BorrowMut<C::Completed>, C: Completion<T>> {
 impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'stream, T, C> {
     /// Wraps a `value` which is ready on `stream`.
     #[must_use]
-    pub const fn ready(value: T, stream: &'stream Stream) -> Self {
+    pub const fn ready(value: T, stream: Stream<'stream>) -> Self {
         Self {
             stream,
             value,
@@ -139,7 +139,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// # Errors
     /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
     /// CUDA.
-    pub fn pending(value: T, stream: &'stream Stream, completion: C) -> CudaResult<Self> {
+    pub fn pending(value: T, stream: Stream<'stream>, completion: C) -> CudaResult<Self> {
         let (sender, receiver) = oneshot::channel();
         stream.add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
 
@@ -203,7 +203,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// CUDA.
     pub fn move_to_stream<'stream_new>(
         self,
-        stream: &'stream_new Stream,
+        stream: Stream<'stream_new>,
     ) -> CudaResult<Async<'a, 'stream_new, T, C>> {
         let (old_stream, mut value, status) = self.destructure_into_parts();
 
@@ -229,7 +229,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
         };
 
         let event = CudaDropWrapper::from(Event::new(EventFlags::DISABLE_TIMING)?);
-        event.record(old_stream)?;
+        event.record(&old_stream)?;
         stream.wait_event(&event, StreamWaitEventFlags::DEFAULT)?;
 
         let (sender, receiver) = oneshot::channel();
@@ -302,7 +302,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
 
                     self.stream
                         .add_callback(Box::new(|result| std::mem::drop(sender.send(result))))?;
-                    event.record(self.stream)?;
+                    event.record(&self.stream)?;
 
                     self.status = AsyncStatus::Processing {
                         receiver,
@@ -318,7 +318,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     }
 
     #[must_use]
-    fn destructure_into_parts(self) -> (&'stream Stream, T, AsyncStatus<'a, T, C>) {
+    fn destructure_into_parts(self) -> (Stream<'stream>, T, AsyncStatus<'a, T, C>) {
         let this = std::mem::ManuallyDrop::new(self);
 
         // Safety: we destructure self into its droppable components,
@@ -354,7 +354,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'
 
 #[cfg(feature = "host")]
 struct AsyncFuture<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> {
-    _stream: PhantomData<&'stream Stream>,
+    _stream: PhantomData<Stream<'stream>>,
     value: Option<T>,
     completion: Option<C>,
     status: AsyncStatus<'a, T, NoCompletion>,
@@ -435,7 +435,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
         };
 
         AsyncFuture {
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value: Some(value),
             completion,
             status,
@@ -476,7 +476,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop
 #[allow(clippy::module_name_repetitions)]
 pub struct AsyncProj<'a, 'stream, T: 'a> {
     _capture: PhantomData<&'a ()>,
-    _stream: PhantomData<&'stream Stream>,
+    _stream: PhantomData<Stream<'stream>>,
     value: T,
     use_callback: Option<Box<dyn FnMut() -> CudaResult<()> + 'a>>,
 }
@@ -495,7 +495,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
     ) -> Self {
         Self {
             _capture: PhantomData::<&'a ()>,
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value,
             use_callback,
         }
@@ -540,7 +540,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
     {
         AsyncProj {
             _capture: PhantomData::<&'b ()>,
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value: &self.value,
             use_callback: None,
         }
@@ -553,7 +553,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
     {
         AsyncProj {
             _capture: PhantomData::<&'b ()>,
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value: &mut self.value,
             use_callback: self.use_callback.as_mut().map(|use_callback| {
                 let use_callback: Box<dyn FnMut() -> CudaResult<()>> = Box::new(use_callback);
@@ -578,7 +578,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a T> {
     {
         AsyncProj {
             _capture: PhantomData::<&'b ()>,
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value: self.value,
             use_callback: None,
         }
@@ -607,7 +607,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
     {
         AsyncProj {
             _capture: PhantomData::<&'b ()>,
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value: self.value,
             use_callback: None,
         }
@@ -620,7 +620,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
     {
         AsyncProj {
             _capture: PhantomData::<&'b ()>,
-            _stream: PhantomData::<&'stream Stream>,
+            _stream: PhantomData::<Stream<'stream>>,
             value: self.value,
             use_callback: self.use_callback.as_mut().map(|use_callback| {
                 let use_callback: Box<dyn FnMut() -> CudaResult<()>> = Box::new(use_callback);

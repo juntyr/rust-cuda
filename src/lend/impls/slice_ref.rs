@@ -88,7 +88,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &'stream crate::host::Stream,
+        stream: crate::host::Stream<'stream>,
     ) -> rustacuda::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
@@ -112,7 +112,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
         let mut device_buffer = CudaDropWrapper::from(DeviceBuffer::<
             DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
         >::uninitialized(self.len())?);
-        device_buffer.async_copy_from(&*locked_buffer, stream)?;
+        device_buffer.async_copy_from(&*locked_buffer, &stream)?;
 
         Ok((
             Async::pending(
@@ -132,7 +132,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
     unsafe fn restore_async<'b, 'stream, A: CudaAlloc, O>(
         this: owning_ref::BoxRefMut<'b, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
-        stream: &'stream crate::host::Stream,
+        stream: crate::host::Stream<'stream>,
     ) -> CudaResult<(
         Async<'b, 'stream, owning_ref::BoxRefMut<'b, O, Self>, CompletionFnMut<'b, Self>>,
         A,

@@ -180,7 +180,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     pub unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
-        stream: &'stream crate::host::Stream,
+        stream: crate::host::Stream<'stream>,
     ) -> rustacuda::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>>,
         CombinedCudaAlloc<NoCudaAlloc, A>,
@@ -195,7 +195,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
             rustacuda::memory::AsyncCopyDestination::async_copy_from(
                 &mut ***device_buffer,
                 self.host_buffer.as_slice(),
-                stream,
+                &stream,
             )?;
         }
 
@@ -217,7 +217,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     pub unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
         mut this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
-        stream: &'stream crate::host::Stream,
+        stream: crate::host::Stream<'stream>,
     ) -> rustacuda::error::CudaResult<(
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
@@ -232,7 +232,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
             rustacuda::memory::AsyncCopyDestination::async_copy_to(
                 &***this.device_buffer.get_mut(),
                 this.host_buffer.as_mut_slice(),
-                stream,
+                &stream,
             )?;
         }
 
