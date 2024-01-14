@@ -13,15 +13,17 @@ use std::{
 
 use colored::Colorize;
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use ptx_builder::{
     builder::{BuildStatus, Builder, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
 };
 
-use super::{
+use crate::kernel::{
     lints::{LintLevel, PtxLint},
     utils::skip_kernel_compilation,
-    KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY,
+    KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY,
+    PTX_CSTR_IDENT,
 };
 
 mod config;
@@ -33,7 +35,9 @@ use error::emit_ptx_build_error;
 use ptx_compiler_sys::NvptxError;
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
-    proc_macro_error::set_dummy(quote! {::core::result::Result::Err(())});
+    proc_macro_error::set_dummy(
+        quote! {::core::compile_error!("rust-cuda PTX kernel check failed");},
+    );
 
     let CheckKernelConfig {
         kernel,
@@ -54,7 +58,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     let kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, Specialisation::Check);
 
     let Some(kernel_ptx) = kernel_ptx else {
-        return quote!(::core::result::Result::Err(())).into();
+        return quote!(::core::compile_error!("rust-cuda PTX kernel check failed");).into();
     };
 
     check_kernel_ptx_and_report(
@@ -64,13 +68,18 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
         &HashMap::new(),
     );
 
-    quote!(::core::result::Result::Ok(())).into()
+    quote!().into()
 }
 
 #[allow(clippy::module_name_repetitions)]
 pub fn link_kernel(tokens: TokenStream) -> TokenStream {
+    let ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, Span::call_site());
+    let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
+
     proc_macro_error::set_dummy(quote! {
-        const PTX_CSTR: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
+        const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
+        const #ffi_signature_ident: &[u8; 29] = b"ERROR in this PTX compilation";
+        ::core::compile_error!("rust-cuda PTX kernel compilation failed");
     });
 
     let LinkKernelConfig {
@@ -94,7 +103,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
 
     if skip_kernel_compilation() {
         return quote! {
-            const PTX_CSTR: &'static ::core::ffi::CStr = c"CLIPPY skips specialised PTX compilation";
+            const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"CLIPPY skips specialised PTX compilation";
         }
         .into();
     }
@@ -106,7 +115,9 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         Specialisation::Link(&specialisation),
     ) else {
         return (quote! {
-            const PTX_CSTR: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
+            const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
+            const #ffi_signature_ident: &[u8; 29] = b"ERROR in this PTX compilation";
+            ::core::compile_error!("rust-cuda PTX kernel compilation failed");
         })
         .into();
     };
@@ -137,7 +148,8 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
     let kernel_ptx =
         quote! { unsafe { ::core::ffi::CStr::from_bytes_with_nul_unchecked(#kernel_ptx) } };
 
-    (quote! { const PTX_CSTR: &'static ::core::ffi::CStr = #kernel_ptx; #(#type_layouts)* }).into()
+    (quote! { const #ptx_cstr_ident: &'static ::core::ffi::CStr = #kernel_ptx; #(#type_layouts)* })
+        .into()
 }
 
 fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenStream> {

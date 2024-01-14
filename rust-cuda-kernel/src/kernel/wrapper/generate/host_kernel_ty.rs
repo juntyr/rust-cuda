@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
+use crate::kernel::wrapper::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
 
 pub(in super::super) fn quote_host_kernel_ty(
     crate_path: &syn::Path,

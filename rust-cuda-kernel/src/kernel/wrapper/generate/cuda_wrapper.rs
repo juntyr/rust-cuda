@@ -1,9 +1,9 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use super::super::{
-    super::{KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY},
-    FuncIdent, FunctionInputs, ImplGenerics,
+use crate::kernel::{
+    wrapper::{FuncIdent, FunctionInputs, ImplGenerics},
+    KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY,
 };
 
 #[allow(clippy::too_many_lines)]
@@ -24,16 +24,6 @@ pub(in super::super) fn quote_cuda_wrapper(
 ) -> TokenStream {
     let (ffi_inputs, ffi_types) =
         specialise_ffi_input_types(crate_path, inputs, func, impl_generics);
-
-    let func_layout_params = func_params
-        .iter()
-        .map(|ident| {
-            syn::Ident::new(
-                &format!("__{func_ident_hash}_{ident}_layout").to_uppercase(),
-                ident.span(),
-            )
-        })
-        .collect::<Vec<_>>();
 
     let ffi_param_ptx_jit_wrap = func_inputs.iter().enumerate().rev().fold(
         quote! {
@@ -70,6 +60,9 @@ pub(in super::super) fn quote_cuda_wrapper(
         })
         .collect::<Vec<_>>();
 
+    let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, func_ident.span());
+    let ffi_signature_ty = quote! { extern "C" fn(#(#ffi_types),*) };
+
     quote! {
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_function(#func_ident)]
@@ -89,20 +82,13 @@ pub(in super::super) fn quote_cuda_wrapper(
                 #crate_path::utils::shared::init();
             }
 
-            unsafe {
-                ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY);
-            }
-            #(
-                #[no_mangle]
-                static #func_layout_params: [
-                    u8; #crate_path::deps::const_type_layout::serialised_type_graph_len::<#ffi_types>()
-                ] = #crate_path::deps::const_type_layout::serialise_type_graph::<#ffi_types>();
-
-                unsafe { ::core::ptr::read_volatile(&#func_layout_params[0]) };
-            )*
-            unsafe {
-                ::core::arch::asm!(#KERNEL_TYPE_USE_END_CANARY);
-            }
+            unsafe { ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY); }
+            #[no_mangle]
+            static #ffi_signature_ident: [
+                u8; #crate_path::deps::const_type_layout::serialised_type_graph_len::<#ffi_signature_ty>()
+            ] = #crate_path::deps::const_type_layout::serialise_type_graph::<#ffi_signature_ty>();
+            unsafe { ::core::ptr::read_volatile(&#ffi_signature_ident) };
+            unsafe { ::core::arch::asm!(#KERNEL_TYPE_USE_END_CANARY); }
 
             #ffi_param_ptx_jit_wrap
         }

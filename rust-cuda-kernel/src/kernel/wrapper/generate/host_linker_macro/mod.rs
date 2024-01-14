@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, KernelConfig};
+use crate::kernel::wrapper::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics, KernelConfig};
 
 mod args_trait;
 mod get_ptx;

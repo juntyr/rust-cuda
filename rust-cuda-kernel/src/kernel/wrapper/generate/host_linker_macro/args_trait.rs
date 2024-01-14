@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 
-use super::super::super::{FunctionInputs, ImplGenerics};
+use crate::kernel::wrapper::{FunctionInputs, ImplGenerics};
 
 pub(in super::super) fn quote_args_trait(
     args: &syn::Ident,

@@ -1,30 +1,36 @@
 #[derive(PartialEq, Eq, core::marker::ConstParamTy)]
-pub enum CpuAndGpuKernelSignatures {
+pub enum HostAndDeviceKernelEntryPoint {
     Match,
     Mismatch,
 }
 
-pub struct Assert<const MATCH: CpuAndGpuKernelSignatures>;
+pub struct Assert<const MATCH: HostAndDeviceKernelEntryPoint>;
 
 #[must_use]
-pub const fn check(ptx: &[u8], entry_point: &[u8]) -> CpuAndGpuKernelSignatures {
+pub const fn check(ptx: &[u8], entry_point: &[u8]) -> HostAndDeviceKernelEntryPoint {
+    const PTX_ERROR_MESSAGE: &[u8] = b"ERROR in this PTX compilation";
     const KERNEL_TYPE: &[u8] = b".visible .entry ";
+
+    // Short-circuit to avoid extra errors when PTX compilation fails
+    if ptx.len() == PTX_ERROR_MESSAGE.len() && starts_with(ptx, PTX_ERROR_MESSAGE, 0) {
+        return HostAndDeviceKernelEntryPoint::Match;
+    }
 
     let mut j = 0;
 
     while j < ptx.len() {
         let Some(j2) = find(ptx, KERNEL_TYPE, j) else {
-            return CpuAndGpuKernelSignatures::Mismatch;
+            return HostAndDeviceKernelEntryPoint::Mismatch;
         };
 
         if starts_with(ptx, entry_point, j2) {
-            return CpuAndGpuKernelSignatures::Match;
+            return HostAndDeviceKernelEntryPoint::Match;
         }
 
         j += 1;
     }
 
-    CpuAndGpuKernelSignatures::Mismatch
+    HostAndDeviceKernelEntryPoint::Mismatch
 }
 
 const fn find(haystack: &[u8], needle: &[u8], from: usize) -> Option<usize> {

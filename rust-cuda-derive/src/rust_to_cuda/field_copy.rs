@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 
-use super::field_ty::CudaReprFieldTy;
+use crate::rust_to_cuda::field_ty::CudaReprFieldTy;
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn impl_field_copy_init_and_expand_alloc_type(

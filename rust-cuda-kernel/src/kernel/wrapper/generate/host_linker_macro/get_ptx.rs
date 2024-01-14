@@ -1,9 +1,11 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use crate::kernel::utils::skip_kernel_compilation;
-
-use super::super::super::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics};
+use crate::kernel::{
+    utils::skip_kernel_compilation,
+    wrapper::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics},
+    KERNEL_TYPE_LAYOUT_IDENT, PTX_CSTR_IDENT,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx(
@@ -38,15 +40,17 @@ pub(super) fn quote_get_ptx(
     let cpu_func_lifetime_erased_types =
         generate_lifetime_erased_types(crate_path, &args, generics, inputs, macro_type_ids);
 
+    let ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, func_ident.span());
+
     let matching_kernel_assert = if skip_kernel_compilation() {
         quote!()
     } else {
         quote::quote_spanned! { func_ident.span()=>
-            const _: #crate_path::safety::kernel_signature::Assert<{
-                #crate_path::safety::kernel_signature::CpuAndGpuKernelSignatures::Match
-            }> = #crate_path::safety::kernel_signature::Assert::<{
-                #crate_path::safety::kernel_signature::check(
-                    PTX_CSTR.to_bytes(),
+            const _: #crate_path::safety::ptx_entry_point::Assert<{
+                #crate_path::safety::ptx_entry_point::HostAndDeviceKernelEntryPoint::Match
+            }> = #crate_path::safety::ptx_entry_point::Assert::<{
+                #crate_path::safety::ptx_entry_point::check(
+                    #ptx_cstr_ident.to_bytes(),
                     #crate_path::kernel::specialise_kernel_entry_point!(
                         #func_ident_hash #generic_start_token
                             #($#macro_type_ids),*
@@ -57,27 +61,19 @@ pub(super) fn quote_get_ptx(
         }
     };
 
-    let type_layout_asserts = if skip_kernel_compilation() {
-        Vec::new()
+    let signature_layout_assert = if skip_kernel_compilation() {
+        quote!()
     } else {
-        cpu_func_lifetime_erased_types
-            .iter()
-            .zip(func_params.iter())
-            .map(|(ty, param)| {
-                let layout_param = syn::Ident::new(
-                    &format!("__{func_ident_hash}_{param}_layout").to_uppercase(),
-                    param.span(),
-                );
+        let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, func_ident.span());
+        let ffi_signature_ty = quote! { extern "C" fn(#(#cpu_func_lifetime_erased_types),*) };
 
-                quote::quote_spanned! { ty.span()=>
-                    const _: #crate_path::safety::type_layout::Assert<{
-                        #crate_path::safety::type_layout::CpuAndGpuTypeLayouts::Match
-                    }> = #crate_path::safety::type_layout::Assert::<{
-                        #crate_path::safety::type_layout::check::<#ty>(#layout_param)
-                    }>;
-                }
-            })
-            .collect::<Vec<_>>()
+        quote::quote_spanned! { func_ident.span()=>
+            const _: #crate_path::safety::ptx_kernel_signature::Assert<{
+                #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
+            }> = #crate_path::safety::ptx_kernel_signature::Assert::<{
+                #crate_path::safety::ptx_kernel_signature::check::<#ffi_signature_ty>(#ffi_signature_ident)
+            }>;
+        }
     };
 
     let private_func_params = func_params
@@ -107,9 +103,9 @@ pub(super) fn quote_get_ptx(
 
             #matching_kernel_assert
 
-            #(#type_layout_asserts)*
+            #signature_layout_assert
 
-            PTX_CSTR
+            #ptx_cstr_ident
         }
     }
 }

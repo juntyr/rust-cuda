@@ -4,9 +4,9 @@ mod portable;
 mod stack_only;
 
 #[doc(hidden)]
-pub mod kernel_signature;
+pub mod ptx_entry_point;
 #[doc(hidden)]
-pub mod type_layout;
+pub mod ptx_kernel_signature;
 
 pub use aliasing::SafeMutableAliasing;
 pub use portable::PortableBitSemantics;

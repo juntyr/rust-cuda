@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use super::super::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
+use crate::kernel::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 
 #[allow(clippy::module_name_repetitions)]
 pub(super) struct LinkKernelConfig {

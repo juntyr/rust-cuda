@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
 
-use super::super::{DeclGenerics, FuncIdent};
+use crate::kernel::wrapper::{DeclGenerics, FuncIdent};
 
 pub(in super::super) fn quote_cuda_generic_function(
     crate_path: &syn::Path,
