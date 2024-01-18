@@ -1,15 +1,27 @@
 use crate::deps::alloc::{fmt, string::String};
 
 /// Abort the CUDA kernel using the `trap` system call.
+///
+/// [`abort`] poisons the CUDA context and no more work can be performed in it.
 #[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn abort() -> ! {
     unsafe { ::core::arch::nvptx::trap() }
 }
 
+/// Exit the CUDA kernel using the `exit` instruction.
+///
+/// # Safety
+///
+/// [`exit`] quits the kernel early and any mutable data accessible outside this
+/// kernel launch (by the host or a subsequent kernel launch) may be in an
+/// inconsistent state. Therefore, kernel failure must be communicated back to
+/// host and handled in some other manner.
+///
+/// Safely return from the main kernel function instead.
 #[allow(clippy::inline_always)]
 #[inline(always)]
-pub fn exit() -> ! {
+pub unsafe fn exit() -> ! {
     unsafe { ::core::arch::asm!("exit;", options(noreturn)) }
 }
 
@@ -68,14 +80,28 @@ pub fn print(args: ::core::fmt::Arguments) {
     }
 }
 
-// TODO: docs
+/// Helper function to efficiently pretty-print a [`core::panic::PanicInfo`]
+/// using the `vprintf` system call.
+///
+/// If `allow_dynamic_message` is set,
+/// [`alloc::fmt::format`](crate::deps::alloc::fmt::format) is used to print
+/// [`core::panic::PanicInfo::message`] message when
+/// [`core::fmt::Arguments::as_str`] returns [`None`]. Note that this may pull
+/// in a large amount of string formatting and dynamic allocation code.
+/// If unset, a default placeholder panic message is printed instead.
+///
+/// If `allow_dynamic_payload` is set, [`core::panic::PanicInfo::payload`] is
+/// checked for [`&str`] and [`String`] to get a message to print if
+/// [`core::panic::PanicInfo::message`] returns [`None`]. Note that this may
+/// pull in some dynamic dispatch code. If unset, a default placeholder panic
+/// message is printed instead.
 #[allow(clippy::inline_always)]
 #[inline(always)]
-pub fn pretty_panic_handler(
+pub fn pretty_print_panic_info(
     info: &::core::panic::PanicInfo,
     allow_dynamic_message: bool,
     allow_dynamic_payload: bool,
-) -> ! {
+) {
     #[repr(C)]
     struct FormatArgs {
         file_len: u32,
@@ -140,15 +166,14 @@ pub fn pretty_panic_handler(
             ::core::ptr::from_ref(&args).cast(),
         );
     }
-
-    exit()
 }
 
-// TODO: docs
+/// Helper function to efficiently pretty-print an error message (inside an
+/// allocation error handler) using the `vprintf` system call.
 #[track_caller]
 #[allow(clippy::inline_always)]
 #[inline(always)]
-pub fn pretty_alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
+pub fn pretty_print_alloc_error(layout: ::core::alloc::Layout) {
     #[repr(C)]
     struct FormatArgs {
         size: usize,
@@ -186,6 +211,4 @@ pub fn pretty_alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
             ::core::ptr::from_ref(&args).cast(),
         );
     }
-
-    exit()
 }

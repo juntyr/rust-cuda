@@ -93,12 +93,18 @@ mod cuda_prelude {
     fn panic(info: &::core::panic::PanicInfo) -> ! {
         // pretty format and print the panic message
         // but don't allow dynamic formatting or panic payload downcasting
-        rust_cuda::device::utils::pretty_panic_handler(info, false, false)
+        rust_cuda::device::utils::pretty_print_panic_info(info, false, false);
+
+        // Safety: no mutable data is shared with the kernel
+        unsafe { rust_cuda::device::utils::exit() }
     }
 
     #[alloc_error_handler]
     #[track_caller]
     fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
-        rust_cuda::device::utils::pretty_alloc_error_handler(layout)
+        rust_cuda::device::utils::pretty_print_alloc_error(layout);
+
+        // Safety: no mutable data is shared with the kernel
+        unsafe { rust_cuda::device::utils::exit() }
     }
 }

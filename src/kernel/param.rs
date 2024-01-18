@@ -82,7 +82,8 @@ impl<
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -168,7 +169,8 @@ impl<
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -253,7 +255,8 @@ impl<
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -377,7 +380,8 @@ impl<
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -514,7 +518,8 @@ impl<
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -600,7 +605,8 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -684,7 +690,8 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -774,7 +781,8 @@ impl<
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -857,7 +865,8 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -940,7 +949,8 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -1067,7 +1077,8 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,
@@ -1144,7 +1155,8 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
-        inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
         Self: 'b,

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     env,
-    ffi::{CStr, CString},
+    ffi::CString,
     fmt::Write as FmtWrite,
     fs,
     io::{Read, Write},
@@ -132,21 +132,18 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         &ptx_lint_levels,
     );
 
-    let mut kernel_ptx = kernel_ptx.into_bytes();
-    kernel_ptx.push(b'\0');
-
-    if let Err(err) = CStr::from_bytes_with_nul(&kernel_ptx) {
-        abort_call_site!(
+    let kernel_ptx = match CString::new(kernel_ptx) {
+        Ok(kernel_ptx) => kernel_ptx,
+        Err(err) => abort_call_site!(
             "Kernel compilation generated invalid PTX: internal nul byte: {:?}",
             err
-        );
-    }
+        ),
+    };
 
-    // TODO: CStr constructor blocked on https://github.com/rust-lang/rust/issues/118560
-    let kernel_ptx = syn::LitByteStr::new(&kernel_ptx, proc_macro2::Span::call_site());
-    // Safety: the validity of kernel_ptx as a CStr was just checked above
-    let kernel_ptx =
-        quote! { unsafe { ::core::ffi::CStr::from_bytes_with_nul_unchecked(#kernel_ptx) } };
+    let kernel_ptx = proc_macro::Literal::c_string(&kernel_ptx);
+    let kernel_ptx = proc_macro2::TokenStream::from(proc_macro::TokenStream::from(
+        proc_macro::TokenTree::Literal(kernel_ptx),
+    ));
 
     (quote! { const #ptx_cstr_ident: &'static ::core::ffi::CStr = #kernel_ptx; #(#type_layouts)* })
         .into()

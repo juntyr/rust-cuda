@@ -40,7 +40,8 @@ mod sealed {
     pub struct Token;
 }
 
-#[cfg(feature = "host")] // FIXME: make private?
+#[cfg(all(feature = "host", not(doc)))]
+#[doc(hidden)]
 pub trait WithNewAsync<
     'stream,
     P: ?Sized + CudaKernelParameter,
@@ -48,13 +49,12 @@ pub trait WithNewAsync<
     E: From<rustacuda::error::CudaError>,
 >
 {
-    #[allow(clippy::missing_errors_doc)] // FIXME
     fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E>
     where
         P: 'b;
 }
 
-#[cfg(feature = "host")] // FIXME: make private?
+#[cfg(all(feature = "host", not(doc)))]
 impl<
         'stream,
         P: ?Sized + CudaKernelParameter,
@@ -72,6 +72,7 @@ impl<
 }
 
 #[cfg(feature = "device")]
+#[doc(hidden)]
 pub trait WithFfiAsDevice<P: ?Sized + CudaKernelParameter, O> {
     fn with<'b>(self, param: P::DeviceType<'b>) -> O
     where
@@ -108,13 +109,14 @@ pub trait CudaKernelParameter: sealed::Sealed {
 
     #[cfg(feature = "host")]
     #[allow(clippy::missing_errors_doc)] // FIXME
-    fn with_new_async<'stream, 'param, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
-        inner: impl WithNewAsync<'stream, Self, O, E>,
+        #[cfg(not(doc))] inner: impl WithNewAsync<'stream, Self, O, E>,
+        #[cfg(doc)] inner: impl FnOnce(Self::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     ) -> Result<O, E>
     where
-        Self: 'param;
+        Self: 'b;
 
     #[doc(hidden)]
     #[cfg(feature = "host")]

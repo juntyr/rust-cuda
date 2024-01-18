@@ -147,10 +147,8 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
 
             #[allow(clippy::option_if_let_else)]
             let (r#async, alloc_tail) = RustToCudaAsync::restore_async(
-                this.map_mut(|value| match value {
-                    Some(value) => value,
-                    None => unreachable!(), // TODO
-                }),
+                // Safety: we have already established value is Some above
+                this.map_mut(|value| unsafe { value.as_mut().unwrap_unchecked() }),
                 CombinedCudaAlloc::new(alloc_front, alloc_tail),
                 stream,
             )?;
