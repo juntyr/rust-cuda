@@ -38,9 +38,7 @@ pub(in super::super) fn quote_cuda_generic_function(
                     elem,
                 }) = &**ty
                 {
-                    let lifetime = if let Some(lifetime) = lifetime {
-                        lifetime.clone()
-                    } else {
+                    let lifetime = lifetime.clone().unwrap_or_else(|| {
                         let lifetime =
                             syn::Lifetime::new(&format!("'__rust_cuda_lt_{i}"), ty.span());
                         generic_params.insert(
@@ -53,7 +51,7 @@ pub(in super::super) fn quote_cuda_generic_function(
                             }),
                         );
                         lifetime
-                    };
+                    });
                     let lt = quote!(#lifetime);
                     (
                         syn::Type::Reference(syn::TypeReference {

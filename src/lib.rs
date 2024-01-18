@@ -5,7 +5,10 @@
 #![deny(clippy::perf)]
 #![deny(clippy::style)]
 #![deny(clippy::suspicious)]
-#![allow(clippy::useless_attribute)]
+// #![warn(clippy::multiple_unsafe_ops_per_block)] // FIXME
+// #![warn(clippy::undocumented_unsafe_blocks)] // FIXME
+#![deny(unused_unsafe)]
+// #![warn(missing_docs)] // FIXME
 #![cfg_attr(all(any(feature = "device", target_os = "cuda"), not(doc)), no_std)]
 #![feature(associated_type_bounds)]
 #![feature(auto_traits)]

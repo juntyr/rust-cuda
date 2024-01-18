@@ -386,6 +386,7 @@ fn check_kernel_ptx(
 ) {
     let compiler = {
         let mut compiler = std::ptr::null_mut();
+        #[allow(unsafe_code)] // FFI
         if let Err(err) = NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCreate(
                 addr_of_mut!(compiler),
@@ -451,6 +452,7 @@ fn check_kernel_ptx(
 
             let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
+            #[allow(unsafe_code)] // FFI
             NvptxError::try_err_from(unsafe {
                 ptx_compiler_sys::nvPTXCompilerCompile(
                     compiler,
@@ -493,6 +495,7 @@ fn check_kernel_ptx(
 
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
@@ -505,6 +508,7 @@ fn check_kernel_ptx(
     let error_log = (|| {
         let mut error_log_size = 0;
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
         })?;
@@ -514,16 +518,12 @@ fn check_kernel_ptx(
         }
 
         #[allow(clippy::cast_possible_truncation)]
-        let mut error_log: Vec<u8> = Vec::with_capacity(error_log_size as usize);
+        let mut error_log: Vec<u8> = vec![0; error_log_size as usize];
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
         })?;
-
-        #[allow(clippy::cast_possible_truncation)]
-        unsafe {
-            error_log.set_len(error_log_size as usize);
-        }
 
         Ok(Some(String::from_utf8_lossy(&error_log).into_owned()))
     })();
@@ -531,6 +531,7 @@ fn check_kernel_ptx(
     let info_log = (|| {
         let mut info_log_size = 0;
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
         })?;
@@ -540,16 +541,12 @@ fn check_kernel_ptx(
         }
 
         #[allow(clippy::cast_possible_truncation)]
-        let mut info_log: Vec<u8> = Vec::with_capacity(info_log_size as usize);
+        let mut info_log: Vec<u8> = vec![0; info_log_size as usize];
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
         })?;
-
-        #[allow(clippy::cast_possible_truncation)]
-        unsafe {
-            info_log.set_len(info_log_size as usize);
-        }
 
         Ok(Some(String::from_utf8_lossy(&info_log).into_owned()))
     })();
@@ -561,6 +558,7 @@ fn check_kernel_ptx(
 
         let mut binary_size = 0;
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
                 compiler,
@@ -573,16 +571,12 @@ fn check_kernel_ptx(
         }
 
         #[allow(clippy::cast_possible_truncation)]
-        let mut binary: Vec<u8> = Vec::with_capacity(binary_size as usize);
+        let mut binary: Vec<u8> = vec![0; binary_size as usize];
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
         })?;
-
-        #[allow(clippy::cast_possible_truncation)]
-        unsafe {
-            binary.set_len(binary_size as usize);
-        }
 
         Ok(Some(binary))
     })();
@@ -591,6 +585,7 @@ fn check_kernel_ptx(
         let mut major = 0;
         let mut minor = 0;
 
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetVersion(addr_of_mut!(major), addr_of_mut!(minor))
         })?;
@@ -600,6 +595,7 @@ fn check_kernel_ptx(
 
     let drop = {
         let mut compiler = compiler;
+        #[allow(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerDestroy(addr_of_mut!(compiler))
         })

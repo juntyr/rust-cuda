@@ -1,4 +1,12 @@
-#![deny(clippy::pedantic)]
+#![deny(clippy::complexity)]
+#![deny(clippy::correctness)]
+#![warn(clippy::nursery)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::perf)]
+#![deny(clippy::style)]
+#![deny(clippy::suspicious)]
+#![deny(unsafe_code)]
+// #![warn(missing_docs)] // FIXME
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
 #![feature(proc_macro_span)]

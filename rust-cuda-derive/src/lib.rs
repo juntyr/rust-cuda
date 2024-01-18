@@ -5,6 +5,8 @@
 #![deny(clippy::perf)]
 #![deny(clippy::style)]
 #![deny(clippy::suspicious)]
+#![deny(unsafe_code)]
+// #![warn(missing_docs)] // FIXME
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]

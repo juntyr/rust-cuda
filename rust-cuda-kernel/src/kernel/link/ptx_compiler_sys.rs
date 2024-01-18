@@ -42,7 +42,7 @@ impl NvptxError {
     const NVPTXCOMPILE_ERROR_UNSUPPORTED_PTX_VERSION: NvptxCompileResult = 7;
     const NVPTXCOMPILE_SUCCESS: NvptxCompileResult = 0;
 
-    pub fn try_err_from(result: NvptxCompileResult) -> Result<(), Self> {
+    pub const fn try_err_from(result: NvptxCompileResult) -> Result<(), Self> {
         match result {
             Self::NVPTXCOMPILE_SUCCESS => Ok(()),
             Self::NVPTXCOMPILE_ERROR_INVALID_COMPILER_HANDLE => Err(Self::InvalidCompilerHandle),

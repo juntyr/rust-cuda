@@ -22,15 +22,14 @@ pub fn emit_ptx_build_error() {
 
     let call_site = proc_macro::Span::call_site();
 
-    let (byte_start, byte_end) =
-        if let Some(captures) = PROC_MACRO_SPAN_REGEX.captures(&format!("{call_site:?}")) {
+    let (byte_start, byte_end) = PROC_MACRO_SPAN_REGEX
+        .captures(&format!("{call_site:?}"))
+        .map_or((0_u32, 0_u32), |captures| {
             (
                 captures["start"].parse().unwrap_or(0_u32),
                 captures["end"].parse().unwrap_or(0_u32),
             )
-        } else {
-            (0_u32, 0_u32)
-        };
+        });
 
     let span = DiagnosticSpanBuilder::default()
         .file_name(

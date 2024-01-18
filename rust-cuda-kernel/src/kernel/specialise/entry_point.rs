@@ -18,6 +18,7 @@ pub fn specialise_kernel_entry_point(tokens: TokenStream) -> TokenStream {
         },
     };
 
+    #[allow(clippy::option_if_let_else)]
     let mangled_kernel_ident = if let Some(specialisation) = specialisation {
         format!(
             "{kernel}_kernel_{:016x}",
