@@ -159,10 +159,7 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                         _ => {
                             emit_error!(
                                 meta.span(),
-                                "[rust-cuda]: Expected #[cuda(ignore)] / \
-                                #[cuda(bound = \"<where-predicate>\")] / \
-                                #[cuda(crate = \"<crate-path>\")] / \
-                                #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
+                                "[rust-cuda]: Expected #[cuda(crate = \"<crate-path>\")] / #[cuda(bound = \"<where-predicate>\")] / #[cuda(free = \"<type>\")] / #[cuda(async = <bool>)] / #[cuda(layout::ATTR = \"VALUE\")] / #[cuda(ignore)] struct attribute."
                             );
                         },
                     }
@@ -170,10 +167,7 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
             } else {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[cuda(ignore)] / \
-                    #[cuda(bound = \"<where-predicate>\")] / \
-                    #[cuda(crate = \"<crate-path>\")] / \
-                    #[cuda(layout::ATTR = \"VALUE\")] struct attribute."
+                    "[rust-cuda]: Expected #[cuda(crate = \"<crate-path>\")] / #[cuda(bound = \"<where-predicate>\")] / #[cuda(free = \"<type>\")] / #[cuda(async = <bool>)] / #[cuda(layout::ATTR = \"VALUE\")] / #[cuda(ignore)] struct attribute."
                 );
             }
 

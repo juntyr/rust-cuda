@@ -69,7 +69,7 @@ pub fn swap_field_type_and_filter_attrs(
                                     Err(err) => emit_error!(
                                         s.span(),
                                         "[rust-cuda]: Invalid #[cuda(embed = \
-                                        \"<type>\")] field attribute: {}.",
+                                        \"<proxy-type>\")] field attribute: {}.",
                                         err
                                     ),
                                 }
@@ -84,7 +84,7 @@ pub fn swap_field_type_and_filter_attrs(
                             emit_error!(
                                 meta.span(),
                                 "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
-                                #[cuda(embed = \"<type>\")] field attribute"
+                                #[cuda(embed = \"<proxy-type>\")] field attribute"
                             );
                         }
                     }
@@ -93,7 +93,7 @@ pub fn swap_field_type_and_filter_attrs(
                 emit_error!(
                     attr.span(),
                     "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
-                    #[cuda(embed = \"<type>\")] field attribute."
+                    #[cuda(embed = \"<proxy-type>\")] field attribute."
                 );
             }
 
