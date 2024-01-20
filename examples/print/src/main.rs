@@ -22,7 +22,7 @@ pub enum Action {
 }
 
 #[rust_cuda::kernel::kernel(use link! for impl)]
-#[kernel(allow(ptx::local_memory_usage))]
+#[kernel(allow(ptx::local_memory_use))]
 pub fn kernel(action: rust_cuda::kernel::param::PerThreadShallowCopy<Action>) {
     match action {
         Action::Print => rust_cuda::device::utils::println!("println! from CUDA kernel"),

@@ -88,9 +88,9 @@ pub fn parse_ptx_lint_level(
         let lint = match lint {
             l if l == "verbose" => PtxLint::Verbose,
             l if l == "double_precision_use" => PtxLint::DoublePrecisionUse,
-            l if l == "local_memory_usage" => PtxLint::LocalMemoryUsage,
+            l if l == "local_memory_use" => PtxLint::LocalMemoryUse,
             l if l == "register_spills" => PtxLint::RegisterSpills,
-            l if l == "dump_binary" => PtxLint::DumpBinary,
+            l if l == "dump_assembly" => PtxLint::DumpAssembly,
             l if l == "dynamic_stack_size" => PtxLint::DynamicStackSize,
             _ => {
                 emit_error!(
@@ -151,9 +151,9 @@ impl fmt::Display for LintLevel {
 pub enum PtxLint {
     Verbose,
     DoublePrecisionUse,
-    LocalMemoryUsage,
+    LocalMemoryUse,
     RegisterSpills,
-    DumpBinary,
+    DumpAssembly,
     DynamicStackSize,
 }
 
@@ -162,9 +162,9 @@ impl fmt::Display for PtxLint {
         match self {
             Self::Verbose => fmt.write_str("verbose"),
             Self::DoublePrecisionUse => fmt.write_str("double_precision_use"),
-            Self::LocalMemoryUsage => fmt.write_str("local_memory_usage"),
+            Self::LocalMemoryUse => fmt.write_str("local_memory_use"),
             Self::RegisterSpills => fmt.write_str("register_spills"),
-            Self::DumpBinary => fmt.write_str("dump_binary"),
+            Self::DumpAssembly => fmt.write_str("dump_assembly"),
             Self::DynamicStackSize => fmt.write_str("dynamic_stack_size"),
         }
     }

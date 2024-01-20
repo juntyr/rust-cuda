@@ -95,7 +95,7 @@ pub(super) fn quote_get_ptx(
                 static #private_func_params: #cpu_func_lifetime_erased_types;
             )* }
 
-            #crate_path::kernel::link_kernel!{
+            #crate_path::kernel::compile_kernel!{
                 #func_ident #func_ident_hash #crate_name #crate_manifest_dir #generic_start_token
                     #($#macro_type_ids),*
                 #generic_close_token #ptx_lint_levels

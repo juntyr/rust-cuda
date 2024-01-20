@@ -1,7 +1,8 @@
 use proc_macro::TokenStream;
 use quote::ToTokens;
 
-pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
+#[allow(clippy::module_name_repetitions)]
+pub fn specialise_kernel_param_type(tokens: TokenStream) -> TokenStream {
     let SpecialiseTypeConfig {
         mut ty,
         generics,
@@ -10,8 +11,8 @@ pub fn specialise_kernel_type(tokens: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "specialise_kernel_type!(TY for GENERICS in KERNEL) expects TY type, GENERICS \
-                 generics, and KERNEL identifier: {:?}",
+                "specialise_kernel_param_type!(TY for GENERICS in KERNEL) expects TY type, \
+                 GENERICS generics, and KERNEL identifier: {:?}",
                 err
             )
         },

@@ -19,7 +19,7 @@ pub use rust_cuda_kernel::kernel;
 #[doc(hidden)]
 #[cfg(all(feature = "kernel", feature = "host"))]
 #[allow(clippy::module_name_repetitions)]
-pub use rust_cuda_kernel::{check_kernel, link_kernel, specialise_kernel_entry_point};
+pub use rust_cuda_kernel::{check_kernel, compile_kernel, specialise_kernel_entry_point};
 
 #[cfg(feature = "host")]
 mod ptx_jit;

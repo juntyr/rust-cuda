@@ -8,10 +8,10 @@ mod get_ptx;
 use get_ptx::quote_get_ptx;
 
 #[allow(clippy::too_many_arguments)] // FIXME
-pub(in super::super) fn quote_host_linker_macro(
+pub(in super::super) fn quote_host_link_macro(
     crate_path: &syn::Path,
     KernelConfig {
-        visibility, linker, ..
+        visibility, link, ..
     }: &KernelConfig,
     decl_generics @ DeclGenerics {
         generic_start_token,
@@ -86,7 +86,7 @@ pub(in super::super) fn quote_host_linker_macro(
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
-        #visibility macro #linker(
+        #visibility macro #link(
             impl #func_ident_name #generic_start_token
                 #(#macro_generics),* $(,)?
             #generic_close_token for $ptx:ident

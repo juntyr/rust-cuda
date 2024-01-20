@@ -55,7 +55,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
         },
     };
 
-    let kernel_ptx = compile_kernel(&kernel, &crate_name, &crate_path, Specialisation::Check);
+    let kernel_ptx = compile_kernel_ptx(&kernel, &crate_name, &crate_path, Specialisation::Check);
 
     let Some(kernel_ptx) = kernel_ptx else {
         return quote!(::core::compile_error!("rust-cuda PTX kernel check failed");).into();
@@ -72,7 +72,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub fn link_kernel(tokens: TokenStream) -> TokenStream {
+pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     let ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, Span::call_site());
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
 
@@ -93,7 +93,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "link_kernel!(KERNEL HASH NAME PATH SPECIALISATION LINTS,*) expects KERNEL and \
+                "compile_kernel!(KERNEL HASH NAME PATH SPECIALISATION LINTS,*) expects KERNEL and \
                  HASH identifiers, NAME and PATH string literals, and SPECIALISATION and LINTS \
                  tokens: {:?}",
                 err
@@ -108,7 +108,7 @@ pub fn link_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     }
 
-    let Some(mut kernel_ptx) = compile_kernel(
+    let Some(mut kernel_ptx) = compile_kernel_ptx(
         &kernel,
         &crate_name,
         &crate_path,
@@ -285,7 +285,7 @@ fn check_kernel_ptx_and_report(
         Ok(None) => (),
         Ok(Some(binary)) => {
             if ptx_lint_levels
-                .get(&PtxLint::DumpBinary)
+                .get(&PtxLint::DumpAssembly)
                 .map_or(false, |level| *level > LintLevel::Allow)
             {
                 const HEX: [char; 16] = [
@@ -299,7 +299,7 @@ fn check_kernel_ptx_and_report(
                 }
 
                 if ptx_lint_levels
-                    .get(&PtxLint::DumpBinary)
+                    .get(&PtxLint::DumpAssembly)
                     .map_or(false, |level| *level > LintLevel::Warn)
                 {
                     emit_call_site_error!(
@@ -431,7 +431,7 @@ fn check_kernel_ptx(
                 options.push(c"--warn-on-double-precision-use");
             }
             if ptx_lint_levels
-                .get(&PtxLint::LocalMemoryUsage)
+                .get(&PtxLint::LocalMemoryUse)
                 .map_or(false, |level| *level > LintLevel::Warn)
             {
                 options.push(c"--warn-on-local-memory-usage");
@@ -475,7 +475,7 @@ fn check_kernel_ptx(
             options.push(c"--warn-on-double-precision-use");
         }
         if ptx_lint_levels
-            .get(&PtxLint::LocalMemoryUsage)
+            .get(&PtxLint::LocalMemoryUse)
             .map_or(false, |level| *level > LintLevel::Allow)
         {
             options.push(c"--warn-on-local-memory-usage");
@@ -604,7 +604,7 @@ fn check_kernel_ptx(
     (result, error_log, info_log, binary, version, drop)
 }
 
-fn compile_kernel(
+fn compile_kernel_ptx(
     kernel: &syn::Ident,
     crate_name: &str,
     crate_path: &Path,

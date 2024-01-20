@@ -14,7 +14,7 @@ use crate::kernel::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 use config::KernelConfig;
 use generate::{
     cuda_generic_function::quote_cuda_generic_function, cuda_wrapper::quote_cuda_wrapper,
-    host_kernel_ty::quote_host_kernel_ty, host_linker_macro::quote_host_linker_macro,
+    host_kernel_ty::quote_host_kernel_ty, host_link_macro::quote_host_link_macro,
 };
 use parse::parse_kernel_fn;
 use proc_macro2::{Ident, Span};
@@ -33,7 +33,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
-                "#[kernel(pub? use LINKER! for impl)] expects LINKER identifier: {:?}",
+                "#[kernel(pub? use LINK! for impl)] expects LINK macro identifier: {:?}",
                 err
             )
         },
@@ -107,9 +107,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let _ = ptx_lint_levels.try_insert(PtxLint::Verbose, LintLevel::Allow);
     let _ = ptx_lint_levels.try_insert(PtxLint::DoublePrecisionUse, LintLevel::Warn);
-    let _ = ptx_lint_levels.try_insert(PtxLint::LocalMemoryUsage, LintLevel::Warn);
+    let _ = ptx_lint_levels.try_insert(PtxLint::LocalMemoryUse, LintLevel::Warn);
     let _ = ptx_lint_levels.try_insert(PtxLint::RegisterSpills, LintLevel::Warn);
-    let _ = ptx_lint_levels.try_insert(PtxLint::DumpBinary, LintLevel::Allow);
+    let _ = ptx_lint_levels.try_insert(PtxLint::DumpAssembly, LintLevel::Allow);
     let _ = ptx_lint_levels.try_insert(PtxLint::DynamicStackSize, LintLevel::Warn);
 
     let ptx_lint_levels = {
@@ -223,7 +223,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
         &func.attrs,
     );
     let host_generic_kernel_check = quote_generic_check(&crate_path, &func_ident);
-    let host_linker_macro = quote_host_linker_macro(
+    let host_link_macro = quote_host_link_macro(
         &crate_path,
         &config,
         &decl_generics,
@@ -255,7 +255,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
         #host_generic_kernel_check
 
-        #host_linker_macro
+        #host_link_macro
 
         #cuda_wrapper
         #cuda_generic_function

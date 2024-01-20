@@ -49,7 +49,7 @@ pub struct Triple(i32, i32, i32);
 #[kernel(crate = "rc")]
 #[kernel(
     allow(ptx::double_precision_use),
-    forbid(ptx::local_memory_usage, ptx::register_spills)
+    forbid(ptx::local_memory_use, ptx::register_spills)
 )]
 pub fn kernel<
     'a,

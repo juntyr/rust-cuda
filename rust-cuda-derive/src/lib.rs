@@ -20,8 +20,8 @@
 //! [Gitpod Ready-to-Code]: https://img.shields.io/badge/Gitpod-ready-blue?logo=gitpod
 //! [gitpod]: https://gitpod.io/#https://github.com/juntyr/rust-cuda
 //!
-//! `rust-cuda-derive` provides the [`#[derive(LendRustToCuda)`](LendRustToCuda)
-//! derive macro for the
+//! `rust-cuda-derive` provides the
+//! [`#[derive(LendRustToCuda)]`](LendRustToCuda) derive macro for the
 //! [`rust_cuda::lend::RustToCuda`]
 //! utility trait, which enables the usage of the
 //! [`rust_cuda::lend::LendToCuda`]

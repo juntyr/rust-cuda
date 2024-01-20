@@ -31,7 +31,7 @@ pub(in super::super) fn quote_cuda_wrapper(
         },
         |inner, (i, syn::PatType { pat, ty, .. })| {
             let specialised_ty = quote::quote_spanned! { ty.span()=>
-                #crate_path::device::specialise_kernel_type!(#ty for #generics in #func_ident)
+                #crate_path::device::specialise_kernel_param_type!(#ty for #generics in #func_ident)
             };
 
             // Load the device param from its FFI representation
@@ -110,7 +110,7 @@ fn specialise_ffi_input_types(
             ty,
         }| {
             let specialised_ty = quote::quote_spanned! { ty.span()=>
-                #crate_path::device::specialise_kernel_type!(#ty for #impl_generics in #func_ident)
+                #crate_path::device::specialise_kernel_param_type!(#ty for #impl_generics in #func_ident)
             };
 
             let ffi_ty: syn::Type = syn::parse_quote_spanned! { ty.span()=>
