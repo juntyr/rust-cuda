@@ -68,11 +68,14 @@ pub(super) fn quote_get_ptx(
         let ffi_signature_ty = quote! { extern "C" fn(#(#cpu_func_lifetime_erased_types),*) };
 
         quote::quote_spanned! { func_ident.span()=>
-            const _: #crate_path::safety::ptx_kernel_signature::Assert<{
-                #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
-            }> = #crate_path::safety::ptx_kernel_signature::Assert::<{
-                #crate_path::safety::ptx_kernel_signature::check::<#ffi_signature_ty>(#ffi_signature_ident)
-            }>;
+            const _: () = #crate_path::safety::ptx_kernel_signature::check::<
+                {
+                    &#crate_path::deps::const_type_layout::serialise_type_graph::<
+                        #ffi_signature_ty
+                    >()
+                },
+                #ffi_signature_ident,
+            >();
         }
     };
 

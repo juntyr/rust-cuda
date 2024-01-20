@@ -1,51 +1,22 @@
-use const_type_layout::{serialise_type_graph, serialised_type_graph_len, TypeGraphLayout};
+const SIGNATURE_ERROR_MESSAGE: &[u8] = b"ERROR in this PTX compilation";
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(PartialEq, Eq, core::marker::ConstParamTy)]
-pub enum HostAndDeviceKernelSignatureTypeLayout {
-    Match,
-    Mismatch,
-}
-
-pub struct Assert<const MATCH: HostAndDeviceKernelSignatureTypeLayout>;
-
-#[must_use]
-pub const fn check<T: TypeGraphLayout>(
-    device: &'static [u8],
-) -> HostAndDeviceKernelSignatureTypeLayout
-where
-    [u8; serialised_type_graph_len::<T>()]:,
+#[marker]
+pub trait SameHostAndDeviceKernelSignatureTypeLayout<const A: &'static [u8], const B: &'static [u8]>
 {
-    const SIGNATURE_ERROR_MESSAGE: &[u8] = b"ERROR in this PTX compilation";
-
-    // Short-circuit to avoid extra errors when PTX compilation fails
-    if equals(device, SIGNATURE_ERROR_MESSAGE) {
-        return HostAndDeviceKernelSignatureTypeLayout::Match;
-    }
-
-    let host = serialise_type_graph::<T>();
-
-    if equals(device, &host) {
-        HostAndDeviceKernelSignatureTypeLayout::Match
-    } else {
-        HostAndDeviceKernelSignatureTypeLayout::Mismatch
-    }
 }
 
-const fn equals(device: &[u8], host: &[u8]) -> bool {
-    if host.len() != device.len() {
-        return false;
-    }
+impl<const AB: &'static [u8]> SameHostAndDeviceKernelSignatureTypeLayout<AB, AB> for () {}
+impl<const A: &'static [u8]> SameHostAndDeviceKernelSignatureTypeLayout<A, SIGNATURE_ERROR_MESSAGE>
+    for ()
+{
+}
+impl<const B: &'static [u8]> SameHostAndDeviceKernelSignatureTypeLayout<SIGNATURE_ERROR_MESSAGE, B>
+    for ()
+{
+}
 
-    let mut i = 0;
-
-    while i < host.len() {
-        if host[i] != device[i] {
-            return false;
-        }
-
-        i += 1;
-    }
-
-    true
+pub const fn check<const A: &'static [u8], const B: &'static [u8]>()
+where
+    (): SameHostAndDeviceKernelSignatureTypeLayout<A, B>,
+{
 }
