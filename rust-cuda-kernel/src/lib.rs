@@ -41,7 +41,6 @@
 #![feature(proc_macro_def_site)]
 #![feature(proc_macro_c_str_literals)]
 #![feature(cfg_version)]
-#![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 extern crate proc_macro;

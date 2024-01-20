@@ -7,7 +7,6 @@
 #![feature(const_type_name)]
 #![feature(offset_of)]
 #![feature(cfg_version)]
-#![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_bounds)]
 #![feature(decl_macro)]

@@ -1,5 +1,4 @@
 [toolchain]
-# Pin to final 1.75.0 nightly
 channel = "nightly"
 components = [ "cargo", "rustfmt", "clippy" ]
 targets = [ "x86_64-unknown-linux-gnu", "nvptx64-nvidia-cuda" ]

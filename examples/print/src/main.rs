@@ -6,7 +6,6 @@
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(const_type_name)]
 #![feature(cfg_version)]
-#![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
 #![feature(type_alias_impl_trait)]
 #![feature(decl_macro)]
 

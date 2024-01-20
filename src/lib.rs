@@ -54,8 +54,6 @@
 #![feature(never_type)]
 #![feature(layout_for_ptr)]
 #![feature(cfg_version)]
-#![cfg_attr(not(version("1.76.0")), feature(c_str_literals))]
-#![cfg_attr(not(version("1.76.0")), feature(ptr_from_ref))]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![cfg_attr(feature = "device", feature(slice_ptr_get))]
