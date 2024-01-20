@@ -65,15 +65,18 @@ pub(super) fn quote_get_ptx(
         quote!()
     } else {
         let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, func_ident.span());
+        let ffi_signature_host_ident = quote::format_ident!("{ffi_signature_ident}_HOST");
         let ffi_signature_ty = quote! { extern "C" fn(#(#cpu_func_lifetime_erased_types),*) };
 
         quote::quote_spanned! { func_ident.span()=>
+            #[allow(dead_code)]
+            const #ffi_signature_host_ident: &'static [u8] =
+                &#crate_path::deps::const_type_layout::serialise_type_graph::<
+                    #ffi_signature_ty
+                >();
+
             const _: () = #crate_path::safety::ptx_kernel_signature::check::<
-                {
-                    &#crate_path::deps::const_type_layout::serialise_type_graph::<
-                        #ffi_signature_ty
-                    >()
-                },
+                #ffi_signature_host_ident,
                 #ffi_signature_ident,
             >();
         }
