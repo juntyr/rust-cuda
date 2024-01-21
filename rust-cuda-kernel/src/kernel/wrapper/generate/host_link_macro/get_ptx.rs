@@ -71,9 +71,7 @@ pub(super) fn quote_get_ptx(
             const _: #crate_path::safety::ptx_kernel_signature::Assert<{
                 #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
             }> = #crate_path::safety::ptx_kernel_signature::Assert::<{
-                #ffi_signature_ident(&#crate_path::deps::const_type_layout::serialise_type_graph::<
-                    #ffi_signature_ty
-                >())
+                #crate_path::safety::ptx_kernel_signature::check::<#ffi_signature_ty>(#ffi_signature_ident)
             }>;
         }
     };
@@ -89,9 +87,6 @@ pub(super) fn quote_get_ptx(
 
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
-            #[allow(dead_code)]
-            use #crate_path as rust_cuda_import;
-
             #args_trait
 
             extern "C" { #(

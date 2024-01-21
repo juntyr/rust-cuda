@@ -54,9 +54,12 @@
 #![feature(never_type)]
 #![feature(layout_for_ptr)]
 #![feature(cfg_version)]
+#![cfg_attr(feature = "device", feature(slice_ptr_get))]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-#![cfg_attr(feature = "device", feature(slice_ptr_get))]
+#![allow(internal_features)]
+#![feature(core_intrinsics)]
+#![feature(const_intrinsic_compare_bytes)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 #[cfg(all(feature = "host", feature = "device", not(doc)))]

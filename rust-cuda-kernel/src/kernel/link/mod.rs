@@ -78,9 +78,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
 
     proc_macro_error::set_dummy(quote! {
         const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
-        const fn #ffi_signature_ident(host: &[u8]) -> rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout {
-            rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
-        }
+        const #ffi_signature_ident: &[u8; 29] = b"ERROR in this PTX compilation";
         ::core::compile_error!("rust-cuda PTX kernel compilation failed");
     });
 
@@ -118,9 +116,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     ) else {
         return (quote! {
             const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
-            const fn #ffi_signature_ident(host: &[u8]) -> rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout {
-                rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
-            }
+            const #ffi_signature_ident: &[u8; 29] = b"ERROR in this PTX compilation";
             ::core::compile_error!("rust-cuda PTX kernel compilation failed");
         })
         .into();
@@ -203,12 +199,7 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
         let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());
 
         type_layouts.push(quote! {
-            const fn #param(host: &[u8]) -> rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout {
-                match host {
-                    #byte_str => rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match,
-                    _ => rust_cuda_import::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Mismatch,
-                }
-            }
+            const #param: &[u8; #len] = #byte_str;
         });
 
         let type_layout_end = bytes_start + bytes_end_offset + AFTER_BYTES_PATTERN.len();
