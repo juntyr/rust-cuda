@@ -1,6 +1,7 @@
 use std::ffi::CString;
 
 use proc_macro::TokenStream;
+use quote::quote;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn specialise_kernel_entry_point(tokens: TokenStream) -> TokenStream {

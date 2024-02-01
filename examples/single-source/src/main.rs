@@ -5,7 +5,6 @@
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 #![feature(cfg_version)]
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_bounds)]

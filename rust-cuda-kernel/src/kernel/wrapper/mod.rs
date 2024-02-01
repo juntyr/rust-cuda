@@ -19,6 +19,7 @@ use generate::{
 use parse::parse_kernel_fn;
 use proc_macro2::{Ident, Span};
 use syn::spanned::Spanned;
+use quote::quote;
 
 #[allow(clippy::too_many_lines)]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {

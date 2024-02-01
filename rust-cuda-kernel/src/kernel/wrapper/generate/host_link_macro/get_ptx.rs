@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
+use quote::quote;
 
 use crate::kernel::{
     utils::skip_kernel_compilation,

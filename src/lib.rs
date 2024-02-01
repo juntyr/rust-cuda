@@ -42,7 +42,6 @@
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 #![feature(adt_const_params)]
 #![feature(impl_trait_in_assoc_type)]
 #![feature(ptr_metadata)]

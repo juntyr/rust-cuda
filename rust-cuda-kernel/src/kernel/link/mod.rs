@@ -18,6 +18,7 @@ use ptx_builder::{
     builder::{BuildStatus, Builder, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
 };
+use quote::quote;
 
 use crate::kernel::{
     lints::{LintLevel, PtxLint},
@@ -194,6 +195,26 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
             abort_call_site!(
                 "Kernel compilation generated invalid PTX: type layout length mismatch"
             );
+        }
+
+        // let mut ascii_escaped_bytes = Vec::new();
+        // for b in &bytes {
+        //     ascii_escaped_bytes.extend(std::ascii::escape_default(*b));
+        // }
+        // emit_call_site_warning!("{}", std::str::from_utf8(&ascii_escaped_bytes).unwrap());
+
+        let mut zeros = 0;
+        for b in &bytes {
+            if *b == 0 {
+                zeros += 1;
+            } else {
+                zeros = 0;
+            }
+        }
+
+        #[allow(clippy::cast_precision_loss)] // FIXME
+        {
+            emit_call_site_warning!("type layout: {}B (can do {:.02} compression)", bytes.len(), (bytes.len() as f64) / ((bytes.len() - zeros) as f64));
         }
 
         let byte_str = syn::LitByteStr::new(&bytes, proc_macro2::Span::call_site());

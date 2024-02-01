@@ -55,19 +55,8 @@ const fn find(haystack: &[u8], needle: &[u8], from: usize) -> Option<usize> {
 }
 
 const fn starts_with(haystack: &[u8], needle: &[u8], from: usize) -> bool {
-    let mut i = 0;
+    let haystack_len = haystack.len() - from;
+    let check_len = if needle.len() < haystack_len { needle.len() } else { haystack_len };
 
-    while i < needle.len() {
-        if (from + i) >= haystack.len() {
-            return false;
-        }
-
-        if needle[i] == haystack[from + i] {
-            i += 1;
-        } else {
-            return false;
-        }
-    }
-
-    true
+    unsafe { core::intrinsics::compare_bytes(haystack.as_ptr().add(from), needle.as_ptr(), check_len) == 0 }
 }

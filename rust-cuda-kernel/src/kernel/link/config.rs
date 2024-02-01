@@ -1,5 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use quote::quote;
+
 use crate::kernel::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 
 #[allow(clippy::module_name_repetitions)]
