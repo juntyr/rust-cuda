@@ -80,7 +80,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error::set_dummy(quote! {
         const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
 
-        const fn #ffi_signature_ident<T: TypeLayoutGraph>() -> HostAndDeviceKernelSignatureTypeLayout {
+        const fn #ffi_signature_ident<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
             HostAndDeviceKernelSignatureTypeLayout::Match
         }
 
@@ -122,7 +122,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         return (quote! {
             const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
 
-            const fn #ffi_signature_ident<T: TypeLayoutGraph>() -> HostAndDeviceKernelSignatureTypeLayout {
+            const fn #ffi_signature_ident<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
                 HostAndDeviceKernelSignatureTypeLayout::Match
             }
 
@@ -228,7 +228,7 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
         let byte_str = syn::LitByteStr::new(&bytes[..bytes.len()-zeros], proc_macro2::Span::call_site());
 
         type_layouts.push(quote! {
-            const fn #param<T: TypeLayoutGraph>() -> HostAndDeviceKernelSignatureTypeLayout {
+            const fn #param<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
                 if check_serialised_type_graph::<T>(#byte_str) {
                     HostAndDeviceKernelSignatureTypeLayout::Match
                 } else {

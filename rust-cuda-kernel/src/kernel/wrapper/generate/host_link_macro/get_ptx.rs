@@ -71,14 +71,9 @@ pub(super) fn quote_get_ptx(
         quote::quote_spanned! { func_ident.span()=>
             const _: #crate_path::safety::ptx_kernel_signature::Assert<{
                 #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
-            }> = {
-                use #crate_path::deps::const_type_layout::{TypeLayoutGraph, check_serialised_type_graph};
-                use crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout;
-
-                #crate_path::safety::ptx_kernel_signature::Assert::<{
-                    #ffi_signature_ident::<#ffi_signature_ty>()
-                }>
-            };
+            }> = #crate_path::safety::ptx_kernel_signature::Assert::<{
+                #ffi_signature_ident::<#ffi_signature_ty>()
+            }>;
         }
     };
 
@@ -93,6 +88,10 @@ pub(super) fn quote_get_ptx(
 
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
+            // FIXME: don't use imports here
+            use #crate_path::deps::const_type_layout::{TypeGraphLayout, check_serialised_type_graph};
+            use #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout;
+
             #args_trait
 
             extern "C" { #(
