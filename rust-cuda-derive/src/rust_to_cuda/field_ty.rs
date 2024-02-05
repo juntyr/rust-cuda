@@ -12,7 +12,10 @@ pub enum CudaReprFieldTy {
     },
 }
 
-pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprFieldTy {
+pub fn swap_field_type_and_filter_attrs(
+    crate_path: &syn::Path,
+    field: &mut syn::Field,
+) -> CudaReprFieldTy {
     let mut cuda_repr_field_ty: Option<CudaReprFieldTy> = None;
     let mut field_ty = field.ty.clone();
 
@@ -33,8 +36,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
                                     field_ty: Box::new(field_ty.clone()),
                                 });
                                 field_ty = parse_quote! {
-                                    rust_cuda::common::DeviceAccessible<
-                                        <#field_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                    #crate_path::utils::ffi::DeviceAccessible<
+                                        <#field_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
                                     >
                                 };
                             } else {
@@ -54,8 +57,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
                                     Ok(proxy_ty) => {
                                         let old_field_ty = Box::new(field_ty.clone());
                                         field_ty = parse_quote! {
-                                            rust_cuda::common::DeviceAccessible<
-                                                <#proxy_ty as rust_cuda::common::RustToCuda>::CudaRepresentation
+                                            #crate_path::utils::ffi::DeviceAccessible<
+                                                <#proxy_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
                                             >
                                         };
                                         cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
@@ -66,7 +69,7 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
                                     Err(err) => emit_error!(
                                         s.span(),
                                         "[rust-cuda]: Invalid #[cuda(embed = \
-                                        \"<type>\")] field attribute: {}.",
+                                        \"<proxy-type>\")] field attribute: {}.",
                                         err
                                     ),
                                 }
@@ -80,8 +83,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
                         _ => {
                             emit_error!(
                                 meta.span(),
-                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
-                                #[cuda(embed = \"<type>\")] field attribute"
+                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
+                                #[cuda(embed = \"<proxy-type>\")] field attribute"
                             );
                         }
                     }
@@ -89,8 +92,8 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
             } else {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cdua(embed)] / \
-                    #[cuda(embed = \"<type>\")] field attribute."
+                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
+                    #[cuda(embed = \"<proxy-type>\")] field attribute."
                 );
             }
 
@@ -100,12 +103,13 @@ pub fn swap_field_type_and_filter_attrs(field: &mut syn::Field) -> CudaReprField
         }
     });
 
+    #[allow(clippy::option_if_let_else)]
     let cuda_repr_field_ty = if let Some(cuda_repr_field_ty) = cuda_repr_field_ty {
         cuda_repr_field_ty
     } else {
         field_ty = parse_quote! {
-            rust_cuda::common::DeviceAccessible<
-                rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<#field_ty>
+            #crate_path::utils::ffi::DeviceAccessible<
+                #crate_path::utils::adapter::RustToCudaWithPortableBitCopySemantics<#field_ty>
             >
         };
 
