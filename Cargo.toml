@@ -29,7 +29,7 @@ rustacuda_core = "0.1.2"
 rustacuda = { version = "0.1.3", optional = true }
 rustacuda_derive = { version = "0.1.2", optional = true }
 
-const-type-layout = { version = "0.2.0", features = ["derive"] }
+const-type-layout = { version = "0.3.0", features = ["derive"] }
 
 final = "0.1.1"
 hashbrown = { version = "0.14", default-features = false, features = ["inline-more"], optional = true }
