@@ -102,12 +102,12 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> RustToCudaProxy<Option<T>>
 {
     fn from_ref(val: &Option<T>) -> &Self {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
-        unsafe { &*(val as *const Option<T>).cast() }
+        unsafe { &*core::ptr::from_ref(val).cast() }
     }
 
     fn from_mut(val: &mut Option<T>) -> &mut Self {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype
-        unsafe { &mut *(val as *mut Option<T>).cast() }
+        unsafe { &mut *core::ptr::from_mut(val).cast() }
     }
 
     fn into(self) -> Option<T> {

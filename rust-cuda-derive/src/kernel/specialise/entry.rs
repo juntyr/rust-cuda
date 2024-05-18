@@ -1,6 +1,7 @@
 use std::env::VarError;
 
 use proc_macro::TokenStream;
+use quote::quote;
 
 #[allow(clippy::module_name_repetitions)]
 pub fn specialise_kernel_entry(attr: TokenStream, func: TokenStream) -> TokenStream {

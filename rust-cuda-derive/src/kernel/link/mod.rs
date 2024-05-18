@@ -11,6 +11,7 @@ use ptx_builder::{
     builder::{BuildStatus, Builder, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
 };
+use quote::quote;
 
 use super::utils::skip_kernel_compilation;
 
@@ -287,7 +288,7 @@ fn build_kernel_with_specialisation(
         let any_output = AtomicBool::new(false);
         let crate_name = String::from(builder.get_crate_name());
 
-        match builder.build_live(
+        let status = builder.build_live(
             |stdout_line| {
                 if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
                     serde_json::from_str(stdout_line)
@@ -355,7 +356,9 @@ fn build_kernel_with_specialisation(
                 );
                 colored::control::unset_override();
             },
-        )? {
+        )?;
+
+        match status {
             BuildStatus::Success(output) => {
                 let ptx_path = output.get_assembly_path();
 

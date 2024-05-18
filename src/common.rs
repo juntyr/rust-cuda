@@ -1,5 +1,3 @@
-#[cfg(any(not(feature = "host"), doc))]
-use core::convert::{AsMut, AsRef};
 use core::marker::PhantomData;
 
 #[cfg(feature = "host")]

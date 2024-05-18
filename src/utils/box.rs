@@ -1,3 +1,4 @@
+#[allow(unused_imports)] // std prelude is not always imported
 use alloc::boxed::Box;
 
 use const_type_layout::TypeGraphLayout;

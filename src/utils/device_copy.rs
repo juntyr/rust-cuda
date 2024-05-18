@@ -31,22 +31,22 @@ impl<T: SafeDeviceCopy + TypeGraphLayout> SafeDeviceCopyWrapper<T> {
 
     pub fn from_ref(reference: &T) -> &Self {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
-        unsafe { &*(reference as *const T).cast() }
+        unsafe { &*core::ptr::from_ref(reference).cast() }
     }
 
     pub fn into_ref(&self) -> &T {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
-        unsafe { &*(self as *const Self).cast() }
+        unsafe { &*core::ptr::from_ref(self).cast() }
     }
 
     pub fn from_mut(reference: &mut T) -> &mut Self {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
-        unsafe { &mut *(reference as *mut T).cast() }
+        unsafe { &mut *core::ptr::from_mut(reference).cast() }
     }
 
     pub fn into_mut(&mut self) -> &mut T {
         // Safety: `SafeDeviceCopyWrapper` is a transparent newtype around `T`
-        unsafe { &mut *(self as *mut Self).cast() }
+        unsafe { &mut *core::ptr::from_mut(self).cast() }
     }
 
     pub fn from_slice(slice: &[T]) -> &[Self] {

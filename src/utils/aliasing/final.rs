@@ -42,7 +42,7 @@ unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
         alloc: crate::host::CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> rustacuda::error::CudaResult<A> {
         // Safety: Final is a repr(transparent) newtype wrapper around T
-        let inner: &mut T = &mut *(self as *mut Self).cast();
+        let inner: &mut T = &mut *core::ptr::from_mut(self).cast();
 
         inner.restore(alloc)
     }

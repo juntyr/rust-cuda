@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use quote::quote;
+
 #[allow(clippy::module_name_repetitions)]
 pub(super) struct LinkKernelConfig {
     pub(super) kernel: syn::Ident,

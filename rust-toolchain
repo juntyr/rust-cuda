@@ -1,5 +1,5 @@
 [toolchain]
-# Pin version pin until const traits are back
-channel = "nightly-2023-11-10"
+# Pin to final 1.78.0 nightly
+channel = "nightly-2024-03-17"
 components = [ "cargo", "rustfmt", "clippy" ]
 targets = [ "x86_64-unknown-linux-gnu", "nvptx64-nvidia-cuda" ]

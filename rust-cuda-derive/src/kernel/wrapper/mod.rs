@@ -16,6 +16,7 @@ use generate::{
 use inputs::{parse_function_inputs, FunctionInputs};
 use parse::parse_kernel_fn;
 use proc_macro2::Span;
+use quote::quote;
 use syn::spanned::Spanned;
 
 #[allow(clippy::too_many_lines)]

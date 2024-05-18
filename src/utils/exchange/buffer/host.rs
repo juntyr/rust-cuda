@@ -1,3 +1,4 @@
+#[allow(unused_imports)] // std prelude is not always imported
 use alloc::vec::Vec;
 use core::{
     cell::UnsafeCell,
@@ -42,7 +43,7 @@ impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bo
     /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
     pub fn new(elem: &T, capacity: usize) -> CudaResult<Self> {
         // Safety: CudaExchangeItem is a `repr(transparent)` wrapper around T
-        let elem: &CudaExchangeItem<T, M2D, M2H> = unsafe { &*(elem as *const T).cast() };
+        let elem: &CudaExchangeItem<T, M2D, M2H> = unsafe { &*core::ptr::from_ref(elem).cast() };
 
         let host_buffer = CudaDropWrapper::from(LockedBuffer::new(elem, capacity)?);
         let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(

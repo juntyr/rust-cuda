@@ -6,13 +6,12 @@
 #![feature(negative_impls)]
 #![cfg_attr(
     any(all(not(feature = "host"), target_os = "cuda"), doc),
-    feature(stdsimd)
+    feature(stdarch_nvptx)
 )]
 #![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
 #![feature(const_type_name)]
-#![feature(offset_of)]
 #![feature(adt_const_params)]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]

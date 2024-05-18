@@ -1,4 +1,5 @@
 use proc_macro2::TokenStream;
+use quote::quote;
 
 use crate::kernel::utils::r2c_move_lifetime;
 

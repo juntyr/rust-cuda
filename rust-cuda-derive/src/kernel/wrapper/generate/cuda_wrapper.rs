@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote_spanned;
+use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 use super::super::{FuncIdent, FunctionInputs, InputCudaType, KernelConfig};
