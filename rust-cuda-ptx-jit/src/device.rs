@@ -6,7 +6,7 @@ macro_rules! PtxJITConstLoad {
         unsafe {
             ::core::arch::asm!(
                 concat!("// <rust-cuda-ptx-jit-const-load-{}-", $index, "> //"),
-                in(reg32) *($reference as *const _ as *const u32),
+                in(reg32) *::core::ptr::from_ref($reference).cast::<u32>(),
             )
         }
     };

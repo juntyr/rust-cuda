@@ -1,7 +1,6 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::useless_attribute)]
 #![cfg_attr(not(feature = "host"), no_std)]
-#![feature(associated_type_bounds)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![cfg_attr(

@@ -42,7 +42,7 @@ macro_rules! compilePtxJITwithArguments {
     // Muncher recursive case: much one `ConstLoad[$expr]` (some `ConstLoad[$expr]`s already)
     (@munch Some $compiler:ident $(. $path:ident)+ => [, ConstLoad [ $head:expr ] $($tail:tt)*] => $($exprs:expr),*) => {
         $crate::compilePtxJITwithArguments!(@munch Some $compiler$(.$path)+ => [$($tail)*] => $($exprs,)* Some(unsafe {
-            ::std::slice::from_raw_parts($head as *const _ as *const u8, ::std::mem::size_of_val($head))
+            ::std::slice::from_raw_parts(::std::ptr::from_ref($head).cast::<u8>(), ::std::mem::size_of_val($head))
         }))
     };
 }

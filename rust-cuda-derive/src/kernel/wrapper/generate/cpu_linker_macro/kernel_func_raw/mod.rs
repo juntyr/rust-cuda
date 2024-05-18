@@ -100,7 +100,7 @@ pub(super) fn quote_kernel_func_raw(
                 unsafe { stream.launch(function, grid, block, shared_memory_size,
                     &[
                         #(
-                            &#func_params as *const _ as *mut ::std::ffi::c_void
+                            ::core::ptr::from_ref(&#func_params).cast_mut().cast::<::std::ffi::c_void>()
                         ),*
                     ]
                 ) }?;

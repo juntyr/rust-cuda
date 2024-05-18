@@ -119,7 +119,7 @@ fn generate_raw_func_input_wrap(
                                 // Safety: `#pat_box` contains exactly the device copy of `#pat`
                                 let __result = (|#pat| { #inner })(unsafe {
                                     rust_cuda::host::HostAndDeviceConstRef::new(
-                                        &#pat_box,  rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
+                                        &#pat_box, rust_cuda::utils::device_copy::SafeDeviceCopyWrapper::from_ref(#pat)
                                     )
                                 });
 
@@ -133,7 +133,12 @@ fn generate_raw_func_input_wrap(
                                     //    then passing these changes on is safe (and expected)
                                     // * If any mutations occured outside interior mutability,
                                     //    then UB occurred, in the kernel (we're not the cause)
-                                    #pat_box.copy_to(unsafe { &mut *(#pat as *const _ as *mut _) })?;
+                                    // * SafeDeviceCopyWrapper is a newtype wrapper
+                                    #pat_box.copy_to(unsafe {
+                                        &mut *::core::ptr::from_ref(#pat)
+                                            .cast::<rust_cuda::utils::device_copy::SafeDeviceCopyWrapper<_>>()
+                                            .cast_mut()
+                                    })?;
                                 }
 
                                 ::core::mem::drop(#pat_box);
