@@ -3,10 +3,7 @@
 #![cfg_attr(not(feature = "host"), no_std)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
-#![cfg_attr(
-    any(all(not(feature = "host"), target_os = "cuda"), doc),
-    feature(stdarch_nvptx)
-)]
+#![cfg_attr(all(not(feature = "host"), target_os = "cuda"), feature(stdarch_nvptx))]
 #![cfg_attr(any(feature = "alloc", doc), feature(allocator_api))]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
