@@ -1,10 +1,11 @@
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 use quote::quote;
+use syn::spanned::Spanned;
 
 use crate::kernel::{
     wrapper::{FuncIdent, FunctionInputs, ImplGenerics},
-    KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY,
+    KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY,
+    KERNEL_TYPE_USE_START_CANARY,
 };
 
 #[allow(clippy::too_many_lines)]
@@ -62,7 +63,12 @@ pub(in super::super) fn quote_cuda_wrapper(
         .collect::<Vec<_>>();
 
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, func_ident.span());
+    let ffi_signature_hash_seed_ident =
+        syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, func_ident.span());
     let ffi_signature_ty = quote! { extern "C" fn(#(#ffi_types),*) };
+
+    let ffi_signature_seed =
+        std::hash::BuildHasher::hash_one(&std::hash::RandomState::new(), 0xd236_cae6_da79_5f77_u64);
 
     quote! {
         #[cfg(target_os = "cuda")]
@@ -85,9 +91,10 @@ pub(in super::super) fn quote_cuda_wrapper(
 
             unsafe { ::core::arch::asm!(#KERNEL_TYPE_USE_START_CANARY); }
             #[no_mangle]
-            static #ffi_signature_ident: [
-                u8; #crate_path::deps::const_type_layout::serialised_type_graph_len::<#ffi_signature_ty>()
-            ] = #crate_path::deps::const_type_layout::serialise_type_graph::<#ffi_signature_ty>();
+            static #ffi_signature_hash_seed_ident: [u8; 8] = #ffi_signature_seed.to_le_bytes();
+            unsafe { ::core::ptr::read_volatile(&#ffi_signature_hash_seed_ident) };
+            #[no_mangle]
+            static #ffi_signature_ident: [u8; 8] = #crate_path::deps::const_type_layout::hash_type_graph::<#ffi_signature_ty>(#ffi_signature_seed).to_le_bytes();
             unsafe { ::core::ptr::read_volatile(&#ffi_signature_ident) };
             unsafe { ::core::arch::asm!(#KERNEL_TYPE_USE_END_CANARY); }
 

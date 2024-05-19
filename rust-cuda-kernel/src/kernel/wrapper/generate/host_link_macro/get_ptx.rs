@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 use quote::quote;
+use syn::spanned::Spanned;
 
 use crate::kernel::{
     utils::skip_kernel_compilation,
@@ -89,8 +89,11 @@ pub(super) fn quote_get_ptx(
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
             // FIXME: don't use imports here
-            use #crate_path::deps::const_type_layout::{TypeGraphLayout, check_serialised_type_graph};
-            use #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout;
+            #[allow(unused_imports)]
+            use #crate_path::{
+                deps::const_type_layout::{hash_type_graph, TypeGraphLayout},
+                safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout,
+            };
 
             #args_trait
 

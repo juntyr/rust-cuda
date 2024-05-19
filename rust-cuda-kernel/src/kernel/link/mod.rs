@@ -23,8 +23,8 @@ use quote::quote;
 use crate::kernel::{
     lints::{LintLevel, PtxLint},
     utils::skip_kernel_compilation,
-    KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY,
-    PTX_CSTR_IDENT,
+    KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY,
+    KERNEL_TYPE_USE_START_CANARY, PTX_CSTR_IDENT,
 };
 
 mod config;
@@ -131,7 +131,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     };
 
-    let type_layouts = extract_ptx_kernel_layout(&mut kernel_ptx);
+    let type_layout = extract_ptx_kernel_layout(&mut kernel_ptx);
     remove_kernel_type_use_from_ptx(&mut kernel_ptx);
 
     check_kernel_ptx_and_report(
@@ -154,17 +154,16 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         proc_macro::TokenTree::Literal(kernel_ptx),
     ));
 
-    (quote! { const #ptx_cstr_ident: &'static ::core::ffi::CStr = #kernel_ptx; #(#type_layouts)* })
+    (quote! { const #ptx_cstr_ident: &'static ::core::ffi::CStr = #kernel_ptx; #type_layout })
         .into()
 }
 
-fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenStream> {
+fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStream {
     const BEFORE_PARAM_PATTERN: &str = ".visible .global .align 1 .b8 ";
-    const PARAM_LEN_PATTERN: &str = "[";
-    const LEN_BYTES_PATTERN: &str = "] = {";
+    const PARAM_LEN_PATTERN: &str = "[8] = {";
     const AFTER_BYTES_PATTERN: &str = "};";
 
-    let mut type_layouts = Vec::new();
+    let mut type_layout_metas = HashMap::new();
 
     while let Some(type_layout_start) = kernel_ptx.find(BEFORE_PARAM_PATTERN) {
         let param_start = type_layout_start + BEFORE_PARAM_PATTERN.len();
@@ -172,25 +171,14 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
         let Some(len_start_offset) = kernel_ptx[param_start..].find(PARAM_LEN_PATTERN) else {
             abort_call_site!("Kernel compilation generated invalid PTX: missing type layout data")
         };
-        let len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
-
-        let Some(bytes_start_offset) = kernel_ptx[len_start..].find(LEN_BYTES_PATTERN) else {
-            abort_call_site!("Kernel compilation generated invalid PTX: missing type layout length")
-        };
-        let bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
+        let bytes_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
 
         let Some(bytes_end_offset) = kernel_ptx[bytes_start..].find(AFTER_BYTES_PATTERN) else {
             abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout data")
         };
         let param = &kernel_ptx[param_start..(param_start + len_start_offset)];
-        let len = &kernel_ptx[len_start..(len_start + bytes_start_offset)];
         let bytes = &kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
 
-        let param = quote::format_ident!("{}", param);
-
-        let Ok(len) = len.parse::<usize>() else {
-            abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout length")
-        };
         let Ok(bytes) = bytes
             .split(", ")
             .map(std::str::FromStr::from_str)
@@ -199,50 +187,49 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> Vec<proc_macro2::TokenS
             abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout byte")
         };
 
-        if bytes.len() != len {
+        let Ok(bytes) = bytes.try_into() else {
             abort_call_site!(
                 "Kernel compilation generated invalid PTX: type layout length mismatch"
             );
-        }
+        };
 
-        // let mut ascii_escaped_bytes = Vec::new();
-        // for b in &bytes {
-        //     ascii_escaped_bytes.extend(std::ascii::escape_default(*b));
-        // }
-        // emit_call_site_warning!("{}", std::str::from_utf8(&ascii_escaped_bytes).unwrap());
-
-        let mut zeros = 0;
-        for b in &bytes {
-            if *b == 0 {
-                zeros += 1;
-            } else {
-                zeros = 0;
-            }
-        }
-
-        #[allow(clippy::cast_precision_loss)] // FIXME
+        if type_layout_metas
+            .insert(String::from(param), u64::from_le_bytes(bytes))
+            .is_some()
         {
-            emit_call_site_warning!("type layout: {}B (can do {:.02} compression)", bytes.len(), (bytes.len() as f64) / ((bytes.len() - zeros) as f64));
+            abort_call_site!(
+                "Kernel compilation generated invalid PTX: duplicate type information for {param}"
+            );
         }
-
-        let byte_str = syn::LitByteStr::new(&bytes[..bytes.len()-zeros], proc_macro2::Span::call_site());
-
-        type_layouts.push(quote! {
-            const fn #param<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
-                if check_serialised_type_graph::<T>(#byte_str) {
-                    HostAndDeviceKernelSignatureTypeLayout::Match
-                } else {
-                    HostAndDeviceKernelSignatureTypeLayout::Mismatch
-                }
-            }
-        });
 
         let type_layout_end = bytes_start + bytes_end_offset + AFTER_BYTES_PATTERN.len();
 
         kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
     }
 
-    type_layouts
+    let Some(type_layout_hash_seed) = type_layout_metas
+        .get(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT)
+        .copied()
+    else {
+        abort_call_site!(
+            "Kernel compilation generated invalid PTX: missing type information hash seed"
+        );
+    };
+    let Some(type_layout_hash) = type_layout_metas.get(KERNEL_TYPE_LAYOUT_IDENT).copied() else {
+        abort_call_site!("Kernel compilation generated invalid PTX: missing type information");
+    };
+
+    let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
+
+    quote! {
+        const fn #ffi_signature_ident<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
+            if hash_type_graph::<T>(#type_layout_hash_seed) == #type_layout_hash {
+                HostAndDeviceKernelSignatureTypeLayout::Match
+            } else {
+                HostAndDeviceKernelSignatureTypeLayout::Mismatch
+            }
+        }
+    }
 }
 
 fn remove_kernel_type_use_from_ptx(kernel_ptx: &mut String) {

@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 use quote::quote;
+use syn::spanned::Spanned;
 
 use crate::kernel::wrapper::{DeclGenerics, FuncIdent};
 

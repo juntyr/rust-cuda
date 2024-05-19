@@ -7,7 +7,6 @@
 #![feature(const_type_name)]
 #![feature(cfg_version)]
 #![feature(type_alias_impl_trait)]
-#![feature(associated_type_bounds)]
 #![feature(decl_macro)]
 #![recursion_limit = "1024"]
 
@@ -95,6 +94,7 @@ pub fn kernel<
 #[cfg(not(target_os = "cuda"))]
 mod host {
     // Link several instances of the generic CUDA kernel
+    #[allow(dead_code)]
     struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
     crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
     crate::link! { impl kernel<'a, rc::utils::adapter::RustToCudaWithPortableBitCopySemantics<u64>> for KernelPtx }

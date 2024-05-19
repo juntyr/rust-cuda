@@ -39,7 +39,6 @@
 #![feature(let_chains)]
 #![feature(map_try_insert)]
 #![feature(proc_macro_def_site)]
-#![feature(proc_macro_c_str_literals)]
 #![feature(cfg_version)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
