@@ -22,7 +22,7 @@ jobs:
         with:
           toolchain: nightly
           profile: minimal
-          override: true
+          override: false # FIXME
 
       - name: Build the Documentation
         run: |

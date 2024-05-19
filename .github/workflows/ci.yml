@@ -39,7 +39,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           profile: minimal
           target: nvptx64-nvidia-cuda
-          override: true
+          override: false # FIXME
 
       - name: Install the rust-ptx-linker
         run: |
@@ -93,7 +93,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           profile: minimal
           target: nvptx64-nvidia-cuda
-          override: false
+          override: false # FIXME
 
       - name: Install the rust-ptx-linker
         run: |
@@ -151,7 +151,7 @@ jobs:
           profile: minimal
           components: clippy
           target: nvptx64-nvidia-cuda
-          override: true
+          override: false # FIXME
 
       - name: Install the rust-ptx-linker
         run: |
