@@ -62,7 +62,7 @@
 #[cfg(all(feature = "host", feature = "device", not(doc)))]
 core::compile_error!("cannot enable the `host` and `device` features at the same time");
 
-#[cfg(all(feature = "host", targt_os = "cuda", not(doc)))]
+#[cfg(all(feature = "host", target_os = "cuda", not(doc)))]
 core::compile_error!("cannot enable the `host` feature on a target with `target_os=\"cuda\"`");
 
 #[cfg(all(feature = "device", not(target_os = "cuda"), not(doc)))]
