@@ -5,7 +5,7 @@ use syn::spanned::Spanned;
 use crate::kernel::{
     utils::skip_kernel_compilation,
     wrapper::{DeclGenerics, FuncIdent, FunctionInputs, ImplGenerics},
-    KERNEL_TYPE_LAYOUT_IDENT, PTX_CSTR_IDENT,
+    KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, PTX_CSTR_IDENT,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -66,13 +66,18 @@ pub(super) fn quote_get_ptx(
         quote!()
     } else {
         let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, func_ident.span());
-        let ffi_signature_ty = quote! { extern "C" fn(#(#cpu_func_lifetime_erased_types),*) };
+        let ffi_signature_hash_seed_ident =
+            syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, func_ident.span());
 
         quote::quote_spanned! { func_ident.span()=>
             const _: #crate_path::safety::ptx_kernel_signature::Assert<{
                 #crate_path::safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout::Match
             }> = #crate_path::safety::ptx_kernel_signature::Assert::<{
-                #ffi_signature_ident::<#ffi_signature_ty>()
+                #ffi_signature_ident(&[#(
+                    #crate_path::deps::const_type_layout::hash_type_graph::<#cpu_func_lifetime_erased_types>(
+                        #ffi_signature_hash_seed_ident()
+                    )
+                ),*])
             }>;
         }
     };
@@ -90,9 +95,8 @@ pub(super) fn quote_get_ptx(
         fn get_ptx() -> &'static ::core::ffi::CStr {
             // FIXME: don't use imports here
             #[allow(unused_imports)]
-            use #crate_path::{
-                deps::const_type_layout::{hash_type_graph, TypeGraphLayout},
-                safety::ptx_kernel_signature::HostAndDeviceKernelSignatureTypeLayout,
+            use #crate_path::safety::ptx_kernel_signature::{
+                check as check_ptx_kernel_signature, HostAndDeviceKernelSignatureTypeLayout,
             };
 
             #args_trait

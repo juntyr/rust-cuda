@@ -76,12 +76,18 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
 pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     let ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, Span::call_site());
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
+    let ffi_signature_hash_seed_ident =
+        syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, Span::call_site());
 
     proc_macro_error::set_dummy(quote! {
         const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
 
-        const fn #ffi_signature_ident<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
+        const fn #ffi_signature_ident(_hashes: &[u64]) -> HostAndDeviceKernelSignatureTypeLayout {
             HostAndDeviceKernelSignatureTypeLayout::Match
+        }
+
+        const fn #ffi_signature_hash_seed_ident() -> u64 {
+            42
         }
 
         ::core::compile_error!("rust-cuda PTX kernel compilation failed");
@@ -122,8 +128,12 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         return (quote! {
             const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
 
-            const fn #ffi_signature_ident<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
+            const fn #ffi_signature_ident(_hashes: &[u64]) -> HostAndDeviceKernelSignatureTypeLayout {
                 HostAndDeviceKernelSignatureTypeLayout::Match
+            }
+
+            const fn #ffi_signature_hash_seed_ident() -> u64 {
+                42
             }
 
             ::core::compile_error!("rust-cuda PTX kernel compilation failed");
@@ -160,7 +170,8 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
 
 fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStream {
     const BEFORE_PARAM_PATTERN: &str = ".visible .global .align 1 .b8 ";
-    const PARAM_LEN_PATTERN: &str = "[8] = {";
+    const PARAM_LEN_PATTERN: &str = "[";
+    const LEN_BYTES_PATTERN: &str = "] = {";
     const AFTER_BYTES_PATTERN: &str = "};";
 
     let mut type_layout_metas = HashMap::new();
@@ -171,14 +182,23 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStrea
         let Some(len_start_offset) = kernel_ptx[param_start..].find(PARAM_LEN_PATTERN) else {
             abort_call_site!("Kernel compilation generated invalid PTX: missing type layout data")
         };
-        let bytes_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
+        let len_start = param_start + len_start_offset + PARAM_LEN_PATTERN.len();
+
+        let Some(bytes_start_offset) = kernel_ptx[len_start..].find(LEN_BYTES_PATTERN) else {
+            abort_call_site!("Kernel compilation generated invalid PTX: missing type layout length")
+        };
+        let bytes_start = len_start + bytes_start_offset + LEN_BYTES_PATTERN.len();
 
         let Some(bytes_end_offset) = kernel_ptx[bytes_start..].find(AFTER_BYTES_PATTERN) else {
             abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout data")
         };
         let param = &kernel_ptx[param_start..(param_start + len_start_offset)];
+        let len = &kernel_ptx[len_start..(len_start + bytes_start_offset)];
         let bytes = &kernel_ptx[bytes_start..(bytes_start + bytes_end_offset)];
 
+        let Ok(len) = len.parse::<usize>() else {
+            abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout length")
+        };
         let Ok(bytes) = bytes
             .split(", ")
             .map(std::str::FromStr::from_str)
@@ -187,14 +207,14 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStrea
             abort_call_site!("Kernel compilation generated invalid PTX: invalid type layout byte")
         };
 
-        let Ok(bytes) = bytes.try_into() else {
+        if bytes.len() != len {
             abort_call_site!(
                 "Kernel compilation generated invalid PTX: type layout length mismatch"
             );
-        };
+        }
 
         if type_layout_metas
-            .insert(String::from(param), u64::from_le_bytes(bytes))
+            .insert(String::from(param), bytes)
             .is_some()
         {
             abort_call_site!(
@@ -207,27 +227,43 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStrea
         kernel_ptx.replace_range(type_layout_start..type_layout_end, "");
     }
 
-    let Some(type_layout_hash_seed) = type_layout_metas
-        .get(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT)
-        .copied()
+    let Some(type_layout_hash_seed) = type_layout_metas.remove(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT)
     else {
         abort_call_site!(
             "Kernel compilation generated invalid PTX: missing type information hash seed"
         );
     };
-    let Some(type_layout_hash) = type_layout_metas.get(KERNEL_TYPE_LAYOUT_IDENT).copied() else {
+    let Ok(type_layout_hash_seed) = type_layout_hash_seed.as_slice().try_into() else {
+        abort_call_site!(
+            "Kernel compilation generated invalid PTX: invalid type information hash seed"
+        );
+    };
+    let type_layout_hash_seed = u64::from_le_bytes(type_layout_hash_seed);
+
+    let Some(type_layout_hash) = type_layout_metas.remove(KERNEL_TYPE_LAYOUT_IDENT) else {
         abort_call_site!("Kernel compilation generated invalid PTX: missing type information");
     };
+    let mut type_layout_hash_remainder = type_layout_hash.as_slice();
+    let mut type_layout_hash = Vec::new();
+    while let Some((hash, remainder)) = type_layout_hash_remainder.split_first_chunk() {
+        type_layout_hash.push(u64::from_le_bytes(*hash));
+        type_layout_hash_remainder = remainder;
+    }
+    if !type_layout_hash_remainder.is_empty() {
+        abort_call_site!("Kernel compilation generated invalid PTX: invalid type information");
+    }
 
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
+    let ffi_signature_hash_seed_ident =
+        syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, Span::call_site());
 
     quote! {
-        const fn #ffi_signature_ident<T: TypeGraphLayout>() -> HostAndDeviceKernelSignatureTypeLayout {
-            if hash_type_graph::<T>(#type_layout_hash_seed) == #type_layout_hash {
-                HostAndDeviceKernelSignatureTypeLayout::Match
-            } else {
-                HostAndDeviceKernelSignatureTypeLayout::Mismatch
-            }
+        const fn #ffi_signature_ident(hashes: &[u64]) -> HostAndDeviceKernelSignatureTypeLayout {
+            check_ptx_kernel_signature(hashes, &[#(#type_layout_hash),*])
+        }
+
+        const fn #ffi_signature_hash_seed_ident() -> u64 {
+            #type_layout_hash_seed
         }
     }
 }

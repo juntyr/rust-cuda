@@ -26,6 +26,7 @@ pub(in super::super) fn quote_cuda_wrapper(
 ) -> TokenStream {
     let (ffi_inputs, ffi_types) =
         specialise_ffi_input_types(crate_path, inputs, func, impl_generics);
+    let ffi_types_len = ffi_types.len();
 
     let ffi_param_ptx_jit_wrap = func_inputs.iter().enumerate().rev().fold(
         quote! {
@@ -65,7 +66,6 @@ pub(in super::super) fn quote_cuda_wrapper(
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, func_ident.span());
     let ffi_signature_hash_seed_ident =
         syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, func_ident.span());
-    let ffi_signature_ty = quote! { extern "C" fn(#(#ffi_types),*) };
 
     let ffi_signature_seed =
         std::hash::BuildHasher::hash_one(&std::hash::RandomState::new(), 0xd236_cae6_da79_5f77_u64);
@@ -94,7 +94,9 @@ pub(in super::super) fn quote_cuda_wrapper(
             static #ffi_signature_hash_seed_ident: [u8; 8] = #ffi_signature_seed.to_le_bytes();
             unsafe { ::core::ptr::read_volatile(&#ffi_signature_hash_seed_ident) };
             #[no_mangle]
-            static #ffi_signature_ident: [u8; 8] = #crate_path::deps::const_type_layout::hash_type_graph::<#ffi_signature_ty>(#ffi_signature_seed).to_le_bytes();
+            static #ffi_signature_ident: [[u8; 8]; #ffi_types_len] = [#(
+                #crate_path::deps::const_type_layout::hash_type_graph::<#ffi_types>(#ffi_signature_seed).to_le_bytes()
+            ),*];
             unsafe { ::core::ptr::read_volatile(&#ffi_signature_ident) };
             unsafe { ::core::arch::asm!(#KERNEL_TYPE_USE_END_CANARY); }
 
