@@ -34,7 +34,7 @@
 #![cfg_attr(all(any(feature = "device", target_os = "cuda"), not(doc)), no_std)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
-#![cfg_attr(feature = "device", feature(stdarch_nvptx))]
+#![cfg_attr(all(feature = "device", not(doc)), feature(stdarch_nvptx))]
 #![cfg_attr(feature = "device", feature(asm_experimental_arch))]
 #![cfg_attr(feature = "device", feature(asm_const))]
 #![feature(doc_auto_cfg)]
