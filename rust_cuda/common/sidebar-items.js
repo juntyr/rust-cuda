@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"attr":["kernel"],"derive":["LendRustToCuda"],"struct":["DeviceAccessible","DeviceConstRef","DeviceMutRef"],"trait":["CudaAsRust","RustToCuda","RustToCudaProxy"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_copy.rs`."><title>field_copy.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (1a7397988 2024-05-17)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/rust_to_cuda/field_copy.rs`."><title>field_copy.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (aed2187d5 2024-04-27)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rust_cuda_derive/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -120,40 +120,156 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro2::TokenStream;
 <span class="kw">use </span>quote::{format_ident, quote, ToTokens};
 
-<span class="kw">use </span><span class="kw">super</span>::field_ty::CudaReprFieldTy;
+<span class="kw">use </span><span class="kw">crate</span>::rust_to_cuda::field_ty::CudaReprFieldTy;
 
 <span class="attr">#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 </span><span class="kw">pub fn </span>impl_field_copy_init_and_expand_alloc_type(
+    crate_path: <span class="kw-2">&amp;</span>syn::Path,
     field: <span class="kw-2">&amp;</span>syn::Field,
     field_index: usize,
 
     cuda_repr_field_ty: <span class="kw-2">&amp;</span>CudaReprFieldTy,
 
     <span class="kw-2">mut </span>combined_cuda_alloc_type: TokenStream,
+    <span class="kw-2">mut </span>combined_cuda_alloc_async_type: TokenStream,
 
     r2c_field_declarations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+    r2c_field_async_declarations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+    r2c_field_async_completions: <span class="kw-2">&amp;mut </span>Vec&lt;syn::Ident&gt;,
     r2c_field_initialisations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
     r2c_field_destructors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+    r2c_field_async_destructors: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
+    r2c_field_async_completion_calls: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
 
     c2r_field_initialisations: <span class="kw-2">&amp;mut </span>Vec&lt;TokenStream&gt;,
-) -&gt; TokenStream {
-    <span class="kw">let </span>field_accessor = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
+) -&gt; (TokenStream, TokenStream) {
+    <span class="attr">#[allow(clippy::option_if_let_else)]
+    </span><span class="kw">let </span>field_accessor = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
         <span class="prelude-val">Some</span>(ident) =&gt; <span class="macro">quote!</span> { #ident },
         <span class="prelude-val">None </span>=&gt; proc_macro2::Literal::usize_unsuffixed(field_index).to_token_stream(),
     };
-    <span class="kw">let </span>field_repr_ident = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
+    <span class="attr">#[allow(clippy::option_if_let_else)]
+    </span><span class="kw">let </span>field_repr_ident = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
         <span class="prelude-val">Some</span>(ident) =&gt; <span class="macro">format_ident!</span>(<span class="string">"field_{}_repr"</span>, ident),
         <span class="prelude-val">None </span>=&gt; <span class="macro">format_ident!</span>(<span class="string">"field_{}_repr"</span>, field_index),
+    };
+    <span class="attr">#[allow(clippy::option_if_let_else)]
+    </span><span class="kw">let </span>field_completion_ident = <span class="kw">match </span><span class="kw-2">&amp;</span>field.ident {
+        <span class="prelude-val">Some</span>(ident) =&gt; <span class="macro">format_ident!</span>(<span class="string">"field_{}_completion"</span>, ident),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">format_ident!</span>(<span class="string">"field_{}_completion"</span>, field_index),
     };
     <span class="kw">let </span>optional_field_ident = field.ident.as_ref().map(|ident| <span class="macro">quote!</span> { #ident: });
 
     <span class="kw">match </span>cuda_repr_field_ty {
         CudaReprFieldTy::SafeDeviceCopy =&gt; {
             r2c_field_declarations.push(<span class="macro">quote!</span> {
-                <span class="kw">let </span>#field_repr_ident = rust_cuda::common::DeviceAccessible::from(
+                <span class="kw">let </span>#field_repr_ident = #crate_path::utils::ffi::DeviceAccessible::from(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor,
+                );
+            });
+            r2c_field_async_declarations.push(<span class="macro">quote!</span> {
+                <span class="kw">let </span>#field_repr_ident = #crate_path::utils::ffi::DeviceAccessible::from(
                     <span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor,
                 );
             });
@@ -164,23 +280,37 @@
 
             c2r_field_initialisations.push(<span class="macro">quote!</span> {
                 #optional_field_ident {
-                    rust_cuda::common::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor).into_inner()
+                    #crate_path::lend::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor).into_inner()
                 },
             });
         },
         CudaReprFieldTy::RustToCuda { field_ty } =&gt; {
             combined_cuda_alloc_type = <span class="macro">quote!</span> {
-                rust_cuda::host::CombinedCudaAlloc&lt;
-                    &lt;#field_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaAllocation,
+                #crate_path::alloc::CombinedCudaAlloc&lt;
+                    &lt;#field_ty <span class="kw">as </span>#crate_path::lend::RustToCuda&gt;::CudaAllocation,
                     #combined_cuda_alloc_type
+                &gt;
+            };
+            combined_cuda_alloc_async_type = <span class="macro">quote!</span> {
+                #crate_path::alloc::CombinedCudaAlloc&lt;
+                    &lt;#field_ty <span class="kw">as </span>#crate_path::lend::RustToCudaAsync&gt;::CudaAllocationAsync,
+                    #combined_cuda_alloc_async_type
                 &gt;
             };
 
             r2c_field_declarations.push(<span class="macro">quote!</span> {
-                <span class="kw">let </span>(#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                <span class="kw">let </span>(#field_repr_ident, alloc_front) = #crate_path::lend::RustToCuda::borrow(
                     <span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor,
                     alloc_front,
                 )<span class="question-mark">?</span>;
+            });
+            r2c_field_async_declarations.push(<span class="macro">quote!</span> {
+                <span class="kw">let </span>(#field_repr_ident, alloc_front) = #crate_path::lend::RustToCudaAsync::borrow_async(
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor,
+                    alloc_front,
+                    stream,
+                )<span class="question-mark">?</span>;
+                <span class="kw">let </span>(#field_repr_ident, #field_completion_ident) = #field_repr_ident.unwrap_unchecked()<span class="question-mark">?</span>;
             });
 
             r2c_field_initialisations.push(<span class="macro">quote!</span> {
@@ -188,33 +318,72 @@
             });
 
             r2c_field_destructors.push(<span class="macro">quote!</span> {
-                <span class="kw">let </span>alloc_front = rust_cuda::common::RustToCuda::restore(
+                <span class="kw">let </span>alloc_front = #crate_path::lend::RustToCuda::restore(
                     <span class="kw-2">&amp;mut </span><span class="self">self</span>.#field_accessor,
                     alloc_front,
                 )<span class="question-mark">?</span>;
             });
+            r2c_field_async_destructors.push(<span class="macro">quote!</span> {
+                <span class="kw">let </span>this_backup = <span class="kw">unsafe </span>{
+                    ::core::mem::ManuallyDrop::new(::core::ptr::read(<span class="kw-2">&amp;</span>this))
+                };
+                <span class="kw">let </span>(r#async, alloc_front) = #crate_path::lend::RustToCudaAsync::restore_async(
+                    this.map_mut(|this| <span class="kw-2">&amp;mut </span>this.#field_accessor),
+                    alloc_front,
+                    stream,
+                )<span class="question-mark">?</span>;
+                <span class="kw">let </span>(value, #field_completion_ident) = r#async.unwrap_unchecked()<span class="question-mark">?</span>;
+                ::core::mem::forget(value);
+                <span class="kw">let </span>this = ::core::mem::ManuallyDrop::into_inner(this_backup);
+            });
+
+            r2c_field_async_completion_calls.push(<span class="macro">quote!</span> {
+                #crate_path::utils::r#async::Completion::&lt;
+                    #crate_path::deps::owning_ref::BoxRefMut&lt;<span class="lifetime">'a</span>, CudaRestoreOwner, <span class="kw">_</span>&gt;
+                &gt;::complete(
+                    #field_completion_ident, <span class="kw-2">&amp;mut </span>this.#field_accessor,
+                )<span class="question-mark">?</span>;
+            });
+
+            r2c_field_async_completions.push(field_completion_ident);
 
             c2r_field_initialisations.push(<span class="macro">quote!</span> {
                 #optional_field_ident {
-                    rust_cuda::common::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor)
+                    #crate_path::lend::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor)
                 },
             });
         },
         CudaReprFieldTy::RustToCudaProxy { proxy_ty, field_ty } =&gt; {
             combined_cuda_alloc_type = <span class="macro">quote!</span> {
-                rust_cuda::host::CombinedCudaAlloc&lt;
-                    &lt;#proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCuda&gt;::CudaAllocation,
+                #crate_path::alloc::CombinedCudaAlloc&lt;
+                    &lt;#proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCuda&gt;::CudaAllocation,
                     #combined_cuda_alloc_type
+                &gt;
+            };
+            combined_cuda_alloc_async_type = <span class="macro">quote!</span> {
+                #crate_path::alloc::CombinedCudaAlloc&lt;
+                    &lt;#proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCudaAsync&gt;::CudaAllocationAsync,
+                    #combined_cuda_alloc_async_type
                 &gt;
             };
 
             r2c_field_declarations.push(<span class="macro">quote!</span> {
-                <span class="kw">let </span>(#field_repr_ident, alloc_front) = rust_cuda::common::RustToCuda::borrow(
+                <span class="kw">let </span>(#field_repr_ident, alloc_front) = #crate_path::lend::RustToCuda::borrow(
                     &lt;
-                        #proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCudaProxy&lt;#field_ty&gt;
+                        #proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCudaProxy&lt;#field_ty&gt;
                     &gt;::from_ref(<span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor),
                     alloc_front,
                 )<span class="question-mark">?</span>;
+            });
+            r2c_field_async_declarations.push(<span class="macro">quote!</span> {
+                <span class="kw">let </span>(#field_repr_ident, alloc_front) = #crate_path::lend::RustToCudaAsync::borrow_async(
+                    &lt;
+                        #proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCudaProxy&lt;#field_ty&gt;
+                    &gt;::from_ref(<span class="kw-2">&amp;</span><span class="self">self</span>.#field_accessor),
+                    alloc_front,
+                    stream,
+                )<span class="question-mark">?</span>;
+                <span class="kw">let </span>(#field_repr_ident, #field_completion_ident) = #field_repr_ident.unwrap_unchecked()<span class="question-mark">?</span>;
             });
 
             r2c_field_initialisations.push(<span class="macro">quote!</span> {
@@ -222,24 +391,51 @@
             });
 
             r2c_field_destructors.push(<span class="macro">quote!</span> {
-                <span class="kw">let </span>alloc_front = rust_cuda::common::RustToCuda::restore(
+                <span class="kw">let </span>alloc_front = #crate_path::lend::RustToCuda::restore(
                     &lt;
-                        #proxy_ty <span class="kw">as </span>rust_cuda::common::RustToCudaProxy&lt;#field_ty&gt;
+                        #proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCudaProxy&lt;#field_ty&gt;
                     &gt;::from_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.#field_accessor),
                     alloc_front,
                 )<span class="question-mark">?</span>;
             });
+            r2c_field_async_destructors.push(<span class="macro">quote!</span> {
+                <span class="kw">let </span>this_backup = <span class="kw">unsafe </span>{
+                    ::core::mem::ManuallyDrop::new(::core::ptr::read(<span class="kw-2">&amp;</span>this))
+                };
+                <span class="kw">let </span>(r#async, alloc_front) = #crate_path::lend::RustToCudaAsync::restore_async(
+                    this.map_mut(|this| &lt;
+                        #proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCudaProxy&lt;#field_ty&gt;
+                    &gt;::from_mut(<span class="kw-2">&amp;mut </span>this.#field_accessor)),
+                    alloc_front,
+                    stream,
+                )<span class="question-mark">?</span>;
+                <span class="kw">let </span>(value, #field_completion_ident) = r#async.unwrap_unchecked()<span class="question-mark">?</span>;
+                ::core::mem::forget(value);
+                <span class="kw">let </span>this = ::core::mem::ManuallyDrop::into_inner(this_backup);
+            });
+
+            r2c_field_async_completion_calls.push(<span class="macro">quote!</span> {
+                #crate_path::utils::r#async::Completion::&lt;
+                    #crate_path::deps::owning_ref::BoxRefMut&lt;<span class="lifetime">'a</span>, CudaRestoreOwner, <span class="kw">_</span>&gt;
+                &gt;::complete(
+                    #field_completion_ident, &lt;
+                        #proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCudaProxy&lt;#field_ty&gt;
+                    &gt;::from_mut(<span class="kw-2">&amp;mut </span>this.#field_accessor),
+                )<span class="question-mark">?</span>;
+            });
+
+            r2c_field_async_completions.push(field_completion_ident);
 
             c2r_field_initialisations.push(<span class="macro">quote!</span> {
                 #optional_field_ident {
-                    rust_cuda::common::RustToCudaProxy::&lt;#field_ty&gt;::into(
-                        rust_cuda::common::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor)
+                    #crate_path::lend::RustToCudaProxy::&lt;#field_ty&gt;::into(
+                        #crate_path::lend::CudaAsRust::as_rust(<span class="kw-2">&amp;</span>this.#field_accessor)
                     )
                 },
             });
         },
     }
 
-    combined_cuda_alloc_type
+    (combined_cuda_alloc_type, combined_cuda_alloc_async_type)
 }
 </code></pre></div></section></main></body></html>

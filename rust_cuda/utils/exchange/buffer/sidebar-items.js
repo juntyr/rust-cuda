@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["CudaExchangeBuffer","CudaExchangeBufferDevice","CudaExchangeBufferHost","CudaExchangeItem"]};
+window.SIDEBAR_ITEMS = {"struct":["CudaExchangeBuffer","CudaExchangeItem"]};

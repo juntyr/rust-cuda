@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Dim3","Idx3","Thread","ThreadBlock","ThreadBlockGrid"]};

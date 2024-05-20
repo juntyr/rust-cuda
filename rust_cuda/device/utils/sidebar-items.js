@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["block_dim","block_idx","grid_dim","index","thread_idx"],"struct":["Dim3","Idx3","PTXAllocator"]};
+window.SIDEBAR_ITEMS = {"fn":["abort","exit","pretty_print_alloc_error","pretty_print_panic_info","print"],"macro":["print","println"]};

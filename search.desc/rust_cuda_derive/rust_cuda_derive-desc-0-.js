@@ -1,1 +1,1 @@
-searchState.loadedDescShard("rust_cuda_derive", 0, "")
+searchState.loadedDescShard("rust_cuda_derive", 0, "CI Status MSRV Rust Doc License Status Code Coverage Gitpod\nProvides the <code>#[derive(LendRustToCuda)</code> derive macro for the …")

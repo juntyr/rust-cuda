@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"externcrate":["const_type_layout","owning_ref","rustacuda","rustacuda_core"]};

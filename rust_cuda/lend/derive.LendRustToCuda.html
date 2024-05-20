@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Provides the `#[derive(LendRustToCuda)` derive macro for the `rust_cuda::lend::RustToCuda` utility trait, which enables the usage of the `rust_cuda::lend::LendToCuda` trait that allows Rust data structures to be shared with CUDA kernels."><title>LendRustToCuda in rust_cuda::lend - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rust_cuda" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (aed2187d5 2024-04-27)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc derive"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../rust_cuda/index.html">rust_cuda</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><h2><a href="index.html">In rust_cuda::lend</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rust_cuda/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Derive Macro <a href="../index.html">rust_cuda</a>::<wbr><a href="index.html">lend</a>::<wbr><a class="derive" href="#">LendRustToCuda</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../src/rust_cuda_derive/lib.rs.html#57">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>#[derive(LendRustToCuda)]
+{
+    <span class="comment">// Attributes available to this derive:</span>
+    #[cuda]
+}
+</code></pre><span class="item-info"><div class="stab portability">Available on <strong>crate feature <code>derive</code></strong> only.</div></span><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Provides the <a href="derive.LendRustToCuda.html" title="derive rust_cuda::lend::LendRustToCuda"><code>#[derive(LendRustToCuda)</code></a>
+derive macro for the
+<a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html"><code>rust_cuda::lend::RustToCuda</code></a>
+utility trait, which enables the usage of the
+<a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.LendToCuda.html"><code>rust_cuda::lend::LendToCuda</code></a>
+trait that allows Rust data structures to be shared with CUDA kernels.</p>
+<p>At the moment, only
+<a href="https://doc.rust-lang.org/std/keyword.struct.html"><code>struct</code></a>s are supported
+by this derive macro.</p>
+<p>The derive also accepts a <code>#[cuda(...)]</code> attribute. You can annotate the
+entire struct with the <code>#[cuda(...)]</code> to configure the implementation as
+follows:</p>
+<ul>
+<li><code>#[cuda(crate = &quot;&lt;crate-path&gt;&quot;)]</code> changes the path to the <a href="https://juntyr.github.io/rust-cuda/rust_cuda"><code>rust-cuda</code></a>
+crate that the derive uses, which by default is <code>rust_cuda</code>.</li>
+<li><code>#[cuda(bound = &quot;&lt;where-predicate&gt;&quot;)]</code> adds the provided predicate to the
+where clause of the trait implementation.</li>
+<li><code>#[cuda(free = &quot;&lt;type&gt;&quot;)]</code> removes the the auto-added trait bounds for the
+type parameter <code>&lt;type&gt;</code> from the trait implementation, e.g. when
+implementing a wrapper around [<code>std::marker::PhantomData&lt;T&gt;</code>] which should
+implement the trait for any <code>T</code>.</li>
+<li><code>#[cuda(async = &lt;bool&gt;)]</code> explicitly enables or disables the async
+implementation of the trait, <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCudaAsync.html"><code>rust_cuda::lend::RustToCudaAsync</code></a>. By
+default, <code>#[cuda(async = true)]</code> is set.</li>
+<li><code>#[cuda(layout::ATTR = &quot;VALUE&quot;)]</code> adds the <code>#[layout(ATTR = &quot;VALUE&quot;)]</code>
+attribute to the <a href="https://docs.rs/const-type-layout/0.3.1/const_type_layout/derive.TypeLayout.html"><code>#derive(const_type_layout::TypeLayout)</code></a> derive for
+this struct’s <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html#associatedtype.CudaRepresentation"><code>rust_cuda::lend::RustToCuda::CudaRepresentation</code></a>.</li>
+<li><code>#[cuda(ignore)]</code> removes all subsequent attributes from the generated
+<a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html#associatedtype.CudaRepresentation"><code>rust_cuda::lend::RustToCuda::CudaRepresentation</code></a> struct.</li>
+</ul>
+<p>Additionally, the <code>#[cuda(...)]</code> attribute can also be applied individually
+to the fields of the struct to customise the implementation as follows:</p>
+<ul>
+<li><code>#[cuda(embed)]</code> signals that this field has a non-identity CUDA
+representation and should be embedded by using the
+<a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html"><code>rust_cuda::lend::RustToCuda</code></a> implementation of this field’s type. When
+this attribute is not specified, the field must instead implement
+[<code>Copy</code>], <a href="https://juntyr.github.io/rust-cuda/rust_cuda/safety/trait.PortableBitSemantics.html"><code>rust_cuda::safety::PortableBitSemantics</code></a>, and
+<a href="https://docs.rs/const-type-layout/0.3.1/const_type_layout/trait.TypeGraphLayout.html"><code>const_type_layout::TypeGraphLayout</code></a>.</li>
+<li><code>#[cuda(embed = &quot;&lt;proxy-type&gt;&quot;)]</code> works like <code>#[cuda(embed)]</code> but can be
+used when the field’s type does not implement
+<a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html"><code>rust_cuda::lend::RustToCuda</code></a> itself, but some <code>&lt;proxy-type&gt;</code> exists,
+which implements <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCudaProxy.html"><code>rust_cuda::lend::RustToCudaProxy</code></a> for the field’s
+type.</li>
+<li><code>#[cuda(ignore)]</code> removes all subsequent attributes from this field in the
+generated <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html#associatedtype.CudaRepresentation"><code>rust_cuda::lend::RustToCuda::CudaRepresentation</code></a> struct.</li>
+</ul>
+</div></details></section></div></main></body></html>

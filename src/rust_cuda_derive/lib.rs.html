@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (1a7397988 2024-05-17)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-derive/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rust_cuda_derive" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (aed2187d5 2024-04-27)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rust_cuda_derive/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -74,10 +74,99 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
-</pre></div><pre class="rust"><code><span class="attr">#![deny(clippy::pedantic)]
-#![feature(box_patterns)]
-#![feature(proc_macro_tracked_env)]
-#![feature(proc_macro_span)]
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! [![CI Status]][workflow] [![MSRV]][repo] [![Rust Doc]][docs] [![License
+//! Status]][fossa] [![Code Coverage]][codecov] [![Gitpod
+//! Ready-to-Code]][gitpod]
+//!
+//! [CI Status]: https://img.shields.io/github/actions/workflow/status/juntyr/rust-cuda/ci.yml?branch=main
+//! [workflow]: https://github.com/juntyr/rust-cuda/actions/workflows/ci.yml?query=branch%3Amain
+//!
+//! [MSRV]: https://img.shields.io/badge/MSRV-1.79.0--nightly-orange
+//! [repo]: https://github.com/juntyr/rust-cuda
+//!
+//! [Rust Doc]: https://img.shields.io/badge/docs-main-blue
+//! [docs]: https://juntyr.github.io/rust-cuda/rust_cuda_derive/
+//!
+//! [License Status]: https://app.fossa.com/api/projects/custom%2B26490%2Fgithub.com%2Fjuntyr%2Frust-cuda.svg?type=shield
+//! [fossa]: https://app.fossa.com/projects/custom%2B26490%2Fgithub.com%2Fjuntyr%2Frust-cuda?ref=badge_shield
+//!
+//! [Code Coverage]: https://img.shields.io/codecov/c/github/juntyr/rust-cuda?token=wfeAeybbbx
+//! [codecov]: https://codecov.io/gh/juntyr/rust-cuda
+//!
+//! [Gitpod Ready-to-Code]: https://img.shields.io/badge/Gitpod-ready-blue?logo=gitpod
+//! [gitpod]: https://gitpod.io/#https://github.com/juntyr/rust-cuda
+//!
+//! `rust-cuda-derive` provides the
+//! [`#[derive(LendRustToCuda)]`](LendRustToCuda) derive macro for the
+//! [`rust_cuda::lend::RustToCuda`]
+//! utility trait, which enables the usage of the
+//! [`rust_cuda::lend::LendToCuda`]
+//! trait that allows Rust data structures to be shared with CUDA kernels.
+//!
+//! The async variants of both traits are *optionally* implemented as well.
+//!
+//! [`rust_cuda::lend::RustToCuda`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html
+//! [`rust_cuda::lend::LendToCuda`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.LendToCuda.html
+
+</span><span class="attr">#![deny(clippy::complexity)]
+#![deny(clippy::correctness)]
+#![warn(clippy::nursery)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::perf)]
+#![deny(clippy::style)]
+#![deny(clippy::suspicious)]
+#![deny(unsafe_code)]
+#![deny(missing_docs)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![doc(html_root_url = <span class="string">"https://juntyr.github.io/rust-cuda/"</span>)]
@@ -89,16 +178,68 @@
 
 <span class="kw">use </span>proc_macro::TokenStream;
 
-<span class="kw">mod </span>kernel;
 <span class="kw">mod </span>rust_to_cuda;
 
-<span class="comment">// cargo expand --target x86_64-unknown-linux-gnu --ugly \
-//  | rustfmt --config max_width=160 &gt; out.rs
-// cargo expand --target nvptx64-nvidia-cuda --ugly \
-//  | rustfmt --config max_width=160 &gt; out.rs
-
-</span><span class="attr">#[proc_macro_error]
+<span class="attr">#[proc_macro_error]
 #[proc_macro_derive(LendRustToCuda, attributes(cuda))]
+</span><span class="doccomment">/// Provides the [`#[derive(LendRustToCuda)`](LendRustToCuda)
+/// derive macro for the
+/// [`rust_cuda::lend::RustToCuda`]
+/// utility trait, which enables the usage of the
+/// [`rust_cuda::lend::LendToCuda`]
+/// trait that allows Rust data structures to be shared with CUDA kernels.
+///
+/// At the moment, only
+/// [`struct`](https://doc.rust-lang.org/std/keyword.struct.html)s are supported
+/// by this derive macro.
+///
+/// The derive also accepts a `#[cuda(...)]` attribute. You can annotate the
+/// entire struct with the `#[cuda(...)]` to configure the implementation as
+/// follows:
+///
+/// - `#[cuda(crate = "&lt;crate-path&gt;")]` changes the path to the [`rust-cuda`]
+///   crate that the derive uses, which by default is `rust_cuda`.
+/// - `#[cuda(bound = "&lt;where-predicate&gt;")]` adds the provided predicate to the
+///   where clause of the trait implementation.
+/// - `#[cuda(free = "&lt;type&gt;")]` removes the the auto-added trait bounds for the
+///   type parameter `&lt;type&gt;` from the trait implementation, e.g. when
+///   implementing a wrapper around [`std::marker::PhantomData&lt;T&gt;`] which should
+///   implement the trait for any `T`.
+/// - `#[cuda(async = &lt;bool&gt;)]` explicitly enables or disables the async
+///   implementation of the trait, [`rust_cuda::lend::RustToCudaAsync`]. By
+///   default, `#[cuda(async = true)]` is set.
+/// - `#[cuda(layout::ATTR = "VALUE")]` adds the `#[layout(ATTR = "VALUE")]`
+///   attribute to the [`#derive(const_type_layout::TypeLayout)`] derive for
+///   this struct's [`rust_cuda::lend::RustToCuda::CudaRepresentation`].
+/// - `#[cuda(ignore)]` removes all subsequent attributes from the generated
+///   [`rust_cuda::lend::RustToCuda::CudaRepresentation`] struct.
+///
+/// Additionally, the `#[cuda(...)]` attribute can also be applied individually
+/// to the fields of the struct to customise the implementation as follows:
+///
+/// - `#[cuda(embed)]` signals that this field has a non-identity CUDA
+///   representation and should be embedded by using the
+///   [`rust_cuda::lend::RustToCuda`] implementation of this field's type. When
+///   this attribute is not specified, the field must instead implement
+///   [`Copy`], [`rust_cuda::safety::PortableBitSemantics`], and
+///   [`const_type_layout::TypeGraphLayout`].
+/// - `#[cuda(embed = "&lt;proxy-type&gt;")]` works like `#[cuda(embed)]` but can be
+///   used when the field's type does not implement
+///   [`rust_cuda::lend::RustToCuda`] itself, but some `&lt;proxy-type&gt;` exists,
+///   which implements [`rust_cuda::lend::RustToCudaProxy`] for the field's
+///   type.
+/// - `#[cuda(ignore)]` removes all subsequent attributes from this field in the
+///   generated [`rust_cuda::lend::RustToCuda::CudaRepresentation`] struct.
+///
+/// [`rust_cuda::lend::RustToCuda`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html
+/// [`rust_cuda::lend::LendToCuda`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.LendToCuda.html
+/// [`rust-cuda`]: https://juntyr.github.io/rust-cuda/rust_cuda
+/// [`rust_cuda::lend::RustToCudaAsync`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCudaAsync.html
+/// [`#derive(const_type_layout::TypeLayout)`]: https://docs.rs/const-type-layout/0.3.1/const_type_layout/derive.TypeLayout.html
+/// [`rust_cuda::lend::RustToCuda::CudaRepresentation`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html#associatedtype.CudaRepresentation
+/// [`rust_cuda::safety::PortableBitSemantics`]: https://juntyr.github.io/rust-cuda/rust_cuda/safety/trait.PortableBitSemantics.html
+/// [`const_type_layout::TypeGraphLayout`]: https://docs.rs/const-type-layout/0.3.1/const_type_layout/trait.TypeGraphLayout.html
+/// [`rust_cuda::lend::RustToCudaProxy`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCudaProxy.html
 </span><span class="kw">pub fn </span>rust_to_cuda_derive(input: TokenStream) -&gt; TokenStream {
     <span class="comment">// Note: We cannot report a more precise span yet
     </span><span class="kw">let </span>ast = <span class="kw">match </span>syn::parse(input) {
@@ -108,46 +249,5 @@
 
     <span class="comment">// Build the implementation of the `RustToCuda` and `CudaAsRust` traits
     </span>rust_to_cuda::impl_rust_to_cuda(<span class="kw-2">&amp;</span>ast)
-}
-
-<span class="attr">#[proc_macro_error]
-#[proc_macro_attribute]
-</span><span class="kw">pub fn </span>kernel(attr: TokenStream, func: TokenStream) -&gt; TokenStream {
-    kernel::wrapper::kernel(attr, func)
-}
-
-<span class="attr">#[doc(hidden)]
-#[proc_macro_error]
-#[proc_macro]
-</span><span class="kw">pub fn </span>specialise_kernel_type(tokens: TokenStream) -&gt; TokenStream {
-    kernel::specialise::ty::specialise_kernel_type(tokens)
-}
-
-<span class="attr">#[doc(hidden)]
-#[proc_macro_error]
-#[proc_macro]
-</span><span class="kw">pub fn </span>specialise_kernel_call(tokens: TokenStream) -&gt; TokenStream {
-    kernel::specialise::call::specialise_kernel_call(tokens)
-}
-
-<span class="attr">#[doc(hidden)]
-#[proc_macro_error]
-#[proc_macro_attribute]
-</span><span class="kw">pub fn </span>specialise_kernel_entry(attr: TokenStream, func: TokenStream) -&gt; TokenStream {
-    kernel::specialise::entry::specialise_kernel_entry(attr, func)
-}
-
-<span class="attr">#[doc(hidden)]
-#[proc_macro_error]
-#[proc_macro]
-</span><span class="kw">pub fn </span>check_kernel(tokens: TokenStream) -&gt; TokenStream {
-    kernel::link::check_kernel(tokens)
-}
-
-<span class="attr">#[doc(hidden)]
-#[proc_macro_error]
-#[proc_macro]
-</span><span class="kw">pub fn </span>link_kernel(tokens: TokenStream) -&gt; TokenStream {
-    kernel::link::link_kernel(tokens)
 }
 </code></pre></div></section></main></body></html>

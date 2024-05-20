@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["DeviceAccessible","DeviceConstPointer","DeviceConstRef","DeviceMutPointer","DeviceMutRef","DeviceOwnedPointer","DeviceOwnedRef"]};

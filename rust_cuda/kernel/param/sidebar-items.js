@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["DeepPerThreadBorrow","PerThreadShallowCopy","PtxJit","ShallowInteriorMutable"],"trait":["InteriorMutableSync"]};

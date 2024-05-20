@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"externcrate":["ptx_jit","rustacuda","rustacuda_core","rustacuda_derive"],"macro":["assert","assert_eq","assert_ne","print","println"],"mod":["common","device","host","safety","utils"]};
+window.SIDEBAR_ITEMS = {"mod":["alloc","deps","device","host","kernel","lend","safety","utils"]};

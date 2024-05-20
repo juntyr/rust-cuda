@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/device/utils.rs`."><title>utils.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rust_cuda" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (1a7397988 2024-05-17)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/device/utils.rs`."><title>utils.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rust_cuda" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (aed2187d5 2024-04-27)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../rust_cuda/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -212,230 +212,218 @@
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>alloc::alloc::{GlobalAlloc, Layout};
-<span class="attr">#[cfg(target_os = <span class="string">"cuda"</span>)]
-</span><span class="kw">use </span>core::arch::nvptx;
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::deps::alloc::{fmt, string::String};
 
-<span class="doccomment">/// Memory allocator using CUDA malloc/free
-</span><span class="kw">pub struct </span>PTXAllocator;
-
-<span class="kw">unsafe impl </span>GlobalAlloc <span class="kw">for </span>PTXAllocator {
-    <span class="kw">unsafe fn </span>alloc(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: Layout) -&gt; <span class="kw-2">*mut </span>u8 {
-        nvptx::malloc(layout.size()).cast()
-    }
-
-    <span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, _layout: Layout) {
-        nvptx::free(ptr.cast());
-    }
+<span class="doccomment">/// Abort the CUDA kernel using the `trap` system call.
+///
+/// [`abort`] poisons the CUDA context and no more work can be performed in it.
+</span><span class="attr">#[allow(clippy::inline_always)]
+#[inline(always)]
+</span><span class="kw">pub fn </span>abort() -&gt; ! {
+    <span class="kw">unsafe </span>{ ::core::arch::nvptx::trap() }
 }
 
-<span class="comment">// Based on https://github.com/popzxc/stdext-rs/blob/master/src/macros.rs
-</span><span class="attr">#[macro_export]
-#[doc(hidden)]
-</span><span class="macro">macro_rules!</span> function {
-    () =&gt; {{
-        <span class="comment">// Hack to get the name of the enclosing function
-        </span><span class="kw">fn </span>f() {}
-        <span class="kw">fn </span>type_name_of&lt;T&gt;(<span class="kw">_</span>: T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-            core::any::type_name::&lt;T&gt;()
-        }
-        <span class="kw">let </span>name = type_name_of(f);
-
-        <span class="comment">// Remove the `::f` suffix
-        </span><span class="kw-2">&amp;</span>name[..name.len() - <span class="number">3</span>]
-    }};
+<span class="doccomment">/// Exit the CUDA kernel using the `exit` instruction.
+///
+/// # Safety
+///
+/// [`exit`] quits the kernel early and any mutable data accessible outside this
+/// kernel launch (by the host or a subsequent kernel launch) may be in an
+/// inconsistent state. Therefore, kernel failure must be communicated back to
+/// host and handled in some other manner.
+///
+/// Safely return from the main kernel function instead.
+</span><span class="attr">#[allow(clippy::inline_always)]
+#[inline(always)]
+</span><span class="kw">pub unsafe fn </span>exit() -&gt; ! {
+    <span class="kw">unsafe </span>{ <span class="macro">::core::arch::asm!</span>(<span class="string">"exit;"</span>, options(noreturn)) }
 }
 
-<span class="doccomment">/// Alternative of [`std::print!`](https://doc.rust-lang.org/std/macro.print.html) using CUDA `vprintf` system-call
-</span><span class="attr">#[doc(cfg(all(not(feature = <span class="string">"host"</span>), target_os = <span class="string">"cuda"</span>)))]
-#[macro_export]
-</span><span class="macro">macro_rules!</span> print {
+<span class="doccomment">/// Prints to the CUDA kernel's standard output using the `vprintf` system call.
+///
+/// Replacement for the [`std::print!`] macro, which now forwards to the
+/// [`print()`] function.
+</span><span class="kw">pub macro </span>print($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) {
+    <span class="self">self</span>::print(<span class="macro">::core::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>))
+}
+
+<span class="doccomment">/// Prints to the CUDA kernel's standard output using the `vprintf` system call.
+///
+/// Replacement for the [`std::println!`] macro, which now forwards to the
+/// [`print()`] function.
+</span><span class="kw">pub macro </span>println {
+    () =&gt; {
+        <span class="self">self</span>::print(<span class="macro">::core::format_args!</span>(<span class="string">"\n"</span>))
+    },
     ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {
-        <span class="kw">let </span>msg = <span class="macro-nonterminal">$</span><span class="macro">crate::alloc::format!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>);
+        <span class="self">self</span>::print(<span class="macro">::core::format_args!</span>(<span class="string">"{}\n"</span>, <span class="macro">::core::format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>)))
+    },
+}
 
-        <span class="attr">#[allow(unused_unsafe)]
-        </span><span class="kw">unsafe </span>{
-            ::core::arch::nvptx::vprintf(msg.as_ptr(), ::core::ptr::null_mut());
-        }
+<span class="doccomment">/// The [`print()`] function takes an [`Arguments`](core::fmt::Arguments) struct
+/// and formats and prints it to the CUDA kernel's standard output using the
+/// `vprintf` system call.
+///
+/// The [`Arguments`](core::fmt::Arguments) instance can be created with the
+/// [`format_args!`](core::format_args) macro.
+</span><span class="attr">#[allow(clippy::inline_always)]
+#[inline(always)]
+</span><span class="kw">pub fn </span>print(args: ::core::fmt::Arguments) {
+    <span class="attr">#[repr(C)]
+    </span><span class="kw">struct </span>FormatArgs {
+        msg_len: u32,
+        msg_ptr: <span class="kw-2">*const </span>u8,
     }
-}
 
-<span class="doccomment">/// Alternative of [`std::println!`](https://doc.rust-lang.org/std/macro.println.html) using CUDA `vprintf` system-call
-</span><span class="attr">#[doc(cfg(all(not(feature = <span class="string">"host"</span>), target_os = <span class="string">"cuda"</span>)))]
-#[macro_export]
-</span><span class="macro">macro_rules!</span> println {
-    () =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::print!</span>(<span class="string">"\n"</span>));
-    (<span class="macro-nonterminal">$fmt</span>:expr) =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::print!</span>(<span class="macro">concat!</span>(<span class="macro-nonterminal">$fmt</span>, <span class="string">"\n"</span>)));
-    (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$</span><span class="macro">crate::print!</span>(<span class="macro">concat!</span>(<span class="macro-nonterminal">$fmt</span>, <span class="string">"\n"</span>), $(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
-}
-
-<span class="doccomment">/// Assertion in GPU kernel for one expression is true.
-</span><span class="attr">#[doc(cfg(all(not(feature = <span class="string">"host"</span>), target_os = <span class="string">"cuda"</span>)))]
-#[macro_export]
-</span><span class="macro">macro_rules!</span> assert {
-    (<span class="macro-nonterminal">$e</span>:expr) =&gt; {
-        <span class="kw">if </span>!<span class="macro-nonterminal">$e </span>{
-            <span class="kw">let </span>msg = <span class="macro-nonterminal">$</span><span class="macro">crate::alloc::format!</span>(
-                <span class="string">"\nassertion failed: {}\nexpression: {:?}"</span>,
-                <span class="macro">stringify!</span>(<span class="macro-nonterminal">$e</span>),
-                <span class="macro-nonterminal">$e</span>,
-            );
-
-            <span class="kw">unsafe </span>{
-                ::core::arch::nvptx::__assert_fail(
-                    msg.as_ptr(),
-                    <span class="macro">file!</span>().as_ptr(),
-                    <span class="macro">line!</span>(),
-                    <span class="macro-nonterminal">$</span><span class="macro">crate::function!</span>().<span class="macro-nonterminal">as_ptr</span>(),
-                )
-            };
-        }
+    <span class="kw">let </span>msg; <span class="comment">// place to store the dynamically expanded format string
+    </span><span class="attr">#[allow(clippy::option_if_let_else)]
+    </span><span class="kw">let </span>msg = <span class="kw">if let </span><span class="prelude-val">Some</span>(msg) = args.as_str() {
+        msg
+    } <span class="kw">else </span>{
+        msg = fmt::format(args);
+        msg.as_str()
     };
-}
 
-<span class="doccomment">/// Assertion in GPU kernel for two expressions are equal.
-</span><span class="attr">#[doc(cfg(all(not(feature = <span class="string">"host"</span>), target_os = <span class="string">"cuda"</span>)))]
-#[macro_export]
-</span><span class="macro">macro_rules!</span> assert_eq {
-    (<span class="macro-nonterminal">$a</span>:expr, <span class="macro-nonterminal">$b</span>:expr) =&gt; {
-        <span class="kw">if </span><span class="macro-nonterminal">$a </span>!= <span class="macro-nonterminal">$b </span>{
-            <span class="kw">let </span>msg = <span class="macro-nonterminal">$</span><span class="macro">crate::alloc::format!</span>(
-                <span class="string">"\nassertion failed: ({} == {})\nleft : {:?}\nright: {:?}"</span>,
-                <span class="macro">stringify!</span>(<span class="macro-nonterminal">$a</span>),
-                <span class="macro">stringify!</span>(<span class="macro-nonterminal">$b</span>),
-                <span class="macro-nonterminal">$a</span>,
-                <span class="macro-nonterminal">$b
-            </span>);
-
-            <span class="kw">unsafe </span>{
-                ::core::arch::nvptx::__assert_fail(
-                    msg.as_ptr(),
-                    <span class="macro">file!</span>().as_ptr(),
-                    <span class="macro">line!</span>(),
-                    <span class="macro-nonterminal">$</span><span class="macro">crate::function!</span>().<span class="macro-nonterminal">as_ptr</span>(),
-                )
-            };
-        }
+    <span class="kw">let </span>args = FormatArgs {
+        msg_len: u32::try_from(msg.len()).unwrap_or(u32::MAX),
+        msg_ptr: msg.as_ptr(),
     };
+
+    <span class="kw">unsafe </span>{
+        ::core::arch::nvptx::vprintf(<span class="string">c"%*s"</span>.as_ptr().cast(), ::core::ptr::from_ref(<span class="kw-2">&amp;</span>args).cast());
+    }
 }
 
-<span class="doccomment">/// Assertion in GPU kernel for two expressions are not equal.
-</span><span class="attr">#[doc(cfg(all(not(feature = <span class="string">"host"</span>), target_os = <span class="string">"cuda"</span>)))]
-#[macro_export]
-</span><span class="macro">macro_rules!</span> assert_ne {
-    (<span class="macro-nonterminal">$a</span>:expr, <span class="macro-nonterminal">$b</span>:expr) =&gt; {
-        <span class="kw">if </span><span class="macro-nonterminal">$a </span>== <span class="macro-nonterminal">$b </span>{
-            <span class="kw">let </span>msg = <span class="macro-nonterminal">$</span><span class="macro">crate::alloc::format!</span>(
-                <span class="string">"\nassertion failed: ({} != {})\nleft : {:?}\nright: {:?}"</span>,
-                <span class="macro">stringify!</span>(<span class="macro-nonterminal">$a</span>),
-                <span class="macro">stringify!</span>(<span class="macro-nonterminal">$b</span>),
-                <span class="macro-nonterminal">$a</span>,
-                <span class="macro-nonterminal">$b
-            </span>);
+<span class="doccomment">/// Helper function to efficiently pretty-print a [`core::panic::PanicInfo`]
+/// using the `vprintf` system call.
+///
+/// If `allow_dynamic_message` is set,
+/// [`alloc::fmt::format`](crate::deps::alloc::fmt::format) is used to print
+/// [`core::panic::PanicInfo::message`] message when
+/// [`core::fmt::Arguments::as_str`] returns [`None`]. Note that this may pull
+/// in a large amount of string formatting and dynamic allocation code.
+/// If unset, a default placeholder panic message is printed instead.
+///
+/// If `allow_dynamic_payload` is set, [`core::panic::PanicInfo::payload`] is
+/// checked for [`&amp;str`] and [`String`] to get a message to print if
+/// [`core::panic::PanicInfo::message`] returns [`None`]. Note that this may
+/// pull in some dynamic dispatch code. If unset, a default placeholder panic
+/// message is printed instead.
+</span><span class="attr">#[allow(clippy::inline_always)]
+#[inline(always)]
+</span><span class="kw">pub fn </span>pretty_print_panic_info(
+    info: <span class="kw-2">&amp;</span>::core::panic::PanicInfo,
+    allow_dynamic_message: bool,
+    allow_dynamic_payload: bool,
+) {
+    <span class="attr">#[repr(C)]
+    </span><span class="kw">struct </span>FormatArgs {
+        file_len: u32,
+        file_ptr: <span class="kw-2">*const </span>u8,
+        line: u32,
+        column: u32,
+        thread_idx_x: u32,
+        thread_idx_y: u32,
+        thread_idx_z: u32,
+        msg_len: u32,
+        msg_ptr: <span class="kw-2">*const </span>u8,
+    }
 
-            <span class="kw">unsafe </span>{
-                ::core::arch::nvptx::__assert_fail(
-                    msg.as_ptr(),
-                    <span class="macro">file!</span>().as_ptr(),
-                    <span class="macro">line!</span>(),
-                    <span class="macro-nonterminal">$</span><span class="macro">crate::function!</span>().<span class="macro-nonterminal">as_ptr</span>(),
-                )
-            };
-        }
+    <span class="kw">let </span>msg; <span class="comment">// place to store the dynamically expanded format string
+    </span><span class="attr">#[allow(clippy::option_if_let_else)]
+    </span><span class="kw">let </span>msg = <span class="kw">if let </span><span class="prelude-val">Some</span>(message) = info.message() {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(msg) = message.as_str() {
+            msg
+        } <span class="kw">else if </span>allow_dynamic_message {
+            msg = fmt::format(<span class="kw-2">*</span>message);
+            msg.as_str()
+        } <span class="kw">else </span>{
+            <span class="string">"&lt;dynamic panic message&gt;"
+        </span>}
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(msg) = info.payload().downcast_ref::&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;()
+        &amp;&amp; allow_dynamic_payload
+    {
+        msg
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(msg) = info.payload().downcast_ref::&lt;String&gt;()
+        &amp;&amp; allow_dynamic_payload
+    {
+        msg.as_str()
+    } <span class="kw">else </span>{
+        <span class="string">"&lt;unknown panic payload type&gt;"
+    </span>};
+
+    <span class="kw">let </span>location_line = info.location().map_or(<span class="number">0</span>, ::core::panic::Location::line);
+    <span class="kw">let </span>location_column = info.location().map_or(<span class="number">0</span>, ::core::panic::Location::column);
+    <span class="kw">let </span>location_file = info
+        .location()
+        .map_or(<span class="string">"&lt;unknown panic location&gt;"</span>, ::core::panic::Location::file);
+
+    <span class="kw">let </span>thread_idx = <span class="kw">crate</span>::device::thread::Thread::this().idx();
+
+    <span class="kw">let </span>args = FormatArgs {
+        file_len: u32::try_from(location_file.len()).unwrap_or(u32::MAX),
+        file_ptr: location_file.as_ptr(),
+        line: location_line,
+        column: location_column,
+        thread_idx_x: thread_idx.x,
+        thread_idx_y: thread_idx.y,
+        thread_idx_z: thread_idx.z,
+        msg_len: u32::try_from(msg.len()).unwrap_or(u32::MAX),
+        msg_ptr: msg.as_ptr(),
     };
-}
 
-<span class="doccomment">/// Dimension specified in kernel launching
-</span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>Dim3 {
-    <span class="kw">pub </span>x: u32,
-    <span class="kw">pub </span>y: u32,
-    <span class="kw">pub </span>z: u32,
-}
-
-<span class="doccomment">/// Indices that the kernel code is running on
-</span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>Idx3 {
-    <span class="kw">pub </span>x: u32,
-    <span class="kw">pub </span>y: u32,
-    <span class="kw">pub </span>z: u32,
-}
-
-<span class="attr">#[must_use]
-</span><span class="kw">pub fn </span>block_dim() -&gt; Dim3 {
-    <span class="attr">#[allow(clippy::cast_sign_loss)]
-    </span><span class="kw">unsafe </span>{
-        Dim3 {
-            x: nvptx::_block_dim_x() <span class="kw">as </span>u32,
-            y: nvptx::_block_dim_y() <span class="kw">as </span>u32,
-            z: nvptx::_block_dim_z() <span class="kw">as </span>u32,
-        }
+    <span class="kw">unsafe </span>{
+        ::core::arch::nvptx::vprintf(
+            <span class="string">c"panicked at %*s:%u:%u on thread (x=%u, y=%u, z=%u):\n%*s\n"
+                </span>.as_ptr()
+                .cast(),
+            ::core::ptr::from_ref(<span class="kw-2">&amp;</span>args).cast(),
+        );
     }
 }
 
-<span class="attr">#[must_use]
-</span><span class="kw">pub fn </span>block_idx() -&gt; Idx3 {
-    <span class="attr">#[allow(clippy::cast_sign_loss)]
-    </span><span class="kw">unsafe </span>{
-        Idx3 {
-            x: nvptx::_block_idx_x() <span class="kw">as </span>u32,
-            y: nvptx::_block_idx_y() <span class="kw">as </span>u32,
-            z: nvptx::_block_idx_z() <span class="kw">as </span>u32,
-        }
+<span class="doccomment">/// Helper function to efficiently pretty-print an error message (inside an
+/// allocation error handler) using the `vprintf` system call.
+</span><span class="attr">#[track_caller]
+#[allow(clippy::inline_always)]
+#[inline(always)]
+</span><span class="kw">pub fn </span>pretty_print_alloc_error(layout: ::core::alloc::Layout) {
+    <span class="attr">#[repr(C)]
+    </span><span class="kw">struct </span>FormatArgs {
+        size: usize,
+        align: usize,
+        file_len: u32,
+        file_ptr: <span class="kw-2">*const </span>u8,
+        line: u32,
+        column: u32,
+        thread_idx_x: u32,
+        thread_idx_y: u32,
+        thread_idx_z: u32,
     }
-}
 
-<span class="attr">#[must_use]
-</span><span class="kw">pub fn </span>grid_dim() -&gt; Dim3 {
-    <span class="attr">#[allow(clippy::cast_sign_loss)]
-    </span><span class="kw">unsafe </span>{
-        Dim3 {
-            x: nvptx::_grid_dim_x() <span class="kw">as </span>u32,
-            y: nvptx::_grid_dim_y() <span class="kw">as </span>u32,
-            z: nvptx::_grid_dim_z() <span class="kw">as </span>u32,
-        }
+    <span class="kw">let </span>location = ::core::panic::Location::caller();
+    <span class="kw">let </span>thread_idx = <span class="kw">crate</span>::device::thread::Thread::this().idx();
+
+    <span class="kw">let </span>args = FormatArgs {
+        size: layout.size(),
+        align: layout.align(),
+        file_len: u32::try_from(location.file().len()).unwrap_or(u32::MAX),
+        file_ptr: location.file().as_ptr(),
+        line: location.line(),
+        column: location.column(),
+        thread_idx_x: thread_idx.x,
+        thread_idx_y: thread_idx.y,
+        thread_idx_z: thread_idx.z,
+    };
+
+    <span class="kw">unsafe </span>{
+        ::core::arch::nvptx::vprintf(
+            <span class="string">c"memory allocation of %llu bytes with alignment %llu failed at \
+            %*s:%u:%u on thread (x=%u, y=%u, z=%u)\n"
+                </span>.as_ptr()
+                .cast(),
+            ::core::ptr::from_ref(<span class="kw-2">&amp;</span>args).cast(),
+        );
     }
-}
-
-<span class="attr">#[must_use]
-</span><span class="kw">pub fn </span>thread_idx() -&gt; Idx3 {
-    <span class="attr">#[allow(clippy::cast_sign_loss)]
-    </span><span class="kw">unsafe </span>{
-        Idx3 {
-            x: nvptx::_thread_idx_x() <span class="kw">as </span>u32,
-            y: nvptx::_thread_idx_y() <span class="kw">as </span>u32,
-            z: nvptx::_thread_idx_z() <span class="kw">as </span>u32,
-        }
-    }
-}
-
-<span class="kw">impl </span>Dim3 {
-    <span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        (<span class="self">self</span>.x <span class="kw">as </span>usize) * (<span class="self">self</span>.y <span class="kw">as </span>usize) * (<span class="self">self</span>.z <span class="kw">as </span>usize)
-    }
-}
-
-<span class="kw">impl </span>Idx3 {
-    <span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>as_id(<span class="kw-2">&amp;</span><span class="self">self</span>, dim: <span class="kw-2">&amp;</span>Dim3) -&gt; usize {
-        (<span class="self">self</span>.x <span class="kw">as </span>usize)
-            + (<span class="self">self</span>.y <span class="kw">as </span>usize) * (dim.x <span class="kw">as </span>usize)
-            + (<span class="self">self</span>.z <span class="kw">as </span>usize) * (dim.x <span class="kw">as </span>usize) * (dim.y <span class="kw">as </span>usize)
-    }
-}
-
-<span class="attr">#[must_use]
-</span><span class="kw">pub fn </span>index() -&gt; usize {
-    <span class="kw">let </span>block_id = block_idx().as_id(<span class="kw-2">&amp;</span>grid_dim());
-    <span class="kw">let </span>thread_id = thread_idx().as_id(<span class="kw-2">&amp;</span>block_dim());
-
-    block_id * block_dim().size() + thread_id
 }
 </code></pre></div></section></main></body></html>
