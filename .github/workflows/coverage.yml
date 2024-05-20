@@ -32,15 +32,16 @@ jobs:
       - name: Generate the coverage data
         run: |
           cargo clean
-          cargo test \
-            --workspace \
-            --all-targets \
-            --exclude derive \
-            --exclude print \
-            --exclude single-source
+          cargo \
+            --config "target.'cfg(all())'.rustflags=['-Cinstrument-coverage']" \
+            test \
+              --workspace \
+              --all-targets \
+              --exclude derive \
+              --exclude print \
+              --exclude single-source
         env:
           CARGO_INCREMENTAL: 0
-          RUSTFLAGS: -Cinstrument-coverage
           RUSTDOCFLAGS: -Cinstrument-coverage
           LLVM_PROFILE_FILE: coverage/coverage-%p-%m.profraw
       
