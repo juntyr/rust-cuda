@@ -34,12 +34,7 @@ jobs:
           cargo clean
           cargo \
             --config "target.'cfg(all())'.rustflags=['-Cinstrument-coverage']" \
-            test \
-              --workspace \
-              --all-targets \
-              --exclude derive \
-              --exclude print \
-              --exclude single-source
+            test --workspace --all-targets
         env:
           CARGO_INCREMENTAL: 0
           RUSTDOCFLAGS: -Cinstrument-coverage
