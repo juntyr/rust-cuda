@@ -5,6 +5,9 @@ authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [target.'cfg(target_os = "cuda")'.dependencies]

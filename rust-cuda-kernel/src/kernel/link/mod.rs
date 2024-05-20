@@ -15,7 +15,7 @@ use colored::Colorize;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use ptx_builder::{
-    builder::{BuildStatus, Builder, MessageFormat, Profile},
+    builder::{BuildStatus, Builder, CrateType, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
 };
 use quote::quote;
@@ -729,6 +729,8 @@ fn build_kernel_with_specialisation(
             Specialisation::Check => builder.set_profile(Profile::Debug),
             Specialisation::Link(_) => builder.set_profile(Profile::Release),
         };
+
+        builder = builder.set_crate_type(CrateType::Library);
 
         builder = builder.set_message_format(MessageFormat::Json {
             render_diagnostics: false,

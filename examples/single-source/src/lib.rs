@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #![cfg_attr(target_os = "cuda", no_std)]
-#![cfg_attr(target_os = "cuda", no_main)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
 #![cfg_attr(target_os = "cuda", feature(asm_experimental_arch))]
@@ -11,9 +10,6 @@
 #![recursion_limit = "1024"]
 
 extern crate alloc;
-
-#[cfg(not(target_os = "cuda"))]
-fn main() {}
 
 #[repr(C)]
 #[derive(rc::deps::const_type_layout::TypeLayout)]
