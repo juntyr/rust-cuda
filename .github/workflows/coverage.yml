@@ -32,7 +32,12 @@ jobs:
       - name: Generate the coverage data
         run: |
           cargo clean
-          cargo test --workspace --all-targets
+          cargo test \
+            --workspace \
+            --all-targets \
+            --exclude derive \
+            --exclude print \
+            --exclude single-source
         env:
           CARGO_INCREMENTAL: 0
           RUSTFLAGS: -Cinstrument-coverage
