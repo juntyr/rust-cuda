@@ -14,6 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Install CUDA
+        uses: Jimver/cuda-toolkit@v0.2.14
+        with:
+          method: network
+          use-github-cache: false
+          use-local-cache: false
+
       - name: Checkout the Repository
         uses: actions/checkout@v2
       
