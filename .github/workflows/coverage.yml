@@ -28,13 +28,6 @@ jobs:
           components: llvm-tools-preview
           target: nvptx64-nvidia-cuda
           override: false # FIXME
-
-      - name: Install the rust-ptx-linker
-        run: |
-          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
-          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
-          rm llvm.sh
-          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
       
       - name: Generate the coverage data
         run: |
