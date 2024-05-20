@@ -1,6 +1,4 @@
-#[allow(unused_imports)] // std prelude is not always imported
-use alloc::vec::Vec;
-use core::{
+use std::{
     cell::UnsafeCell,
     ops::{Deref, DerefMut},
 };
@@ -12,40 +10,51 @@ use rustacuda::{
 };
 
 use crate::{
-    common::{DeviceAccessible, RustToCuda},
-    host::{CombinedCudaAlloc, CudaAlloc, CudaDropWrapper, NullCudaAlloc},
-    safety::SafeDeviceCopy,
+    alloc::{CombinedCudaAlloc, CudaAlloc, NoCudaAlloc},
+    host::CudaDropWrapper,
+    safety::{PortableBitSemantics, StackOnly},
+    utils::{
+        adapter::DeviceCopyWithPortableBitSemantics,
+        ffi::{DeviceAccessible, DeviceMutPointer},
+        r#async::{Async, CompletionFnMut, NoCompletion},
+    },
 };
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
 #[allow(clippy::module_name_repetitions)]
-#[doc(cfg(feature = "host"))]
-/// When the `host` feature is **not** set,
-/// [`CudaExchangeBuffer`](super::CudaExchangeBuffer)
-/// refers to
-/// [`CudaExchangeBufferDevice`](super::CudaExchangeBufferDevice)
-/// instead.
-/// [`CudaExchangeBufferHost`](Self) is never exposed directly.
 pub struct CudaExchangeBufferHost<
-    T: SafeDeviceCopy + TypeGraphLayout,
+    T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,
     const M2H: bool,
 > {
-    host_buffer: CudaDropWrapper<LockedBuffer<CudaExchangeItem<T, M2D, M2H>>>,
-    device_buffer: UnsafeCell<CudaDropWrapper<DeviceBuffer<CudaExchangeItem<T, M2D, M2H>>>>,
+    host_buffer: CudaDropWrapper<
+        LockedBuffer<DeviceCopyWithPortableBitSemantics<CudaExchangeItem<T, M2D, M2H>>>,
+    >,
+    device_buffer: UnsafeCell<
+        CudaDropWrapper<
+            DeviceBuffer<DeviceCopyWithPortableBitSemantics<CudaExchangeItem<T, M2D, M2H>>>,
+        >,
+    >,
 }
 
-impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
-    CudaExchangeBufferHost<T, M2D, M2H>
+impl<
+        T: Clone + StackOnly + PortableBitSemantics + TypeGraphLayout,
+        const M2D: bool,
+        const M2H: bool,
+    > CudaExchangeBufferHost<T, M2D, M2H>
 {
     /// # Errors
-    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
     pub fn new(elem: &T, capacity: usize) -> CudaResult<Self> {
         // Safety: CudaExchangeItem is a `repr(transparent)` wrapper around T
-        let elem: &CudaExchangeItem<T, M2D, M2H> = unsafe { &*core::ptr::from_ref(elem).cast() };
+        let elem: &CudaExchangeItem<T, M2D, M2H> = unsafe { &*std::ptr::from_ref(elem).cast() };
 
-        let host_buffer = CudaDropWrapper::from(LockedBuffer::new(elem, capacity)?);
+        let host_buffer = CudaDropWrapper::from(LockedBuffer::new(
+            DeviceCopyWithPortableBitSemantics::from_ref(elem),
+            capacity,
+        )?);
         let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
         )?));
@@ -57,20 +66,30 @@ impl<T: Clone + SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bo
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     /// # Errors
-    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// CUDA
     pub fn from_vec(vec: Vec<T>) -> CudaResult<Self> {
-        let mut host_buffer_uninit =
-            CudaDropWrapper::from(unsafe { LockedBuffer::uninitialized(vec.len())? });
+        let host_buffer = unsafe {
+            let mut uninit: CudaDropWrapper<LockedBuffer<DeviceCopyWithPortableBitSemantics<_>>> =
+                CudaDropWrapper::from(LockedBuffer::uninitialized(vec.len())?);
 
-        for (src, dst) in vec.into_iter().zip(host_buffer_uninit.iter_mut()) {
-            *dst = CudaExchangeItem(src);
-        }
+            let uninit_ptr: *mut DeviceCopyWithPortableBitSemantics<CudaExchangeItem<T, M2D, M2H>> =
+                uninit.as_mut_ptr();
 
-        let host_buffer = host_buffer_uninit;
+            for (i, src) in vec.into_iter().enumerate() {
+                uninit_ptr
+                    .add(i)
+                    .write(DeviceCopyWithPortableBitSemantics::from(CudaExchangeItem(
+                        src,
+                    )));
+            }
+
+            uninit
+        };
 
         let device_buffer = UnsafeCell::new(CudaDropWrapper::from(DeviceBuffer::from_slice(
             host_buffer.as_slice(),
@@ -83,37 +102,34 @@ impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool>
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool> Deref
     for CudaExchangeBufferHost<T, M2D, M2H>
 {
     type Target = [CudaExchangeItem<T, M2D, M2H>];
 
     fn deref(&self) -> &Self::Target {
-        self.host_buffer.as_slice()
+        DeviceCopyWithPortableBitSemantics::into_slice(self.host_buffer.as_slice())
     }
 }
 
-impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> DerefMut
-    for CudaExchangeBufferHost<T, M2D, M2H>
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    DerefMut for CudaExchangeBufferHost<T, M2D, M2H>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.host_buffer.as_mut_slice()
+        DeviceCopyWithPortableBitSemantics::into_mut_slice(self.host_buffer.as_mut_slice())
     }
 }
 
-unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: bool> RustToCuda
-    for CudaExchangeBufferHost<T, M2D, M2H>
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    CudaExchangeBufferHost<T, M2D, M2H>
 {
-    type CudaAllocation = NullCudaAlloc;
-    type CudaRepresentation = CudaExchangeBufferCudaRepresentation<T, M2D, M2H>;
-
     #[allow(clippy::type_complexity)]
-    unsafe fn borrow<A: CudaAlloc>(
+    pub unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
     ) -> rustacuda::error::CudaResult<(
-        DeviceAccessible<Self::CudaRepresentation>,
-        CombinedCudaAlloc<Self::CudaAllocation, A>,
+        DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>,
+        CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
         // Safety: device_buffer is inside an UnsafeCell
         //         borrow checks must be satisfied through LendToCuda
@@ -130,17 +146,17 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
 
         Ok((
             DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
-                device_buffer.as_mut_ptr(),
+                DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
                 device_buffer.len(),
             )),
-            CombinedCudaAlloc::new(NullCudaAlloc, alloc),
+            CombinedCudaAlloc::new(NoCudaAlloc, alloc),
         ))
     }
 
     #[allow(clippy::type_complexity)]
-    unsafe fn restore<A: CudaAlloc>(
+    pub unsafe fn restore<A: CudaAlloc>(
         &mut self,
-        alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
+        alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
     ) -> rustacuda::error::CudaResult<A> {
         let (_alloc_front, alloc_tail) = alloc.split();
 
@@ -154,5 +170,78 @@ unsafe impl<T: SafeDeviceCopy + TypeGraphLayout, const M2D: bool, const M2H: boo
         }
 
         Ok(alloc_tail)
+    }
+}
+
+impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
+    CudaExchangeBufferHost<T, M2D, M2H>
+{
+    #[allow(clippy::type_complexity)]
+    pub unsafe fn borrow_async<'stream, A: CudaAlloc>(
+        &self,
+        alloc: A,
+        stream: crate::host::Stream<'stream>,
+    ) -> rustacuda::error::CudaResult<(
+        Async<'_, 'stream, DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>>,
+        CombinedCudaAlloc<NoCudaAlloc, A>,
+    )> {
+        // Safety: device_buffer is inside an UnsafeCell
+        //         borrow checks must be satisfied through LendToCuda
+        let device_buffer = &mut *self.device_buffer.get();
+
+        if M2D {
+            // Only move the buffer contents to the device if needed
+
+            rustacuda::memory::AsyncCopyDestination::async_copy_from(
+                &mut ***device_buffer,
+                self.host_buffer.as_slice(),
+                &stream,
+            )?;
+        }
+
+        let cuda_repr = DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
+            DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
+            device_buffer.len(),
+        ));
+
+        let r#async = if M2D {
+            Async::pending(cuda_repr, stream, NoCompletion)?
+        } else {
+            Async::ready(cuda_repr, stream)
+        };
+
+        Ok((r#async, CombinedCudaAlloc::new(NoCudaAlloc, alloc)))
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
+        mut this: owning_ref::BoxRefMut<'a, O, Self>,
+        alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
+        stream: crate::host::Stream<'stream>,
+    ) -> rustacuda::error::CudaResult<(
+        Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
+        A,
+    )> {
+        let (_alloc_front, alloc_tail) = alloc.split();
+
+        if M2H {
+            // Only move the buffer contents back to the host if needed
+
+            let this: &mut Self = &mut this;
+
+            rustacuda::memory::AsyncCopyDestination::async_copy_to(
+                &***this.device_buffer.get_mut(),
+                this.host_buffer.as_mut_slice(),
+                &stream,
+            )?;
+        }
+
+        let r#async = if M2H {
+            Async::<_, CompletionFnMut<'a, Self>>::pending(this, stream, Box::new(|_this| Ok(())))?
+        } else {
+            Async::ready(this, stream)
+        };
+
+        Ok((r#async, alloc_tail))
     }
 }

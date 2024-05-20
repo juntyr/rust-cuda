@@ -1,10 +1,6 @@
+pub mod adapter;
 pub mod aliasing;
-#[cfg(any(feature = "alloc", doc))]
-#[doc(cfg(feature = "alloc"))]
-pub mod alloc;
-pub mod device_copy;
+pub mod r#async;
 pub mod exchange;
-
-mod r#box;
-mod boxed_slice;
-mod option;
+pub mod ffi;
+pub mod shared;

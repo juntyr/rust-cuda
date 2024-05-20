@@ -1,7 +1,10 @@
-# rust-cuda &emsp; [![CI Status]][workflow] [![Rust Doc]][docs] [![License Status]][fossa] [![Code Coverage]][codecov] [![Gitpod Ready-to-Code]][gitpod]
+# rust-cuda &emsp; [![CI Status]][workflow] [![MSRV]][repo] [![Rust Doc]][docs] [![License Status]][fossa] [![Code Coverage]][codecov] [![Gitpod Ready-to-Code]][gitpod]
 
 [CI Status]: https://img.shields.io/github/actions/workflow/status/juntyr/rust-cuda/ci.yml?branch=main
 [workflow]: https://github.com/juntyr/rust-cuda/actions/workflows/ci.yml?query=branch%3Amain
+
+[MSRV]: https://img.shields.io/badge/MSRV-1.79.0--nightly-orange
+[repo]: https://github.com/juntyr/rust-cuda
 
 [Rust Doc]: https://img.shields.io/badge/docs-main-blue
 [docs]: https://juntyr.github.io/rust-cuda/

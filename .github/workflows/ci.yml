@@ -23,6 +23,13 @@ jobs:
         rust: [nightly]
 
     steps:
+      - name: Install CUDA
+        uses: Jimver/cuda-toolkit@v0.2.14
+        with:
+          method: network
+          use-github-cache: false
+          use-local-cache: false
+
       - name: Checkout the Repository
         uses: actions/checkout@v2
       
@@ -32,61 +39,27 @@ jobs:
           toolchain: ${{ matrix.rust }}
           profile: minimal
           target: nvptx64-nvidia-cuda
-          override: true
+          override: false # FIXME
 
-      - name: Install the rust-ptx-linker
-        run: |
-          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
-          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
-          rm llvm.sh
-          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
 
-      - name: Check without features on CPU
+      - name: Check feature powerset on the CPU
         run: |
-          cargo check
+          cargo hack check --feature-powerset --optional-deps \
+            --skip device \
+            --keep-going
 
-      - name: Check with alloc feature on CPU
+      - name: Check feature powerset on CUDA
         run: |
-          cargo check \
-            --features alloc
-
-      - name: Check with derive feature on CPU
-        run: |
-          cargo check \
-            --features derive
-
-      - name: Check with host feature on CPU
-        run: |
-          cargo check \
-            --features host
-
-      - name: Check with host,derive,alloc features on CPU
-        run: |
-          cargo check \
-            --features host,derive,alloc
-
-      - name: Check without features on CUDA
-        run: |
-          cargo check \
+          cargo hack check --feature-powerset --optional-deps \
+            --skip host \
+            --keep-going \
             --target nvptx64-nvidia-cuda
-
-      - name: Check with alloc feature on CUDA
-        run: |
-          cargo check \
-            --target nvptx64-nvidia-cuda \
-            --features alloc
-
-      - name: Check with derive feature on CUDA
-        run: |
-          cargo check \
-            --target nvptx64-nvidia-cuda \
-            --features derive
 
       - name: Check all workspace targets
         run: |
-          cargo check \
-            --workspace \
-            --all-targets
+          cargo check --workspace --all-targets
 
   test:
     name: Test Suite
@@ -113,14 +86,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           profile: minimal
           target: nvptx64-nvidia-cuda
-          override: true
-
-      - name: Install the rust-ptx-linker
-        run: |
-          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
-          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
-          rm llvm.sh
-          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
+          override: false # FIXME
       
       - name: Run the test-suite
         run: |
@@ -154,6 +120,13 @@ jobs:
         rust: [nightly]
 
     steps:
+      - name: Install CUDA
+        uses: Jimver/cuda-toolkit@v0.2.14
+        with:
+          method: network
+          use-github-cache: false
+          use-local-cache: false
+
       - name: Checkout the Repository
         uses: actions/checkout@v2
       
@@ -164,67 +137,26 @@ jobs:
           profile: minimal
           components: clippy
           target: nvptx64-nvidia-cuda
-          override: true
+          override: false # FIXME
 
-      - name: Install the rust-ptx-linker
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
+      
+      - name: Check feature powerset on the CPU
         run: |
-          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
-          sudo ./llvm.sh $(rustc --version -v | grep -oP "LLVM version: \K\d+")
-          rm llvm.sh
-          cargo install rust-ptx-linker --git https://github.com/juntyr/rust-ptx-linker --force
-
-      - name: Check the code style without features on CPU
-        run: |
-          cargo clippy \
-            -- -D warnings
-
-      - name: Check the code style with alloc feature on CPU
-        run: |
-          cargo clippy \
-            --features alloc \
-            -- -D warnings
-
-      - name: Check the code style with derive feature on CPU
-        run: |
-          cargo clippy \
-            --features derive \
-            -- -D warnings
-
-      - name: Check the code style with host feature on CPU
-        run: |
-          cargo clippy \
-            --features host \
-            -- -D warnings
-
-      - name: Check the code style with host,derive,alloc features on CPU
-        run: |
-          cargo clippy \
-            --features host,derive,alloc \
-            -- -D warnings
-
-      - name: Check the code style without features on CUDA
-        run: |
-          cargo clippy \
-            --target nvptx64-nvidia-cuda \
+          cargo hack clippy --feature-powerset --optional-deps \
+            --skip device \
+            --keep-going \
             -- -D warnings
       
-      - name: Check the code style with alloc feature on CUDA
+      - name: Check feature powerset on CUDA
         run: |
-          cargo clippy \
+          cargo hack clippy --feature-powerset --optional-deps \
+            --skip host \
+            --keep-going \
             --target nvptx64-nvidia-cuda \
-            --features alloc \
             -- -D warnings
 
-      - name: Check the code style with derive feature on CUDA
+      - name: Check all workspace targets
         run: |
-          cargo clippy \
-            --target nvptx64-nvidia-cuda \
-            --features derive \
-            -- -D warnings
-
-      - name: Check the code style for all workspace targets
-        run: |
-          cargo clippy \
-            --workspace \
-            --all-targets \
-            -- -D warnings
+          cargo clippy --workspace --all-targets -- -D warnings
