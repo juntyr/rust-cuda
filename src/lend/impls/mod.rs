@@ -1,3 +1,4 @@
+mod arc;
 mod r#box;
 mod boxed_slice;
 #[cfg(feature = "final")]
