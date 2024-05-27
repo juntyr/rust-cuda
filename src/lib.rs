@@ -51,7 +51,7 @@
 #![feature(never_type)]
 #![feature(layout_for_ptr)]
 #![feature(cfg_version)]
-#![cfg_attr(feature = "device", feature(slice_ptr_get))]
+#![cfg_attr(any(feature = "host", feature = "device"), feature(slice_ptr_get))]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![allow(internal_features)]

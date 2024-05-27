@@ -62,14 +62,12 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<T> {
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let inner = ManuallyDrop::new(_ArcInner {
-            strong: AtomicUsize::new(1),
-            weak: AtomicUsize::new(1),
-            data: std::ptr::read(&**self),
-        });
+        let data_ptr: *const T = std::ptr::from_ref(&**self);
+        let offset = std::mem::offset_of!(_ArcInner<T>, data);
+        let arc_ptr: *const _ArcInner<T> = data_ptr.byte_sub(offset).cast();
 
         let mut device_box = CudaDropWrapper::from(DeviceBox::new(
-            DeviceCopyWithPortableBitSemantics::from_ref(&*inner),
+            DeviceCopyWithPortableBitSemantics::from_ref(&*arc_ptr),
         )?);
 
         Ok((
