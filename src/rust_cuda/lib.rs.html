@@ -133,7 +133,7 @@
 #![feature(never_type)]
 #![feature(layout_for_ptr)]
 #![feature(cfg_version)]
-#![cfg_attr(feature = <span class="string">"device"</span>, feature(slice_ptr_get))]
+#![cfg_attr(any(feature = <span class="string">"host"</span>, feature = <span class="string">"device"</span>), feature(slice_ptr_get))]
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 #![allow(internal_features)]

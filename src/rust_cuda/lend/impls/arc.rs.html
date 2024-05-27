@@ -167,8 +167,6 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::sync::atomic::AtomicUsize;
 <span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">use </span>std::mem::ManuallyDrop;
@@ -233,14 +231,12 @@
         DeviceAccessible&lt;<span class="self">Self</span>::CudaRepresentation&gt;,
         CombinedCudaAlloc&lt;<span class="self">Self</span>::CudaAllocation, A&gt;,
     )&gt; {
-        <span class="kw">let </span>inner = ManuallyDrop::new(_ArcInner {
-            strong: AtomicUsize::new(<span class="number">1</span>),
-            weak: AtomicUsize::new(<span class="number">1</span>),
-            data: std::ptr::read(<span class="kw-2">&amp;**</span><span class="self">self</span>),
-        });
+        <span class="kw">let </span>data_ptr: <span class="kw-2">*const </span>T = std::ptr::from_ref(<span class="kw-2">&amp;**</span><span class="self">self</span>);
+        <span class="kw">let </span>offset = <span class="macro">std::mem::offset_of!</span>(_ArcInner&lt;T&gt;, data);
+        <span class="kw">let </span>arc_ptr: <span class="kw-2">*const </span>_ArcInner&lt;T&gt; = data_ptr.byte_sub(offset).cast();
 
         <span class="kw">let </span><span class="kw-2">mut </span>device_box = CudaDropWrapper::from(DeviceBox::new(
-            DeviceCopyWithPortableBitSemantics::from_ref(<span class="kw-2">&amp;*</span>inner),
+            DeviceCopyWithPortableBitSemantics::from_ref(<span class="kw-2">&amp;*</span>arc_ptr),
         )<span class="question-mark">?</span>);
 
         <span class="prelude-val">Ok</span>((
