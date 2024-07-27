@@ -8,7 +8,7 @@ mod get_ptx;
 
 use get_ptx::quote_get_ptx;
 
-#[allow(clippy::too_many_arguments)] // FIXME
+#[expect(clippy::too_many_arguments)] // FIXME
 pub(in super::super) fn quote_host_link_macro(
     crate_path: &syn::Path,
     KernelConfig {

@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::ToTokens;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn specialise_kernel_param_type(tokens: TokenStream) -> TokenStream {
     let SpecialiseTypeConfig {
         mut ty,

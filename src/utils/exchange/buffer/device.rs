@@ -9,7 +9,7 @@ use crate::{
 
 use super::CudaExchangeItem;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct CudaExchangeBufferDevice<
     T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,

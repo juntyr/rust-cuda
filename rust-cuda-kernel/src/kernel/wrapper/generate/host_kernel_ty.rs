@@ -40,7 +40,7 @@ pub(in super::super) fn quote_host_kernel_ty(
 
     quote! {
         #[cfg(not(target_os = "cuda"))]
-        #[allow(non_camel_case_types)]
+        #[expect(non_camel_case_types)]
         pub type #func_ident #generic_start_token
             #generic_kernel_params
         #generic_close_token = impl Fn(
@@ -52,8 +52,8 @@ pub(in super::super) fn quote_host_kernel_ty(
 
         #[cfg(not(target_os = "cuda"))]
         #(#func_attrs)*
-        #[allow(clippy::too_many_arguments)]
-        #[allow(clippy::used_underscore_binding)]
+        #[expect(clippy::too_many_arguments)]
+        #[expect(clippy::used_underscore_binding)]
         fn #private_func_ident #generic_start_token
             #generic_kernel_params
         #generic_close_token (

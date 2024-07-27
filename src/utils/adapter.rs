@@ -1,5 +1,3 @@
-#![allow(clippy::trait_duplication_in_bounds)]
-
 use core::ops::{Deref, DerefMut};
 
 use const_type_layout::{TypeGraphLayout, TypeLayout};
@@ -123,7 +121,6 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCuda
     type CudaRepresentation = Self;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -152,7 +149,6 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
     type CudaAllocationAsync = NoCudaAlloc;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
@@ -313,7 +309,6 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCuda
     type CudaRepresentation = Self;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -342,7 +337,6 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
     type CudaAllocationAsync = NoCudaAlloc;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
@@ -396,7 +390,6 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> CudaAsRust
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
 #[derive(Copy, Clone, Debug, TypeLayout)]
 #[repr(transparent)]
 pub struct DeviceCopyWithPortableBitSemantics<T: PortableBitSemantics + TypeGraphLayout>(T);

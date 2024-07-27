@@ -38,7 +38,7 @@ pub(in super::super) fn quote_args_trait(
         .collect::<Vec<_>>();
 
     quote! {
-        #[allow(non_camel_case_types)]
+        #[expect(non_camel_case_types)]
         pub trait #args #impl_generics {
             #(#func_input_typedefs)*
         }

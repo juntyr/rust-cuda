@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[derive(const_type_layout::TypeLayout)]
 #[repr(transparent)]
 pub struct FinalCudaRepresentation<T: CudaAsRust>(DeviceAccessible<T>);
@@ -16,7 +16,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Final<T> {
     type CudaRepresentation = FinalCudaRepresentation<T::CudaRepresentation>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
@@ -97,6 +96,6 @@ unsafe impl<T: CudaAsRust> CudaAsRust for FinalCudaRepresentation<T> {
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        Final::new(CudaAsRust::as_rust(&this.0))
+        Final::new(CudaAsRust::as_rust(&(**this).0))
     }
 }

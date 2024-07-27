@@ -8,7 +8,7 @@ use crate::kernel::{
     KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, PTX_CSTR_IDENT,
 };
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx(
     crate_path: &syn::Path,
     FuncIdent {
@@ -94,7 +94,7 @@ pub(super) fn quote_get_ptx(
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
             // FIXME: don't use imports here
-            #[allow(unused_imports)]
+            #[expect(unused_imports)]
             use #crate_path::safety::ptx_kernel_signature::{
                 check as check_ptx_kernel_signature, HostAndDeviceKernelSignatureTypeLayout,
             };
@@ -102,7 +102,7 @@ pub(super) fn quote_get_ptx(
             #args_trait
 
             extern "C" { #(
-                #[allow(dead_code)]
+                #[expect(dead_code)]
                 #[deny(improper_ctypes)]
                 static #private_func_params: #cpu_func_lifetime_erased_types;
             )* }

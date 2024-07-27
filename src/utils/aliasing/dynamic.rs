@@ -163,7 +163,6 @@ unsafe impl<T: RustToCuda> RustToCuda for SplitSliceOverCudaThreadsDynamicStride
         SplitSliceOverCudaThreadsDynamicStride<DeviceAccessible<T::CudaRepresentation>>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
@@ -195,7 +194,6 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for SplitSliceOverCudaThreadsDyn
     type CudaAllocationAsync = T::CudaAllocationAsync;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<'stream, A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,

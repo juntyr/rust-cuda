@@ -43,7 +43,6 @@ impl<'stream> Deref for Stream<'stream> {
 }
 
 impl<'stream> Stream<'stream> {
-    #[allow(clippy::needless_pass_by_ref_mut)]
     /// Create a new uniquely branded [`Stream`], which can bind async
     /// operations to the [`Stream`] that they are computed on.
     ///
@@ -77,7 +76,7 @@ impl<'stream> Stream<'stream> {
 }
 
 pub trait CudaDroppable: Sized {
-    #[allow(clippy::missing_errors_doc)]
+    #[expect(clippy::missing_errors_doc)]
     fn drop(val: Self) -> Result<(), (rustacuda::error::CudaError, Self)>;
 }
 
@@ -152,7 +151,7 @@ impl_sealed_drop_value!(rustacuda::stream::Stream);
 impl_sealed_drop_value!(Context);
 impl_sealed_drop_value!(Event);
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct HostAndDeviceMutRef<'a, T: PortableBitSemantics + TypeGraphLayout> {
     device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_ref: &'a mut T,
@@ -263,7 +262,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct HostAndDeviceConstRef<'a, T: PortableBitSemantics + TypeGraphLayout> {
     device_box: &'a DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_ref: &'a T,
@@ -362,7 +361,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct HostAndDeviceOwned<'a, T: PortableBitSemantics + TypeGraphLayout> {
     device_box: &'a mut DeviceBox<DeviceCopyWithPortableBitSemantics<T>>,
     host_val: &'a mut T,

@@ -12,7 +12,6 @@ use super::{
 
 impl PtxJITCompiler {
     #[must_use]
-    #[allow(clippy::too_many_lines)]
     pub fn new(ptx: &CStr) -> Self {
         let ptx = ptx.to_bytes();
 

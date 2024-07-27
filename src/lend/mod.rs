@@ -3,7 +3,7 @@ use const_type_layout::TypeGraphLayout;
 use rustacuda::error::CudaError;
 
 #[cfg(feature = "derive")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub use rust_cuda_derive::LendRustToCuda;
 
 #[cfg(any(feature = "host", feature = "device", doc))]
@@ -42,7 +42,7 @@ pub unsafe trait RustToCuda {
     /// This is an internal function and should NEVER be called manually
     /// The returned [`Self::CudaRepresentation`] must NEVER be accessed on the
     ///  CPU  as it contains a GPU-resident copy of `self`.
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -61,7 +61,6 @@ pub unsafe trait RustToCuda {
     /// # Safety
     ///
     /// This is an internal function and should NEVER be called manually
-    #[allow(clippy::type_complexity)]
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
@@ -97,7 +96,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     ///
     /// Similarly, `&self` should remain borrowed until synchronisation has
     /// been performed.
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
@@ -123,7 +122,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     ///
     /// Therefore, `&mut self` should remain mutably borrowed until
     /// synchronisation has been performed.
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
@@ -156,7 +155,7 @@ pub trait RustToCudaProxy<T>: RustToCuda {
 }
 
 #[cfg(feature = "host")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub trait LendToCuda: RustToCuda {
     /// Lends an immutable borrow of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
@@ -294,7 +293,7 @@ impl<T: RustToCuda> LendToCuda for T {
 }
 
 #[cfg(feature = "host")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub trait LendToCudaAsync: RustToCudaAsync {
     /// Lends an immutable copy of `&self` to CUDA:
     /// - code in the CUDA kernel can only access `&self` through the
@@ -330,7 +329,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
     where
         Self: Sync;
 
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     /// Lends a mutable borrow of `&mut self` to CUDA iff `Self` is
     /// [`SafeMutableAliasing`]:
     /// - code in the CUDA kernel can only access `&mut self` through the

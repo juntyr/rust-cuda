@@ -72,7 +72,6 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     quote!().into()
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     let ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, Span::call_site());
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
@@ -293,7 +292,7 @@ fn remove_kernel_type_use_from_ptx(kernel_ptx: &mut String) {
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn check_kernel_ptx_and_report(
     kernel_ptx: &str,
     specialisation: Specialisation,
@@ -427,8 +426,8 @@ fn check_kernel_ptx_and_report(
     }
 }
 
-#[allow(clippy::type_complexity)]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::type_complexity)]
+#[expect(clippy::too_many_lines)]
 fn check_kernel_ptx(
     kernel_ptx: &str,
     specialisation: Specialisation,
@@ -444,7 +443,7 @@ fn check_kernel_ptx(
 ) {
     let compiler = {
         let mut compiler = std::ptr::null_mut();
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         if let Err(err) = NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCreate(
                 addr_of_mut!(compiler),
@@ -510,7 +509,7 @@ fn check_kernel_ptx(
 
             let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-            #[allow(unsafe_code)] // FFI
+            #[expect(unsafe_code)] // FFI
             NvptxError::try_err_from(unsafe {
                 ptx_compiler_sys::nvPTXCompilerCompile(
                     compiler,
@@ -553,7 +552,7 @@ fn check_kernel_ptx(
 
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
@@ -566,7 +565,7 @@ fn check_kernel_ptx(
     let error_log = (|| {
         let mut error_log_size = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
         })?;
@@ -575,10 +574,10 @@ fn check_kernel_ptx(
             return Ok(None);
         }
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let mut error_log: Vec<u8> = vec![0; error_log_size as usize];
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
         })?;
@@ -589,7 +588,7 @@ fn check_kernel_ptx(
     let info_log = (|| {
         let mut info_log_size = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
         })?;
@@ -598,10 +597,10 @@ fn check_kernel_ptx(
             return Ok(None);
         }
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let mut info_log: Vec<u8> = vec![0; info_log_size as usize];
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
         })?;
@@ -616,7 +615,7 @@ fn check_kernel_ptx(
 
         let mut binary_size = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
                 compiler,
@@ -628,10 +627,10 @@ fn check_kernel_ptx(
             return Ok(None);
         }
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let mut binary: Vec<u8> = vec![0; binary_size as usize];
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
         })?;
@@ -643,7 +642,7 @@ fn check_kernel_ptx(
         let mut major = 0;
         let mut minor = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetVersion(addr_of_mut!(major), addr_of_mut!(minor))
         })?;
@@ -653,7 +652,7 @@ fn check_kernel_ptx(
 
     let drop = {
         let mut compiler = compiler;
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerDestroy(addr_of_mut!(compiler))
         })
@@ -669,12 +668,13 @@ fn compile_kernel_ptx(
     specialisation: Specialisation,
 ) -> Option<String> {
     if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
-        env::set_var(
+        #[expect(unsafe_code)] // TODO: only change in child process env
+        unsafe { env::set_var(
             "RUSTFLAGS",
             rust_flags
                 .replace("-Zinstrument-coverage", "")
                 .replace("-Cinstrument-coverage", ""),
-        );
+        ); }
     }
 
     let specialisation_var = format!(
@@ -711,16 +711,17 @@ fn compile_kernel_ptx(
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_kernel_with_specialisation(
     kernel_path: &Path,
     env_var: &str,
     specialisation: Specialisation,
 ) -> Result<PathBuf> {
-    match specialisation {
+    #[expect(unsafe_code)] // TODO: only change in child process env
+    unsafe { match specialisation {
         Specialisation::Check => env::set_var(env_var, "chECK"),
         Specialisation::Link(specialisation) => env::set_var(env_var, specialisation),
-    };
+    } };
 
     let result = (|| {
         let mut builder = Builder::new(kernel_path)?;
@@ -855,7 +856,10 @@ fn build_kernel_with_specialisation(
         }
     })();
 
+    #[expect(unsafe_code)] // TODO: only change in child process env
+    unsafe {
     env::remove_var(env_var);
+    };
 
     result
 }

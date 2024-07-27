@@ -3,7 +3,7 @@ use std::env::VarError;
 use proc_macro::TokenStream;
 use quote::quote;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut func: syn::ItemFn = syn::parse(func).unwrap_or_else(|err| {
         abort_call_site!(

@@ -6,7 +6,6 @@ mod replace;
 
 type ByteSliceOptionalArguments = Option<Box<[Option<Box<[u8]>>]>>;
 
-#[allow(clippy::module_name_repetitions)]
 pub struct PtxJITCompiler {
     ptx_slices: Box<[PtxElement]>,
     last_arguments: ByteSliceOptionalArguments,

@@ -10,7 +10,7 @@ fn get_cuda_repr_ident(rust_repr_ident: &proc_macro2::Ident) -> proc_macro2::Ide
     format_ident!("{}CudaRepresentation", rust_repr_ident)
 }
 
-#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
+#[expect(clippy::module_name_repetitions, clippy::too_many_lines)]
 pub fn impl_rust_to_cuda(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
     let (mut struct_fields_cuda, struct_semi_cuda) = if let syn::Data::Struct(s) = &ast.data {
         (s.fields.clone(), s.semi_token)

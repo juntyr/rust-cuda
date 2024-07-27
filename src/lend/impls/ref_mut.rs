@@ -24,7 +24,7 @@ use crate::{
 #[doc(hidden)]
 #[repr(transparent)]
 #[derive(TypeLayout)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct RefMutCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {
     data: DeviceMutPointer<T>,
     _marker: PhantomData<&'a mut T>,
@@ -38,7 +38,6 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mu
     type CudaRepresentation = RefMutCudaRepresentation<'a, T>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,

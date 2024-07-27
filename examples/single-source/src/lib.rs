@@ -1,5 +1,5 @@
 #![deny(clippy::pedantic)]
-#![allow(dead_code)]
+#![expect(dead_code)]
 #![cfg_attr(target_os = "cuda", no_std)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
@@ -19,7 +19,6 @@ pub struct Dummy(i32);
 
 #[derive(Clone, rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
-#[allow(dead_code)]
 pub struct Wrapper<T> {
     #[cuda(embed)]
     inner: T,
@@ -68,7 +67,7 @@ pub fn kernel<
     let shared = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
     let shared2 = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
 
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     unsafe {
         (*shared.index_mut_unchecked(1)).0 = (f64::from(s) * 2.0) as u32;
     }
@@ -91,7 +90,7 @@ pub fn kernel<
 #[cfg(not(target_os = "cuda"))]
 mod host {
     // Link several instances of the generic CUDA kernel
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
     crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
     crate::link! { impl kernel<'a, rc::utils::adapter::RustToCudaWithPortableBitCopySemantics<u64>> for KernelPtx }

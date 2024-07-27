@@ -33,7 +33,7 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct ArcedSliceCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout> {
@@ -67,7 +67,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<[T]> {
     type CudaRepresentation = ArcedSliceCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -98,7 +97,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<[T]> {
         );
         let (_, header) = header.split_at_mut(header.len() - offset);
         let (header, _) = header.split_at_mut(std::mem::size_of::<_ArcInnerHeader>());
-        #[allow(clippy::cast_ptr_alignment)]
+        #[expect(clippy::cast_ptr_alignment)]
         let mut header: ManuallyDrop<DeviceBox<_ArcInnerHeader>> = ManuallyDrop::new(
             DeviceBox::from_raw(header.as_mut_ptr().cast::<_ArcInnerHeader>()),
         );

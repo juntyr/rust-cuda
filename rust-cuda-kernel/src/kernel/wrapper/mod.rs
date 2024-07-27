@@ -21,7 +21,7 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::spanned::Spanned;
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut hasher = seahash::SeaHasher::new();
 
@@ -268,7 +268,7 @@ struct FunctionInputs {
     func_inputs: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
 }
 
-#[allow(clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 struct DeclGenerics<'f> {
     generic_start_token: &'f Option<syn::token::Lt>,
     generic_close_token: &'f Option<syn::token::Gt>,
@@ -276,12 +276,10 @@ struct DeclGenerics<'f> {
 }
 
 struct ImplGenerics<'f> {
-    #[allow(clippy::struct_field_names)]
     impl_generics: syn::ImplGenerics<'f>,
     ty_generics: syn::TypeGenerics<'f>,
 }
 
-#[allow(clippy::struct_field_names)]
 struct FuncIdent<'f> {
     func_ident: &'f syn::Ident,
     func_ident_hash: syn::Ident,

@@ -63,7 +63,6 @@ macro_rules! stack_only_docs {
 
 #[cfg(not(doc))]
 stack_only_docs! {
-    #[allow(clippy::module_name_repetitions)]
     pub trait StackOnly: sealed::StackOnly {}
 }
 #[cfg(doc)]

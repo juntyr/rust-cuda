@@ -30,7 +30,7 @@ use crate::{
 #[doc(hidden)]
 #[repr(transparent)]
 #[derive(TypeLayout)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct ArcCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout>(
     DeviceOwnedPointer<_ArcInner<T>>,
 );
@@ -54,7 +54,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<T> {
     type CudaRepresentation = ArcCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -164,6 +163,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> CudaAsRust for ArcCudaRep
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        crate::deps::alloc::sync::Arc::from_raw(core::ptr::addr_of!((*(this.0 .0)).data))
+        crate::deps::alloc::sync::Arc::from_raw(core::ptr::addr_of!((*((**this).0 .0)).data))
     }
 }

@@ -4,7 +4,6 @@ use quote::quote;
 
 use crate::kernel::lints::{parse_ptx_lint_level, LintLevel, PtxLint};
 
-#[allow(clippy::module_name_repetitions)]
 pub(super) struct LinkKernelConfig {
     pub(super) kernel: syn::Ident,
     pub(super) kernel_hash: syn::Ident,
@@ -64,7 +63,6 @@ impl syn::parse::Parse for LinkKernelConfig {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub(super) struct CheckKernelConfig {
     pub(super) kernel: syn::Ident,
     pub(super) kernel_hash: syn::Ident,

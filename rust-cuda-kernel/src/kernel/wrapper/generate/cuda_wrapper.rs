@@ -8,7 +8,6 @@ use crate::kernel::{
     KERNEL_TYPE_USE_START_CANARY,
 };
 
-#[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
     crate_path: &syn::Path,
     inputs @ FunctionInputs { func_inputs }: &FunctionInputs,
@@ -74,11 +73,11 @@ pub(in super::super) fn quote_cuda_wrapper(
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_function(#func_ident)]
         #[no_mangle]
-        #[allow(unused_unsafe)]
+        #[expect(unused_unsafe)]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ffi_inputs),*) {
             extern "C" { #(
-                #[allow(dead_code)]
+                #[expect(dead_code)]
                 #[deny(improper_ctypes)]
                 static #private_func_params: #ffi_types;
             )* }

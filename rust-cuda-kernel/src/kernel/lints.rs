@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt};
 
 use syn::spanned::Spanned;
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn parse_ptx_lint_level(
     path: &syn::Path,
     nested: &syn::punctuated::Punctuated<syn::NestedMeta, syn::token::Comma>,

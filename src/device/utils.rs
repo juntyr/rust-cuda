@@ -3,7 +3,7 @@ use crate::deps::alloc::{fmt, format};
 /// Abort the CUDA kernel using the `trap` system call.
 ///
 /// [`abort`] poisons the CUDA context and no more work can be performed in it.
-#[allow(clippy::inline_always)]
+#[expect(clippy::inline_always)]
 #[inline(always)]
 pub fn abort() -> ! {
     unsafe { ::core::arch::nvptx::trap() }
@@ -19,7 +19,7 @@ pub fn abort() -> ! {
 /// host and handled in some other manner.
 ///
 /// Safely return from the main kernel function instead.
-#[allow(clippy::inline_always)]
+#[expect(clippy::inline_always)]
 #[inline(always)]
 pub unsafe fn exit() -> ! {
     unsafe { ::core::arch::asm!("exit;", options(noreturn)) }
@@ -52,7 +52,6 @@ pub macro println {
 ///
 /// The [`Arguments`](core::fmt::Arguments) instance can be created with the
 /// [`format_args!`](core::format_args) macro.
-#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn print(args: ::core::fmt::Arguments) {
     #[repr(C)]
@@ -62,7 +61,7 @@ pub fn print(args: ::core::fmt::Arguments) {
     }
 
     let msg; // place to store the dynamically expanded format string
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let msg = if let Some(msg) = args.as_str() {
         msg
     } else {
@@ -89,7 +88,6 @@ pub fn print(args: ::core::fmt::Arguments) {
 /// [`core::panic::PanicMessage::as_str`] returns [`None`]. Note that this may
 /// pull in a large amount of string formatting and dynamic allocation code.
 /// If unset, a default placeholder panic message is printed instead.
-#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn pretty_print_panic_info(info: &::core::panic::PanicInfo, allow_dynamic_message: bool) {
     #[repr(C)]
@@ -106,7 +104,7 @@ pub fn pretty_print_panic_info(info: &::core::panic::PanicInfo, allow_dynamic_me
     }
 
     let msg; // place to store the dynamically expanded format string
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let msg = if let Some(msg) = info.message().as_str() {
         msg
     } else if allow_dynamic_message {
@@ -149,7 +147,6 @@ pub fn pretty_print_panic_info(info: &::core::panic::PanicInfo, allow_dynamic_me
 /// Helper function to efficiently pretty-print an error message (inside an
 /// allocation error handler) using the `vprintf` system call.
 #[track_caller]
-#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn pretty_print_alloc_error(layout: ::core::alloc::Layout) {
     #[repr(C)]

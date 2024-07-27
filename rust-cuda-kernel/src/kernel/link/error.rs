@@ -8,7 +8,7 @@ lazy_static::lazy_static! {
     };
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn emit_ptx_build_error() {
     colored::control::set_override(true);
     let rendered = format!(

@@ -1,4 +1,4 @@
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 /// Types for which mutable references can be safely shared with each CUDA
 /// thread without breaking Rust's no-mutable-aliasing memory safety
 /// guarantees.
