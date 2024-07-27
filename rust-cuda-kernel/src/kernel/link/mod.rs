@@ -669,12 +669,14 @@ fn compile_kernel_ptx(
 ) -> Option<String> {
     if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
         #[expect(unsafe_code)] // TODO: only change in child process env
-        unsafe { env::set_var(
-            "RUSTFLAGS",
-            rust_flags
-                .replace("-Zinstrument-coverage", "")
-                .replace("-Cinstrument-coverage", ""),
-        ); }
+        unsafe {
+            env::set_var(
+                "RUSTFLAGS",
+                rust_flags
+                    .replace("-Zinstrument-coverage", "")
+                    .replace("-Cinstrument-coverage", ""),
+            );
+        }
     }
 
     let specialisation_var = format!(
@@ -718,10 +720,12 @@ fn build_kernel_with_specialisation(
     specialisation: Specialisation,
 ) -> Result<PathBuf> {
     #[expect(unsafe_code)] // TODO: only change in child process env
-    unsafe { match specialisation {
-        Specialisation::Check => env::set_var(env_var, "chECK"),
-        Specialisation::Link(specialisation) => env::set_var(env_var, specialisation),
-    } };
+    unsafe {
+        match specialisation {
+            Specialisation::Check => env::set_var(env_var, "chECK"),
+            Specialisation::Link(specialisation) => env::set_var(env_var, specialisation),
+        }
+    };
 
     let result = (|| {
         let mut builder = Builder::new(kernel_path)?;
@@ -858,7 +862,7 @@ fn build_kernel_with_specialisation(
 
     #[expect(unsafe_code)] // TODO: only change in child process env
     unsafe {
-    env::remove_var(env_var);
+        env::remove_var(env_var);
     };
 
     result

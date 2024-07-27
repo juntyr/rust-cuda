@@ -32,7 +32,8 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
         CudaExchangeBuffer {
             inner: super::device::CudaExchangeBufferDevice(core::mem::ManuallyDrop::new(
                 crate::deps::alloc::boxed::Box::from_raw(core::slice::from_raw_parts_mut(
-                    (**this).0.0, this.1,
+                    (**this).0 .0,
+                    this.1,
                 )),
             )),
         }

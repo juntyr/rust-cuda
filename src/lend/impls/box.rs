@@ -167,6 +167,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> CudaAsRust for BoxCudaRep
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        crate::deps::alloc::boxed::Box::from_raw((**this).0.0)
+        crate::deps::alloc::boxed::Box::from_raw((**this).0 .0)
     }
 }
