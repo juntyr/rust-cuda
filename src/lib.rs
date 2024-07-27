@@ -5,7 +5,7 @@
 //! [CI Status]: https://img.shields.io/github/actions/workflow/status/juntyr/rust-cuda/ci.yml?branch=main
 //! [workflow]: https://github.com/juntyr/rust-cuda/actions/workflows/ci.yml?query=branch%3Amain
 //!
-//! [MSRV]: https://img.shields.io/badge/MSRV-1.79.0--nightly-orange
+//! [MSRV]: https://img.shields.io/badge/MSRV-1.81.0--nightly-orange
 //! [repo]: https://github.com/juntyr/rust-cuda
 //!
 //! [Rust Doc]: https://img.shields.io/badge/docs-main-blue
@@ -45,7 +45,6 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(ptr_metadata)]
 #![feature(decl_macro)]
-#![feature(panic_info_message)]
 #![feature(let_chains)]
 #![feature(sync_unsafe_cell)]
 #![feature(never_type)]

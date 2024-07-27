@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![allow(dead_code)]
 #![feature(const_type_name)]
 
 #[derive(rc::lend::LendRustToCuda)]
@@ -10,6 +11,7 @@ struct Inner<T: Copy> {
 
 #[derive(rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
+
 struct Outer<T: Copy> {
     #[cuda(embed)]
     inner: Inner<T>,

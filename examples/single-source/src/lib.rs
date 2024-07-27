@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![allow(dead_code)]
 #![cfg_attr(target_os = "cuda", no_std)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]

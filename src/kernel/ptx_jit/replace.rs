@@ -43,7 +43,7 @@ impl PtxJITCompiler {
             if let Some(args) = &self.last_arguments {
                 // Some constant loads are required, rebuild PTX string from source and newly
                 //  generated constant load instructions
-                for element in self.ptx_slices.iter() {
+                for element in &self.ptx_slices {
                     match element {
                         PtxElement::CopiedSource { ptx } => output_ptx.extend_from_slice(ptx),
                         PtxElement::ConstLoad {
@@ -147,7 +147,7 @@ impl PtxJITCompiler {
                 }
             } else {
                 // No constant loads are requires, just rebuild the PTX string from its slices
-                for element in self.ptx_slices.iter() {
+                for element in &self.ptx_slices {
                     match element {
                         PtxElement::CopiedSource { ptx } | PtxElement::ConstLoad { ptx, .. } => {
                             output_ptx.extend_from_slice(ptx);

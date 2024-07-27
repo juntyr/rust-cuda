@@ -16,7 +16,7 @@ use crate::{lend::CudaAsRust, utils::adapter::RustToCudaWithPortableBitCopySeman
 #[cfg_attr(any(feature = "device", doc), derive(Debug))]
 #[derive(TypeLayout)]
 #[repr(transparent)]
-pub struct DeviceAccessible<T: ?Sized + PortableBitSemantics + TypeGraphLayout>(T);
+pub struct DeviceAccessible<T: PortableBitSemantics + TypeGraphLayout>(T);
 
 #[cfg(feature = "host")]
 impl<T: CudaAsRust> From<T> for DeviceAccessible<T> {
@@ -35,9 +35,7 @@ impl<T: Copy + PortableBitSemantics + TypeGraphLayout> From<&T>
 }
 
 #[cfg(all(feature = "host", not(doc)))]
-impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout + fmt::Debug> fmt::Debug
-    for DeviceAccessible<T>
-{
+impl<T: PortableBitSemantics + TypeGraphLayout + fmt::Debug> fmt::Debug for DeviceAccessible<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct(stringify!(DeviceAccessible))
             .finish_non_exhaustive()
@@ -45,7 +43,7 @@ impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout + fmt::Debug> fmt::Debug
 }
 
 #[cfg(feature = "device")]
-impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout> Deref for DeviceAccessible<T> {
+impl<T: PortableBitSemantics + TypeGraphLayout> Deref for DeviceAccessible<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -54,7 +52,7 @@ impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout> Deref for DeviceAccessi
 }
 
 #[cfg(feature = "device")]
-impl<T: ?Sized + PortableBitSemantics + TypeGraphLayout> DerefMut for DeviceAccessible<T> {
+impl<T: PortableBitSemantics + TypeGraphLayout> DerefMut for DeviceAccessible<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
