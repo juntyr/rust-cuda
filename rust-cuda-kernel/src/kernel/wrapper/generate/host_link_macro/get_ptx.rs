@@ -94,7 +94,7 @@ pub(super) fn quote_get_ptx(
     quote! {
         fn get_ptx() -> &'static ::core::ffi::CStr {
             // FIXME: don't use imports here
-            #[expect(unused_imports)]
+            #[allow(unused_imports)]
             use #crate_path::safety::ptx_kernel_signature::{
                 check as check_ptx_kernel_signature, HostAndDeviceKernelSignatureTypeLayout,
             };
@@ -102,7 +102,7 @@ pub(super) fn quote_get_ptx(
             #args_trait
 
             extern "C" { #(
-                #[expect(dead_code)]
+                #[allow(dead_code)]
                 #[deny(improper_ctypes)]
                 static #private_func_params: #cpu_func_lifetime_erased_types;
             )* }

@@ -73,11 +73,11 @@ pub(in super::super) fn quote_cuda_wrapper(
         #[cfg(target_os = "cuda")]
         #[#crate_path::device::specialise_kernel_function(#func_ident)]
         #[no_mangle]
-        #[expect(unused_unsafe)]
+        #[allow(unused_unsafe)]
         #(#func_attrs)*
         pub unsafe extern "ptx-kernel" fn #func_ident_hash(#(#ffi_inputs),*) {
             extern "C" { #(
-                #[expect(dead_code)]
+                #[allow(dead_code)]
                 #[deny(improper_ctypes)]
                 static #private_func_params: #ffi_types;
             )* }

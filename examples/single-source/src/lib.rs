@@ -1,5 +1,5 @@
 #![deny(clippy::pedantic)]
-#![expect(dead_code)]
+#![allow(dead_code)] // FIXME: use expect
 #![cfg_attr(target_os = "cuda", no_std)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
@@ -90,7 +90,6 @@ pub fn kernel<
 #[cfg(not(target_os = "cuda"))]
 mod host {
     // Link several instances of the generic CUDA kernel
-    #[expect(dead_code)]
     struct KernelPtx<'a, T>(std::marker::PhantomData<&'a T>);
     crate::link! { impl kernel<'a, crate::Empty> for KernelPtx }
     crate::link! { impl kernel<'a, rc::utils::adapter::RustToCudaWithPortableBitCopySemantics<u64>> for KernelPtx }
