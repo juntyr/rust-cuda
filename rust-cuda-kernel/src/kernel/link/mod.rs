@@ -457,186 +457,188 @@ fn check_kernel_ptx(
     };
 
     let result = (|| {
-        let kernel_name = match specialisation {
-            Specialisation::Check => format!("{kernel_hash}_chECK"),
-            Specialisation::Link("") => format!("{kernel_hash}_kernel"),
-            Specialisation::Link(specialisation) => format!(
-                "{kernel_hash}_kernel_{:016x}",
-                seahash::hash(specialisation.as_bytes())
-            ),
-        };
-        let kernel_name = CString::new(kernel_name).unwrap();
+        // let kernel_name = match specialisation {
+        //     Specialisation::Check => format!("{kernel_hash}_chECK"),
+        //     Specialisation::Link("") => format!("{kernel_hash}_kernel"),
+        //     Specialisation::Link(specialisation) => format!(
+        //         "{kernel_hash}_kernel_{:016x}",
+        //         seahash::hash(specialisation.as_bytes())
+        //     ),
+        // };
+        // let kernel_name = CString::new(kernel_name).unwrap();
 
-        let mut options = vec![c"--entry", kernel_name.as_c_str()];
+        // let mut options = vec![c"--entry", kernel_name.as_c_str()];
 
-        if ptx_lint_levels
-            .values()
-            .any(|level| *level > LintLevel::Warn)
-        {
-            let mut options = options.clone();
+        // if ptx_lint_levels
+        //     .values()
+        //     .any(|level| *level > LintLevel::Warn)
+        // {
+        //     let mut options = options.clone();
 
-            if ptx_lint_levels
-                .get(&PtxLint::Verbose)
-                .map_or(false, |level| *level > LintLevel::Warn)
-            {
-                options.push(c"--verbose");
-            }
-            if ptx_lint_levels
-                .get(&PtxLint::DoublePrecisionUse)
-                .map_or(false, |level| *level > LintLevel::Warn)
-            {
-                options.push(c"--warn-on-double-precision-use");
-            }
-            if ptx_lint_levels
-                .get(&PtxLint::LocalMemoryUse)
-                .map_or(false, |level| *level > LintLevel::Warn)
-            {
-                options.push(c"--warn-on-local-memory-usage");
-            }
-            if ptx_lint_levels
-                .get(&PtxLint::RegisterSpills)
-                .map_or(false, |level| *level > LintLevel::Warn)
-            {
-                options.push(c"--warn-on-spills");
-            }
-            if ptx_lint_levels
-                .get(&PtxLint::DynamicStackSize)
-                .map_or(true, |level| *level <= LintLevel::Warn)
-            {
-                options.push(c"--suppress-stack-size-warning");
-            }
-            options.push(c"--warning-as-error");
+        //     if ptx_lint_levels
+        //         .get(&PtxLint::Verbose)
+        //         .map_or(false, |level| *level > LintLevel::Warn)
+        //     {
+        //         options.push(c"--verbose");
+        //     }
+        //     if ptx_lint_levels
+        //         .get(&PtxLint::DoublePrecisionUse)
+        //         .map_or(false, |level| *level > LintLevel::Warn)
+        //     {
+        //         options.push(c"--warn-on-double-precision-use");
+        //     }
+        //     if ptx_lint_levels
+        //         .get(&PtxLint::LocalMemoryUse)
+        //         .map_or(false, |level| *level > LintLevel::Warn)
+        //     {
+        //         options.push(c"--warn-on-local-memory-usage");
+        //     }
+        //     if ptx_lint_levels
+        //         .get(&PtxLint::RegisterSpills)
+        //         .map_or(false, |level| *level > LintLevel::Warn)
+        //     {
+        //         options.push(c"--warn-on-spills");
+        //     }
+        //     if ptx_lint_levels
+        //         .get(&PtxLint::DynamicStackSize)
+        //         .map_or(true, |level| *level <= LintLevel::Warn)
+        //     {
+        //         options.push(c"--suppress-stack-size-warning");
+        //     }
+        //     options.push(c"--warning-as-error");
 
-            let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
+        //     let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-            #[expect(unsafe_code)] // FFI
-            NvptxError::try_err_from(unsafe {
-                ptx_compiler_sys::nvPTXCompilerCompile(
-                    compiler,
-                    c_int::try_from(options_ptrs.len()).unwrap(),
-                    options_ptrs.as_ptr().cast(),
-                )
-            })?;
-        };
+        //     #[expect(unsafe_code)] // FFI
+        //     NvptxError::try_err_from(unsafe {
+        //         ptx_compiler_sys::nvPTXCompilerCompile(
+        //             compiler,
+        //             c_int::try_from(options_ptrs.len()).unwrap(),
+        //             options_ptrs.as_ptr().cast(),
+        //         )
+        //     })?;
+        // };
 
-        if ptx_lint_levels
-            .get(&PtxLint::Verbose)
-            .map_or(false, |level| *level > LintLevel::Allow)
-        {
-            options.push(c"--verbose");
-        }
-        if ptx_lint_levels
-            .get(&PtxLint::DoublePrecisionUse)
-            .map_or(false, |level| *level > LintLevel::Allow)
-        {
-            options.push(c"--warn-on-double-precision-use");
-        }
-        if ptx_lint_levels
-            .get(&PtxLint::LocalMemoryUse)
-            .map_or(false, |level| *level > LintLevel::Allow)
-        {
-            options.push(c"--warn-on-local-memory-usage");
-        }
-        if ptx_lint_levels
-            .get(&PtxLint::RegisterSpills)
-            .map_or(false, |level| *level > LintLevel::Allow)
-        {
-            options.push(c"--warn-on-spills");
-        }
-        if ptx_lint_levels
-            .get(&PtxLint::DynamicStackSize)
-            .map_or(true, |level| *level < LintLevel::Warn)
-        {
-            options.push(c"--suppress-stack-size-warning");
-        }
+        // if ptx_lint_levels
+        //     .get(&PtxLint::Verbose)
+        //     .map_or(false, |level| *level > LintLevel::Allow)
+        // {
+        //     options.push(c"--verbose");
+        // }
+        // if ptx_lint_levels
+        //     .get(&PtxLint::DoublePrecisionUse)
+        //     .map_or(false, |level| *level > LintLevel::Allow)
+        // {
+        //     options.push(c"--warn-on-double-precision-use");
+        // }
+        // if ptx_lint_levels
+        //     .get(&PtxLint::LocalMemoryUse)
+        //     .map_or(false, |level| *level > LintLevel::Allow)
+        // {
+        //     options.push(c"--warn-on-local-memory-usage");
+        // }
+        // if ptx_lint_levels
+        //     .get(&PtxLint::RegisterSpills)
+        //     .map_or(false, |level| *level > LintLevel::Allow)
+        // {
+        //     options.push(c"--warn-on-spills");
+        // }
+        // if ptx_lint_levels
+        //     .get(&PtxLint::DynamicStackSize)
+        //     .map_or(true, |level| *level < LintLevel::Warn)
+        // {
+        //     options.push(c"--suppress-stack-size-warning");
+        // }
 
-        let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
+        // let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
         #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
-                c_int::try_from(options_ptrs.len()).unwrap(),
-                options_ptrs.as_ptr().cast(),
+                // c_int::try_from(options_ptrs.len()).unwrap(),
+                // options_ptrs.as_ptr().cast(),
+                0,
+                std::ptr::NonNull::dangling().as_ptr(),
             )
         })
     })();
 
-    let error_log = (|| {
-        let mut error_log_size = 0;
+    // let error_log = (|| {
+    //     let mut error_log_size = 0;
 
-        #[expect(unsafe_code)] // FFI
-        NvptxError::try_err_from(unsafe {
-            ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
-        })?;
+    //     #[expect(unsafe_code)] // FFI
+    //     NvptxError::try_err_from(unsafe {
+    //         ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
+    //     })?;
 
-        if error_log_size == 0 {
-            return Ok(None);
-        }
+    //     if error_log_size == 0 {
+    //         return Ok(None);
+    //     }
 
-        #[expect(clippy::cast_possible_truncation)]
-        let mut error_log: Vec<u8> = vec![0; error_log_size as usize];
+    //     #[expect(clippy::cast_possible_truncation)]
+    //     let mut error_log: Vec<u8> = vec![0; error_log_size as usize];
 
-        #[expect(unsafe_code)] // FFI
-        NvptxError::try_err_from(unsafe {
-            ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
-        })?;
+    //     #[expect(unsafe_code)] // FFI
+    //     NvptxError::try_err_from(unsafe {
+    //         ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
+    //     })?;
 
-        Ok(Some(String::from_utf8_lossy(&error_log).into_owned()))
-    })();
+    //     Ok(Some(String::from_utf8_lossy(&error_log).into_owned()))
+    // })();
 
-    let info_log = (|| {
-        let mut info_log_size = 0;
+    // let info_log = (|| {
+    //     let mut info_log_size = 0;
 
-        #[expect(unsafe_code)] // FFI
-        NvptxError::try_err_from(unsafe {
-            ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
-        })?;
+    //     #[expect(unsafe_code)] // FFI
+    //     NvptxError::try_err_from(unsafe {
+    //         ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
+    //     })?;
 
-        if info_log_size == 0 {
-            return Ok(None);
-        }
+    //     if info_log_size == 0 {
+    //         return Ok(None);
+    //     }
 
-        #[expect(clippy::cast_possible_truncation)]
-        let mut info_log: Vec<u8> = vec![0; info_log_size as usize];
+    //     #[expect(clippy::cast_possible_truncation)]
+    //     let mut info_log: Vec<u8> = vec![0; info_log_size as usize];
 
-        #[expect(unsafe_code)] // FFI
-        NvptxError::try_err_from(unsafe {
-            ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
-        })?;
+    //     #[expect(unsafe_code)] // FFI
+    //     NvptxError::try_err_from(unsafe {
+    //         ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
+    //     })?;
 
-        Ok(Some(String::from_utf8_lossy(&info_log).into_owned()))
-    })();
+    //     Ok(Some(String::from_utf8_lossy(&info_log).into_owned()))
+    // })();
 
-    let binary = (|| {
-        if result.is_err() {
-            return Ok(None);
-        }
+    // let binary = (|| {
+    //     if result.is_err() {
+    //         return Ok(None);
+    //     }
 
-        let mut binary_size = 0;
+    //     let mut binary_size = 0;
 
-        #[expect(unsafe_code)] // FFI
-        NvptxError::try_err_from(unsafe {
-            ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
-                compiler,
-                addr_of_mut!(binary_size),
-            )
-        })?;
+    //     #[expect(unsafe_code)] // FFI
+    //     NvptxError::try_err_from(unsafe {
+    //         ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
+    //             compiler,
+    //             addr_of_mut!(binary_size),
+    //         )
+    //     })?;
 
-        if binary_size == 0 {
-            return Ok(None);
-        }
+    //     if binary_size == 0 {
+    //         return Ok(None);
+    //     }
 
-        #[expect(clippy::cast_possible_truncation)]
-        let mut binary: Vec<u8> = vec![0; binary_size as usize];
+    //     #[expect(clippy::cast_possible_truncation)]
+    //     let mut binary: Vec<u8> = vec![0; binary_size as usize];
 
-        #[expect(unsafe_code)] // FFI
-        NvptxError::try_err_from(unsafe {
-            ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
-        })?;
+    //     #[expect(unsafe_code)] // FFI
+    //     NvptxError::try_err_from(unsafe {
+    //         ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
+    //     })?;
 
-        Ok(Some(binary))
-    })();
+    //     Ok(Some(binary))
+    // })();
 
     let version = (|| {
         let mut major = 0;
@@ -658,7 +660,8 @@ fn check_kernel_ptx(
         })
     };
 
-    (result, error_log, info_log, binary, version, drop)
+    // (result, error_log, info_log, binary, version, drop)
+    (result, Ok(None), Ok(None), Ok(None), version, drop)
 }
 
 fn compile_kernel_ptx(
