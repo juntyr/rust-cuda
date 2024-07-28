@@ -43,6 +43,7 @@
 #![deny(missing_docs)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
+#![feature(lint_reasons)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 extern crate proc_macro;

@@ -103,16 +103,17 @@ pub fn pretty_print_panic_info(info: &::core::panic::PanicInfo, allow_dynamic_me
         msg_ptr: *const u8,
     }
 
-    let msg; // place to store the dynamically expanded format string
-    #[expect(clippy::option_if_let_else)]
-    let msg = if let Some(msg) = info.message().as_str() {
-        msg
-    } else if allow_dynamic_message {
-        msg = format!("{}", info.message());
-        msg.as_str()
-    } else {
-        "<dynamic panic message>"
-    };
+    // let msg; // place to store the dynamically expanded format string
+    // #[expect(clippy::option_if_let_else)]
+    // let msg = if let Some(msg) = info.message().as_str() {
+    //     msg
+    // } else if allow_dynamic_message {
+    //     msg = format!("{}", info.message());
+    //     msg.as_str()
+    // } else {
+    //     "<dynamic panic message>"
+    // };
+    let msg = "dummy";
 
     let location_line = info.location().map_or(0, ::core::panic::Location::line);
     let location_column = info.location().map_or(0, ::core::panic::Location::column);

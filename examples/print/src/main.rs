@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![feature(lint_reasons)]
 
 use print::{kernel, link, Action};
 

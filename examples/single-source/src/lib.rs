@@ -8,6 +8,7 @@
 #![feature(cfg_version)]
 #![feature(type_alias_impl_trait)]
 #![feature(decl_macro)]
+#![feature(lint_reasons)]
 #![recursion_limit = "1024"]
 
 extern crate alloc;

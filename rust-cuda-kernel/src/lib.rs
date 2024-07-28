@@ -40,6 +40,7 @@
 #![feature(map_try_insert)]
 #![feature(proc_macro_def_site)]
 #![feature(cfg_version)]
+#![feature(lint_reasons)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 extern crate proc_macro;
