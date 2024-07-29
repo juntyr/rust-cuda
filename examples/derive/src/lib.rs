@@ -11,7 +11,6 @@ struct Inner<T: Copy> {
 
 #[derive(rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
-
 struct Outer<T: Copy> {
     #[cuda(embed)]
     inner: Inner<T>,
