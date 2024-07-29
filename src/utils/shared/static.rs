@@ -7,7 +7,8 @@ pub struct ThreadBlockShared<T: 'static> {
 impl<T: 'static> ThreadBlockShared<T> {
     #[cfg(any(feature = "host", feature = "device"))]
     #[must_use]
-    #[allow(clippy::inline_always, clippy::missing_const_for_fn)]
+    #[expect(clippy::inline_always)]
+    #[cfg_attr(feature = "host", expect(clippy::missing_const_for_fn))]
     #[inline(always)]
     pub fn new_uninit() -> Self {
         #[cfg(feature = "host")]

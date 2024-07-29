@@ -1,2 +1,5 @@
 [alias]
 reap-clippy = "reaper cargo clippy"
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Zlinker-features=-lld"]

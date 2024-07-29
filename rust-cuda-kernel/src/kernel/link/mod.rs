@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    env,
     ffi::CString,
     fmt::Write as FmtWrite,
     fs,
@@ -72,7 +71,6 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     quote!().into()
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     let ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, Span::call_site());
     let ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
@@ -293,7 +291,7 @@ fn remove_kernel_type_use_from_ptx(kernel_ptx: &mut String) {
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn check_kernel_ptx_and_report(
     kernel_ptx: &str,
     specialisation: Specialisation,
@@ -427,8 +425,8 @@ fn check_kernel_ptx_and_report(
     }
 }
 
-#[allow(clippy::type_complexity)]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::type_complexity)]
+#[expect(clippy::too_many_lines)]
 fn check_kernel_ptx(
     kernel_ptx: &str,
     specialisation: Specialisation,
@@ -444,7 +442,7 @@ fn check_kernel_ptx(
 ) {
     let compiler = {
         let mut compiler = std::ptr::null_mut();
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         if let Err(err) = NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCreate(
                 addr_of_mut!(compiler),
@@ -510,7 +508,7 @@ fn check_kernel_ptx(
 
             let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-            #[allow(unsafe_code)] // FFI
+            #[expect(unsafe_code)] // FFI
             NvptxError::try_err_from(unsafe {
                 ptx_compiler_sys::nvPTXCompilerCompile(
                     compiler,
@@ -553,7 +551,7 @@ fn check_kernel_ptx(
 
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
@@ -566,7 +564,7 @@ fn check_kernel_ptx(
     let error_log = (|| {
         let mut error_log_size = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
         })?;
@@ -575,10 +573,10 @@ fn check_kernel_ptx(
             return Ok(None);
         }
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let mut error_log: Vec<u8> = vec![0; error_log_size as usize];
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
         })?;
@@ -589,7 +587,7 @@ fn check_kernel_ptx(
     let info_log = (|| {
         let mut info_log_size = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
         })?;
@@ -598,10 +596,10 @@ fn check_kernel_ptx(
             return Ok(None);
         }
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let mut info_log: Vec<u8> = vec![0; info_log_size as usize];
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
         })?;
@@ -616,7 +614,7 @@ fn check_kernel_ptx(
 
         let mut binary_size = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
                 compiler,
@@ -628,10 +626,10 @@ fn check_kernel_ptx(
             return Ok(None);
         }
 
-        #[allow(clippy::cast_possible_truncation)]
+        #[expect(clippy::cast_possible_truncation)]
         let mut binary: Vec<u8> = vec![0; binary_size as usize];
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
         })?;
@@ -643,7 +641,7 @@ fn check_kernel_ptx(
         let mut major = 0;
         let mut minor = 0;
 
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetVersion(addr_of_mut!(major), addr_of_mut!(minor))
         })?;
@@ -653,7 +651,7 @@ fn check_kernel_ptx(
 
     let drop = {
         let mut compiler = compiler;
-        #[allow(unsafe_code)] // FFI
+        #[expect(unsafe_code)] // FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerDestroy(addr_of_mut!(compiler))
         })
@@ -668,15 +666,6 @@ fn compile_kernel_ptx(
     crate_path: &Path,
     specialisation: Specialisation,
 ) -> Option<String> {
-    if let Ok(rust_flags) = proc_macro::tracked_env::var("RUSTFLAGS") {
-        env::set_var(
-            "RUSTFLAGS",
-            rust_flags
-                .replace("-Zinstrument-coverage", "")
-                .replace("-Cinstrument-coverage", ""),
-        );
-    }
-
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
         crate_name,
@@ -711,90 +700,51 @@ fn compile_kernel_ptx(
     }
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn build_kernel_with_specialisation(
     kernel_path: &Path,
     env_var: &str,
     specialisation: Specialisation,
 ) -> Result<PathBuf> {
-    match specialisation {
-        Specialisation::Check => env::set_var(env_var, "chECK"),
-        Specialisation::Link(specialisation) => env::set_var(env_var, specialisation),
+    let mut builder = Builder::new(kernel_path)?;
+
+    builder = match specialisation {
+        Specialisation::Check => builder.set_profile(Profile::Debug),
+        Specialisation::Link(_) => builder.set_profile(Profile::Release),
     };
 
-    let result = (|| {
-        let mut builder = Builder::new(kernel_path)?;
+    builder = builder.set_crate_type(CrateType::Library);
 
-        builder = match specialisation {
-            Specialisation::Check => builder.set_profile(Profile::Debug),
-            Specialisation::Link(_) => builder.set_profile(Profile::Release),
-        };
+    builder = builder.set_message_format(MessageFormat::Json {
+        render_diagnostics: false,
+        short: false,
+        ansi: true,
+    });
 
-        builder = builder.set_crate_type(CrateType::Library);
+    let specialisation_prefix = match specialisation {
+        Specialisation::Check => String::from("chECK"),
+        Specialisation::Link(specialisation) => {
+            format!("{:016x}", seahash::hash(specialisation.as_bytes()))
+        },
+    };
+    builder = builder.set_prefix(specialisation_prefix.clone());
 
-        builder = builder.set_message_format(MessageFormat::Json {
-            render_diagnostics: false,
-            short: false,
-            ansi: true,
-        });
+    builder = builder.with_env(
+        env_var,
+        match specialisation {
+            Specialisation::Check => "chECK",
+            Specialisation::Link(specialisation) => specialisation,
+        },
+    );
 
-        let specialisation_prefix = match specialisation {
-            Specialisation::Check => String::from("chECK"),
-            Specialisation::Link(specialisation) => {
-                format!("{:016x}", seahash::hash(specialisation.as_bytes()))
-            },
-        };
-        builder = builder.set_prefix(specialisation_prefix.clone());
+    let any_output = AtomicBool::new(false);
+    let crate_name = String::from(builder.get_crate_name());
 
-        let any_output = AtomicBool::new(false);
-        let crate_name = String::from(builder.get_crate_name());
-
-        let build = builder.build_live(
-            |stdout_line| {
-                if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
-                    serde_json::from_str(stdout_line)
-                {
-                    if any_output
-                        .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
-                        .is_ok()
-                    {
-                        colored::control::set_override(true);
-                        eprintln!(
-                            "{} of {} ({})",
-                            "[PTX]".bright_black().bold(),
-                            crate_name.bold(),
-                            specialisation_prefix.to_ascii_lowercase(),
-                        );
-                        colored::control::unset_override();
-                    }
-
-                    if let Some(rendered) = &mut message.message.rendered {
-                        colored::control::set_override(true);
-                        let prefix = "  | ".bright_black().bold().to_string();
-                        colored::control::unset_override();
-
-                        let glue = String::from('\n') + &prefix;
-
-                        let mut lines = rendered
-                            .split('\n')
-                            .rev()
-                            .skip_while(|l| l.trim().is_empty())
-                            .collect::<Vec<_>>();
-                        lines.reverse();
-
-                        let mut prefixed = prefix + &lines.join(&glue);
-
-                        std::mem::swap(rendered, &mut prefixed);
-                    }
-
-                    eprintln!("{}", serde_json::to_string(&message.message).unwrap());
-                }
-            },
-            |stderr_line| {
-                if stderr_line.trim().is_empty() {
-                    return;
-                }
-
+    let build = builder.build_live(
+        |stdout_line| {
+            if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
+                serde_json::from_str(stdout_line)
+            {
                 if any_output
                     .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
                     .is_ok()
@@ -809,55 +759,90 @@ fn build_kernel_with_specialisation(
                     colored::control::unset_override();
                 }
 
-                colored::control::set_override(true);
-                eprintln!(
-                    "  {} {}",
-                    "|".bright_black().bold(),
-                    stderr_line.replace("   ", "")
-                );
-                colored::control::unset_override();
-            },
-        )?;
+                if let Some(rendered) = &mut message.message.rendered {
+                    colored::control::set_override(true);
+                    let prefix = "  | ".bright_black().bold().to_string();
+                    colored::control::unset_override();
 
-        match build {
-            BuildStatus::Success(output) => {
-                let ptx_path = output.get_assembly_path();
+                    let glue = String::from('\n') + &prefix;
 
-                let mut specialised_ptx_path = ptx_path.clone();
+                    let mut lines = rendered
+                        .split('\n')
+                        .rev()
+                        .skip_while(|l| l.trim().is_empty())
+                        .collect::<Vec<_>>();
+                    lines.reverse();
 
-                specialised_ptx_path.set_extension(format!("{specialisation_prefix}.ptx"));
+                    let mut prefixed = prefix + &lines.join(&glue);
 
-                fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
-                    Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                        "Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: \
-                         {err}"
-                    )]))
-                })?;
-
-                if let Specialisation::Link(specialisation) = specialisation {
-                    fs::OpenOptions::new()
-                        .append(true)
-                        .open(&specialised_ptx_path)
-                        .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
-                        .map_err(|err| {
-                            Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                                "Failed to write specialisation to {specialised_ptx_path:?}: {err}"
-                            )]))
-                        })?;
+                    std::mem::swap(rendered, &mut prefixed);
                 }
 
-                Ok(specialised_ptx_path)
-            },
-            BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                "Kernel build for specialisation {:?} was not needed.",
-                &specialisation
-            )]))),
-        }
-    })();
+                eprintln!("{}", serde_json::to_string(&message.message).unwrap());
+            }
+        },
+        |stderr_line| {
+            if stderr_line.trim().is_empty() {
+                return;
+            }
 
-    env::remove_var(env_var);
+            if any_output
+                .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                colored::control::set_override(true);
+                eprintln!(
+                    "{} of {} ({})",
+                    "[PTX]".bright_black().bold(),
+                    crate_name.bold(),
+                    specialisation_prefix.to_ascii_lowercase(),
+                );
+                colored::control::unset_override();
+            }
 
-    result
+            colored::control::set_override(true);
+            eprintln!(
+                "  {} {}",
+                "|".bright_black().bold(),
+                stderr_line.replace("   ", "")
+            );
+            colored::control::unset_override();
+        },
+    )?;
+
+    match build {
+        BuildStatus::Success(output) => {
+            let ptx_path = output.get_assembly_path();
+
+            let mut specialised_ptx_path = ptx_path.clone();
+
+            specialised_ptx_path.set_extension(format!("{specialisation_prefix}.ptx"));
+
+            fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
+                Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                    "Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: {err}"
+                )]))
+            })?;
+
+            if let Specialisation::Link(specialisation) = specialisation {
+                fs::OpenOptions::new()
+                    .append(true)
+                    .open(&specialised_ptx_path)
+                    .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
+                    .map_err(|err| {
+                        Error::from(BuildErrorKind::BuildFailed(vec![format!(
+                            "Failed to write specialisation to {specialised_ptx_path:?}: {err}"
+                        )]))
+                    })?;
+            }
+
+            Ok(specialised_ptx_path)
+        },
+        BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
+            "Kernel build for specialisation {:?} was not needed.",
+            &specialisation
+        )]))),
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

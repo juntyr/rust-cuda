@@ -22,7 +22,7 @@ use crate::{
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct CudaExchangeBufferHost<
     T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,
@@ -123,7 +123,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
 impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -153,7 +153,6 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         ))
     }
 
-    #[allow(clippy::type_complexity)]
     pub unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
@@ -176,7 +175,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
 impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, const M2H: bool>
     CudaExchangeBufferHost<T, M2D, M2H>
 {
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
@@ -213,7 +212,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         Ok((r#async, CombinedCudaAlloc::new(NoCudaAlloc, alloc)))
     }
 
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     pub unsafe fn restore_async<'a, 'stream, A: CudaAlloc, O>(
         mut this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<NoCudaAlloc, A>,

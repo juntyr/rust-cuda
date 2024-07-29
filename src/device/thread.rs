@@ -1,31 +1,30 @@
 #[cfg(all(feature = "device", not(doc)))]
 use core::arch::nvptx;
 
-#[allow(clippy::module_name_repetitions)]
 pub struct Thread {
     _private: (),
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct ThreadBlock {
     _private: (),
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct ThreadBlockGrid {
     _private: (),
 }
 
 impl Thread {
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub const fn this() -> Self {
         Self { _private: () }
     }
 
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn index(&self) -> usize {
         let block = self.block();
@@ -38,10 +37,10 @@ impl Thread {
     }
 
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn idx(&self) -> Idx3 {
-        #[allow(clippy::cast_sign_loss)]
+        #[expect(clippy::cast_sign_loss)]
         unsafe {
             Idx3 {
                 x: nvptx::_thread_idx_x() as u32,
@@ -52,7 +51,7 @@ impl Thread {
     }
 
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub const fn block(&self) -> ThreadBlock {
         ThreadBlock { _private: () }
@@ -61,10 +60,10 @@ impl Thread {
 
 impl ThreadBlock {
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn dim(&self) -> Dim3 {
-        #[allow(clippy::cast_sign_loss)]
+        #[expect(clippy::cast_sign_loss)]
         unsafe {
             Dim3 {
                 x: nvptx::_block_dim_x() as u32,
@@ -75,10 +74,10 @@ impl ThreadBlock {
     }
 
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn idx(&self) -> Idx3 {
-        #[allow(clippy::cast_sign_loss)]
+        #[expect(clippy::cast_sign_loss)]
         unsafe {
             Idx3 {
                 x: nvptx::_block_idx_x() as u32,
@@ -89,13 +88,13 @@ impl ThreadBlock {
     }
 
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub const fn grid(&self) -> ThreadBlockGrid {
         ThreadBlockGrid { _private: () }
     }
 
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn synchronize(&self) {
         unsafe { nvptx::_syncthreads() }
@@ -104,10 +103,10 @@ impl ThreadBlock {
 
 impl ThreadBlockGrid {
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn dim(&self) -> Dim3 {
-        #[allow(clippy::cast_sign_loss)]
+        #[expect(clippy::cast_sign_loss)]
         unsafe {
             Dim3 {
                 x: nvptx::_grid_dim_x() as u32,
@@ -136,7 +135,7 @@ pub struct Idx3 {
 
 impl Dim3 {
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub const fn size(&self) -> usize {
         (self.x as usize) * (self.y as usize) * (self.z as usize)
@@ -145,7 +144,7 @@ impl Dim3 {
 
 impl Idx3 {
     #[must_use]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     pub const fn as_id(&self, dim: &Dim3) -> usize {
         (self.x as usize)

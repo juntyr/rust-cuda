@@ -1,7 +1,7 @@
 use quote::quote_spanned;
 use syn::spanned::Spanned;
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     ast: &syn::DeriveInput,
 ) -> (

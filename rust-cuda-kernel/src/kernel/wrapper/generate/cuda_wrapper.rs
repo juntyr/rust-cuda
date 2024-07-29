@@ -8,7 +8,6 @@ use crate::kernel::{
     KERNEL_TYPE_USE_START_CANARY,
 };
 
-#[allow(clippy::too_many_lines)]
 pub(in super::super) fn quote_cuda_wrapper(
     crate_path: &syn::Path,
     inputs @ FunctionInputs { func_inputs }: &FunctionInputs,

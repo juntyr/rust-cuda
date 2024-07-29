@@ -3,7 +3,7 @@ use std::ffi::CString;
 use proc_macro::TokenStream;
 use quote::quote;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn specialise_kernel_entry_point(tokens: TokenStream) -> TokenStream {
     let SpecialiseMangleConfig {
         kernel,
@@ -19,7 +19,7 @@ pub fn specialise_kernel_entry_point(tokens: TokenStream) -> TokenStream {
         },
     };
 
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let mangled_kernel_ident = if let Some(specialisation) = specialisation {
         format!(
             "{kernel}_kernel_{:016x}",

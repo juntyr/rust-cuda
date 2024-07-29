@@ -1,6 +1,6 @@
 use syn::{parse_quote, spanned::Spanned};
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub enum CudaReprFieldTy {
     SafeDeviceCopy,
     RustToCuda {
@@ -103,7 +103,7 @@ pub fn swap_field_type_and_filter_attrs(
         }
     });
 
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let cuda_repr_field_ty = if let Some(cuda_repr_field_ty) = cuda_repr_field_ty {
         cuda_repr_field_ty
     } else {

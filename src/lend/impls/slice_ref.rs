@@ -25,7 +25,7 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct SliceRefCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {
@@ -43,7 +43,6 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a [T
     type CudaRepresentation = SliceRefCudaRepresentation<'a, T>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,

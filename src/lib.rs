@@ -5,7 +5,7 @@
 //! [CI Status]: https://img.shields.io/github/actions/workflow/status/juntyr/rust-cuda/ci.yml?branch=main
 //! [workflow]: https://github.com/juntyr/rust-cuda/actions/workflows/ci.yml?query=branch%3Amain
 //!
-//! [MSRV]: https://img.shields.io/badge/MSRV-1.79.0--nightly-orange
+//! [MSRV]: https://img.shields.io/badge/MSRV-1.81.0--nightly-orange
 //! [repo]: https://github.com/juntyr/rust-cuda
 //!
 //! [Rust Doc]: https://img.shields.io/badge/docs-main-blue
@@ -45,16 +45,15 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(ptr_metadata)]
 #![feature(decl_macro)]
-#![feature(panic_info_message)]
 #![feature(let_chains)]
 #![feature(sync_unsafe_cell)]
 #![feature(never_type)]
 #![feature(layout_for_ptr)]
 #![feature(cfg_version)]
 #![cfg_attr(any(feature = "host", feature = "device"), feature(slice_ptr_get))]
-#![allow(incomplete_features)]
+#![expect(incomplete_features)]
 #![feature(generic_const_exprs)]
-#![allow(internal_features)]
+#![expect(internal_features)]
 #![feature(core_intrinsics)]
 #![feature(const_intrinsic_compare_bytes)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]

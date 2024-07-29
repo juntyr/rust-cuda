@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use regex::bytes::Regex;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn const_marker_regex() -> &'static Regex {
     static CONST_MARKER_REGEX: OnceLock<Regex> = OnceLock::new();
     CONST_MARKER_REGEX.get_or_init(|| {
@@ -11,7 +11,7 @@ pub fn const_marker_regex() -> &'static Regex {
     })
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn const_base_register_regex() -> &'static Regex {
     static CONST_BASE_REGISTER_REGEX: OnceLock<Regex> = OnceLock::new();
     CONST_BASE_REGISTER_REGEX.get_or_init(|| {
@@ -20,7 +20,7 @@ pub fn const_base_register_regex() -> &'static Regex {
     })
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn const_load_instruction_regex() -> &'static Regex {
     static CONST_LOAD_INSTRUCTION_REGEX: OnceLock<Regex> = OnceLock::new();
     CONST_LOAD_INSTRUCTION_REGEX.get_or_init(|| {
@@ -51,7 +51,7 @@ pub fn const_load_instruction_regex() -> &'static Regex {
     })
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub fn register_regex() -> &'static Regex {
     static REGISTER_REGEX: OnceLock<Regex> = OnceLock::new();
     REGISTER_REGEX.get_or_init(|| Regex::new(r"(?-u)(?P<register>%[rf][sd]?\d+)").unwrap())

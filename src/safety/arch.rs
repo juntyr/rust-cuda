@@ -109,7 +109,7 @@ struct TypeLayout {
     align: usize,
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 struct Assert<const LAYOUT: TypeLayout>;
 
 macro_rules! size_align_check {

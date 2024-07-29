@@ -1,4 +1,3 @@
-#[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq, Eq, core::marker::ConstParamTy)]
 pub enum HostAndDeviceKernelSignatureTypeLayout {
     Match,

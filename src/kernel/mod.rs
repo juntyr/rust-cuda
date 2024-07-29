@@ -18,7 +18,7 @@ pub use rust_cuda_kernel::kernel;
 
 #[doc(hidden)]
 #[cfg(all(feature = "kernel", feature = "host"))]
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions)] // FIXME: use expect
 pub use rust_cuda_kernel::{check_kernel, compile_kernel, specialise_kernel_entry_point};
 
 #[cfg(feature = "host")]
@@ -108,7 +108,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
         Self: 'b;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::missing_errors_doc)] // FIXME
+    #[expect(clippy::missing_errors_doc)] // FIXME
     fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
@@ -166,7 +166,7 @@ pub struct Launcher<'stream, 'kernel, Kernel> {
 #[cfg(feature = "host")]
 macro_rules! impl_launcher_launch {
     ($launch:ident($($arg:ident : $T:ident),*) => $with_async:ident => $launch_async:ident) => {
-        #[allow(clippy::missing_errors_doc)]
+        #[expect(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch<$($T: CudaKernelParameter),*>(
             &mut self,
@@ -178,7 +178,7 @@ macro_rules! impl_launcher_launch {
             self.kernel.$launch::<$($T),*>(self.stream, &self.config, $($arg),*)
         }
 
-        #[allow(clippy::missing_errors_doc)]
+        #[expect(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $with_async<
             'a,
@@ -204,7 +204,7 @@ macro_rules! impl_launcher_launch {
             } }
         }
 
-        #[allow(clippy::missing_errors_doc)]
+        #[expect(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch_async<$($T: CudaKernelParameter),*>(
             &mut self,
@@ -292,7 +292,7 @@ pub struct LaunchConfig {
 }
 
 #[cfg(feature = "host")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct RawPtxKernel {
     module: ManuallyDrop<Box<Module>>,
     function: ManuallyDrop<Function<'static>>,
@@ -352,7 +352,7 @@ impl Drop for RawPtxKernel {
 pub type PtxKernelConfigure = dyn FnMut(&Function) -> CudaResult<()>;
 
 #[cfg(feature = "host")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct TypedPtxKernel<Kernel> {
     compiler: PtxJITCompiler,
     ptx_kernel: Option<RawPtxKernel>,
@@ -364,7 +364,7 @@ pub struct TypedPtxKernel<Kernel> {
 #[cfg(feature = "host")]
 macro_rules! impl_typed_kernel_launch {
     ($launch:ident($($arg:ident : $T:ident),*) => $with_async:ident => $launch_async:ident) => {
-        #[allow(clippy::missing_errors_doc)]
+        #[expect(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch<'kernel, 'stream, $($T: CudaKernelParameter),*>(
             &'kernel mut self,
@@ -388,7 +388,7 @@ macro_rules! impl_typed_kernel_launch {
             )
         }
 
-        #[allow(clippy::missing_errors_doc)]
+        #[expect(clippy::missing_errors_doc)]
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $with_async<
             'kernel,
@@ -416,7 +416,7 @@ macro_rules! impl_typed_kernel_launch {
             } }
         }
 
-        #[allow(clippy::missing_errors_doc)]
+        #[expect(clippy::missing_errors_doc)]
         #[allow(clippy::needless_lifetimes)] // 'stream is unused for zero args
         #[allow(clippy::too_many_arguments)] // func is defined for <= 12 args
         pub fn $launch_async<'kernel, 'stream, $($T: CudaKernelParameter),*>(

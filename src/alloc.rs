@@ -1,4 +1,4 @@
-#![allow(clippy::module_name_repetitions)]
+#![expect(clippy::module_name_repetitions)]
 
 pub trait EmptyCudaAlloc: From<NoCudaAlloc> + Into<NoCudaAlloc> + sealed::empty::Sealed {}
 

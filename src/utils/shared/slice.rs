@@ -2,7 +2,7 @@ use core::alloc::Layout;
 
 use const_type_layout::TypeGraphLayout;
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[repr(transparent)]
 pub struct ThreadBlockSharedSlice<T: 'static + TypeGraphLayout> {
     shared: *mut [T],

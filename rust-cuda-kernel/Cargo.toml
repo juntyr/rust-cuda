@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.79" # nightly
+rust-version = "1.81" # nightly
 links = "libnvptxcompiler_static"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -25,7 +25,7 @@ strip-ansi-escapes = "0.2"
 colored = "2.0"
 thiserror = "1.0"
 seahash = "4.1"
-ptx-builder = { git = "https://github.com/juntyr/rust-ptx-builder", rev = "aeb3b68" }
+ptx-builder = { git = "https://github.com/juntyr/rust-ptx-builder", rev = "9649e58" }
 
 [build-dependencies]
 find_cuda_helper = "0.2"

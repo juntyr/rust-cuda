@@ -3,7 +3,7 @@ use quote::{format_ident, quote, ToTokens};
 
 use crate::rust_to_cuda::field_ty::CudaReprFieldTy;
 
-#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn impl_field_copy_init_and_expand_alloc_type(
     crate_path: &syn::Path,
     field: &syn::Field,
@@ -24,17 +24,17 @@ pub fn impl_field_copy_init_and_expand_alloc_type(
 
     c2r_field_initialisations: &mut Vec<TokenStream>,
 ) -> (TokenStream, TokenStream) {
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let field_accessor = match &field.ident {
         Some(ident) => quote! { #ident },
         None => proc_macro2::Literal::usize_unsuffixed(field_index).to_token_stream(),
     };
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let field_repr_ident = match &field.ident {
         Some(ident) => format_ident!("field_{}_repr", ident),
         None => format_ident!("field_{}_repr", field_index),
     };
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let field_completion_ident = match &field.ident {
         Some(ident) => format_ident!("field_{}_completion", ident),
         None => format_ident!("field_{}_completion", field_index),

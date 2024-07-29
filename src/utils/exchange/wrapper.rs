@@ -17,7 +17,6 @@ use crate::{
     },
 };
 
-#[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWrapperOnHost<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: Box<T>,
     device_box: CudaDropWrapper<
@@ -36,7 +35,6 @@ pub struct ExchangeWrapperOnHost<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> 
     >,
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub struct ExchangeWrapperOnDevice<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> {
     value: Box<T>,
     device_box: CudaDropWrapper<
@@ -111,7 +109,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
 impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: EmptyCudaAlloc>>
     ExchangeWrapperOnHost<T>
 {
-    #[allow(clippy::needless_lifetimes)] // keep 'stream explicit
+    #[expect(clippy::needless_lifetimes)] // keep 'stream explicit
     /// Moves the data asynchronously to the CUDA device.
     ///
     /// # Errors
@@ -199,7 +197,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
 impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: EmptyCudaAlloc>>
     ExchangeWrapperOnDevice<T>
 {
-    #[allow(clippy::needless_lifetimes)] // keep 'stream explicit
+    #[expect(clippy::needless_lifetimes)] // keep 'stream explicit
     /// Moves the data asynchronously back to the host CPU device.
     ///
     /// # Errors

@@ -1124,7 +1124,7 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     }
 
     #[cfg(feature = "device")]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
         _param: Self::FfiType<'static, 'short>,
@@ -1202,7 +1202,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     }
 
     #[cfg(feature = "device")]
-    #[allow(clippy::inline_always)]
+    #[expect(clippy::inline_always)]
     #[inline(always)]
     unsafe fn with_ffi_as_device<'short, O, const PARAM: usize>(
         param: Self::FfiType<'static, 'short>,

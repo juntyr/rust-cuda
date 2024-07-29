@@ -1,9 +1,9 @@
-use crate::deps::alloc::{fmt, string::String};
+use crate::deps::alloc::{fmt, format};
 
 /// Abort the CUDA kernel using the `trap` system call.
 ///
 /// [`abort`] poisons the CUDA context and no more work can be performed in it.
-#[allow(clippy::inline_always)]
+#[expect(clippy::inline_always)]
 #[inline(always)]
 pub fn abort() -> ! {
     unsafe { ::core::arch::nvptx::trap() }
@@ -19,7 +19,7 @@ pub fn abort() -> ! {
 /// host and handled in some other manner.
 ///
 /// Safely return from the main kernel function instead.
-#[allow(clippy::inline_always)]
+#[expect(clippy::inline_always)]
 #[inline(always)]
 pub unsafe fn exit() -> ! {
     unsafe { ::core::arch::asm!("exit;", options(noreturn)) }
@@ -52,7 +52,6 @@ pub macro println {
 ///
 /// The [`Arguments`](core::fmt::Arguments) instance can be created with the
 /// [`format_args!`](core::format_args) macro.
-#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn print(args: ::core::fmt::Arguments) {
     #[repr(C)]
@@ -62,7 +61,7 @@ pub fn print(args: ::core::fmt::Arguments) {
     }
 
     let msg; // place to store the dynamically expanded format string
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let msg = if let Some(msg) = args.as_str() {
         msg
     } else {
@@ -84,24 +83,13 @@ pub fn print(args: ::core::fmt::Arguments) {
 /// using the `vprintf` system call.
 ///
 /// If `allow_dynamic_message` is set,
-/// [`alloc::fmt::format`](crate::deps::alloc::fmt::format) is used to print
-/// [`core::panic::PanicInfo::message`] message when
-/// [`core::fmt::Arguments::as_str`] returns [`None`]. Note that this may pull
-/// in a large amount of string formatting and dynamic allocation code.
+/// [`alloc::format!`](crate::deps::alloc::format!) is used to print the
+/// [`core::panic::PanicMessage`] message when
+/// [`core::panic::PanicMessage::as_str`] returns [`None`]. Note that this may
+/// pull in a large amount of string formatting and dynamic allocation code.
 /// If unset, a default placeholder panic message is printed instead.
-///
-/// If `allow_dynamic_payload` is set, [`core::panic::PanicInfo::payload`] is
-/// checked for [`&str`] and [`String`] to get a message to print if
-/// [`core::panic::PanicInfo::message`] returns [`None`]. Note that this may
-/// pull in some dynamic dispatch code. If unset, a default placeholder panic
-/// message is printed instead.
-#[allow(clippy::inline_always)]
 #[inline(always)]
-pub fn pretty_print_panic_info(
-    info: &::core::panic::PanicInfo,
-    allow_dynamic_message: bool,
-    allow_dynamic_payload: bool,
-) {
+pub fn pretty_print_panic_info(info: &::core::panic::PanicInfo, allow_dynamic_message: bool) {
     #[repr(C)]
     struct FormatArgs {
         file_len: u32,
@@ -116,26 +104,14 @@ pub fn pretty_print_panic_info(
     }
 
     let msg; // place to store the dynamically expanded format string
-    #[allow(clippy::option_if_let_else)]
-    let msg = if let Some(message) = info.message() {
-        if let Some(msg) = message.as_str() {
-            msg
-        } else if allow_dynamic_message {
-            msg = fmt::format(*message);
-            msg.as_str()
-        } else {
-            "<dynamic panic message>"
-        }
-    } else if let Some(msg) = info.payload().downcast_ref::<&'static str>()
-        && allow_dynamic_payload
-    {
+    #[expect(clippy::option_if_let_else)]
+    let msg = if let Some(msg) = info.message().as_str() {
         msg
-    } else if let Some(msg) = info.payload().downcast_ref::<String>()
-        && allow_dynamic_payload
-    {
+    } else if allow_dynamic_message {
+        msg = format!("{}", info.message());
         msg.as_str()
     } else {
-        "<unknown panic payload type>"
+        "<dynamic panic message>"
     };
 
     let location_line = info.location().map_or(0, ::core::panic::Location::line);
@@ -171,7 +147,6 @@ pub fn pretty_print_panic_info(
 /// Helper function to efficiently pretty-print an error message (inside an
 /// allocation error handler) using the `vprintf` system call.
 #[track_caller]
-#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn pretty_print_alloc_error(layout: ::core::alloc::Layout) {
     #[repr(C)]

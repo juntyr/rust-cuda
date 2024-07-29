@@ -24,7 +24,7 @@ pub trait Completion<T: ?Sized + BorrowMut<Self::Completed>>: sealed::Sealed {
     #[doc(hidden)]
     fn synchronize_on_drop(&self) -> bool;
 
-    #[allow(clippy::missing_errors_doc)] // FIXME
+    #[expect(clippy::missing_errors_doc)] // FIXME
     fn complete(self, completed: &mut Self::Completed) -> CudaResult<()>;
 }
 #[cfg(feature = "host")]
@@ -108,7 +108,6 @@ pub struct Async<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T> = NoC
 
 #[cfg(feature = "host")]
 enum AsyncStatus<'a, T: BorrowMut<C::Completed>, C: Completion<T>> {
-    #[allow(clippy::type_complexity)]
     Processing {
         receiver: oneshot::Receiver<CudaResult<()>>,
         completion: C,
@@ -248,7 +247,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
         })
     }
 
-    #[allow(clippy::missing_errors_doc)] // FIXME
+    #[expect(clippy::missing_errors_doc)] // FIXME
     /// # Safety
     ///
     /// The returned inner value of type `T` may not yet have completed its
@@ -549,7 +548,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop
 }
 
 #[cfg(feature = "host")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct AsyncProj<'a, 'stream, T: 'a> {
     _capture: PhantomData<&'a ()>,
     _stream: PhantomData<Stream<'stream>>,
@@ -590,7 +589,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, T> {
         self.value
     }
 
-    #[allow(clippy::type_complexity)]
+    #[expect(clippy::type_complexity)]
     /// # Safety
     ///
     /// The returned reference to the inner value of type `T` may not yet have
@@ -705,7 +704,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
         }
     }
 
-    #[allow(dead_code)] // FIXME
+    #[expect(dead_code)] // FIXME
     /// # Safety
     ///
     /// The returned reference to the inner value of type `&T` may not yet have
@@ -719,7 +718,7 @@ impl<'a, 'stream, T: 'a> AsyncProj<'a, 'stream, &'a mut T> {
         self.value
     }
 
-    #[allow(dead_code)] // FIXME
+    #[expect(dead_code)] // FIXME
     /// # Safety
     ///
     /// The returned reference to the inner value of type `&T` may not yet have

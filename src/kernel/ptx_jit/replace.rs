@@ -3,11 +3,11 @@ use std::{ffi::CString, ops::Deref, ptr::NonNull};
 use super::{PtxElement, PtxJITCompiler, PtxJITResult, PtxLoadWidth};
 
 impl PtxJITCompiler {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub fn with_arguments(&mut self, arguments: Option<&[Option<&NonNull<[u8]>>]>) -> PtxJITResult {
         // Check if the arguments, cast as byte slices, are the same as the last cached
         //  ones
-        #[allow(clippy::explicit_deref_methods)]
+        #[expect(clippy::explicit_deref_methods)]
         let needs_recomputation = match (arguments, &self.last_arguments) {
             (None, None) => false,
             (Some(arguments), Some(last_arguments)) if arguments.len() == last_arguments.len() => {
@@ -43,7 +43,7 @@ impl PtxJITCompiler {
             if let Some(args) = &self.last_arguments {
                 // Some constant loads are required, rebuild PTX string from source and newly
                 //  generated constant load instructions
-                for element in self.ptx_slices.iter() {
+                for element in &self.ptx_slices {
                     match element {
                         PtxElement::CopiedSource { ptx } => output_ptx.extend_from_slice(ptx),
                         PtxElement::ConstLoad {
@@ -147,7 +147,7 @@ impl PtxJITCompiler {
                 }
             } else {
                 // No constant loads are requires, just rebuild the PTX string from its slices
-                for element in self.ptx_slices.iter() {
+                for element in &self.ptx_slices {
                     match element {
                         PtxElement::CopiedSource { ptx } | PtxElement::ConstLoad { ptx, .. } => {
                             output_ptx.extend_from_slice(ptx);

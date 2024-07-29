@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types)] // FIXME: use expect
 pub type size_t = ::std::os::raw::c_ulonglong;
 
 #[repr(C)]

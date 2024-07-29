@@ -29,7 +29,7 @@ use crate::{
 #[doc(hidden)]
 #[repr(transparent)]
 #[derive(TypeLayout)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub struct BoxCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout>(DeviceOwnedPointer<T>);
 
 unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {
@@ -40,7 +40,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {
     type CudaRepresentation = BoxCudaRepresentation<T>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -168,6 +167,6 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> CudaAsRust for BoxCudaRep
 
     #[cfg(feature = "device")]
     unsafe fn as_rust(this: &DeviceAccessible<Self>) -> Self::RustRepresentation {
-        crate::deps::alloc::boxed::Box::from_raw(this.0 .0)
+        crate::deps::alloc::boxed::Box::from_raw((**this).0 .0)
     }
 }

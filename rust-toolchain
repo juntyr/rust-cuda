@@ -1,5 +1,5 @@
 [toolchain]
-# Pin to final 1.79.0 nightly
-channel = "nightly-2024-04-28"
+# Pin to final 1.81.0 nightly
+channel = "nightly-2024-07-21"
 components = [ "cargo", "rustfmt", "clippy", "llvm-bitcode-linker", "llvm-tools" ]
 targets = [ "x86_64-unknown-linux-gnu", "nvptx64-nvidia-cuda" ]

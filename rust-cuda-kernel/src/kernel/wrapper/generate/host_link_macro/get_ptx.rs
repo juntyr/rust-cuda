@@ -8,7 +8,7 @@ use crate::kernel::{
     KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, PTX_CSTR_IDENT,
 };
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub(super) fn quote_get_ptx(
     crate_path: &syn::Path,
     FuncIdent {

@@ -18,7 +18,7 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct OptionCudaRepresentation<T: CudaAsRust> {
@@ -31,7 +31,6 @@ unsafe impl<T: RustToCuda> RustToCuda for Option<T> {
     type CudaRepresentation = OptionCudaRepresentation<<T as RustToCuda>::CudaRepresentation>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
@@ -85,7 +84,6 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
     type CudaAllocationAsync = Option<<T as RustToCudaAsync>::CudaAllocationAsync>;
 
     #[cfg(feature = "host")]
-    #[allow(clippy::type_complexity)]
     unsafe fn borrow_async<'stream, A: CudaAlloc>(
         &self,
         alloc: A,
@@ -145,7 +143,6 @@ unsafe impl<T: RustToCudaAsync> RustToCudaAsync for Option<T> {
         if let (Some(_), Some(alloc_front)) = (&mut *this, alloc_front) {
             let this_backup = unsafe { std::mem::ManuallyDrop::new(std::ptr::read(&this)) };
 
-            #[allow(clippy::option_if_let_else)]
             let (r#async, alloc_tail) = RustToCudaAsync::restore_async(
                 // Safety: we have already established value is Some above
                 this.map_mut(|value| unsafe { value.as_mut().unwrap_unchecked() }),

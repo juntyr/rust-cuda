@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn cuda_struct_declaration(
     crate_path: &syn::Path,
     struct_attrs_cuda: &[syn::Attribute],
@@ -23,7 +23,7 @@ pub fn cuda_struct_declaration(
         quote! { #[repr(C)] }
     };
 
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     let struct_fields_where_clause = if let Some(struct_semi_cuda) = struct_semi_cuda {
         quote!(#struct_fields_cuda #where_clause #struct_semi_cuda)
     } else {
@@ -44,7 +44,7 @@ pub fn cuda_struct_declaration(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn rust_to_cuda_trait(
     crate_path: &syn::Path,
     struct_name: &syn::Ident,
@@ -118,7 +118,7 @@ pub fn rust_to_cuda_trait(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn rust_to_cuda_async_trait(
     crate_path: &syn::Path,
     struct_name: &syn::Ident,
