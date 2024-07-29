@@ -33,7 +33,7 @@ pub fn cuda_struct_declaration(
     let const_type_layout_crate_path = quote! { #crate_path::deps::const_type_layout }.to_string();
 
     quote! {
-        #[expect(dead_code)]
+        #[allow(dead_code)]
         #[doc(hidden)]
         #(#struct_attrs_cuda)*
         #[derive(#crate_path::deps::const_type_layout::TypeLayout)]
