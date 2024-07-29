@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-kernel/src/kernel/link/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-081576b923113409.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rust_cuda_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (aed2187d5 2024-04-27)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../rust_cuda_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rust-cuda-kernel/src/kernel/link/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rust_cuda_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (506985649 2024-07-20)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -850,24 +850,8 @@
 <a href="#850" id="850">850</a>
 <a href="#851" id="851">851</a>
 <a href="#852" id="852">852</a>
-<a href="#853" id="853">853</a>
-<a href="#854" id="854">854</a>
-<a href="#855" id="855">855</a>
-<a href="#856" id="856">856</a>
-<a href="#857" id="857">857</a>
-<a href="#858" id="858">858</a>
-<a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
-<a href="#862" id="862">862</a>
-<a href="#863" id="863">863</a>
-<a href="#864" id="864">864</a>
-<a href="#865" id="865">865</a>
-<a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::HashMap,
-    env,
     ffi::CString,
     fmt::Write <span class="kw">as </span>FmtWrite,
     fs,
@@ -939,8 +923,7 @@
     <span class="macro">quote!</span>().into()
 }
 
-<span class="attr">#[allow(clippy::module_name_repetitions)]
-</span><span class="kw">pub fn </span>compile_kernel(tokens: TokenStream) -&gt; TokenStream {
+<span class="kw">pub fn </span>compile_kernel(tokens: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span>ptx_cstr_ident = syn::Ident::new(PTX_CSTR_IDENT, Span::call_site());
     <span class="kw">let </span>ffi_signature_ident = syn::Ident::new(KERNEL_TYPE_LAYOUT_IDENT, Span::call_site());
     <span class="kw">let </span>ffi_signature_hash_seed_ident =
@@ -1160,7 +1143,7 @@
     }
 }
 
-<span class="attr">#[allow(clippy::too_many_lines)]
+<span class="attr">#[expect(clippy::too_many_lines)]
 </span><span class="kw">fn </span>check_kernel_ptx_and_report(
     kernel_ptx: <span class="kw-2">&amp;</span>str,
     specialisation: Specialisation,
@@ -1294,8 +1277,8 @@
     }
 }
 
-<span class="attr">#[allow(clippy::type_complexity)]
-#[allow(clippy::too_many_lines)]
+<span class="attr">#[expect(clippy::type_complexity)]
+#[expect(clippy::too_many_lines)]
 </span><span class="kw">fn </span>check_kernel_ptx(
     kernel_ptx: <span class="kw-2">&amp;</span>str,
     specialisation: Specialisation,
@@ -1311,7 +1294,7 @@
 ) {
     <span class="kw">let </span>compiler = {
         <span class="kw">let </span><span class="kw-2">mut </span>compiler = std::ptr::null_mut();
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerCreate(
                 <span class="macro">addr_of_mut!</span>(compiler),
@@ -1377,7 +1360,7 @@
 
             <span class="kw">let </span>options_ptrs = options.iter().map(|o| o.as_ptr()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-            <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+            <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
             </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
                 ptx_compiler_sys::nvPTXCompilerCompile(
                     compiler,
@@ -1420,7 +1403,7 @@
 
         <span class="kw">let </span>options_ptrs = options.iter().map(|o| o.as_ptr()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
@@ -1433,7 +1416,7 @@
     <span class="kw">let </span>error_log = (|| {
         <span class="kw">let </span><span class="kw-2">mut </span>error_log_size = <span class="number">0</span>;
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, <span class="macro">addr_of_mut!</span>(error_log_size))
         })<span class="question-mark">?</span>;
@@ -1442,10 +1425,10 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
         }
 
-        <span class="attr">#[allow(clippy::cast_possible_truncation)]
+        <span class="attr">#[expect(clippy::cast_possible_truncation)]
         </span><span class="kw">let </span><span class="kw-2">mut </span>error_log: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; error_log_size <span class="kw">as </span>usize];
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
         })<span class="question-mark">?</span>;
@@ -1456,7 +1439,7 @@
     <span class="kw">let </span>info_log = (|| {
         <span class="kw">let </span><span class="kw-2">mut </span>info_log_size = <span class="number">0</span>;
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, <span class="macro">addr_of_mut!</span>(info_log_size))
         })<span class="question-mark">?</span>;
@@ -1465,10 +1448,10 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
         }
 
-        <span class="attr">#[allow(clippy::cast_possible_truncation)]
+        <span class="attr">#[expect(clippy::cast_possible_truncation)]
         </span><span class="kw">let </span><span class="kw-2">mut </span>info_log: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; info_log_size <span class="kw">as </span>usize];
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
         })<span class="question-mark">?</span>;
@@ -1483,7 +1466,7 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>binary_size = <span class="number">0</span>;
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
                 compiler,
@@ -1495,10 +1478,10 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
         }
 
-        <span class="attr">#[allow(clippy::cast_possible_truncation)]
+        <span class="attr">#[expect(clippy::cast_possible_truncation)]
         </span><span class="kw">let </span><span class="kw-2">mut </span>binary: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; binary_size <span class="kw">as </span>usize];
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
         })<span class="question-mark">?</span>;
@@ -1510,7 +1493,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>major = <span class="number">0</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>minor = <span class="number">0</span>;
 
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerGetVersion(<span class="macro">addr_of_mut!</span>(major), <span class="macro">addr_of_mut!</span>(minor))
         })<span class="question-mark">?</span>;
@@ -1520,7 +1503,7 @@
 
     <span class="kw">let </span>drop = {
         <span class="kw">let </span><span class="kw-2">mut </span>compiler = compiler;
-        <span class="attr">#[allow(unsafe_code)] </span><span class="comment">// FFI
+        <span class="attr">#[expect(unsafe_code)] </span><span class="comment">// FFI
         </span>NvptxError::try_err_from(<span class="kw">unsafe </span>{
             ptx_compiler_sys::nvPTXCompilerDestroy(<span class="macro">addr_of_mut!</span>(compiler))
         })
@@ -1535,15 +1518,6 @@
     crate_path: <span class="kw-2">&amp;</span>Path,
     specialisation: Specialisation,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Ok</span>(rust_flags) = proc_macro::tracked_env::var(<span class="string">"RUSTFLAGS"</span>) {
-        env::set_var(
-            <span class="string">"RUSTFLAGS"</span>,
-            rust_flags
-                .replace(<span class="string">"-Zinstrument-coverage"</span>, <span class="string">""</span>)
-                .replace(<span class="string">"-Cinstrument-coverage"</span>, <span class="string">""</span>),
-        );
-    }
-
     <span class="kw">let </span>specialisation_var = <span class="macro">format!</span>(
         <span class="string">"RUST_CUDA_DERIVE_SPECIALISE_{}_{}"</span>,
         crate_name,
@@ -1578,90 +1552,51 @@
     }
 }
 
-<span class="attr">#[allow(clippy::too_many_lines)]
+<span class="attr">#[expect(clippy::too_many_lines)]
 </span><span class="kw">fn </span>build_kernel_with_specialisation(
     kernel_path: <span class="kw-2">&amp;</span>Path,
     env_var: <span class="kw-2">&amp;</span>str,
     specialisation: Specialisation,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
-    <span class="kw">match </span>specialisation {
-        Specialisation::Check =&gt; env::set_var(env_var, <span class="string">"chECK"</span>),
-        Specialisation::Link(specialisation) =&gt; env::set_var(env_var, specialisation),
+    <span class="kw">let </span><span class="kw-2">mut </span>builder = Builder::new(kernel_path)<span class="question-mark">?</span>;
+
+    builder = <span class="kw">match </span>specialisation {
+        Specialisation::Check =&gt; builder.set_profile(Profile::Debug),
+        Specialisation::Link(<span class="kw">_</span>) =&gt; builder.set_profile(Profile::Release),
     };
 
-    <span class="kw">let </span>result = (|| {
-        <span class="kw">let </span><span class="kw-2">mut </span>builder = Builder::new(kernel_path)<span class="question-mark">?</span>;
+    builder = builder.set_crate_type(CrateType::Library);
 
-        builder = <span class="kw">match </span>specialisation {
-            Specialisation::Check =&gt; builder.set_profile(Profile::Debug),
-            Specialisation::Link(<span class="kw">_</span>) =&gt; builder.set_profile(Profile::Release),
-        };
+    builder = builder.set_message_format(MessageFormat::Json {
+        render_diagnostics: <span class="bool-val">false</span>,
+        short: <span class="bool-val">false</span>,
+        ansi: <span class="bool-val">true</span>,
+    });
 
-        builder = builder.set_crate_type(CrateType::Library);
+    <span class="kw">let </span>specialisation_prefix = <span class="kw">match </span>specialisation {
+        Specialisation::Check =&gt; String::from(<span class="string">"chECK"</span>),
+        Specialisation::Link(specialisation) =&gt; {
+            <span class="macro">format!</span>(<span class="string">"{:016x}"</span>, seahash::hash(specialisation.as_bytes()))
+        },
+    };
+    builder = builder.set_prefix(specialisation_prefix.clone());
 
-        builder = builder.set_message_format(MessageFormat::Json {
-            render_diagnostics: <span class="bool-val">false</span>,
-            short: <span class="bool-val">false</span>,
-            ansi: <span class="bool-val">true</span>,
-        });
+    builder = builder.with_env(
+        env_var,
+        <span class="kw">match </span>specialisation {
+            Specialisation::Check =&gt; <span class="string">"chECK"</span>,
+            Specialisation::Link(specialisation) =&gt; specialisation,
+        },
+    );
 
-        <span class="kw">let </span>specialisation_prefix = <span class="kw">match </span>specialisation {
-            Specialisation::Check =&gt; String::from(<span class="string">"chECK"</span>),
-            Specialisation::Link(specialisation) =&gt; {
-                <span class="macro">format!</span>(<span class="string">"{:016x}"</span>, seahash::hash(specialisation.as_bytes()))
-            },
-        };
-        builder = builder.set_prefix(specialisation_prefix.clone());
+    <span class="kw">let </span>any_output = AtomicBool::new(<span class="bool-val">false</span>);
+    <span class="kw">let </span>crate_name = String::from(builder.get_crate_name());
 
-        <span class="kw">let </span>any_output = AtomicBool::new(<span class="bool-val">false</span>);
-        <span class="kw">let </span>crate_name = String::from(builder.get_crate_name());
-
-        <span class="kw">let </span>build = builder.build_live(
-            |stdout_line| {
-                <span class="kw">if let </span><span class="prelude-val">Ok</span>(cargo_metadata::Message::CompilerMessage(<span class="kw-2">mut </span>message)) =
-                    serde_json::from_str(stdout_line)
-                {
-                    <span class="kw">if </span>any_output
-                        .compare_exchange(<span class="bool-val">false</span>, <span class="bool-val">true</span>, Ordering::Relaxed, Ordering::Relaxed)
-                        .is_ok()
-                    {
-                        colored::control::set_override(<span class="bool-val">true</span>);
-                        <span class="macro">eprintln!</span>(
-                            <span class="string">"{} of {} ({})"</span>,
-                            <span class="string">"[PTX]"</span>.bright_black().bold(),
-                            crate_name.bold(),
-                            specialisation_prefix.to_ascii_lowercase(),
-                        );
-                        colored::control::unset_override();
-                    }
-
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(rendered) = <span class="kw-2">&amp;mut </span>message.message.rendered {
-                        colored::control::set_override(<span class="bool-val">true</span>);
-                        <span class="kw">let </span>prefix = <span class="string">"  | "</span>.bright_black().bold().to_string();
-                        colored::control::unset_override();
-
-                        <span class="kw">let </span>glue = String::from(<span class="string">'\n'</span>) + <span class="kw-2">&amp;</span>prefix;
-
-                        <span class="kw">let </span><span class="kw-2">mut </span>lines = rendered
-                            .split(<span class="string">'\n'</span>)
-                            .rev()
-                            .skip_while(|l| l.trim().is_empty())
-                            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-                        lines.reverse();
-
-                        <span class="kw">let </span><span class="kw-2">mut </span>prefixed = prefix + <span class="kw-2">&amp;</span>lines.join(<span class="kw-2">&amp;</span>glue);
-
-                        std::mem::swap(rendered, <span class="kw-2">&amp;mut </span>prefixed);
-                    }
-
-                    <span class="macro">eprintln!</span>(<span class="string">"{}"</span>, serde_json::to_string(<span class="kw-2">&amp;</span>message.message).unwrap());
-                }
-            },
-            |stderr_line| {
-                <span class="kw">if </span>stderr_line.trim().is_empty() {
-                    <span class="kw">return</span>;
-                }
-
+    <span class="kw">let </span>build = builder.build_live(
+        |stdout_line| {
+            <span class="kw">if let </span><span class="prelude-val">Ok</span>(cargo_metadata::Message::CompilerMessage(<span class="kw-2">mut </span>message)) =
+                serde_json::from_str(stdout_line)
+            {
                 <span class="kw">if </span>any_output
                     .compare_exchange(<span class="bool-val">false</span>, <span class="bool-val">true</span>, Ordering::Relaxed, Ordering::Relaxed)
                     .is_ok()
@@ -1676,55 +1611,90 @@
                     colored::control::unset_override();
                 }
 
-                colored::control::set_override(<span class="bool-val">true</span>);
-                <span class="macro">eprintln!</span>(
-                    <span class="string">"  {} {}"</span>,
-                    <span class="string">"|"</span>.bright_black().bold(),
-                    stderr_line.replace(<span class="string">"   "</span>, <span class="string">""</span>)
-                );
-                colored::control::unset_override();
-            },
-        )<span class="question-mark">?</span>;
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(rendered) = <span class="kw-2">&amp;mut </span>message.message.rendered {
+                    colored::control::set_override(<span class="bool-val">true</span>);
+                    <span class="kw">let </span>prefix = <span class="string">"  | "</span>.bright_black().bold().to_string();
+                    colored::control::unset_override();
 
-        <span class="kw">match </span>build {
-            BuildStatus::Success(output) =&gt; {
-                <span class="kw">let </span>ptx_path = output.get_assembly_path();
+                    <span class="kw">let </span>glue = String::from(<span class="string">'\n'</span>) + <span class="kw-2">&amp;</span>prefix;
 
-                <span class="kw">let </span><span class="kw-2">mut </span>specialised_ptx_path = ptx_path.clone();
+                    <span class="kw">let </span><span class="kw-2">mut </span>lines = rendered
+                        .split(<span class="string">'\n'</span>)
+                        .rev()
+                        .skip_while(|l| l.trim().is_empty())
+                        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                    lines.reverse();
 
-                specialised_ptx_path.set_extension(<span class="macro">format!</span>(<span class="string">"{specialisation_prefix}.ptx"</span>));
+                    <span class="kw">let </span><span class="kw-2">mut </span>prefixed = prefix + <span class="kw-2">&amp;</span>lines.join(<span class="kw-2">&amp;</span>glue);
 
-                fs::copy(<span class="kw-2">&amp;</span>ptx_path, <span class="kw-2">&amp;</span>specialised_ptx_path).map_err(|err| {
-                    Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                        <span class="string">"Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: \
-                         {err}"
-                    </span>)]))
-                })<span class="question-mark">?</span>;
-
-                <span class="kw">if let </span>Specialisation::Link(specialisation) = specialisation {
-                    fs::OpenOptions::new()
-                        .append(<span class="bool-val">true</span>)
-                        .open(<span class="kw-2">&amp;</span>specialised_ptx_path)
-                        .and_then(|<span class="kw-2">mut </span>file| <span class="macro">writeln!</span>(file, <span class="string">"\n// {specialisation}"</span>))
-                        .map_err(|err| {
-                            Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                                <span class="string">"Failed to write specialisation to {specialised_ptx_path:?}: {err}"
-                            </span>)]))
-                        })<span class="question-mark">?</span>;
+                    std::mem::swap(rendered, <span class="kw-2">&amp;mut </span>prefixed);
                 }
 
-                <span class="prelude-val">Ok</span>(specialised_ptx_path)
-            },
-            BuildStatus::NotNeeded =&gt; <span class="prelude-val">Err</span>(Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
-                <span class="string">"Kernel build for specialisation {:?} was not needed."</span>,
-                <span class="kw-2">&amp;</span>specialisation
-            )]))),
-        }
-    })();
+                <span class="macro">eprintln!</span>(<span class="string">"{}"</span>, serde_json::to_string(<span class="kw-2">&amp;</span>message.message).unwrap());
+            }
+        },
+        |stderr_line| {
+            <span class="kw">if </span>stderr_line.trim().is_empty() {
+                <span class="kw">return</span>;
+            }
 
-    env::remove_var(env_var);
+            <span class="kw">if </span>any_output
+                .compare_exchange(<span class="bool-val">false</span>, <span class="bool-val">true</span>, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                colored::control::set_override(<span class="bool-val">true</span>);
+                <span class="macro">eprintln!</span>(
+                    <span class="string">"{} of {} ({})"</span>,
+                    <span class="string">"[PTX]"</span>.bright_black().bold(),
+                    crate_name.bold(),
+                    specialisation_prefix.to_ascii_lowercase(),
+                );
+                colored::control::unset_override();
+            }
 
-    result
+            colored::control::set_override(<span class="bool-val">true</span>);
+            <span class="macro">eprintln!</span>(
+                <span class="string">"  {} {}"</span>,
+                <span class="string">"|"</span>.bright_black().bold(),
+                stderr_line.replace(<span class="string">"   "</span>, <span class="string">""</span>)
+            );
+            colored::control::unset_override();
+        },
+    )<span class="question-mark">?</span>;
+
+    <span class="kw">match </span>build {
+        BuildStatus::Success(output) =&gt; {
+            <span class="kw">let </span>ptx_path = output.get_assembly_path();
+
+            <span class="kw">let </span><span class="kw-2">mut </span>specialised_ptx_path = ptx_path.clone();
+
+            specialised_ptx_path.set_extension(<span class="macro">format!</span>(<span class="string">"{specialisation_prefix}.ptx"</span>));
+
+            fs::copy(<span class="kw-2">&amp;</span>ptx_path, <span class="kw-2">&amp;</span>specialised_ptx_path).map_err(|err| {
+                Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
+                    <span class="string">"Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: {err}"
+                </span>)]))
+            })<span class="question-mark">?</span>;
+
+            <span class="kw">if let </span>Specialisation::Link(specialisation) = specialisation {
+                fs::OpenOptions::new()
+                    .append(<span class="bool-val">true</span>)
+                    .open(<span class="kw-2">&amp;</span>specialised_ptx_path)
+                    .and_then(|<span class="kw-2">mut </span>file| <span class="macro">writeln!</span>(file, <span class="string">"\n// {specialisation}"</span>))
+                    .map_err(|err| {
+                        Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
+                            <span class="string">"Failed to write specialisation to {specialised_ptx_path:?}: {err}"
+                        </span>)]))
+                    })<span class="question-mark">?</span>;
+            }
+
+            <span class="prelude-val">Ok</span>(specialised_ptx_path)
+        },
+        BuildStatus::NotNeeded =&gt; <span class="prelude-val">Err</span>(Error::from(BuildErrorKind::BuildFailed(<span class="macro">vec!</span>[<span class="macro">format!</span>(
+            <span class="string">"Kernel build for specialisation {:?} was not needed."</span>,
+            <span class="kw-2">&amp;</span>specialisation
+        )]))),
+    }
 }
 
 <span class="attr">#[derive(Copy, Clone, Debug)]
