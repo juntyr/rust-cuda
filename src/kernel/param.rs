@@ -71,10 +71,19 @@ impl<
     > CudaKernelParameter for PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = T where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = T
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = T where Self: 'b;
-    type FfiType<'stream, 'b> = crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T> where Self: 'b;
+    type DeviceType<'b>
+        = T
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = crate::utils::adapter::RustToCudaWithPortableBitCopySemantics<T>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = T;
 
@@ -154,14 +163,19 @@ impl<
     > CudaKernelParameter for &'a PerThreadShallowCopy<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
-        'b,
-        'stream,
-        crate::host::HostAndDeviceConstRef<'b, T>,
-    > where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = crate::utils::r#async::AsyncProj<'b, 'stream, crate::host::HostAndDeviceConstRef<'b, T>>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b T where Self: 'b;
-    type FfiType<'stream, 'b> = DeviceConstRef<'b, T> where Self: 'b;
+    type DeviceType<'b>
+        = &'b T
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = DeviceConstRef<'b, T>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = &'a T;
 
@@ -242,12 +256,19 @@ impl<
     > CudaKernelParameter for &'a PtxJit<PerThreadShallowCopy<T>>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b> where Self: 'b;
-    type FfiType<'stream, 'b> =
-        <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b> where Self: 'b;
+    type DeviceType<'b>
+        = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::DeviceType<'b>
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::FfiType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
 
@@ -363,14 +384,19 @@ impl<
     > CudaKernelParameter for &'a ShallowInteriorMutable<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
-        'b,
-        'stream,
-        crate::host::HostAndDeviceConstRef<'b, T>
-    > where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = crate::utils::r#async::AsyncProj<'b, 'stream, crate::host::HostAndDeviceConstRef<'b, T>>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b T where Self: 'b;
-    type FfiType<'stream, 'b> = DeviceConstRef<'b, T> where Self: 'b;
+    type DeviceType<'b>
+        = &'b T
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = DeviceConstRef<'b, T>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     /// The kernel takes a mutable borrow of the interior mutable data to ensure
     /// the interior mutability is limited to just this kernel invocation.
@@ -498,7 +524,8 @@ impl<
     > CudaKernelParameter for DeepPerThreadBorrow<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::Async<
+    type AsyncHostType<'stream, 'b>
+        = crate::utils::r#async::Async<
         'b,
         'stream,
         crate::host::HostAndDeviceOwned<
@@ -506,11 +533,18 @@ impl<
             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
         >,
         crate::utils::r#async::NoCompletion,
-    > where Self: 'b;
+    >
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = T where Self: 'b;
-    type FfiType<'stream, 'b> =
-        DeviceOwnedRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> where Self: 'b;
+    type DeviceType<'b>
+        = T
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = DeviceOwnedRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = T;
 
@@ -586,18 +620,26 @@ impl<
 
 impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
+    type AsyncHostType<'stream, 'b>
+        = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
         crate::host::HostAndDeviceConstRef<
             'b,
             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
         >,
-    > where Self: 'b;
+    >
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b T where Self: 'b;
-    type FfiType<'stream, 'b> =
-        DeviceConstRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> where Self: 'b;
+    type DeviceType<'b>
+        = &'b T
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = DeviceConstRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = &'a T;
 
@@ -671,18 +713,26 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut DeepPerThreadBorrow<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = crate::utils::r#async::AsyncProj<
+    type AsyncHostType<'stream, 'b>
+        = crate::utils::r#async::AsyncProj<
         'b,
         'stream,
         crate::host::HostAndDeviceMutRef<
             'b,
             DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
         >,
-    > where Self: 'b;
+    >
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b mut T where Self: 'b;
-    type FfiType<'stream, 'b> =
-        DeviceMutRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>> where Self: 'b;
+    type DeviceType<'b>
+        = &'b mut T
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = DeviceMutRef<'b, DeviceAccessible<<T as RustToCuda>::CudaRepresentation>>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = &'a mut T;
 
@@ -768,12 +818,19 @@ impl<
     > CudaKernelParameter for PtxJit<DeepPerThreadBorrow<T>>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = <DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b> where Self: 'b;
-    type FfiType<'stream, 'b> =
-        <DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b> where Self: 'b;
+    type DeviceType<'b>
+        = <DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = <DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = <DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
@@ -852,12 +909,19 @@ impl<
 
 impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadBorrow<T>> {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b> where Self: 'b;
-    type FfiType<'stream, 'b> =
-        <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b> where Self: 'b;
+    type DeviceType<'b>
+        = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
@@ -936,12 +1000,19 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut PtxJit<DeepPerThreadBorrow<T>>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> =
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::AsyncHostType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b> where Self: 'b;
-    type FfiType<'stream, 'b> =
-        <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b> where Self: 'b;
+    type DeviceType<'b>
+        = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::DeviceType<'b>
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::FfiType<'stream, 'b>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
@@ -1066,10 +1137,19 @@ mod private_shared {
 
 impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::ThreadBlockShared<T> {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockShared<T> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = &'b mut crate::utils::shared::ThreadBlockShared<T>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b mut crate::utils::shared::ThreadBlockShared<T> where Self: 'b;
-    type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedFfi<T> where Self: 'b;
+    type DeviceType<'b>
+        = &'b mut crate::utils::shared::ThreadBlockShared<T>
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = private_shared::ThreadBlockSharedFfi<T>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = Self;
 
@@ -1144,10 +1224,19 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
     #[cfg(feature = "host")]
-    type AsyncHostType<'stream, 'b> = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T> where Self: 'b;
+    type AsyncHostType<'stream, 'b>
+        = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T>
+    where
+        Self: 'b;
     #[cfg(any(feature = "device", doc))]
-    type DeviceType<'b> = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T> where Self: 'b;
-    type FfiType<'stream, 'b> = private_shared::ThreadBlockSharedSliceFfi<T> where Self: 'b;
+    type DeviceType<'b>
+        = &'b mut crate::utils::shared::ThreadBlockSharedSlice<T>
+    where
+        Self: 'b;
+    type FfiType<'stream, 'b>
+        = private_shared::ThreadBlockSharedSliceFfi<T>
+    where
+        Self: 'b;
     #[cfg(feature = "host")]
     type SyncHostType = Self;
 
