@@ -28,7 +28,7 @@ implement the trait for any <code>T</code>.</li>
 implementation of the trait, <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCudaAsync.html"><code>rust_cuda::lend::RustToCudaAsync</code></a>. By
 default, <code>#[cuda(async = true)]</code> is set.</li>
 <li><code>#[cuda(layout::ATTR = "VALUE")]</code> adds the <code>#[layout(ATTR = "VALUE")]</code>
-attribute to the <a href="https://docs.rs/const-type-layout/0.3.1/const_type_layout/derive.TypeLayout.html"><code>#derive(const_type_layout::TypeLayout)</code></a> derive for
+attribute to the <a href="https://docs.rs/const-type-layout/0.3.2/const_type_layout/derive.TypeLayout.html"><code>#derive(const_type_layout::TypeLayout)</code></a> derive for
 this struct’s <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html#associatedtype.CudaRepresentation"><code>rust_cuda::lend::RustToCuda::CudaRepresentation</code></a>.</li>
 <li><code>#[cuda(ignore)]</code> removes all subsequent attributes from the generated
 <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html#associatedtype.CudaRepresentation"><code>rust_cuda::lend::RustToCuda::CudaRepresentation</code></a> struct.</li>
@@ -41,7 +41,7 @@ representation and should be embedded by using the
 <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html"><code>rust_cuda::lend::RustToCuda</code></a> implementation of this field’s type. When
 this attribute is not specified, the field must instead implement
 <a href="https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html" title="trait core::marker::Copy"><code>Copy</code></a>, <a href="https://juntyr.github.io/rust-cuda/rust_cuda/safety/trait.PortableBitSemantics.html"><code>rust_cuda::safety::PortableBitSemantics</code></a>, and
-<a href="https://docs.rs/const-type-layout/0.3.1/const_type_layout/trait.TypeGraphLayout.html"><code>const_type_layout::TypeGraphLayout</code></a>.</li>
+<a href="https://docs.rs/const-type-layout/0.3.2/const_type_layout/trait.TypeGraphLayout.html"><code>const_type_layout::TypeGraphLayout</code></a>.</li>
 <li><code>#[cuda(embed = "&lt;proxy-type&gt;")]</code> works like <code>#[cuda(embed)]</code> but can be
 used when the field’s type does not implement
 <a href="https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html"><code>rust_cuda::lend::RustToCuda</code></a> itself, but some <code>&lt;proxy-type&gt;</code> exists,
