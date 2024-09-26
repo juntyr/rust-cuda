@@ -74,7 +74,7 @@
         )
     });
 
-    <span class="kw">let </span>kernel: syn::Ident = <span class="kw">match </span>syn::parse_macro_input::parse(attr) {
+    <span class="kw">let </span>kernel: syn::Ident = <span class="kw">match </span>syn::parse(attr) {
         <span class="prelude-val">Ok</span>(kernel) =&gt; kernel,
         <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">abort_call_site!</span>(
             <span class="string">"#[specialise_kernel_function(KERNEL)] expects KERNEL identifier: {:?}"</span>,

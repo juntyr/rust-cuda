@@ -382,7 +382,7 @@
 
     <span class="kw">let </span>kernel_hash = hasher.finish();
 
-    <span class="kw">let </span>config: KernelConfig = <span class="kw">match </span>syn::parse_macro_input::parse(attr) {
+    <span class="kw">let </span>config: KernelConfig = <span class="kw">match </span>syn::parse(attr) {
         <span class="prelude-val">Ok</span>(config) =&gt; config,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">abort_call_site!</span>(
@@ -398,55 +398,59 @@
     <span class="kw">let </span><span class="kw-2">mut </span>ptx_lint_levels = HashMap::new();
 
     func.attrs.retain(|attr| {
-        <span class="kw">if </span>attr.path.is_ident(<span class="string">"kernel"</span>) {
-            <span class="kw">if let </span><span class="prelude-val">Ok</span>(syn::Meta::List(list)) = attr.parse_meta() {
-                <span class="kw">for </span>meta <span class="kw">in </span><span class="kw-2">&amp;</span>list.nested {
-                    <span class="kw">match </span>meta {
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) <span class="kw">if </span>path.is_ident(<span class="string">"crate"</span>) =&gt; <span class="kw">match </span>syn::parse_str::&lt;syn::Path&gt;(<span class="kw-2">&amp;</span>s.value()) {
+        <span class="kw">if </span>attr.path().is_ident(<span class="string">"kernel"</span>) {
+            <span class="kw">if </span>attr
+                .parse_nested_meta(|meta| {
+                    <span class="kw">if </span>meta.path.is_ident(<span class="string">"crate"</span>) {
+                        <span class="kw">match </span>meta
+                            .value()
+                            .and_then(&lt;syn::LitStr <span class="kw">as </span>syn::parse::Parse&gt;::parse)
+                            .and_then(|s| syn::parse_str(<span class="kw-2">&amp;</span>s.value()))
+                        {
                             <span class="prelude-val">Ok</span>(new_crate_path) =&gt; {
                                 <span class="kw">if </span>crate_path.is_none() {
-                                    crate_path = <span class="prelude-val">Some</span>(
-                                        <span class="macro">syn::parse_quote_spanned!</span> { s.span() =&gt; #new_crate_path },
+                                    crate_path = <span class="prelude-val">Some</span>(new_crate_path);
+                                } <span class="kw">else </span>{
+                                    <span class="macro">emit_error!</span>(
+                                        meta.path.span(),
+                                        <span class="string">"[rust-cuda]: Duplicate #[kernel(crate)] attribute."</span>,
                                     );
-
-                                    <span class="kw">continue</span>;
                                 }
-
-                                <span class="macro">emit_error!</span>(
-                                    s.span(),
-                                    <span class="string">"[rust-cuda]: Duplicate #[kernel(crate)] attribute."</span>,
-                                );
                             },
                             <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">emit_error!</span>(
-                                s.span(),
-                                <span class="string">"[rust-cuda]: Invalid #[kernel(crate = \
-                                 \"&lt;crate-path&gt;\")] attribute: {}."</span>,
+                                meta.path.span(),
+                                <span class="string">"[rust-cuda]: Invalid #[kernel(crate = \"&lt;crate-path&gt;\")] \
+                                 attribute: {}."</span>,
                                 err
                             ),
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::List(syn::MetaList {
-                            path,
-                            nested,
-                            ..
-                        })) <span class="kw">if </span>path.is_ident(<span class="string">"allow"</span>) || path.is_ident(<span class="string">"warn"</span>) || path.is_ident(<span class="string">"deny"</span>) || path.is_ident(<span class="string">"forbid"</span>) =&gt; {
-                            parse_ptx_lint_level(path, nested, <span class="kw-2">&amp;mut </span>ptx_lint_levels);
-                        },
-                        <span class="kw">_ </span>=&gt; {
-                            <span class="macro">emit_error!</span>(
-                                meta.span(),
-                                <span class="string">"[rust-cuda]: Expected #[kernel(crate = \"&lt;crate-path&gt;\")] or #[kernel(allow/warn/deny/forbid(&lt;lint&gt;))] function attribute."
-                            </span>);
                         }
+
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
-                }
-            } <span class="kw">else </span>{
+
+                    <span class="kw">if </span>meta.path.is_ident(<span class="string">"allow"</span>)
+                        || meta.path.is_ident(<span class="string">"warn"</span>)
+                        || meta.path.is_ident(<span class="string">"deny"</span>)
+                        || meta.path.is_ident(<span class="string">"forbid"</span>)
+                    {
+                        parse_ptx_lint_level(<span class="kw-2">&amp;</span>meta, <span class="kw-2">&amp;mut </span>ptx_lint_levels);
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                    }
+
+                    <span class="macro">emit_error!</span>(
+                        meta.path.span(),
+                        <span class="string">"[rust-cuda]: Expected #[kernel(crate = \"&lt;crate-path&gt;\")] or \
+                         #[kernel(allow/warn/deny/forbid(&lt;lint&gt;))] function attribute."
+                    </span>);
+
+                    <span class="prelude-val">Ok</span>(())
+                })
+                .is_err()
+            {
                 <span class="macro">emit_error!</span>(
                     attr.span(),
-                    <span class="string">"[rust-cuda]: Expected #[kernel(crate = \"&lt;crate-path&gt;\")] or or #[kernel(allow/warn/deny/forbid(&lt;lint&gt;))] function attribute."
+                    <span class="string">"[rust-cuda]: Expected #[kernel(crate = \"&lt;crate-path&gt;\")] or or \
+                     #[kernel(allow/warn/deny/forbid(&lt;lint&gt;))] function attribute."
                 </span>);
             }
 
@@ -647,15 +651,11 @@
         | syn::Pat::Verbatim(<span class="kw">_</span>)
         | syn::Pat::Wild(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         syn::Pat::Ident(syn::PatIdent { ident, .. }) =&gt; <span class="prelude-val">Some</span>(ident.clone()),
-        syn::Pat::Box(syn::PatBox { pat, .. })
-        | syn::Pat::Reference(syn::PatReference { pat, .. })
+        syn::Pat::Reference(syn::PatReference { pat, .. })
         | syn::Pat::Type(syn::PatType { pat, .. }) =&gt; ident_from_pat(pat),
         syn::Pat::Or(syn::PatOr { cases, .. }) =&gt; ident_from_pat_iter(cases.iter()),
         syn::Pat::Slice(syn::PatSlice { elems, .. })
-        | syn::Pat::TupleStruct(syn::PatTupleStruct {
-            pat: syn::PatTuple { elems, .. },
-            ..
-        })
+        | syn::Pat::TupleStruct(syn::PatTupleStruct { elems, .. })
         | syn::Pat::Tuple(syn::PatTuple { elems, .. }) =&gt; ident_from_pat_iter(elems.iter()),
         syn::Pat::Struct(syn::PatStruct { fields, .. }) =&gt; {
             ident_from_pat_iter(fields.iter().map(|field| <span class="kw-2">&amp;*</span>field.pat))

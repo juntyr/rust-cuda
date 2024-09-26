@@ -297,7 +297,7 @@
 
     <span class="kw">let </span>struct_repr = <span class="kw">if </span>struct_attrs_cuda
         .iter()
-        .any(|attr| attr.path.is_ident(<span class="string">"repr"</span>))
+        .any(|attr| attr.path().is_ident(<span class="string">"repr"</span>))
     {
         <span class="macro">quote!</span> {}
     } <span class="kw">else </span>{

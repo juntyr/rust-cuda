@@ -887,7 +887,7 @@
 <span class="kw">use </span>ptx_compiler_sys::NvptxError;
 
 <span class="kw">pub fn </span>check_kernel(tokens: TokenStream) -&gt; TokenStream {
-    proc_macro_error::set_dummy(
+    proc_macro_error2::set_dummy(
         <span class="macro">quote!</span> {<span class="macro">::core::compile_error!</span>(<span class="string">"rust-cuda PTX kernel check failed"</span>);},
     );
 
@@ -896,7 +896,7 @@
         kernel_hash,
         crate_name,
         crate_path,
-    } = <span class="kw">match </span>syn::parse_macro_input::parse(tokens) {
+    } = <span class="kw">match </span>syn::parse(tokens) {
         <span class="prelude-val">Ok</span>(config) =&gt; config,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">abort_call_site!</span>(
@@ -929,7 +929,7 @@
     <span class="kw">let </span>ffi_signature_hash_seed_ident =
         syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, Span::call_site());
 
-    proc_macro_error::set_dummy(<span class="macro">quote!</span> {
+    proc_macro_error2::set_dummy(<span class="macro">quote!</span> {
         <span class="kw">const </span>#ptx_cstr_ident: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>::core::ffi::CStr = <span class="string">c"ERROR in this PTX compilation"</span>;
 
         <span class="kw">const fn </span>#ffi_signature_ident(_hashes: <span class="kw-2">&amp;</span>[u64]) -&gt; HostAndDeviceKernelSignatureTypeLayout {
@@ -950,7 +950,7 @@
         crate_path,
         specialisation,
         ptx_lint_levels,
-    } = <span class="kw">match </span>syn::parse_macro_input::parse(tokens) {
+    } = <span class="kw">match </span>syn::parse(tokens) {
         <span class="prelude-val">Ok</span>(config) =&gt; config,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">abort_call_site!</span>(

@@ -87,7 +87,7 @@
     <span class="kw">let </span>SpecialiseMangleConfig {
         kernel,
         specialisation,
-    } = <span class="kw">match </span>syn::parse_macro_input::parse(tokens) {
+    } = <span class="kw">match </span>syn::parse(tokens) {
         <span class="prelude-val">Ok</span>(config) =&gt; config,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">abort_call_site!</span>(

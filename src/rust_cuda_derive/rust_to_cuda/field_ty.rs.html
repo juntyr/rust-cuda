@@ -113,13 +113,6 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>syn::{parse_quote, spanned::Spanned};
 
 <span class="attr">#[expect(clippy::module_name_repetitions)]
@@ -145,78 +138,71 @@
 
     <span class="comment">// Remove all attributes from the fields in the Cuda representation
     </span>field.attrs.retain(|attr| {
-        <span class="kw">if </span>attr.path.is_ident(<span class="string">"cuda"</span>) {
-            <span class="kw">if let </span><span class="prelude-val">Ok</span>(syn::Meta::List(list)) = attr.parse_meta() {
-                <span class="kw">for </span>meta <span class="kw">in </span><span class="kw-2">&amp;</span>list.nested {
-                    <span class="kw">match </span>meta {
-                        syn::NestedMeta::Meta(syn::Meta::Path(path)) <span class="kw">if </span>path.is_ident(<span class="string">"ignore"</span>) =&gt; {
-                            r2c_ignore = <span class="bool-val">true</span>;
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::Path(path)) <span class="kw">if </span>path.is_ident(<span class="string">"embed"</span>) =&gt; {
-                            <span class="kw">if </span>cuda_repr_field_ty.is_none() {
-                                cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCuda {
-                                    field_ty: Box::new(field_ty.clone()),
-                                });
+        <span class="kw">if </span>attr.path().is_ident(<span class="string">"cuda"</span>) {
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = attr.parse_nested_meta(|meta| {
+                <span class="kw">if </span>meta.path.is_ident(<span class="string">"ignore"</span>) {
+                    r2c_ignore = <span class="bool-val">true</span>;
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                }
+
+                <span class="kw">if </span>meta.path.is_ident(<span class="string">"embed"</span>) {
+                    <span class="kw">if </span>cuda_repr_field_ty.is_some() {
+                        <span class="macro">emit_error!</span>(
+                            attr.span(),
+                            <span class="string">"[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
+                        </span>);
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                    }
+
+                    <span class="kw">if let </span><span class="prelude-val">Ok</span>(meta) = meta.value() {
+                        <span class="kw">match </span>meta.parse::&lt;syn::LitStr&gt;().and_then(|s| syn::parse_str(<span class="kw-2">&amp;</span>s.value())) {
+                            <span class="prelude-val">Ok</span>(proxy_ty) =&gt; {
+                                <span class="kw">let </span>old_field_ty = Box::new(field_ty.clone());
                                 field_ty = <span class="macro">parse_quote!</span> {
                                     #crate_path::utils::ffi::DeviceAccessible&lt;
-                                        &lt;#field_ty <span class="kw">as </span>#crate_path::lend::RustToCuda&gt;::CudaRepresentation
+                                        &lt;#proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCuda&gt;::CudaRepresentation
                                     &gt;
                                 };
-                            } <span class="kw">else </span>{
-                                <span class="macro">emit_error!</span>(
-                                    attr.span(),
-                                    <span class="string">"[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
-                                </span>);
-                            }
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) <span class="kw">if </span>path.is_ident(<span class="string">"embed"</span>) =&gt; {
-                            <span class="kw">if </span>cuda_repr_field_ty.is_none() {
-                                <span class="kw">match </span>syn::parse_str(<span class="kw-2">&amp;</span>s.value()) {
-                                    <span class="prelude-val">Ok</span>(proxy_ty) =&gt; {
-                                        <span class="kw">let </span>old_field_ty = Box::new(field_ty.clone());
-                                        field_ty = <span class="macro">parse_quote!</span> {
-                                            #crate_path::utils::ffi::DeviceAccessible&lt;
-                                                &lt;#proxy_ty <span class="kw">as </span>#crate_path::lend::RustToCuda&gt;::CudaRepresentation
-                                            &gt;
-                                        };
-                                        cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCudaProxy {
-                                            proxy_ty: Box::new(proxy_ty),
-                                            field_ty: old_field_ty,
-                                        });
-                                    },
-                                    <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">emit_error!</span>(
-                                        s.span(),
-                                        <span class="string">"[rust-cuda]: Invalid #[cuda(embed = \
-                                        \"&lt;proxy-type&gt;\")] field attribute: {}."</span>,
-                                        err
-                                    ),
-                                }
-                            } <span class="kw">else </span>{
-                                <span class="macro">emit_error!</span>(
-                                    attr.span(),
-                                    <span class="string">"[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
-                                </span>);
-                            }
-                        },
-                        <span class="kw">_ </span>=&gt; {
-                            <span class="macro">emit_error!</span>(
+                                cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCudaProxy {
+                                    proxy_ty: Box::new(proxy_ty),
+                                    field_ty: old_field_ty,
+                                });
+                            },
+                            <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">emit_error!</span>(
                                 meta.span(),
-                                <span class="string">"[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
-                                #[cuda(embed = \"&lt;proxy-type&gt;\")] field attribute"
-                            </span>);
+                                <span class="string">"[rust-cuda]: Invalid #[cuda(embed = \
+                                \"&lt;proxy-type&gt;\")] field attribute: {}."</span>,
+                                err
+                            ),
                         }
+                    } <span class="kw">else </span>{
+                        cuda_repr_field_ty = <span class="prelude-val">Some</span>(CudaReprFieldTy::RustToCuda {
+                            field_ty: Box::new(field_ty.clone()),
+                        });
+                        field_ty = <span class="macro">parse_quote!</span> {
+                            #crate_path::utils::ffi::DeviceAccessible&lt;
+                                &lt;#field_ty <span class="kw">as </span>#crate_path::lend::RustToCuda&gt;::CudaRepresentation
+                            &gt;
+                        };
                     }
+
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
-            } <span class="kw">else </span>{
+
+                <span class="macro">emit_error!</span>(
+                    meta.path.span(),
+                    <span class="string">"[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
+                    #[cuda(embed = \"&lt;proxy-type&gt;\")] field attribute"
+                </span>);
+
+                <span class="prelude-val">Ok</span>(())
+            }) {
                 <span class="macro">emit_error!</span>(
                     attr.span(),
                     <span class="string">"[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
-                    #[cuda(embed = \"&lt;proxy-type&gt;\")] field attribute."
-                </span>);
+                    #[cuda(embed = \"&lt;proxy-type&gt;\")] field attribute: {}"</span>,
+                    err
+                );
             }
 
             <span class="bool-val">false

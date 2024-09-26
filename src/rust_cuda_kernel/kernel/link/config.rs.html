@@ -133,11 +133,11 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>ptx_lint_levels = HashMap::new();
 
-        <span class="kw">for </span>syn::MetaList { path, nested, .. } <span class="kw">in </span>attrs {
-            parse_ptx_lint_level(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span>nested, <span class="kw-2">&amp;mut </span>ptx_lint_levels);
+        <span class="kw">for </span>attr <span class="kw">in </span>attrs {
+            parse_ptx_lint_level(<span class="kw-2">&amp;</span>attr, <span class="kw-2">&amp;mut </span>ptx_lint_levels);
         }
 
-        proc_macro_error::abort_if_dirty();
+        proc_macro_error2::abort_if_dirty();
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             kernel,

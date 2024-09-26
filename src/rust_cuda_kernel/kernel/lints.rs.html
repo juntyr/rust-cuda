@@ -169,24 +169,59 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{collections::HashMap, fmt};
 
 <span class="kw">use </span>syn::spanned::Spanned;
 
 <span class="attr">#[expect(clippy::too_many_lines)]
 </span><span class="kw">pub fn </span>parse_ptx_lint_level(
-    path: <span class="kw-2">&amp;</span>syn::Path,
-    nested: <span class="kw-2">&amp;</span>syn::punctuated::Punctuated&lt;syn::NestedMeta, syn::token::Comma&gt;,
+    meta: <span class="kw-2">&amp;</span><span class="kw">impl </span>NestedMetaParser,
     ptx_lint_levels: <span class="kw-2">&amp;mut </span>HashMap&lt;PtxLint, LintLevel&gt;,
 ) {
-    <span class="kw">let </span>level = <span class="kw">match </span>path.get_ident() {
+    <span class="kw">let </span>level = <span class="kw">match </span>meta.path().get_ident() {
         <span class="prelude-val">Some</span>(ident) <span class="kw">if </span>ident == <span class="string">"allow" </span>=&gt; LintLevel::Allow,
         <span class="prelude-val">Some</span>(ident) <span class="kw">if </span>ident == <span class="string">"warn" </span>=&gt; LintLevel::Warn,
         <span class="prelude-val">Some</span>(ident) <span class="kw">if </span>ident == <span class="string">"deny" </span>=&gt; LintLevel::Deny,
         <span class="prelude-val">Some</span>(ident) <span class="kw">if </span>ident == <span class="string">"forbid" </span>=&gt; LintLevel::Forbid,
         <span class="kw">_ </span>=&gt; {
             <span class="macro">emit_error!</span>(
-                path.span(),
+                meta.path().span(),
                 <span class="string">"[rust-cuda]: Invalid lint #[kernel(&lt;level&gt;(&lt;lint&gt;))] attribute: unknown lint \
                  level, must be one of `allow`, `warn`, `deny`, `forbid`."</span>,
             );
@@ -195,107 +230,109 @@
         },
     };
 
-    <span class="kw">for </span>meta <span class="kw">in </span>nested {
-        <span class="kw">let </span>syn::NestedMeta::Meta(syn::Meta::Path(path)) = meta <span class="kw">else </span>{
-            <span class="macro">emit_error!</span>(
-                meta.span(),
-                <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute."</span>,
-                level,
-            );
-            <span class="kw">continue</span>;
-        };
-
-        <span class="kw">if </span>path.leading_colon.is_some()
-            || path.segments.empty_or_trailing()
-            || path.segments.len() != <span class="number">2
-        </span>{
-            <span class="macro">emit_error!</span>(
-                meta.span(),
-                <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the form \
-                 `ptx::lint`."</span>,
-                level,
-            );
-            <span class="kw">continue</span>;
-        }
-
-        <span class="kw">let </span><span class="prelude-val">Some</span>(syn::PathSegment {
-            ident: namespace,
-            arguments: syn::PathArguments::None,
-        }) = path.segments.first()
-        <span class="kw">else </span>{
-            <span class="macro">emit_error!</span>(
-                meta.span(),
-                <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the form \
-                 `ptx::lint`."</span>,
-                level,
-            );
-            <span class="kw">continue</span>;
-        };
-
-        <span class="kw">if </span>namespace != <span class="string">"ptx" </span>{
-            <span class="macro">emit_error!</span>(
-                meta.span(),
-                <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the form \
-                 `ptx::lint`."</span>,
-                level,
-            );
-            <span class="kw">continue</span>;
-        }
-
-        <span class="kw">let </span><span class="prelude-val">Some</span>(syn::PathSegment {
-            ident: lint,
-            arguments: syn::PathArguments::None,
-        }) = path.segments.last()
-        <span class="kw">else </span>{
-            <span class="macro">emit_error!</span>(
-                meta.span(),
-                <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the form \
-                 `ptx::lint`."</span>,
-                level,
-            );
-            <span class="kw">continue</span>;
-        };
-
-        <span class="kw">let </span>lint = <span class="kw">match </span>lint {
-            l <span class="kw">if </span>l == <span class="string">"verbose" </span>=&gt; PtxLint::Verbose,
-            l <span class="kw">if </span>l == <span class="string">"double_precision_use" </span>=&gt; PtxLint::DoublePrecisionUse,
-            l <span class="kw">if </span>l == <span class="string">"local_memory_use" </span>=&gt; PtxLint::LocalMemoryUse,
-            l <span class="kw">if </span>l == <span class="string">"register_spills" </span>=&gt; PtxLint::RegisterSpills,
-            l <span class="kw">if </span>l == <span class="string">"dump_assembly" </span>=&gt; PtxLint::DumpAssembly,
-            l <span class="kw">if </span>l == <span class="string">"dynamic_stack_size" </span>=&gt; PtxLint::DynamicStackSize,
-            <span class="kw">_ </span>=&gt; {
+    <span class="kw">if </span>meta
+        .parse_nested_meta(|meta| {
+            <span class="kw">if </span>meta.path.leading_colon.is_some()
+                || meta.path.segments.empty_or_trailing()
+                || meta.path.segments.len() != <span class="number">2
+            </span>{
                 <span class="macro">emit_error!</span>(
-                    meta.span(),
-                    <span class="string">"[rust-cuda]: Unknown PTX kernel lint `ptx::{}`."</span>,
-                    lint,
+                    meta.path.span(),
+                    <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the \
+                     form `ptx::lint`."</span>,
+                    level,
                 );
-                <span class="kw">continue</span>;
-            },
-        };
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+            }
 
-        <span class="kw">match </span>ptx_lint_levels.get(<span class="kw-2">&amp;</span>lint) {
-            <span class="prelude-val">None </span>=&gt; (),
-            <span class="prelude-val">Some</span>(LintLevel::Forbid) <span class="kw">if </span>level &lt; LintLevel::Forbid =&gt; {
+            <span class="kw">let </span><span class="prelude-val">Some</span>(syn::PathSegment {
+                ident: namespace,
+                arguments: syn::PathArguments::None,
+            }) = meta.path.segments.first()
+            <span class="kw">else </span>{
                 <span class="macro">emit_error!</span>(
-                    meta.span(),
-                    <span class="string">"[rust-cuda]: {}(ptx::{}) incompatible with previous forbid."</span>,
+                    meta.path.span(),
+                    <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the \
+                     form `ptx::lint`."</span>,
                     level,
-                    lint,
                 );
-                <span class="kw">continue</span>;
-            },
-            <span class="prelude-val">Some</span>(previous) =&gt; {
-                <span class="macro">emit_warning!</span>(
-                    meta.span(),
-                    <span class="string">"[rust-cuda]: {}(ptx::{}) overwrites previous {}."</span>,
-                    level,
-                    lint,
-                    previous,
-                );
-            },
-        }
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+            };
 
-        ptx_lint_levels.insert(lint, level);
+            <span class="kw">if </span>namespace != <span class="string">"ptx" </span>{
+                <span class="macro">emit_error!</span>(
+                    meta.path.span(),
+                    <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the \
+                     form `ptx::lint`."</span>,
+                    level,
+                );
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+            }
+
+            <span class="kw">let </span><span class="prelude-val">Some</span>(syn::PathSegment {
+                ident: lint,
+                arguments: syn::PathArguments::None,
+            }) = meta.path.segments.last()
+            <span class="kw">else </span>{
+                <span class="macro">emit_error!</span>(
+                    meta.path.span(),
+                    <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute: &lt;lint&gt; must be of the \
+                     form `ptx::lint`."</span>,
+                    level,
+                );
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+            };
+
+            <span class="kw">let </span>lint = <span class="kw">match </span>lint {
+                l <span class="kw">if </span>l == <span class="string">"verbose" </span>=&gt; PtxLint::Verbose,
+                l <span class="kw">if </span>l == <span class="string">"double_precision_use" </span>=&gt; PtxLint::DoublePrecisionUse,
+                l <span class="kw">if </span>l == <span class="string">"local_memory_use" </span>=&gt; PtxLint::LocalMemoryUse,
+                l <span class="kw">if </span>l == <span class="string">"register_spills" </span>=&gt; PtxLint::RegisterSpills,
+                l <span class="kw">if </span>l == <span class="string">"dump_assembly" </span>=&gt; PtxLint::DumpAssembly,
+                l <span class="kw">if </span>l == <span class="string">"dynamic_stack_size" </span>=&gt; PtxLint::DynamicStackSize,
+                <span class="kw">_ </span>=&gt; {
+                    <span class="macro">emit_error!</span>(
+                        meta.path.span(),
+                        <span class="string">"[rust-cuda]: Unknown PTX kernel lint `ptx::{}`."</span>,
+                        lint,
+                    );
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                },
+            };
+
+            <span class="kw">match </span>ptx_lint_levels.get(<span class="kw-2">&amp;</span>lint) {
+                <span class="prelude-val">None </span>=&gt; (),
+                <span class="prelude-val">Some</span>(LintLevel::Forbid) <span class="kw">if </span>level &lt; LintLevel::Forbid =&gt; {
+                    <span class="macro">emit_error!</span>(
+                        meta.path.span(),
+                        <span class="string">"[rust-cuda]: {}(ptx::{}) incompatible with previous forbid."</span>,
+                        level,
+                        lint,
+                    );
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                },
+                <span class="prelude-val">Some</span>(previous) =&gt; {
+                    <span class="macro">emit_warning!</span>(
+                        meta.path.span(),
+                        <span class="string">"[rust-cuda]: {}(ptx::{}) overwrites previous {}."</span>,
+                        level,
+                        lint,
+                        previous,
+                    );
+                },
+            }
+
+            ptx_lint_levels.insert(lint, level);
+
+            <span class="prelude-val">Ok</span>(())
+        })
+        .is_err()
+    {
+        <span class="macro">emit_error!</span>(
+            meta.path().span(),
+            <span class="string">"[rust-cuda]: Invalid #[kernel({}(&lt;lint&gt;))] attribute."</span>,
+            level,
+        );
     }
 }
 
@@ -338,6 +375,41 @@
             <span class="self">Self</span>::DumpAssembly =&gt; fmt.write_str(<span class="string">"dump_assembly"</span>),
             <span class="self">Self</span>::DynamicStackSize =&gt; fmt.write_str(<span class="string">"dynamic_stack_size"</span>),
         }
+    }
+}
+
+<span class="kw">pub trait </span>NestedMetaParser {
+    <span class="kw">fn </span>path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>syn::Path;
+
+    <span class="kw">fn </span>parse_nested_meta(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        logic: <span class="kw">impl </span>FnMut(syn::meta::ParseNestedMeta) -&gt; syn::Result&lt;()&gt;,
+    ) -&gt; syn::Result&lt;()&gt;;
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; NestedMetaParser <span class="kw">for </span>syn::meta::ParseNestedMeta&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>syn::Path {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.path
+    }
+
+    <span class="kw">fn </span>parse_nested_meta(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        logic: <span class="kw">impl </span>FnMut(syn::meta::ParseNestedMeta) -&gt; syn::Result&lt;()&gt;,
+    ) -&gt; syn::Result&lt;()&gt; {
+        <span class="self">self</span>.parse_nested_meta(logic)
+    }
+}
+
+<span class="kw">impl </span>NestedMetaParser <span class="kw">for </span>syn::MetaList {
+    <span class="kw">fn </span>path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>syn::Path {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.path
+    }
+
+    <span class="kw">fn </span>parse_nested_meta(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        logic: <span class="kw">impl </span>FnMut(syn::meta::ParseNestedMeta) -&gt; syn::Result&lt;()&gt;,
+    ) -&gt; syn::Result&lt;()&gt; {
+        <span class="self">self</span>.parse_nested_meta(logic)
     }
 }
 </code></pre></div></section></main></body></html>

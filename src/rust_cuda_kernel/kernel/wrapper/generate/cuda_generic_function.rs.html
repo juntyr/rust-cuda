@@ -139,7 +139,7 @@
                             syn::Lifetime::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"'__rust_cuda_lt_{i}"</span>), ty.span());
                         generic_params.insert(
                             <span class="number">0</span>,
-                            syn::GenericParam::Lifetime(syn::LifetimeDef {
+                            syn::GenericParam::Lifetime(syn::LifetimeParam {
                                 attrs: Vec::new(),
                                 colon_token: <span class="prelude-val">None</span>,
                                 lifetime: lifetime.clone(),
