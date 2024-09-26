@@ -4,18 +4,17 @@ use syn::spanned::Spanned;
 
 #[expect(clippy::too_many_lines)]
 pub fn parse_ptx_lint_level(
-    path: &syn::Path,
-    nested: &syn::punctuated::Punctuated<syn::NestedMeta, syn::token::Comma>,
+    meta: &impl NestedMetaParser,
     ptx_lint_levels: &mut HashMap<PtxLint, LintLevel>,
 ) {
-    let level = match path.get_ident() {
+    let level = match meta.path().get_ident() {
         Some(ident) if ident == "allow" => LintLevel::Allow,
         Some(ident) if ident == "warn" => LintLevel::Warn,
         Some(ident) if ident == "deny" => LintLevel::Deny,
         Some(ident) if ident == "forbid" => LintLevel::Forbid,
         _ => {
             emit_error!(
-                path.span(),
+                meta.path().span(),
                 "[rust-cuda]: Invalid lint #[kernel(<level>(<lint>))] attribute: unknown lint \
                  level, must be one of `allow`, `warn`, `deny`, `forbid`.",
             );
@@ -24,107 +23,109 @@ pub fn parse_ptx_lint_level(
         },
     };
 
-    for meta in nested {
-        let syn::NestedMeta::Meta(syn::Meta::Path(path)) = meta else {
-            emit_error!(
-                meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute.",
-                level,
-            );
-            continue;
-        };
-
-        if path.leading_colon.is_some()
-            || path.segments.empty_or_trailing()
-            || path.segments.len() != 2
-        {
-            emit_error!(
-                meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form \
-                 `ptx::lint`.",
-                level,
-            );
-            continue;
-        }
-
-        let Some(syn::PathSegment {
-            ident: namespace,
-            arguments: syn::PathArguments::None,
-        }) = path.segments.first()
-        else {
-            emit_error!(
-                meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form \
-                 `ptx::lint`.",
-                level,
-            );
-            continue;
-        };
-
-        if namespace != "ptx" {
-            emit_error!(
-                meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form \
-                 `ptx::lint`.",
-                level,
-            );
-            continue;
-        }
-
-        let Some(syn::PathSegment {
-            ident: lint,
-            arguments: syn::PathArguments::None,
-        }) = path.segments.last()
-        else {
-            emit_error!(
-                meta.span(),
-                "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the form \
-                 `ptx::lint`.",
-                level,
-            );
-            continue;
-        };
-
-        let lint = match lint {
-            l if l == "verbose" => PtxLint::Verbose,
-            l if l == "double_precision_use" => PtxLint::DoublePrecisionUse,
-            l if l == "local_memory_use" => PtxLint::LocalMemoryUse,
-            l if l == "register_spills" => PtxLint::RegisterSpills,
-            l if l == "dump_assembly" => PtxLint::DumpAssembly,
-            l if l == "dynamic_stack_size" => PtxLint::DynamicStackSize,
-            _ => {
+    if meta
+        .parse_nested_meta(|meta| {
+            if meta.path.leading_colon.is_some()
+                || meta.path.segments.empty_or_trailing()
+                || meta.path.segments.len() != 2
+            {
                 emit_error!(
-                    meta.span(),
-                    "[rust-cuda]: Unknown PTX kernel lint `ptx::{}`.",
-                    lint,
+                    meta.path.span(),
+                    "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the \
+                     form `ptx::lint`.",
+                    level,
                 );
-                continue;
-            },
-        };
+                return Ok(());
+            }
 
-        match ptx_lint_levels.get(&lint) {
-            None => (),
-            Some(LintLevel::Forbid) if level < LintLevel::Forbid => {
+            let Some(syn::PathSegment {
+                ident: namespace,
+                arguments: syn::PathArguments::None,
+            }) = meta.path.segments.first()
+            else {
                 emit_error!(
-                    meta.span(),
-                    "[rust-cuda]: {}(ptx::{}) incompatible with previous forbid.",
+                    meta.path.span(),
+                    "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the \
+                     form `ptx::lint`.",
                     level,
-                    lint,
                 );
-                continue;
-            },
-            Some(previous) => {
-                emit_warning!(
-                    meta.span(),
-                    "[rust-cuda]: {}(ptx::{}) overwrites previous {}.",
-                    level,
-                    lint,
-                    previous,
-                );
-            },
-        }
+                return Ok(());
+            };
 
-        ptx_lint_levels.insert(lint, level);
+            if namespace != "ptx" {
+                emit_error!(
+                    meta.path.span(),
+                    "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the \
+                     form `ptx::lint`.",
+                    level,
+                );
+                return Ok(());
+            }
+
+            let Some(syn::PathSegment {
+                ident: lint,
+                arguments: syn::PathArguments::None,
+            }) = meta.path.segments.last()
+            else {
+                emit_error!(
+                    meta.path.span(),
+                    "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute: <lint> must be of the \
+                     form `ptx::lint`.",
+                    level,
+                );
+                return Ok(());
+            };
+
+            let lint = match lint {
+                l if l == "verbose" => PtxLint::Verbose,
+                l if l == "double_precision_use" => PtxLint::DoublePrecisionUse,
+                l if l == "local_memory_use" => PtxLint::LocalMemoryUse,
+                l if l == "register_spills" => PtxLint::RegisterSpills,
+                l if l == "dump_assembly" => PtxLint::DumpAssembly,
+                l if l == "dynamic_stack_size" => PtxLint::DynamicStackSize,
+                _ => {
+                    emit_error!(
+                        meta.path.span(),
+                        "[rust-cuda]: Unknown PTX kernel lint `ptx::{}`.",
+                        lint,
+                    );
+                    return Ok(());
+                },
+            };
+
+            match ptx_lint_levels.get(&lint) {
+                None => (),
+                Some(LintLevel::Forbid) if level < LintLevel::Forbid => {
+                    emit_error!(
+                        meta.path.span(),
+                        "[rust-cuda]: {}(ptx::{}) incompatible with previous forbid.",
+                        level,
+                        lint,
+                    );
+                    return Ok(());
+                },
+                Some(previous) => {
+                    emit_warning!(
+                        meta.path.span(),
+                        "[rust-cuda]: {}(ptx::{}) overwrites previous {}.",
+                        level,
+                        lint,
+                        previous,
+                    );
+                },
+            }
+
+            ptx_lint_levels.insert(lint, level);
+
+            Ok(())
+        })
+        .is_err()
+    {
+        emit_error!(
+            meta.path().span(),
+            "[rust-cuda]: Invalid #[kernel({}(<lint>))] attribute.",
+            level,
+        );
     }
 }
 
@@ -167,5 +168,40 @@ impl fmt::Display for PtxLint {
             Self::DumpAssembly => fmt.write_str("dump_assembly"),
             Self::DynamicStackSize => fmt.write_str("dynamic_stack_size"),
         }
+    }
+}
+
+pub trait NestedMetaParser {
+    fn path(&self) -> &syn::Path;
+
+    fn parse_nested_meta(
+        &self,
+        logic: impl FnMut(syn::meta::ParseNestedMeta) -> syn::Result<()>,
+    ) -> syn::Result<()>;
+}
+
+impl<'a> NestedMetaParser for syn::meta::ParseNestedMeta<'a> {
+    fn path(&self) -> &syn::Path {
+        &self.path
+    }
+
+    fn parse_nested_meta(
+        &self,
+        logic: impl FnMut(syn::meta::ParseNestedMeta) -> syn::Result<()>,
+    ) -> syn::Result<()> {
+        self.parse_nested_meta(logic)
+    }
+}
+
+impl NestedMetaParser for syn::MetaList {
+    fn path(&self) -> &syn::Path {
+        &self.path
+    }
+
+    fn parse_nested_meta(
+        &self,
+        logic: impl FnMut(syn::meta::ParseNestedMeta) -> syn::Result<()>,
+    ) -> syn::Result<()> {
+        self.parse_nested_meta(logic)
     }
 }

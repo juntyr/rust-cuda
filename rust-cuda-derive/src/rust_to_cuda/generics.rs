@@ -35,18 +35,20 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
     let mut crate_path = None;
 
     struct_attrs_cuda.retain(|attr| {
-        if attr.path.is_ident("cuda") {
-            if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
-                for meta in &list.nested {
-                    match meta {
-                        syn::NestedMeta::Meta(syn::Meta::Path(path)) if path.is_ident("ignore") => {
-                            r2c_ignore = true;
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) if path.is_ident("bound") => match syn::parse_str::<syn::WherePredicate>(&s.value()) {
+        if attr.path().is_ident("cuda") {
+            if attr
+                .parse_nested_meta(|meta| {
+                    if meta.path.is_ident("ignore") {
+                        r2c_ignore = true;
+                        return Ok(());
+                    }
+
+                    if meta.path.is_ident("bound") {
+                        match meta
+                            .value()
+                            .and_then(<syn::LitStr as syn::parse::Parse>::parse)
+                            .and_then(|s| syn::parse_str::<syn::WherePredicate>(&s.value()))
+                        {
                             Ok(bound) => {
                                 struct_generics_cuda
                                     .make_where_clause()
@@ -58,116 +60,157 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
                                     .push(bound);
                             },
                             Err(err) => emit_error!(
-                                s.span(),
+                                meta.path.span(),
                                 "[rust-cuda]: Invalid #[cuda(bound = \"<where-predicate>\")] \
                                  struct attribute: {}.",
                                 err
                             ),
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) if path.is_ident("free") => {
-                            match syn::parse_str::<syn::Ident>(&s.value()) {
-                                Ok(param) => {
-                                    if let Some(i) = type_params.iter().position(|ty| **ty == param)
-                                    {
-                                        type_params.swap_remove(i);
-                                    } else {
-                                        emit_error!(
-                                            s.span(),
-                                            "[rust-cuda]: Invalid #[cuda(free = \"{}\")] \
-                                             attribute: \"{}\" is either not a type parameter or \
-                                             has already been freed (duplicate attribute).",
-                                            param,
-                                            param,
-                                        );
-                                    }
-                                },
-                                Err(err) => emit_error!(
-                                    s.span(),
-                                    "[rust-cuda]: Invalid #[cuda(free = \"<type>\")] attribute: \
-                                     {}.",
-                                    err
-                                ),
-                            }
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Bool(b),
-                            ..
-                        })) if path.is_ident("async") => if r2c_async_impl.is_none() {
-                            r2c_async_impl = Some(b.value());
-                        } else {
-                            emit_error!(
-                                b.span(),
-                                "[rust-cuda]: Duplicate #[cuda(async)] attribute.",
-                            );
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) if path.is_ident("crate") => match syn::parse_str::<syn::Path>(&s.value()) {
-                            Ok(new_crate_path) => {
-                                if crate_path.is_none() {
-                                    crate_path = Some(
-                                        syn::parse_quote_spanned! { s.span() => #new_crate_path },
-                                    );
+                        }
+
+                        return Ok(());
+                    }
+
+                    if meta.path.is_ident("free") {
+                        match meta
+                            .value()
+                            .and_then(<syn::LitStr as syn::parse::Parse>::parse)
+                            .and_then(|s| syn::parse_str::<syn::Ident>(&s.value()))
+                        {
+                            Ok(param) => {
+                                if let Some(i) = type_params.iter().position(|ty| **ty == param) {
+                                    type_params.swap_remove(i);
                                 } else {
                                     emit_error!(
-                                        s.span(),
+                                        param.span(),
+                                        "[rust-cuda]: Invalid #[cuda(free = \"{}\")] attribute: \
+                                         \"{}\" is either not a type parameter or has already \
+                                         been freed (duplicate attribute).",
+                                        param,
+                                        param,
+                                    );
+                                }
+                            },
+                            Err(err) => emit_error!(
+                                meta.path.span(),
+                                "[rust-cuda]: Invalid #[cuda(free = \"<type>\")] attribute: {}.",
+                                err
+                            ),
+                        }
+
+                        return Ok(());
+                    }
+
+                    if meta.path.is_ident("async") {
+                        match meta
+                            .value()
+                            .and_then(<syn::LitBool as syn::parse::Parse>::parse)
+                        {
+                            Ok(b) => {
+                                if r2c_async_impl.is_none() {
+                                    r2c_async_impl = Some(b.value());
+                                } else {
+                                    emit_error!(
+                                        b.span(),
+                                        "[rust-cuda]: Duplicate #[cuda(async)] attribute.",
+                                    );
+                                }
+                            },
+                            Err(err) => emit_error!(
+                                meta.path.span(),
+                                "[rust-cuda]: Invalid #[cuda(async = <bool>)] attribute: {}.",
+                                err
+                            ),
+                        }
+
+                        return Ok(());
+                    }
+
+                    if meta.path.is_ident("crate") {
+                        match meta
+                            .value()
+                            .and_then(<syn::LitStr as syn::parse::Parse>::parse)
+                            .and_then(|s| syn::parse_str(&s.value()))
+                        {
+                            Ok(new_crate_path) => {
+                                if crate_path.is_none() {
+                                    crate_path = Some(new_crate_path);
+                                } else {
+                                    emit_error!(
+                                        meta.path.span(),
                                         "[rust-cuda]: Duplicate #[cuda(crate)] attribute.",
                                     );
                                 }
                             },
                             Err(err) => emit_error!(
-                                s.span(),
-                                "[rust-cuda]: Invalid #[cuda(crate = \
-                                 \"<crate-path>\")] attribute: {}.",
+                                meta.path.span(),
+                                "[rust-cuda]: Invalid #[cuda(crate = \"<crate-path>\")] \
+                                 attribute: {}.",
                                 err
                             ),
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path: syn::Path {
-                                leading_colon: None,
-                                segments,
-                            },
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) if segments.len() == 2
-                            && let syn::PathSegment {
-                                ident: layout_ident,
-                                arguments: syn::PathArguments::None,
-                            } = &segments[0]
-                            && let syn::PathSegment {
-                                ident: attr_ident,
-                                arguments: syn::PathArguments::None,
-                            } = &segments[1]
-                            && layout_ident == "layout"
-                            && !segments.trailing_punct() =>
+                        }
+
+                        return Ok(());
+                    }
+
+                    if meta.path.leading_colon.is_none()
+                        && meta.path.segments.len() == 2
+                        && let syn::PathSegment {
+                            ident: layout_ident,
+                            arguments: syn::PathArguments::None,
+                        } = &meta.path.segments[0]
+                        && let syn::PathSegment {
+                            ident: attr_ident,
+                            arguments: syn::PathArguments::None,
+                        } = &meta.path.segments[1]
+                        && layout_ident == "layout"
+                        && !meta.path.segments.trailing_punct()
+                    {
+                        match meta
+                            .value()
+                            .and_then(<syn::LitStr as syn::parse::Parse>::parse)
                         {
-                            struct_layout_attrs.push(syn::Attribute {
+                            Ok(s) => struct_layout_attrs.push(syn::Attribute {
                                 pound_token: attr.pound_token,
                                 style: attr.style,
                                 bracket_token: attr.bracket_token,
-                                path: proc_macro2::Ident::new("layout", attr.path.span()).into(),
-                                tokens: quote_spanned!(s.span() => (#attr_ident = #s)),
-                            });
-                        },
-                        _ => {
-                            emit_error!(
-                                meta.span(),
-                                "[rust-cuda]: Expected #[cuda(crate = \"<crate-path>\")] / #[cuda(bound = \"<where-predicate>\")] / #[cuda(free = \"<type>\")] / #[cuda(async = <bool>)] / #[cuda(layout::ATTR = \"VALUE\")] / #[cuda(ignore)] struct attribute."
-                            );
-                        },
+                                meta: syn::Meta::List(syn::MetaList {
+                                    path: proc_macro2::Ident::new("layout", layout_ident.span())
+                                        .into(),
+                                    delimiter: syn::MacroDelimiter::Brace(syn::token::Brace(
+                                        attr.path().span(),
+                                    )),
+                                    tokens: quote_spanned!(s.span() => #attr_ident = #s),
+                                }),
+                            }),
+                            Err(err) => emit_error!(
+                                meta.path.span(),
+                                "[rust-cuda]: Invalid #[cuda(layout::ATTR = \"VALUE\")] \
+                                 attribute: {}.",
+                                err
+                            ),
+                        }
+
+                        return Ok(());
                     }
-                }
-            } else {
+
+                    emit_error!(
+                        meta.path.span(),
+                        "[rust-cuda]: Expected #[cuda(crate = \"<crate-path>\")] / #[cuda(bound = \
+                         \"<where-predicate>\")] / #[cuda(free = \"<type>\")] / #[cuda(async = \
+                         <bool>)] / #[cuda(layout::ATTR = \"VALUE\")] / #[cuda(ignore)] struct \
+                         attribute."
+                    );
+
+                    Ok(())
+                })
+                .is_err()
+            {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[cuda(crate = \"<crate-path>\")] / #[cuda(bound = \"<where-predicate>\")] / #[cuda(free = \"<type>\")] / #[cuda(async = <bool>)] / #[cuda(layout::ATTR = \"VALUE\")] / #[cuda(ignore)] struct attribute."
+                    "[rust-cuda]: Expected #[cuda(crate = \"<crate-path>\")] / #[cuda(bound = \
+                     \"<where-predicate>\")] / #[cuda(free = \"<type>\")] / #[cuda(async = \
+                     <bool>)] / #[cuda(layout::ATTR = \"VALUE\")] / #[cuda(ignore)] struct \
+                     attribute."
                 );
             }
 

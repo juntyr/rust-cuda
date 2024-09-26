@@ -30,7 +30,7 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
 
     let kernel_hash = hasher.finish();
 
-    let config: KernelConfig = match syn::parse_macro_input::parse(attr) {
+    let config: KernelConfig = match syn::parse(attr) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
@@ -46,55 +46,59 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut ptx_lint_levels = HashMap::new();
 
     func.attrs.retain(|attr| {
-        if attr.path.is_ident("kernel") {
-            if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
-                for meta in &list.nested {
-                    match meta {
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) if path.is_ident("crate") => match syn::parse_str::<syn::Path>(&s.value()) {
+        if attr.path().is_ident("kernel") {
+            if attr
+                .parse_nested_meta(|meta| {
+                    if meta.path.is_ident("crate") {
+                        match meta
+                            .value()
+                            .and_then(<syn::LitStr as syn::parse::Parse>::parse)
+                            .and_then(|s| syn::parse_str(&s.value()))
+                        {
                             Ok(new_crate_path) => {
                                 if crate_path.is_none() {
-                                    crate_path = Some(
-                                        syn::parse_quote_spanned! { s.span() => #new_crate_path },
+                                    crate_path = Some(new_crate_path);
+                                } else {
+                                    emit_error!(
+                                        meta.path.span(),
+                                        "[rust-cuda]: Duplicate #[kernel(crate)] attribute.",
                                     );
-
-                                    continue;
                                 }
-
-                                emit_error!(
-                                    s.span(),
-                                    "[rust-cuda]: Duplicate #[kernel(crate)] attribute.",
-                                );
                             },
                             Err(err) => emit_error!(
-                                s.span(),
-                                "[rust-cuda]: Invalid #[kernel(crate = \
-                                 \"<crate-path>\")] attribute: {}.",
+                                meta.path.span(),
+                                "[rust-cuda]: Invalid #[kernel(crate = \"<crate-path>\")] \
+                                 attribute: {}.",
                                 err
                             ),
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::List(syn::MetaList {
-                            path,
-                            nested,
-                            ..
-                        })) if path.is_ident("allow") || path.is_ident("warn") || path.is_ident("deny") || path.is_ident("forbid") => {
-                            parse_ptx_lint_level(path, nested, &mut ptx_lint_levels);
-                        },
-                        _ => {
-                            emit_error!(
-                                meta.span(),
-                                "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] or #[kernel(allow/warn/deny/forbid(<lint>))] function attribute."
-                            );
                         }
+
+                        return Ok(());
                     }
-                }
-            } else {
+
+                    if meta.path.is_ident("allow")
+                        || meta.path.is_ident("warn")
+                        || meta.path.is_ident("deny")
+                        || meta.path.is_ident("forbid")
+                    {
+                        parse_ptx_lint_level(&meta, &mut ptx_lint_levels);
+                        return Ok(());
+                    }
+
+                    emit_error!(
+                        meta.path.span(),
+                        "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] or \
+                         #[kernel(allow/warn/deny/forbid(<lint>))] function attribute."
+                    );
+
+                    Ok(())
+                })
+                .is_err()
+            {
                 emit_error!(
                     attr.span(),
-                    "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] or or #[kernel(allow/warn/deny/forbid(<lint>))] function attribute."
+                    "[rust-cuda]: Expected #[kernel(crate = \"<crate-path>\")] or or \
+                     #[kernel(allow/warn/deny/forbid(<lint>))] function attribute."
                 );
             }
 
@@ -295,15 +299,11 @@ fn ident_from_pat(pat: &syn::Pat) -> Option<syn::Ident> {
         | syn::Pat::Verbatim(_)
         | syn::Pat::Wild(_) => None,
         syn::Pat::Ident(syn::PatIdent { ident, .. }) => Some(ident.clone()),
-        syn::Pat::Box(syn::PatBox { pat, .. })
-        | syn::Pat::Reference(syn::PatReference { pat, .. })
+        syn::Pat::Reference(syn::PatReference { pat, .. })
         | syn::Pat::Type(syn::PatType { pat, .. }) => ident_from_pat(pat),
         syn::Pat::Or(syn::PatOr { cases, .. }) => ident_from_pat_iter(cases.iter()),
         syn::Pat::Slice(syn::PatSlice { elems, .. })
-        | syn::Pat::TupleStruct(syn::PatTupleStruct {
-            pat: syn::PatTuple { elems, .. },
-            ..
-        })
+        | syn::Pat::TupleStruct(syn::PatTupleStruct { elems, .. })
         | syn::Pat::Tuple(syn::PatTuple { elems, .. }) => ident_from_pat_iter(elems.iter()),
         syn::Pat::Struct(syn::PatStruct { fields, .. }) => {
             ident_from_pat_iter(fields.iter().map(|field| &*field.pat))

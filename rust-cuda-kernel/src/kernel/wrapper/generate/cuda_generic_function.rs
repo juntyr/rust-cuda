@@ -44,7 +44,7 @@ pub(in super::super) fn quote_cuda_generic_function(
                             syn::Lifetime::new(&format!("'__rust_cuda_lt_{i}"), ty.span());
                         generic_params.insert(
                             0,
-                            syn::GenericParam::Lifetime(syn::LifetimeDef {
+                            syn::GenericParam::Lifetime(syn::LifetimeParam {
                                 attrs: Vec::new(),
                                 colon_token: None,
                                 lifetime: lifetime.clone(),

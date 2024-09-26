@@ -26,19 +26,14 @@ host = ["dep:rustacuda", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
 kernel = ["dep:rust-cuda-kernel"]
 
 [dependencies]
-rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc" }
+const-type-layout = { version = "0.3.2", default-features = false, features = ["derive"] }
+final = { version = "0.1.1", default-features = false, optional = true }
+oneshot = { version = "0.1", default-features = false, features = ["std", "async"], optional = true }
+regex = { version = "1.10", default-features = false, optional = true }
+rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false, optional = true }
+rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
+rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false, optional = true }
+safer_owning_ref = { version = "0.5", default-features = false, optional = true }
 
-rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", optional = true }
-rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", optional = true }
-
-regex = { version = "1.10", optional = true }
-
-const-type-layout = { version = "0.3.2", features = ["derive"] }
-
-safer_owning_ref = { version = "0.5", optional = true }
-oneshot = { version = "0.1", optional = true, features = ["std", "async"] }
-
-final = { version = "0.1.1", optional = true }
-
-rust-cuda-derive = { path = "rust-cuda-derive", optional = true }
-rust-cuda-kernel = { path = "rust-cuda-kernel", optional = true }
+rust-cuda-derive = { path = "rust-cuda-derive", default-features = false, optional = true }
+rust-cuda-kernel = { path = "rust-cuda-kernel", default-features = false, optional = true }

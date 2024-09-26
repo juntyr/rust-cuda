@@ -46,11 +46,11 @@ impl syn::parse::Parse for LinkKernelConfig {
 
         let mut ptx_lint_levels = HashMap::new();
 
-        for syn::MetaList { path, nested, .. } in attrs {
-            parse_ptx_lint_level(&path, &nested, &mut ptx_lint_levels);
+        for attr in attrs {
+            parse_ptx_lint_level(&attr, &mut ptx_lint_levels);
         }
 
-        proc_macro_error::abort_if_dirty();
+        proc_macro_error2::abort_if_dirty();
 
         Ok(Self {
             kernel,

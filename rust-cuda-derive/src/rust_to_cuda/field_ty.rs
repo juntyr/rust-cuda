@@ -23,77 +23,70 @@ pub fn swap_field_type_and_filter_attrs(
 
     // Remove all attributes from the fields in the Cuda representation
     field.attrs.retain(|attr| {
-        if attr.path.is_ident("cuda") {
-            if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
-                for meta in &list.nested {
-                    match meta {
-                        syn::NestedMeta::Meta(syn::Meta::Path(path)) if path.is_ident("ignore") => {
-                            r2c_ignore = true;
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::Path(path)) if path.is_ident("embed") => {
-                            if cuda_repr_field_ty.is_none() {
-                                cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCuda {
-                                    field_ty: Box::new(field_ty.clone()),
-                                });
+        if attr.path().is_ident("cuda") {
+            if let Err(err) = attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("ignore") {
+                    r2c_ignore = true;
+                    return Ok(());
+                }
+
+                if meta.path.is_ident("embed") {
+                    if cuda_repr_field_ty.is_some() {
+                        emit_error!(
+                            attr.span(),
+                            "[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
+                        );
+                        return Ok(());
+                    }
+
+                    if let Ok(meta) = meta.value() {
+                        match meta.parse::<syn::LitStr>().and_then(|s| syn::parse_str(&s.value())) {
+                            Ok(proxy_ty) => {
+                                let old_field_ty = Box::new(field_ty.clone());
                                 field_ty = parse_quote! {
                                     #crate_path::utils::ffi::DeviceAccessible<
-                                        <#field_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
+                                        <#proxy_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
                                     >
                                 };
-                            } else {
-                                emit_error!(
-                                    attr.span(),
-                                    "[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
-                                );
-                            }
-                        },
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            path,
-                            lit: syn::Lit::Str(s),
-                            ..
-                        })) if path.is_ident("embed") => {
-                            if cuda_repr_field_ty.is_none() {
-                                match syn::parse_str(&s.value()) {
-                                    Ok(proxy_ty) => {
-                                        let old_field_ty = Box::new(field_ty.clone());
-                                        field_ty = parse_quote! {
-                                            #crate_path::utils::ffi::DeviceAccessible<
-                                                <#proxy_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
-                                            >
-                                        };
-                                        cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
-                                            proxy_ty: Box::new(proxy_ty),
-                                            field_ty: old_field_ty,
-                                        });
-                                    },
-                                    Err(err) => emit_error!(
-                                        s.span(),
-                                        "[rust-cuda]: Invalid #[cuda(embed = \
-                                        \"<proxy-type>\")] field attribute: {}.",
-                                        err
-                                    ),
-                                }
-                            } else {
-                                emit_error!(
-                                    attr.span(),
-                                    "[rust-cuda]: Duplicate #[cuda(embed)] field attribute."
-                                );
-                            }
-                        },
-                        _ => {
-                            emit_error!(
+                                cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCudaProxy {
+                                    proxy_ty: Box::new(proxy_ty),
+                                    field_ty: old_field_ty,
+                                });
+                            },
+                            Err(err) => emit_error!(
                                 meta.span(),
-                                "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
-                                #[cuda(embed = \"<proxy-type>\")] field attribute"
-                            );
+                                "[rust-cuda]: Invalid #[cuda(embed = \
+                                \"<proxy-type>\")] field attribute: {}.",
+                                err
+                            ),
                         }
+                    } else {
+                        cuda_repr_field_ty = Some(CudaReprFieldTy::RustToCuda {
+                            field_ty: Box::new(field_ty.clone()),
+                        });
+                        field_ty = parse_quote! {
+                            #crate_path::utils::ffi::DeviceAccessible<
+                                <#field_ty as #crate_path::lend::RustToCuda>::CudaRepresentation
+                            >
+                        };
                     }
+
+                    return Ok(());
                 }
-            } else {
+
+                emit_error!(
+                    meta.path.span(),
+                    "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
+                    #[cuda(embed = \"<proxy-type>\")] field attribute"
+                );
+
+                Ok(())
+            }) {
                 emit_error!(
                     attr.span(),
                     "[rust-cuda]: Expected #[cuda(ignore)] / #[cuda(embed)] / \
-                    #[cuda(embed = \"<proxy-type>\")] field attribute."
+                    #[cuda(embed = \"<proxy-type>\")] field attribute: {}",
+                    err
                 );
             }
 

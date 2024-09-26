@@ -35,7 +35,7 @@ use error::emit_ptx_build_error;
 use ptx_compiler_sys::NvptxError;
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
-    proc_macro_error::set_dummy(
+    proc_macro_error2::set_dummy(
         quote! {::core::compile_error!("rust-cuda PTX kernel check failed");},
     );
 
@@ -44,7 +44,7 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
         kernel_hash,
         crate_name,
         crate_path,
-    } = match syn::parse_macro_input::parse(tokens) {
+    } = match syn::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
@@ -77,7 +77,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
     let ffi_signature_hash_seed_ident =
         syn::Ident::new(KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, Span::call_site());
 
-    proc_macro_error::set_dummy(quote! {
+    proc_macro_error2::set_dummy(quote! {
         const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
 
         const fn #ffi_signature_ident(_hashes: &[u64]) -> HostAndDeviceKernelSignatureTypeLayout {
@@ -98,7 +98,7 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         crate_path,
         specialisation,
         ptx_lint_levels,
-    } = match syn::parse_macro_input::parse(tokens) {
+    } = match syn::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
