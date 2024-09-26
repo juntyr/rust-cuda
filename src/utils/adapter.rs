@@ -124,7 +124,7 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCuda
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
@@ -136,7 +136,7 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCuda
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A> {
+    ) -> cust::error::CudaResult<A> {
         let (_alloc_front, alloc_tail): (NoCudaAlloc, A) = alloc.split();
 
         Ok(alloc_tail)
@@ -153,7 +153,7 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         crate::utils::r#async::Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
@@ -169,7 +169,7 @@ unsafe impl<T: Copy + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         crate::utils::r#async::Async<
             'a,
             'stream,
@@ -312,7 +312,7 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCuda
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
@@ -324,7 +324,7 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCuda
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A> {
+    ) -> cust::error::CudaResult<A> {
         let (_alloc_front, alloc_tail): (NoCudaAlloc, A) = alloc.split();
 
         Ok(alloc_tail)
@@ -341,7 +341,7 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         crate::utils::r#async::Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
@@ -357,7 +357,7 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> RustToCudaAsync
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         crate::utils::r#async::Async<
             'a,
             'stream,
@@ -394,7 +394,7 @@ unsafe impl<T: Clone + PortableBitSemantics + TypeGraphLayout> CudaAsRust
 #[repr(transparent)]
 pub struct DeviceCopyWithPortableBitSemantics<T: PortableBitSemantics + TypeGraphLayout>(T);
 
-unsafe impl<T: PortableBitSemantics + TypeGraphLayout> rustacuda_core::DeviceCopy
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> cust_core::DeviceCopy
     for DeviceCopyWithPortableBitSemantics<T>
 {
 }

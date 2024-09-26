@@ -89,22 +89,22 @@ rust-version = { workspace = true }
 
 [features]
 default = []
-derive = ["dep:rust-cuda-derive"]
+derive = ["dep:cust_derive", "dep:rust-cuda-derive"]
 device = []
 final = ["dep:final"]
-host = ["dep:rustacuda", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
+host = ["dep:cust", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
 kernel = ["dep:rust-cuda-kernel"]
 
 [dependencies]
-const-type-layout = { workspace = true, features = ["derive"] }
-final = { workspace = true, optional = true }
-oneshot = { workspace = true, features = ["std", "async"], optional = true }
-regex = { workspace = true, optional = true }
-rustacuda = { workspace = true, optional = true }
-rustacuda_core = { workspace = true }
-rust-cuda-derive = { workspace = true, optional = true }
-rust-cuda-kernel = { workspace = true, optional = true }
-safer_owning_ref = { workspace = true, optional = true }
+const-type-layout = { version = "0.3.2", default-features = false, features = ["derive"] }
+# FIXME: cust fails to compile without the `bytemuck` feature
+cust = { version = "0.3.2", default-features = false, features = ["bytemuck"], optional = true }
+cust_core = { version = "0.1", default-features = false }
+cust_derive = { version = "0.2", default-features = false, optional = true }
+final = { version = "0.1.1", default-features = false, optional = true }
+oneshot = { version = "0.1", default-features = false, features = ["std", "async"], optional = true }
+regex = { version = "1.10", default-features = false, optional = true }
+safer_owning_ref = { version = "0.5", default-features = false, optional = true }
 
-[lints]
-workspace = true
+rust-cuda-derive = { path = "rust-cuda-derive", default-features = false, optional = true }
+rust-cuda-kernel = { path = "rust-cuda-kernel", default-features = false, optional = true }

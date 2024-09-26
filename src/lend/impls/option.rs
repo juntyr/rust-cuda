@@ -3,7 +3,7 @@ use core::mem::MaybeUninit;
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::error::CudaResult;
+use cust::error::CudaResult;
 
 use crate::{
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync, RustToCudaProxy},

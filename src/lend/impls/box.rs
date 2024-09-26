@@ -4,7 +4,7 @@ use std::mem::ManuallyDrop;
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
+use cust::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
 
 use crate::{
     deps::alloc::boxed::Box,
@@ -47,13 +47,13 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let mut device_box = CudaDropWrapper::from(DeviceBox::new(
+        let device_box = CudaDropWrapper::from(DeviceBox::new(
             DeviceCopyWithPortableBitSemantics::from_ref(&**self),
         )?);
 
         Ok((
             DeviceAccessible::from(BoxCudaRepresentation(DeviceOwnedPointer(
-                device_box.as_device_ptr().as_raw_mut().cast(),
+                device_box.as_device_ptr().as_mut_ptr().cast(),
             ))),
             CombinedCudaAlloc::new(device_box, alloc),
         ))
@@ -64,7 +64,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> CudaResult<A> {
-        use rustacuda::memory::CopyDestination;
+        use cust::memory::CopyDestination;
 
         let (alloc_front, alloc_tail) = alloc.split();
 
@@ -90,20 +90,20 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let locked_box = unsafe {
-            let mut uninit = CudaDropWrapper::from(LockedBox::<
+            let uninit = CudaDropWrapper::from(LockedBox::<
                 DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
             >::uninitialized()?);
             std::ptr::copy_nonoverlapping(
                 std::ptr::from_ref::<T>(&**self)
                     .cast::<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>(),
-                uninit.as_mut_ptr(),
+                uninit.as_raw(),
                 1,
             );
             uninit
@@ -112,12 +112,12 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
         let mut device_box = CudaDropWrapper::from(DeviceBox::<
             DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
         >::uninitialized()?);
-        device_box.async_copy_from(&*locked_box, &stream)?;
+        device_box.async_copy_from(&**locked_box, &stream)?;
 
         Ok((
             Async::pending(
                 DeviceAccessible::from(BoxCudaRepresentation(DeviceOwnedPointer(
-                    device_box.as_device_ptr().as_raw_mut().cast(),
+                    device_box.as_device_ptr().as_mut_ptr().cast(),
                 ))),
                 stream,
                 NoCompletion,
@@ -135,12 +135,12 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let (alloc_front, alloc_tail) = alloc.split();
         let (mut locked_box, device_box) = alloc_front.split();
 
-        device_box.async_copy_to(&mut *locked_box, &stream)?;
+        device_box.async_copy_to(&mut **locked_box, &stream)?;
 
         let r#async = crate::utils::r#async::Async::<_, CompletionFnMut<'a, Self>>::pending(
             this,
@@ -151,7 +151,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<T
                 // Safety: equivalent to *data = *locked_box since
                 //         LockedBox<ManuallyDrop<T>> doesn't drop T
                 unsafe {
-                    std::ptr::copy_nonoverlapping(locked_box.as_ptr().cast::<T>(), data, 1);
+                    std::ptr::copy_nonoverlapping(locked_box.as_raw().cast::<T>(), data, 1);
                 }
                 std::mem::drop(locked_box);
                 Ok(())

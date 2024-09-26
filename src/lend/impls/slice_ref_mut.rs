@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBuffer};
+use cust::{error::CudaResult, memory::DeviceBuffer};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda},
@@ -47,13 +47,13 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mu
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let mut device_buffer = CudaDropWrapper::from(DeviceBuffer::from_slice(
+        let device_buffer = CudaDropWrapper::from(DeviceBuffer::from_slice(
             DeviceCopyWithPortableBitSemantics::from_slice(self),
         )?);
 
         Ok((
             DeviceAccessible::from(SliceRefMutCudaRepresentation {
-                data: DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
+                data: DeviceMutPointer(device_buffer.as_device_ptr().as_mut_ptr().cast()),
                 len: device_buffer.len(),
                 _marker: PhantomData::<&'a mut [T]>,
             }),
@@ -66,7 +66,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a mu
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> CudaResult<A> {
-        use rustacuda::memory::CopyDestination;
+        use cust::memory::CopyDestination;
 
         let (alloc_front, alloc_tail) = alloc.split();
 

@@ -88,7 +88,7 @@ impl<
     type SyncHostType = T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -124,7 +124,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -180,7 +180,7 @@ impl<
     type SyncHostType = &'a T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -219,7 +219,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -273,7 +273,7 @@ impl<
     type SyncHostType = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -315,7 +315,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -403,7 +403,7 @@ impl<
     type SyncHostType = &'a mut T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -442,7 +442,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -549,7 +549,7 @@ impl<
     type SyncHostType = T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -585,7 +585,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -644,7 +644,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     type SyncHostType = &'a T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -683,7 +683,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -737,7 +737,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     type SyncHostType = &'a mut T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -781,7 +781,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         mut param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -835,7 +835,7 @@ impl<
     type SyncHostType = <DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -862,7 +862,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -926,7 +926,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     type SyncHostType = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -968,7 +968,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -1017,7 +1017,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     type SyncHostType = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -1064,7 +1064,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -1154,7 +1154,7 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     type SyncHostType = Self;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -1190,7 +1190,7 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         _param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -1241,7 +1241,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     type SyncHostType = Self;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -1277,7 +1277,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>

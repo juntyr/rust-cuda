@@ -5,7 +5,7 @@ use std::mem::ManuallyDrop;
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
+use cust::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
@@ -48,13 +48,13 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a T 
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let mut device_box = CudaDropWrapper::from(DeviceBox::new(
+        let device_box = CudaDropWrapper::from(DeviceBox::new(
             DeviceCopyWithPortableBitSemantics::from_ref(&**self),
         )?);
 
         Ok((
             DeviceAccessible::from(RefCudaRepresentation {
-                data: DeviceConstPointer(device_box.as_device_ptr().as_raw().cast()),
+                data: DeviceConstPointer(device_box.as_device_ptr().as_ptr().cast()),
                 _marker: PhantomData::<&'a T>,
             }),
             CombinedCudaAlloc::new(device_box, alloc),
@@ -85,20 +85,20 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let locked_box = unsafe {
-            let mut uninit = CudaDropWrapper::from(LockedBox::<
+            let uninit = CudaDropWrapper::from(LockedBox::<
                 DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
             >::uninitialized()?);
             std::ptr::copy_nonoverlapping(
                 std::ptr::from_ref::<T>(&**self)
                     .cast::<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>(),
-                uninit.as_mut_ptr(),
+                uninit.as_raw(),
                 1,
             );
             uninit
@@ -107,12 +107,12 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
         let mut device_box = CudaDropWrapper::from(DeviceBox::<
             DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>,
         >::uninitialized()?);
-        device_box.async_copy_from(&*locked_box, &stream)?;
+        device_box.async_copy_from(&**locked_box, &stream)?;
 
         Ok((
             Async::pending(
                 DeviceAccessible::from(RefCudaRepresentation {
-                    data: DeviceConstPointer(device_box.as_device_ptr().as_raw().cast()),
+                    data: DeviceConstPointer(device_box.as_device_ptr().as_ptr().cast()),
                     _marker: PhantomData::<&T>,
                 }),
                 stream,

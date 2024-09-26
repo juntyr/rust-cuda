@@ -2,38 +2,38 @@
 
 use print::{kernel, link, Action};
 
-fn main() -> rust_cuda::deps::rustacuda::error::CudaResult<()> {
+fn main() -> rust_cuda::deps::cust::error::CudaResult<()> {
     // Link the non-generic CUDA kernel
     struct KernelPtx;
     link! { impl kernel for KernelPtx }
 
     // Initialize the CUDA API
-    rust_cuda::deps::rustacuda::init(rust_cuda::deps::rustacuda::CudaFlags::empty())?;
+    rust_cuda::deps::cust::init(rust_cuda::deps::cust::CudaFlags::empty())?;
 
     // Get the first CUDA GPU device
-    let device = rust_cuda::deps::rustacuda::device::Device::get_device(0)?;
+    let device = rust_cuda::deps::cust::device::Device::get_device(0)?;
 
     // Create a CUDA context associated to this device
     let _context = rust_cuda::host::CudaDropWrapper::from(
-        rust_cuda::deps::rustacuda::context::Context::create_and_push(
-            rust_cuda::deps::rustacuda::context::ContextFlags::MAP_HOST
-                | rust_cuda::deps::rustacuda::context::ContextFlags::SCHED_AUTO,
+        rust_cuda::deps::cust::context::Context::create_and_push(
+            rust_cuda::deps::cust::context::ContextFlags::MAP_HOST
+                | rust_cuda::deps::cust::context::ContextFlags::SCHED_AUTO,
             device,
         )?,
     );
 
     // Create a new CUDA stream to submit kernels to
     let mut stream =
-        rust_cuda::host::CudaDropWrapper::from(rust_cuda::deps::rustacuda::stream::Stream::new(
-            rust_cuda::deps::rustacuda::stream::StreamFlags::NON_BLOCKING,
+        rust_cuda::host::CudaDropWrapper::from(rust_cuda::deps::cust::stream::Stream::new(
+            rust_cuda::deps::cust::stream::StreamFlags::NON_BLOCKING,
             None,
         )?);
 
     // Create a new instance of the CUDA kernel and prepare the launch config
     let mut kernel = rust_cuda::kernel::TypedPtxKernel::<kernel>::new::<KernelPtx>(None);
     let config = rust_cuda::kernel::LaunchConfig {
-        grid: rust_cuda::deps::rustacuda::function::GridSize::x(1),
-        block: rust_cuda::deps::rustacuda::function::BlockSize::x(4),
+        grid: rust_cuda::deps::cust::function::GridSize::x(1),
+        block: rust_cuda::deps::cust::function::BlockSize::x(4),
         ptx_jit: false,
     };
 

@@ -4,7 +4,7 @@ use std::{
 };
 
 use const_type_layout::TypeGraphLayout;
-use rustacuda::{
+use cust::{
     error::CudaResult,
     memory::{DeviceBuffer, LockedBuffer},
 };
@@ -45,7 +45,7 @@ impl<
     > CudaExchangeBufferHost<T, M2D, M2H>
 {
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn new(elem: &T, capacity: usize) -> CudaResult<Self> {
         // Safety: CudaExchangeItem is a `repr(transparent)` wrapper around T
@@ -70,7 +70,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     CudaExchangeBufferHost<T, M2D, M2H>
 {
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn from_vec(vec: Vec<T>) -> CudaResult<Self> {
         let host_buffer = unsafe {
@@ -127,7 +127,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     pub unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>,
         CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
@@ -138,7 +138,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         if M2D {
             // Only move the buffer contents to the device if needed
 
-            rustacuda::memory::CopyDestination::copy_from(
+            cust::memory::CopyDestination::copy_from(
                 &mut ***device_buffer,
                 self.host_buffer.as_slice(),
             )?;
@@ -146,7 +146,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
 
         Ok((
             DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
-                DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
+                DeviceMutPointer(device_buffer.as_device_ptr().as_mut_ptr().cast()),
                 device_buffer.len(),
             )),
             CombinedCudaAlloc::new(NoCudaAlloc, alloc),
@@ -156,13 +156,13 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     pub unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
-    ) -> rustacuda::error::CudaResult<A> {
+    ) -> cust::error::CudaResult<A> {
         let (_alloc_front, alloc_tail) = alloc.split();
 
         if M2H {
             // Only move the buffer contents back to the host if needed
 
-            rustacuda::memory::CopyDestination::copy_to(
+            cust::memory::CopyDestination::copy_to(
                 &***self.device_buffer.get_mut(),
                 self.host_buffer.as_mut_slice(),
             )?;
@@ -180,7 +180,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<CudaExchangeBufferCudaRepresentation<T, M2D, M2H>>>,
         CombinedCudaAlloc<NoCudaAlloc, A>,
     )> {
@@ -191,7 +191,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         if M2D {
             // Only move the buffer contents to the device if needed
 
-            rustacuda::memory::AsyncCopyDestination::async_copy_from(
+            cust::memory::AsyncCopyDestination::async_copy_from(
                 &mut ***device_buffer,
                 self.host_buffer.as_slice(),
                 &stream,
@@ -199,7 +199,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         }
 
         let cuda_repr = DeviceAccessible::from(CudaExchangeBufferCudaRepresentation(
-            DeviceMutPointer(device_buffer.as_mut_ptr().cast()),
+            DeviceMutPointer(device_buffer.as_device_ptr().as_mut_ptr().cast()),
             device_buffer.len(),
         ));
 
@@ -217,7 +217,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
         mut this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<NoCudaAlloc, A>,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )> {
@@ -228,7 +228,7 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
 
             let this: &mut Self = &mut this;
 
-            rustacuda::memory::AsyncCopyDestination::async_copy_to(
+            cust::memory::AsyncCopyDestination::async_copy_to(
                 &***this.device_buffer.get_mut(),
                 this.host_buffer.as_mut_slice(),
                 &stream,

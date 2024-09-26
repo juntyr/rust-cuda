@@ -5,7 +5,7 @@ use std::mem::ManuallyDrop;
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
+use cust::{error::CudaResult, memory::DeviceBox, memory::LockedBox};
 
 use crate::{
     deps::alloc::sync::Arc,
@@ -65,13 +65,13 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<T> {
         let offset = std::mem::offset_of!(_ArcInner<T>, data);
         let arc_ptr: *const _ArcInner<T> = data_ptr.byte_sub(offset).cast();
 
-        let mut device_box = CudaDropWrapper::from(DeviceBox::new(
+        let device_box = CudaDropWrapper::from(DeviceBox::new(
             DeviceCopyWithPortableBitSemantics::from_ref(&*arc_ptr),
         )?);
 
         Ok((
             DeviceAccessible::from(ArcCudaRepresentation(DeviceOwnedPointer(
-                device_box.as_device_ptr().as_raw_mut().cast(),
+                device_box.as_device_ptr().as_mut_ptr().cast(),
             ))),
             CombinedCudaAlloc::new(device_box, alloc),
         ))
@@ -101,11 +101,11 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<T
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let locked_box = unsafe {
             let inner = ManuallyDrop::new(_ArcInner {
@@ -114,12 +114,12 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<T
                 data: std::ptr::read(&**self),
             });
 
-            let mut uninit = CudaDropWrapper::from(LockedBox::<
+            let uninit = CudaDropWrapper::from(LockedBox::<
                 DeviceCopyWithPortableBitSemantics<ManuallyDrop<_ArcInner<T>>>,
             >::uninitialized()?);
             std::ptr::copy_nonoverlapping(
                 std::ptr::from_ref(DeviceCopyWithPortableBitSemantics::from_ref(&inner)),
-                uninit.as_mut_ptr(),
+                uninit.as_raw(),
                 1,
             );
 
@@ -129,12 +129,12 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<T
         let mut device_box = CudaDropWrapper::from(DeviceBox::<
             DeviceCopyWithPortableBitSemantics<ManuallyDrop<_ArcInner<T>>>,
         >::uninitialized()?);
-        device_box.async_copy_from(&*locked_box, &stream)?;
+        device_box.async_copy_from(&**locked_box, &stream)?;
 
         Ok((
             Async::pending(
                 DeviceAccessible::from(ArcCudaRepresentation(DeviceOwnedPointer(
-                    device_box.as_device_ptr().as_raw_mut().cast(),
+                    device_box.as_device_ptr().as_mut_ptr().cast(),
                 ))),
                 stream,
                 NoCompletion,
