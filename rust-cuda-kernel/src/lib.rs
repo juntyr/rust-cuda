@@ -45,7 +45,7 @@
 extern crate proc_macro;
 
 #[macro_use]
-extern crate proc_macro_error;
+extern crate proc_macro_error2;
 
 use proc_macro::TokenStream;
 

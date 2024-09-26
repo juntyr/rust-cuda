@@ -29,7 +29,7 @@ pub(in super::super) fn quote_host_kernel_ty(
         .map(|param| match param {
             syn::GenericParam::Type(syn::TypeParam { ident, .. })
             | syn::GenericParam::Const(syn::ConstParam { ident, .. }) => quote!(#ident),
-            syn::GenericParam::Lifetime(syn::LifetimeDef { lifetime, .. }) => quote!(#lifetime),
+            syn::GenericParam::Lifetime(syn::LifetimeParam { lifetime, .. }) => quote!(#lifetime),
         })
         .collect::<Vec<_>>();
 
