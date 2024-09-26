@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use rustacuda::{
+use cust::{
     error::CudaResult,
     memory::{AsyncCopyDestination, CopyDestination, DeviceBox, LockedBox},
 };
@@ -55,7 +55,7 @@ pub struct ExchangeWrapperOnDevice<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>
 
 impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn new(value: T) -> CudaResult<Self> {
         // Safety: The uninitialised memory is never exposed
@@ -65,13 +65,13 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
 
         let (cuda_repr, _null_alloc) = unsafe { value.borrow(NoCudaAlloc) }?;
         let locked_cuda_repr = unsafe {
-            let mut uninit = CudaDropWrapper::from(LockedBox::<
+            let uninit = CudaDropWrapper::from(LockedBox::<
                 DeviceCopyWithPortableBitSemantics<
                     DeviceAccessible<<T as RustToCuda>::CudaRepresentation>,
                 >,
             >::uninitialized()?);
             uninit
-                .as_mut_ptr()
+                .as_raw()
                 .write(DeviceCopyWithPortableBitSemantics::from(cuda_repr));
             uninit
         };
@@ -88,7 +88,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnHost<T> {
     /// via [`ExchangeWrapperOnDevice::as_mut_async`](Async::as_mut_async).
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_device(mut self) -> CudaResult<ExchangeWrapperOnDevice<T>> {
         let (cuda_repr, null_alloc) = unsafe { self.value.borrow(NoCudaAlloc) }?;
@@ -113,7 +113,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
     /// Moves the data asynchronously to the CUDA device.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_device_async<'stream>(
         mut self,
@@ -130,7 +130,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
         // - the kernel is launched on the passed-in [`Stream`]
         unsafe {
             self.device_box
-                .async_copy_from(&*self.locked_cuda_repr, &stream)
+                .async_copy_from(&**self.locked_cuda_repr, &stream)
         }?;
 
         Async::pending(
@@ -163,7 +163,7 @@ impl<T: RustToCuda<CudaAllocation: EmptyCudaAlloc>> ExchangeWrapperOnDevice<T> {
     /// Moves the data synchronously back to the host CPU device.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_host(mut self) -> CudaResult<ExchangeWrapperOnHost<T>> {
         let null_alloc = NoCudaAlloc.into();
@@ -201,7 +201,7 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
     /// Moves the data asynchronously back to the host CPU device.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_host_async<'stream>(
         self,
@@ -259,7 +259,7 @@ impl<
     /// Moves the data asynchronously back to the host CPU device.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     pub fn move_to_host_async(
         self,

@@ -2,7 +2,7 @@
 use std::{borrow::BorrowMut, future::Future, future::IntoFuture, marker::PhantomData, task::Poll};
 
 #[cfg(feature = "host")]
-use rustacuda::{
+use cust::{
     error::CudaError, error::CudaResult, event::Event, event::EventFlags,
     stream::StreamWaitEventFlags,
 };
@@ -136,7 +136,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// such that its computation can be synchronised on.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn pending(value: T, stream: Stream<'stream>, completion: C) -> CudaResult<Self> {
         let (sender, receiver) = oneshot::channel();
@@ -160,11 +160,11 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// operations.
     ///
     /// Calling `synchronize` after the computation has completed, e.g. after
-    /// calling [`rustacuda::stream::Stream::synchronize`], should be very
+    /// calling [`cust::stream::Stream::synchronize`], should be very
     /// cheap.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn synchronize(self) -> CudaResult<T> {
         let (_stream, mut value, status) = self.destructure_into_parts();
@@ -198,7 +198,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// used on the new one.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn move_to_stream<'stream_new>(
         self,

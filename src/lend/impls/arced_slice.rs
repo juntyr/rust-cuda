@@ -5,12 +5,12 @@ use std::mem::{ManuallyDrop, MaybeUninit};
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{
+use cust::{
     error::CudaResult,
     memory::LockedBuffer,
     memory::{DeviceBox, DeviceBuffer},
 };
-use rustacuda_core::DeviceCopy;
+use cust_core::DeviceCopy;
 
 use crate::{
     deps::alloc::sync::Arc,
@@ -51,10 +51,17 @@ pub struct _ArcInner<T: ?Sized> {
     data: T,
 }
 
+#[derive(Copy, Clone)]
 #[repr(C)]
 struct _ArcInnerHeader {
-    strong: AtomicUsize,
-    weak: AtomicUsize,
+    strong: _AtomicUsize,
+    weak: _AtomicUsize,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C, align(8))]
+struct _AtomicUsize {
+    v: usize,
 }
 
 unsafe impl DeviceCopy for _ArcInnerHeader {}
@@ -74,8 +81,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<[T]> {
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        use rustacuda::memory::{CopyDestination, DeviceSlice};
-        use rustacuda_core::DevicePointer;
+        use cust::memory::{CopyDestination, DevicePointer, DeviceSlice};
 
         let data_ptr: *const T = std::ptr::from_ref(&**self).as_ptr();
         let offset = std::mem::offset_of!(_ArcInner<[T; 42]>, data);
@@ -105,7 +111,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<[T]> {
 
         Ok((
             DeviceAccessible::from(ArcedSliceCudaRepresentation {
-                data: DeviceOwnedPointer(header.as_device_ptr().as_raw_mut().cast()),
+                data: DeviceOwnedPointer(header.as_device_ptr().as_mut_ptr().cast()),
                 len: self.len(),
             }),
             CombinedCudaAlloc::new(device_buffer, alloc),
@@ -136,11 +142,11 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<[
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let data_ptr: *const T = std::ptr::from_ref(&**self).as_ptr();
         let offset = std::mem::offset_of!(_ArcInner<[T; 42]>, data);
@@ -187,7 +193,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<[
                     data: DeviceOwnedPointer(
                         device_buffer
                             .as_device_ptr()
-                            .as_raw_mut()
+                            .as_mut_ptr()
                             .byte_add(header_len * std::mem::size_of::<T>() - offset)
                             .cast(),
                     ),

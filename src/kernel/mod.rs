@@ -1,3 +1,4 @@
+use core::str;
 #[cfg(feature = "host")]
 use std::{
     ffi::{CStr, CString},
@@ -6,8 +7,9 @@ use std::{
     ptr::NonNull,
 };
 
+use cust::module::{ModuleJitOption, OptLevel};
 #[cfg(feature = "host")]
-use rustacuda::{
+use cust::{
     error::{CudaError, CudaResult},
     function::Function,
     module::Module,
@@ -42,12 +44,7 @@ mod sealed {
 
 #[cfg(all(feature = "host", not(doc)))]
 #[doc(hidden)]
-pub trait WithNewAsync<
-    'stream,
-    P: ?Sized + CudaKernelParameter,
-    O,
-    E: From<rustacuda::error::CudaError>,
->
+pub trait WithNewAsync<'stream, P: ?Sized + CudaKernelParameter, O, E: From<cust::error::CudaError>>
 {
     fn with<'b>(self, param: P::AsyncHostType<'stream, 'b>) -> Result<O, E>
     where
@@ -59,7 +56,7 @@ impl<
         'stream,
         P: ?Sized + CudaKernelParameter,
         O,
-        E: From<rustacuda::error::CudaError>,
+        E: From<cust::error::CudaError>,
         F: for<'b> FnOnce(P::AsyncHostType<'stream, 'b>) -> Result<O, E>,
     > WithNewAsync<'stream, P, O, E> for F
 {
@@ -109,7 +106,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
 
     #[cfg(feature = "host")]
     #[expect(clippy::missing_errors_doc)] // FIXME
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl WithNewAsync<'stream, Self, O, E>,
@@ -139,7 +136,7 @@ pub trait CudaKernelParameter: sealed::Sealed {
 
     #[doc(hidden)]
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -286,8 +283,8 @@ impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
 #[cfg(feature = "host")]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchConfig {
-    pub grid: rustacuda::function::GridSize,
-    pub block: rustacuda::function::BlockSize,
+    pub grid: cust::function::GridSize,
+    pub block: cust::function::BlockSize,
     pub ptx_jit: bool,
 }
 
@@ -305,9 +302,15 @@ impl RawPtxKernel {
     /// Returns a [`CudaError`] if `ptx` is not a valid PTX source, or it does
     ///  not contain an entry point named `entry_point`.
     pub fn new(ptx: &CStr, entry_point: &CStr) -> CudaResult<Self> {
-        let module: Box<Module> = Box::new(Module::load_from_string(ptx)?);
+        let module: Box<Module> = Box::new(Module::from_ptx_cstr(
+            ptx,
+            &[ModuleJitOption::OptLevel(OptLevel::O4)],
+        )?);
 
-        let function = unsafe { &*std::ptr::from_ref(module.as_ref()) }.get_function(entry_point);
+        // FIXME: cust's Module::get_function takes a str and turns it back into
+        //        a CString immediately
+        let function = unsafe { &*std::ptr::from_ref(module.as_ref()) }
+            .get_function(unsafe { str::from_utf8_unchecked(entry_point.to_bytes()) });
 
         let function = match function {
             Ok(function) => function,
