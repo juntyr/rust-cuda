@@ -16,7 +16,7 @@ pub fn cuda_struct_declaration(
 
     let struct_repr = if struct_attrs_cuda
         .iter()
-        .any(|attr| attr.path.is_ident("repr"))
+        .any(|attr| attr.path().is_ident("repr"))
     {
         quote! {}
     } else {

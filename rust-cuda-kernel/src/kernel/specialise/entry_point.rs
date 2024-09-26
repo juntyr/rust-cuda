@@ -8,7 +8,7 @@ pub fn specialise_kernel_entry_point(tokens: TokenStream) -> TokenStream {
     let SpecialiseMangleConfig {
         kernel,
         specialisation,
-    } = match syn::parse_macro_input::parse(tokens) {
+    } = match syn::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(

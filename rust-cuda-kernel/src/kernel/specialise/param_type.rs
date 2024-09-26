@@ -7,7 +7,7 @@ pub fn specialise_kernel_param_type(tokens: TokenStream) -> TokenStream {
         mut ty,
         generics,
         kernel,
-    } = match syn::parse_macro_input::parse(tokens) {
+    } = match syn::parse(tokens) {
         Ok(config) => config,
         Err(err) => {
             abort_call_site!(
@@ -66,7 +66,7 @@ pub fn specialise_kernel_param_type(tokens: TokenStream) -> TokenStream {
         for (generic, arg) in generics.params.into_iter().zip(args.into_iter()) {
             match (generic, arg) {
                 (
-                    syn::GenericParam::Lifetime(syn::LifetimeDef {
+                    syn::GenericParam::Lifetime(syn::LifetimeParam {
                         lifetime: _generic, ..
                     }),
                     syn::GenericArgument::Lifetime(_arg),

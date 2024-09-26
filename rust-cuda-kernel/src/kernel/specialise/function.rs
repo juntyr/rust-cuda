@@ -12,7 +12,7 @@ pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> Token
         )
     });
 
-    let kernel: syn::Ident = match syn::parse_macro_input::parse(attr) {
+    let kernel: syn::Ident = match syn::parse(attr) {
         Ok(kernel) => kernel,
         Err(err) => abort_call_site!(
             "#[specialise_kernel_function(KERNEL)] expects KERNEL identifier: {:?}",
