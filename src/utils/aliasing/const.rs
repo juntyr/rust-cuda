@@ -189,7 +189,7 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
     unsafe fn borrow<A: crate::alloc::CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
         crate::alloc::CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
@@ -205,7 +205,7 @@ unsafe impl<T: RustToCuda, const STRIDE: usize> RustToCuda
     unsafe fn restore<A: crate::alloc::CudaAlloc>(
         &mut self,
         alloc: crate::alloc::CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A> {
+    ) -> cust::error::CudaResult<A> {
         self.0.restore(alloc)
     }
 }
@@ -220,7 +220,7 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         crate::utils::r#async::Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         crate::alloc::CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
@@ -248,7 +248,7 @@ unsafe impl<T: RustToCudaAsync, const STRIDE: usize> RustToCudaAsync
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: crate::alloc::CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         crate::utils::r#async::Async<
             'a,
             'stream,

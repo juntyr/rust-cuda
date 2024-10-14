@@ -1,6 +1,6 @@
 use const_type_layout::TypeGraphLayout;
 #[cfg(feature = "host")]
-use rustacuda::error::CudaError;
+use cust::error::CudaError;
 
 #[cfg(feature = "derive")]
 #[expect(clippy::module_name_repetitions)]
@@ -34,7 +34,7 @@ pub unsafe trait RustToCuda {
     #[cfg(feature = "host")]
     /// # Errors
     ///
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     ///
     /// # Safety
@@ -46,7 +46,7 @@ pub unsafe trait RustToCuda {
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )>;
@@ -55,7 +55,7 @@ pub unsafe trait RustToCuda {
     #[cfg(feature = "host")]
     /// # Errors
     ///
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     ///
     /// # Safety
@@ -64,7 +64,7 @@ pub unsafe trait RustToCuda {
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A>;
+    ) -> cust::error::CudaResult<A>;
 }
 
 /// # Safety
@@ -78,7 +78,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     #[cfg(feature = "host")]
     /// # Errors
     ///
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     ///
     /// # Safety
@@ -101,7 +101,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )>;
@@ -110,7 +110,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
     #[cfg(feature = "host")]
     /// # Errors
     ///
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
     ///
     /// # Safety
@@ -127,7 +127,7 @@ pub unsafe trait RustToCudaAsync: RustToCuda {
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )>;
@@ -187,7 +187,7 @@ pub trait LendToCuda: RustToCuda {
     ///
     /// # Errors
     ///
-    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// Returns a `cust::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut<
         O,
         E: From<CudaError>,
@@ -339,7 +339,7 @@ pub trait LendToCudaAsync: RustToCudaAsync {
     ///
     /// # Errors
     ///
-    /// Returns a `rustacuda::errors::CudaError` iff an error occurs inside CUDA
+    /// Returns a `cust::errors::CudaError` iff an error occurs inside CUDA
     fn lend_to_cuda_mut_async<
         'a,
         'stream,
