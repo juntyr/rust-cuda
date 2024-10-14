@@ -15,7 +15,7 @@ jobs:
     
     steps:
       - name: Install CUDA
-        uses: Jimver/cuda-toolkit@v0.2
+        uses: Jimver/cuda-toolkit@v0.2.18
         with:
           method: network
           use-github-cache: false
