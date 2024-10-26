@@ -13,11 +13,11 @@ use std::{
 use colored::Colorize;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use ptx_builder::{
+use quote::quote;
+use rust_cuda_builder::{
     builder::{BuildStatus, Builder, CrateType, MessageFormat, Profile},
     error::{BuildErrorKind, Error, Result},
 };
-use quote::quote;
 
 use crate::kernel::{
     lints::{LintLevel, PtxLint},

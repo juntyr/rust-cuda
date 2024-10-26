@@ -1,9 +1,11 @@
 [package]
 name = "print"
 version = "0.1.0"
-authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
-license = "MIT OR Apache-2.0"
-edition = "2021"
+authors = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -11,7 +13,10 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [target.'cfg(target_os = "cuda")'.dependencies]
-rust-cuda = { path = "../../", features = ["kernel", "device"] }
+rust-cuda = { workspace = true, features = ["kernel", "device"] }
 
 [target.'cfg(not(target_os = "cuda"))'.dependencies]
-rust-cuda = { path = "../../", features = ["kernel", "host"] }
+rust-cuda = { workspace = true, features = ["kernel", "host"] }
+
+[lints]
+workspace = true

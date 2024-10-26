@@ -1,19 +1,91 @@
 [workspace]
+resolver = "2"
+
 members = [
-    ".", "rust-cuda-derive", "rust-cuda-kernel",
+    ".", "rust-cuda-builder", "rust-cuda-derive", "rust-cuda-kernel",
     "examples/derive", "examples/print", "examples/single-source",
 ]
 default-members = [
-    ".", "rust-cuda-derive", "rust-cuda-kernel",
+    ".", "rust-cuda-builder", "rust-cuda-derive", "rust-cuda-kernel",
 ]
+
+[workspace.package]
+edition = "2021"
+authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
+repository = "https://github.com/juntyr/rust-cuda"
+license = "MIT OR Apache-2.0"
+rust-version = "1.81" # nightly
+
+[workspace.dependencies]
+# workspace-internal crates
+rust-cuda = { version = "0.1", path = ".", default-features = false }
+rust-cuda-builder = { version = "0.1", path = "rust-cuda-builder", default-features = false }
+rust-cuda-derive = { version = "0.1", path = "rust-cuda-derive", default-features = false }
+rust-cuda-kernel = { version = "0.1", path = "rust-cuda-kernel", default-features = false }
+
+# third-party dependencies with unpublished patches
+rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
+rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
+rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
+
+# crates.io third-party dependencies
+anyhow = { version = "1.0", default-features = false }
+cargo_metadata = { version = "0.18", default-features = false }
+colored = { version = "2.0", default-features = false }
+const-type-layout = { version = "0.3.2", default-features = false }
+final = { version = "0.1.1", default-features = false }
+find_cuda_helper = { version = "0.2", default-features = false }
+lazy_static = { version = "1.4", default-features = false }
+libc = { version = "0.2", default-features = false }
+oneshot = { version = "0.1", default-features = false }
+proc-macro2 = { version = "1.0", default-features = false }
+proc-macro-error2 = { version = "2.0", default-features = false }
+quote = { version = "1.0", default-features = false }
+regex = { version = "1.10", default-features = false }
+safer_owning_ref = { version = "0.5", default-features = false }
+seahash = { version = "4.1", default-features = false }
+semver = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false }
+strip-ansi-escapes = { version = "0.2", default-features = false }
+syn = { version = "2.0", default-features = false }
+thiserror = { version = "1.0", default-features = false }
+toml = { version = "0.8", default-features = false }
+
+[workspace.lints.rust]
+unused_crate_dependencies = "warn"
+
+missing_docs = "allow"  # TODO
+
+[workspace.lints.clippy]
+complexity = { priority = -1, level = "warn" }
+correctness = { priority = -1, level = "warn" }
+nursery = { priority = -1, level = "warn" }
+pedantic = { priority = -1, level = "warn" }
+perf = { priority = -1, level = "warn" }
+style = { priority = -1, level = "warn" }
+suspicious = { priority = -1, level = "warn" }
+
+unwrap_used = "warn"
+expect_used = "warn"
+indexing_slicing = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+unreachable = "warn"
+module_name_repetitions = "allow"
+
+cargo = { priority = -1, level = "warn" }
+cargo_common_metadata = "allow"  # TODO
+multiple_crate_versions = "warn"
 
 [package]
 name = "rust-cuda"
 version = "0.1.0"
-authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
-license = "MIT OR Apache-2.0"
-edition = "2021"
-rust-version = "1.81" # nightly
+authors = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,14 +98,16 @@ host = ["dep:rustacuda", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
 kernel = ["dep:rust-cuda-kernel"]
 
 [dependencies]
-const-type-layout = { version = "0.3.2", default-features = false, features = ["derive"] }
-final = { version = "0.1.1", default-features = false, optional = true }
-oneshot = { version = "0.1", default-features = false, features = ["std", "async"], optional = true }
-regex = { version = "1.10", default-features = false, optional = true }
-rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false, optional = true }
-rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
-rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false, optional = true }
-safer_owning_ref = { version = "0.5", default-features = false, optional = true }
+const-type-layout = { workspace = true, features = ["derive"] }
+final = { workspace = true, optional = true }
+oneshot = { workspace = true, features = ["std", "async"], optional = true }
+regex = { workspace = true, optional = true }
+rustacuda = { workspace = true, optional = true }
+rustacuda_core = { workspace = true }
+rustacuda_derive = { workspace = true, optional = true }
+rust-cuda-derive = { workspace = true, optional = true }
+rust-cuda-kernel = { workspace = true, optional = true }
+safer_owning_ref = { workspace = true, optional = true }
 
-rust-cuda-derive = { path = "rust-cuda-derive", default-features = false, optional = true }
-rust-cuda-kernel = { path = "rust-cuda-kernel", default-features = false, optional = true }
+[lints]
+workspace = true
