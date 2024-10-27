@@ -14,7 +14,6 @@ links = "libnvptxcompiler_static"
 proc-macro = true
 
 [dependencies]
-anyhow = { workspace = true, features = ["std"] }
 cargo_metadata = { workspace = true, features = ["builder"] }
 cargo-util = { workspace = true }
 colored = { workspace = true }
@@ -24,7 +23,6 @@ quote = { workspace = true }
 regex = { workspace = true, features = ["std", "unicode"] }
 seahash = { workspace = true }
 serde_json = { workspace = true }
-strip-ansi-escapes = { workspace = true }
 syn = { workspace = true, features = ["full", "fold"] }
 thiserror = { workspace = true }
 

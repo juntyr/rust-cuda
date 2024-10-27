@@ -26,12 +26,9 @@ use crate::kernel::{
 };
 
 mod config;
-mod error;
 mod ptx_compiler_sys;
 
 use config::{CheckKernelConfig, LinkKernelConfig};
-use error::emit_ptx_build_error;
-use error2::{BuildErrorKind, Error, Result, ResultExt};
 use ptx_compiler_sys::NvptxError;
 
 const TARGET_NAME: &str = "nvptx64-nvidia-cuda";
@@ -58,10 +55,6 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     };
 
     let kernel_ptx = compile_kernel_ptx(&kernel, &crate_name, &crate_path, Specialisation::Check);
-
-    let Some(kernel_ptx) = kernel_ptx else {
-        return quote!(::core::compile_error!("rust-cuda PTX kernel check failed");).into();
-    };
 
     check_kernel_ptx_and_report(
         &kernel_ptx,
@@ -119,27 +112,12 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     }
 
-    let Some(mut kernel_ptx) = compile_kernel_ptx(
+    let mut kernel_ptx = compile_kernel_ptx(
         &kernel,
         &crate_name,
         &crate_path,
         Specialisation::Link(&specialisation),
-    ) else {
-        return (quote! {
-            const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
-
-            const fn #ffi_signature_ident(_hashes: &[u64]) -> HostAndDeviceKernelSignatureTypeLayout {
-                HostAndDeviceKernelSignatureTypeLayout::Match
-            }
-
-            const fn #ffi_signature_hash_seed_ident() -> u64 {
-                42
-            }
-
-            ::core::compile_error!("rust-cuda PTX kernel compilation failed");
-        })
-        .into();
-    };
+    );
 
     let type_layout = extract_ptx_kernel_layout(&mut kernel_ptx);
     remove_kernel_type_use_from_ptx(&mut kernel_ptx);
@@ -218,7 +196,8 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStrea
             .is_some()
         {
             abort_call_site!(
-                "Kernel compilation generated invalid PTX: duplicate type information for {param}"
+                "Kernel compilation generated invalid PTX: duplicate type information for {}",
+                param
             );
         }
 
@@ -351,6 +330,7 @@ fn check_kernel_ptx_and_report(
                 ];
 
                 let mut binary_hex = String::with_capacity(binary.len() * 2);
+                #[expect(clippy::indexing_slicing)] // index always in 0..16
                 for byte in binary {
                     binary_hex.push(HEX[usize::from(byte >> 4)]);
                     binary_hex.push(HEX[usize::from(byte & 0x0F)]);
@@ -667,53 +647,45 @@ fn compile_kernel_ptx(
     crate_name: &str,
     crate_path: &Path,
     specialisation: Specialisation,
-) -> Option<String> {
+) -> String {
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
         crate_name.to_uppercase(),
         kernel.to_string().to_uppercase()
     );
 
-    match build_kernel_with_specialisation(
+    let kernel_path = build_kernel_with_specialisation(
         crate_name,
         crate_path,
         &specialisation_var,
         specialisation,
-    ) {
-        Ok(kernel_path) => {
-            let mut file = fs::File::open(&kernel_path)
-                .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
+    );
 
-            let mut kernel_ptx = String::new();
+    let mut file = fs::File::open(&kernel_path)
+        .unwrap_or_else(|_| abort_call_site!("Failed to open kernel file at {:?}.", &kernel_path));
 
-            file.read_to_string(&mut kernel_ptx)
-                .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
+    let mut kernel_ptx = String::new();
 
-            colored::control::set_override(true);
-            eprintln!(
-                "{} {} compiling a PTX crate.",
-                "[PTX]".bright_black().bold(),
-                "Finished".green().bold()
-            );
-            colored::control::unset_override();
+    file.read_to_string(&mut kernel_ptx)
+        .unwrap_or_else(|_| abort_call_site!("Failed to read kernel file at {:?}.", &kernel_path));
 
-            Some(kernel_ptx)
-        },
-        Err(err) => {
-            eprintln!("{err}");
-            emit_ptx_build_error();
-            None
-        },
-    }
+    colored::control::set_override(true);
+    eprintln!(
+        "{} {} compiling a PTX crate.",
+        "[PTX]".bright_black().bold(),
+        "Finished".green().bold()
+    );
+    colored::control::unset_override();
+
+    kernel_ptx
 }
 
-#[expect(clippy::too_many_lines)]
 fn build_kernel_with_specialisation(
     crate_name: &str,
     crate_path: &Path,
     env_var: &str,
     specialisation: Specialisation,
-) -> Result<PathBuf> {
+) -> PathBuf {
     let specialisation_prefix = match specialisation {
         Specialisation::Check => String::from("chECK"),
         Specialisation::Link(specialisation) => {
@@ -789,33 +761,39 @@ fn build_kernel_with_specialisation(
             );
             colored::control::unset_override();
         },
-    )?;
+    );
 
     let mut specialised_ptx_path = ptx_path.clone();
 
     specialised_ptx_path.set_extension(format!("{specialisation_prefix}.ptx"));
 
-    fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
-        Error::from(BuildErrorKind::BuildFailed(vec![format!(
-            "Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: {err}"
-        )]))
-    })?;
+    if let Err(err) = fs::copy(&ptx_path, &specialised_ptx_path) {
+        abort_call_site!(
+            "Failed to copy kernel from {:?} to {:?}: {}",
+            ptx_path,
+            specialised_ptx_path,
+            err
+        );
+    }
 
     if let Specialisation::Link(specialisation) = specialisation {
-        fs::OpenOptions::new()
+        if let Err(err) = fs::OpenOptions::new()
             .append(true)
             .open(&specialised_ptx_path)
             .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
-            .map_err(|err| {
-                Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                    "Failed to write specialisation to {specialised_ptx_path:?}: {err}"
-                )]))
-            })?;
+        {
+            abort_call_site!(
+                "Failed to write specialisation to {:?}: {}",
+                specialised_ptx_path,
+                err
+            );
+        }
     }
 
-    Ok(specialised_ptx_path)
+    specialised_ptx_path
 }
 
+#[expect(clippy::too_many_lines)]
 fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
     crate_path: &Path,
     crate_name: &str,
@@ -823,7 +801,7 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
     specialisation: (&str, Specialisation),
     mut on_stdout_line: O,
     mut on_stderr_line: E,
-) -> Result<PathBuf> {
+) -> PathBuf {
     fn output_is_not_verbose(line: &str) -> bool {
         !line.starts_with("+ ")
             && !line.contains("Running")
@@ -839,20 +817,27 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
     });
 
     if !matches!(fs::metadata(crate_path.join("Cargo.toml")), Ok(metadata) if metadata.is_file()) {
-        return Err(Error::from(BuildErrorKind::InvalidCratePath(
-            crate_path.to_path_buf(),
-        )));
+        abort_call_site!(
+            "{:?} is not a valid crate manifest path",
+            crate_path.join("Cargo.toml")
+        );
     }
 
     let is_library = crate_path.join("src").join("lib.rs").exists();
     let is_binary = crate_path.join("src").join("main.rs").exists();
 
     if !is_library {
-        return Err(Error::from(if is_binary {
-            BuildErrorKind::InvalidCrateType("Binary".into())
+        if is_binary {
+            abort_call_site!(
+                "{} is a binary-only crate, which is not supported",
+                crate_name
+            );
         } else {
-            BuildErrorKind::InternalError("Unable to find neither `lib.rs` nor `main.rs`".into())
-        }));
+            abort_call_site!(
+                "unable to find either `lib.rs` nor `main.rs` for {}",
+                crate_name
+            );
+        }
     }
 
     let output_file_prefix = crate_name.replace('-', "_");
@@ -883,7 +868,13 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
 
     let mut output_path = PathBuf::from(env!("OUT_DIR"));
     output_path.push(&output_file_prefix);
-    fs::create_dir_all(&output_path).context("Unable to create output path")?;
+    if let Err(err) = fs::create_dir_all(&output_path) {
+        abort_call_site!(
+            "failed to create the output path {:?}: {}",
+            output_path,
+            err
+        );
+    }
 
     cargo
         .args(&args)
@@ -911,14 +902,10 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
             },
             true,
         )
-        .map_err(|err| {
-            Error::new(
-                err,
-                BuildErrorKind::InternalError(format!("Unable to execute command '{cargo:?}'")),
-            )
-        })?;
+        .unwrap_or_else(|err| abort_call_site!("failed to execute command '{:?}': {}", cargo, err));
 
-    let stderr = String::from_utf8(raw_output.stderr).context(BuildErrorKind::OtherError)?;
+    let stderr = String::from_utf8(raw_output.stderr)
+        .unwrap_or_else(|err| abort_call_site!("failed to parse stderr as UTF8: {}", err));
     let mut stderr_lines = stderr.trim_matches('\n').split('\n');
 
     if !raw_output.status.success() {
@@ -926,36 +913,41 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
         let lines = stderr_lines
             .filter(|s| output_is_not_verbose(s))
             .map(String::from)
-            .collect();
+            .collect::<Vec<_>>()
+            .join("\n");
 
-        return Err(Error::from(BuildErrorKind::BuildFailed(lines)));
+        abort_call_site!(
+            "Failed to build PTX for {} ({})\n\n{}",
+            crate_name,
+            match specialisation.1 {
+                Specialisation::Check => "chECK",
+                Specialisation::Link(specialisation) => specialisation,
+            },
+            lines
+        );
     }
 
-    // We need the build command to get real output filename.
-    let build_command = {
-        #[allow(clippy::manual_find_map)]
-        stderr_lines
-            .find(|line| {
-                line.contains(&format!("--crate-name {output_file_prefix}"))
-                    && line.contains(&format!("--crate-type {crate_type}"))
-            })
-            .map(|line| line.to_string())
-            .or_else(|| {
-                fs::read_to_string(output_path.join(format!("{LAST_BUILD_CMD}.{crate_suffix}")))
-                    .ok()
-            })
-            .ok_or_else(|| {
-                Error::from(BuildErrorKind::InternalError(String::from(
-                    "Unable to find build command of the device crate",
-                )))
-            })?
-    };
+    let last_build_cmd = output_path.join(format!("{LAST_BUILD_CMD}.{crate_suffix}"));
 
-    fs::write(
-        output_path.join(format!("{LAST_BUILD_CMD}.{crate_suffix}")),
-        build_command.as_bytes(),
-    )
-    .context(BuildErrorKind::OtherError)?;
+    // We need the build command to get real output filename.
+    #[allow(clippy::manual_find_map)]
+    let build_command = stderr_lines
+        .find(|line| {
+            line.contains(&format!("--crate-name {output_file_prefix}"))
+                && line.contains(&format!("--crate-type {crate_type}"))
+        })
+        .map(String::from)
+        .or_else(|| fs::read_to_string(&last_build_cmd).ok())
+        .unwrap_or_else(|| {
+            abort_call_site!("unable to find build command of the device crate");
+        });
+
+    if let Err(err) = fs::write(&last_build_cmd, build_command.as_bytes()) {
+        abort_call_site!(
+            "failed to cache the last build command to {:?}",
+            last_build_cmd
+        );
+    };
 
     let (file_suffix, found_suffix) = match SUFFIX_REGEX.captures(&build_command) {
         Some(caps) => (caps[1].to_string(), true),
@@ -969,20 +961,16 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
             Specialisation::Link(_) => "release",
         })
         .join("deps")
-        .join(format!("{}{}.ptx", output_file_prefix, file_suffix,));
+        .join(format!("{output_file_prefix}{file_suffix}.ptx"));
 
     if assembly_path.exists() {
-        Ok(assembly_path)
-    } else if found_suffix {
-        Err(BuildErrorKind::InternalError(String::from(
-            "Unable to find PTX assembly as specified by `extra-filename` rustc flag",
-        ))
-        .into())
+        return assembly_path;
+    }
+
+    if found_suffix {
+        abort_call_site!("unable to find PTX assembly as specified by `extra-filename` rustc flag");
     } else {
-        Err(BuildErrorKind::InternalError(String::from(
-            "Unable to find `extra-filename` rustc flag",
-        ))
-        .into())
+        abort_call_site!("Unable to find `extra-filename` rustc flag")
     }
 }
 
@@ -990,126 +978,4 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
 enum Specialisation<'a> {
     Check,
     Link(&'a str),
-}
-
-mod error2 {
-    use std::{fmt, path::PathBuf};
-
-    use colored::Colorize;
-
-    #[derive(thiserror::Error)]
-    pub struct Error {
-        #[source]
-        error: anyhow::Error,
-        context: BuildErrorKind,
-    }
-
-    impl fmt::Debug for Error {
-        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            self.error.fmt(fmt)
-        }
-    }
-
-    impl fmt::Display for Error {
-        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            self.error.fmt(fmt)
-        }
-    }
-
-    impl From<BuildErrorKind> for Error {
-        fn from(context: BuildErrorKind) -> Self {
-            Self {
-                error: anyhow::Error::new(context.clone()),
-                context,
-            }
-        }
-    }
-
-    impl Error {
-        #[must_use]
-        pub fn new(error: anyhow::Error, context: BuildErrorKind) -> Self {
-            Self { error, context }
-        }
-
-        #[must_use]
-        pub fn context(self, context: BuildErrorKind) -> Self {
-            Self {
-                error: self.error.context(context.clone()),
-                context,
-            }
-        }
-    }
-
-    pub(crate) trait ResultExt<T, C> {
-        fn context(self, context: C) -> Result<T, Error>;
-
-        fn with_context<F: FnOnce() -> C>(self, f: F) -> Result<T, Error>;
-    }
-
-    impl<T, E: std::error::Error + Send + Sync + 'static> ResultExt<T, BuildErrorKind>
-        for Result<T, E>
-    {
-        fn context(self, context: BuildErrorKind) -> Result<T, Error> {
-            anyhow::Context::with_context(self, || context.clone())
-                .map_err(|error| Error { error, context })
-        }
-
-        fn with_context<F: FnOnce() -> BuildErrorKind>(self, f: F) -> Result<T, Error> {
-            if let Ok(val) = self {
-                return Ok(val);
-            }
-
-            self.context(f())
-        }
-    }
-
-    impl<'a, T, E: std::error::Error + Send + Sync + 'static> ResultExt<T, &'a str> for Result<T, E> {
-        fn context(self, context: &'a str) -> Result<T, Error> {
-            self.with_context(|| BuildErrorKind::InternalError(String::from(context)))
-        }
-
-        fn with_context<F: FnOnce() -> &'a str>(self, f: F) -> Result<T, Error> {
-            self.with_context(|| BuildErrorKind::InternalError(String::from(f())))
-        }
-    }
-
-    pub type Result<T, E = Error> = std::result::Result<T, E>;
-
-    #[derive(Debug, PartialEq, Eq, thiserror::Error, Clone)]
-    pub enum BuildErrorKind {
-        InvalidCratePath(PathBuf),
-        BuildFailed(Vec<String>),
-        InvalidCrateType(String),
-        InternalError(String),
-        OtherError,
-    }
-
-    impl fmt::Display for BuildErrorKind {
-        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                Self::InvalidCratePath(path) => write!(
-                    fmt,
-                    "{}: {}",
-                    "Invalid device crate path".bold(),
-                    path.display()
-                ),
-                Self::BuildFailed(lines) => write!(
-                    fmt,
-                    "{}\n{}",
-                    "Unable to build a PTX crate!".bold(),
-                    lines.join("\n")
-                ),
-                Self::InvalidCrateType(crate_type) => write!(
-                    fmt,
-                    "{}: the crate cannot be build as '{}'",
-                    "Impossible CrateType".bold(),
-                    crate_type
-                ),
-                Self::InternalError(message) => {
-                    write!(fmt, "{}: {}", "Internal error".bold(), message)
-                },
-                Self::OtherError => write!(fmt, "Other error"),
-            }
-        }
-    }
 }
