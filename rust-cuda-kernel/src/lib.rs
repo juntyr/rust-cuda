@@ -24,13 +24,6 @@
 //! macro. When applied to a function, it compiles it as a CUDA kernel that
 //! can be *safely* called from Rust code on the host.
 
-#![deny(clippy::complexity)]
-#![deny(clippy::correctness)]
-#![warn(clippy::nursery)]
-#![warn(clippy::pedantic)]
-#![deny(clippy::perf)]
-#![deny(clippy::style)]
-#![deny(clippy::suspicious)]
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 #![feature(box_patterns)]

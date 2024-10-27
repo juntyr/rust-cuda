@@ -20,14 +20,12 @@ pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> Token
         ),
     };
 
-    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
-        Ok(crate_name) => crate_name.to_uppercase(),
-        Err(err) => abort_call_site!("Failed to read crate name: {:?}", err),
-    };
+    let crate_name = proc_macro::tracked_env::var("CARGO_CRATE_NAME")
+        .unwrap_or_else(|err| abort_call_site!("Failed to read crate name: {:?}", err));
 
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
-        crate_name,
+        crate_name.to_uppercase(),
         kernel.to_string().to_uppercase()
     );
 

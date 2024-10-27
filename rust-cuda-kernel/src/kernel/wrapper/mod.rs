@@ -335,10 +335,8 @@ fn quote_generic_check(
         ..
     }: &FuncIdent,
 ) -> proc_macro2::TokenStream {
-    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
-        Ok(crate_name) => crate_name.to_uppercase(),
-        Err(err) => abort_call_site!("Failed to read crate name: {:?}.", err),
-    };
+    let crate_name = proc_macro::tracked_env::var("CARGO_CRATE_NAME")
+        .unwrap_or_else(|err| abort_call_site!("Failed to read crate name: {:?}.", err));
 
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));

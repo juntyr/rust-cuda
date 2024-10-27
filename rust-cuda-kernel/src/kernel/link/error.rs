@@ -1,12 +1,12 @@
+use std::sync::LazyLock;
+
 use cargo_metadata::diagnostic::{DiagnosticBuilder, DiagnosticLevel, DiagnosticSpanBuilder};
-
 use colored::Colorize;
+use regex::Regex;
 
-lazy_static::lazy_static! {
-    pub static ref PROC_MACRO_SPAN_REGEX: regex::Regex = {
-        regex::Regex::new(r"\((?P<start>[0-9]+)[^0-9]+(?P<end>[0-9]+)\)").unwrap()
-    };
-}
+static PROC_MACRO_SPAN_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\((?P<start>[0-9]+)[^0-9]+(?P<end>[0-9]+)\)").expect("Unable to parse regex...")
+});
 
 #[expect(clippy::module_name_repetitions)]
 pub fn emit_ptx_build_error() {

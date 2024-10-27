@@ -2,11 +2,11 @@
 resolver = "2"
 
 members = [
-    ".", "rust-cuda-builder", "rust-cuda-derive", "rust-cuda-kernel",
+    ".", "rust-cuda-derive", "rust-cuda-kernel",
     "examples/derive", "examples/print", "examples/single-source",
 ]
 default-members = [
-    ".", "rust-cuda-builder", "rust-cuda-derive", "rust-cuda-kernel",
+    ".", "rust-cuda-derive", "rust-cuda-kernel",
 ]
 
 [workspace.package]
@@ -19,7 +19,6 @@ rust-version = "1.81" # nightly
 [workspace.dependencies]
 # workspace-internal crates
 rust-cuda = { version = "0.1", path = ".", default-features = false }
-rust-cuda-builder = { version = "0.1", path = "rust-cuda-builder", default-features = false }
 rust-cuda-derive = { version = "0.1", path = "rust-cuda-derive", default-features = false }
 rust-cuda-kernel = { version = "0.1", path = "rust-cuda-kernel", default-features = false }
 
@@ -31,12 +30,11 @@ rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc
 # crates.io third-party dependencies
 anyhow = { version = "1.0", default-features = false }
 cargo_metadata = { version = "0.18", default-features = false }
+cargo-util = { version = "0.2", default-features = false }
 colored = { version = "2.0", default-features = false }
 const-type-layout = { version = "0.3.2", default-features = false }
 final = { version = "0.1.1", default-features = false }
 find_cuda_helper = { version = "0.2", default-features = false }
-lazy_static = { version = "1.4", default-features = false }
-libc = { version = "0.2", default-features = false }
 oneshot = { version = "0.1", default-features = false }
 proc-macro2 = { version = "1.0", default-features = false }
 proc-macro-error2 = { version = "2.0", default-features = false }
@@ -44,7 +42,6 @@ quote = { version = "1.0", default-features = false }
 regex = { version = "1.10", default-features = false }
 safer_owning_ref = { version = "0.5", default-features = false }
 seahash = { version = "4.1", default-features = false }
-semver = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 strip-ansi-escapes = { version = "0.2", default-features = false }
 syn = { version = "2.0", default-features = false }
