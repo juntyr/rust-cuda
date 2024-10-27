@@ -847,21 +847,15 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
     let is_library = crate_path.join("src").join("lib.rs").exists();
     let is_binary = crate_path.join("src").join("main.rs").exists();
 
-    let output_file_prefix = crate_name.replace('-', "_");
+    if !is_library {
+        return Err(Error::from(if is_binary {
+            BuildErrorKind::InvalidCrateType("Binary".into())
+        } else {
+            BuildErrorKind::InternalError("Unable to find neither `lib.rs` nor `main.rs`".into())
+        }));
+    }
 
-    let deps_file_prefix = match (is_binary, is_library) {
-        (_, true) => format!("lib{output_file_prefix}"),
-        (true, false) => {
-            return Err(Error::from(BuildErrorKind::InvalidCrateType(
-                "Binary".into(),
-            )))
-        },
-        (false, false) => {
-            return Err(Error::from(BuildErrorKind::InternalError(
-                "Unable to find neither `lib.rs` nor `main.rs`".into(),
-            )));
-        },
-    };
+    let output_file_prefix = crate_name.replace('-', "_");
 
     // TODO: use the cargo env variable
     let mut cargo = ProcessBuilder::new("cargo");
