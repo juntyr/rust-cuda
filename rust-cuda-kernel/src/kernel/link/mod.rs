@@ -832,6 +832,8 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
             && !line.starts_with("  process didn\'t exit successfully: ")
     }
 
+    const LAST_BUILD_CMD: &str = ".last-build-command";
+
     static SUFFIX_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"-C extra-filename=([\S]+)").expect("Unable to parse regex...")
     });
@@ -944,12 +946,22 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
                     && line.contains(&format!("--crate-type {crate_type}"))
             })
             .map(|line| line.to_string())
+            .or_else(|| {
+                fs::read_to_string(output_path.join(format!("{LAST_BUILD_CMD}.{crate_suffix}")))
+                    .ok()
+            })
             .ok_or_else(|| {
                 Error::from(BuildErrorKind::InternalError(String::from(
                     "Unable to find build command of the device crate",
                 )))
             })?
     };
+
+    fs::write(
+        output_path.join(format!("{LAST_BUILD_CMD}.{crate_suffix}")),
+        build_command.as_bytes(),
+    )
+    .context(BuildErrorKind::OtherError)?;
 
     let (file_suffix, found_suffix) = match SUFFIX_REGEX.captures(&build_command) {
         Some(caps) => (caps[1].to_string(), true),
