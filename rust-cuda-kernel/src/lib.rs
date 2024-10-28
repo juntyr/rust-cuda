@@ -25,7 +25,6 @@
 //! can be *safely* called from Rust code on the host.
 
 #![deny(unsafe_code)]
-#![warn(missing_docs)]
 #![feature(box_patterns)]
 #![feature(proc_macro_tracked_env)]
 #![feature(proc_macro_span)]

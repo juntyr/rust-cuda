@@ -1,4 +1,4 @@
-#![deny(clippy::pedantic)]
+#![allow(missing_docs)] // FIXME: use expect
 #![no_std]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
 #![cfg_attr(target_os = "cuda", feature(alloc_error_handler))]
@@ -24,6 +24,7 @@ pub enum Action {
 pub fn kernel(action: rust_cuda::kernel::param::PerThreadShallowCopy<Action>) {
     match action {
         Action::Print => rust_cuda::device::utils::println!("println! from CUDA kernel"),
+        #[allow(clippy::panic)] // we want to demonstrate a panic
         Action::Panic => panic!("panic! from CUDA kernel"),
         Action::AllocError => {
             ::alloc::alloc::handle_alloc_error(::core::alloc::Layout::new::<i8>())

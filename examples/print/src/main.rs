@@ -1,4 +1,4 @@
-#![deny(clippy::pedantic)]
+#![allow(missing_docs)] // FIXME: use expect
 
 use print::{kernel, link, Action};
 

@@ -46,9 +46,9 @@ syn = { version = "2.0", default-features = false }
 thiserror = { version = "1.0", default-features = false }
 
 [workspace.lints.rust]
+missing_docs = "warn"
 unused_crate_dependencies = "warn"
-
-missing_docs = "allow"  # TODO
+unused_unsafe = "warn"
 
 [workspace.lints.clippy]
 complexity = { priority = -1, level = "warn" }
@@ -67,10 +67,12 @@ todo = "warn"
 unimplemented = "warn"
 unreachable = "warn"
 module_name_repetitions = "allow"
+multiple_unsafe_ops_per_block = "warn"
+undocumented_unsafe_blocks = "warn"
 
 cargo = { priority = -1, level = "warn" }
 cargo_common_metadata = "allow"  # TODO
-multiple_crate_versions = "warn"
+multiple_crate_versions = "allow"  # TODO
 
 [package]
 name = "rust-cuda"
