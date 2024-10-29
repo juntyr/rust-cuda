@@ -25,7 +25,6 @@ rust-cuda-kernel = { version = "0.1", path = "rust-cuda-kernel", default-feature
 # third-party dependencies with unpublished patches
 rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
 rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
-rustacuda_derive = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
 
 # crates.io third-party dependencies
 cargo_metadata = { version = "0.18", default-features = false }
@@ -89,7 +88,7 @@ rust-version = { workspace = true }
 
 [features]
 default = []
-derive = ["dep:rustacuda_derive", "dep:rust-cuda-derive"]
+derive = ["dep:rust-cuda-derive"]
 device = []
 final = ["dep:final"]
 host = ["dep:rustacuda", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
@@ -102,7 +101,6 @@ oneshot = { workspace = true, features = ["std", "async"], optional = true }
 regex = { workspace = true, optional = true }
 rustacuda = { workspace = true, optional = true }
 rustacuda_core = { workspace = true }
-rustacuda_derive = { workspace = true, optional = true }
 rust-cuda-derive = { workspace = true, optional = true }
 rust-cuda-kernel = { workspace = true, optional = true }
 safer_owning_ref = { workspace = true, optional = true }
