@@ -4,7 +4,7 @@ use std::{
     ffi::CString,
     fmt::Write as FmtWrite,
     fs,
-    io::{BufRead, Read, Write},
+    io::{Read, Write},
     os::raw::c_int,
     path::{Path, PathBuf},
     ptr::addr_of_mut,
@@ -19,8 +19,8 @@ use quote::quote;
 use crate::kernel::{
     lints::{LintLevel, PtxLint},
     utils::skip_kernel_compilation,
-    KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY,
-    KERNEL_TYPE_USE_START_CANARY, PTX_CSTR_IDENT,
+    CHECK_SPECIALISATION, KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT,
+    KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY, PTX_CSTR_IDENT,
 };
 
 mod config;
@@ -438,7 +438,7 @@ fn check_kernel_ptx(
 
     let result = (|| {
         let kernel_name = match specialisation {
-            Specialisation::Check => format!("{kernel_hash}_chECK"),
+            Specialisation::Check => format!("{kernel_hash}_{CHECK_SPECIALISATION}"),
             Specialisation::Link("") => format!("{kernel_hash}_kernel"),
             Specialisation::Link(specialisation) => format!(
                 "{kernel_hash}_kernel_{:016x}",
@@ -446,7 +446,7 @@ fn check_kernel_ptx(
             ),
         };
         let Ok(kernel_name) = CString::new(kernel_name.clone()) else {
-            abort_call_site!("failed to make a cstr from {:?}", kernel_name);
+            abort_call_site!("Failed to make a cstr from {:?}", kernel_name);
         };
 
         let mut options = vec![c"--entry", kernel_name.as_c_str()];
@@ -666,13 +666,38 @@ fn compile_kernel_ptx(
         crate_name.to_uppercase(),
         kernel.to_string().to_uppercase()
     );
+    let specialisation_value = match specialisation {
+        Specialisation::Check => CHECK_SPECIALISATION,
+        Specialisation::Link(specialisation) => specialisation,
+    };
+    let specialisation_suffix = match specialisation {
+        Specialisation::Check => String::from(CHECK_SPECIALISATION),
+        Specialisation::Link(specialisation) => {
+            format!("{:016x}", seahash::hash(specialisation.as_bytes()))
+        },
+    };
 
     let kernel_path = build_kernel_with_specialisation(
         crate_name,
         crate_path,
+        &specialisation_suffix,
         &specialisation_var,
-        specialisation,
+        specialisation_value,
     );
+
+    if let Specialisation::Link(specialisation) = specialisation {
+        if let Err(err) = fs::OpenOptions::new()
+            .append(true)
+            .open(&kernel_path)
+            .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
+        {
+            abort_call_site!(
+                "Failed to write specialisation to {:?}: {}",
+                kernel_path,
+                err
+            );
+        }
+    }
 
     let mut file = fs::File::open(&kernel_path)
         .unwrap_or_else(|_| abort_call_site!("Failed to open kernel file at {:?}.", &kernel_path));
@@ -696,24 +721,19 @@ fn compile_kernel_ptx(
 fn build_kernel_with_specialisation(
     crate_name: &str,
     crate_path: &Path,
-    env_var: &str,
-    specialisation: Specialisation,
+    crate_suffix: &str,
+    specialisation_var: &str,
+    specialisation_value: &str,
 ) -> PathBuf {
-    let specialisation_prefix = match specialisation {
-        Specialisation::Check => String::from("chECK"),
-        Specialisation::Link(specialisation) => {
-            format!("{:016x}", seahash::hash(specialisation.as_bytes()))
-        },
-    };
-
     let any_output = Cell::new(false);
 
     let ptx_path = cargo_build_with_specialisation(
         crate_path,
         crate_name,
-        &specialisation_prefix,
-        (env_var, specialisation),
-        |stdout_line| {
+        crate_suffix,
+        specialisation_var,
+        specialisation_value,
+        |stdout_line, stdout| {
             if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
                 serde_json::from_str(stdout_line)
             {
@@ -723,12 +743,14 @@ fn build_kernel_with_specialisation(
                         "{} of {} ({})",
                         "[PTX]".bright_black().bold(),
                         crate_name.bold(),
-                        specialisation_prefix.to_ascii_lowercase(),
+                        crate_suffix.to_ascii_lowercase(),
                     );
                     colored::control::unset_override();
                 }
 
                 if let Some(rendered) = &mut message.message.rendered {
+                    stdout.push_str(rendered);
+
                     colored::control::set_override(true);
                     let prefix = "  | ".bright_black().bold().to_string();
                     colored::control::unset_override();
@@ -757,10 +779,19 @@ fn build_kernel_with_specialisation(
                 }
             }
         },
-        |stderr_line| {
-            if stderr_line.trim().is_empty() {
+        |stderr_line, stderr| {
+            if stderr_line.trim().is_empty()
+                || stderr_line.starts_with("+ ")
+                || stderr_line.contains("Running")
+                || stderr_line.contains("Fresh")
+                || stderr_line.starts_with("Caused by:")
+                || stderr_line.starts_with("  process didn\'t exit successfully: ")
+            {
                 return;
             }
+
+            stderr.push_str(stderr_line);
+            stderr.push('\n');
 
             if !any_output.replace(true) {
                 colored::control::set_override(true);
@@ -768,7 +799,7 @@ fn build_kernel_with_specialisation(
                     "{} of {} ({})",
                     "[PTX]".bright_black().bold(),
                     crate_name.bold(),
-                    specialisation_prefix.to_ascii_lowercase(),
+                    crate_suffix.to_ascii_lowercase(),
                 );
                 colored::control::unset_override();
             }
@@ -783,82 +814,25 @@ fn build_kernel_with_specialisation(
         },
     );
 
-    let mut specialised_ptx_path = ptx_path.clone();
-
-    specialised_ptx_path.set_extension(format!("{specialisation_prefix}.ptx"));
-
-    if let Err(err) = fs::copy(&ptx_path, &specialised_ptx_path) {
-        abort_call_site!(
-            "Failed to copy kernel from {:?} to {:?}: {}",
-            ptx_path,
-            specialised_ptx_path,
-            err
-        );
-    }
-
-    if let Specialisation::Link(specialisation) = specialisation {
-        if let Err(err) = fs::OpenOptions::new()
-            .append(true)
-            .open(&specialised_ptx_path)
-            .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
-        {
-            abort_call_site!(
-                "Failed to write specialisation to {:?}: {}",
-                specialised_ptx_path,
-                err
-            );
-        }
-    }
-
-    specialised_ptx_path
+    ptx_path
 }
 
-#[expect(clippy::too_many_lines)]
-fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
+fn cargo_build_with_specialisation<O: FnMut(&str, &mut String), E: FnMut(&str, &mut String)>(
     crate_path: &Path,
     crate_name: &str,
     crate_suffix: &str,
-    specialisation: (&str, Specialisation),
+    specialisation_var: &str,
+    specialisation_value: &str,
     mut on_stdout_line: O,
     mut on_stderr_line: E,
 ) -> PathBuf {
-    fn output_is_not_verbose(line: &str) -> bool {
-        !line.starts_with("+ ")
-            && !line.contains("Running")
-            && !line.contains("Fresh")
-            && !line.starts_with("Caused by:")
-            && !line.starts_with("  process didn\'t exit successfully: ")
-    }
-
-    if !matches!(fs::metadata(crate_path.join("Cargo.toml")), Ok(metadata) if metadata.is_file()) {
-        abort_call_site!(
-            "{:?} is not a valid crate manifest path",
-            crate_path.join("Cargo.toml")
-        );
-    }
-
-    let is_library = crate_path.join("src").join("lib.rs").exists();
-    let is_binary = crate_path.join("src").join("main.rs").exists();
-
-    if !is_library {
-        if is_binary {
-            abort_call_site!(
-                "{} is a binary-only crate, which is not supported",
-                crate_name
-            );
-        } else {
-            abort_call_site!(
-                "unable to find either `lib.rs` nor `main.rs` for {}",
-                crate_name
-            );
-        }
-    }
+    check_crate_is_library(crate_path, crate_name);
 
     // TODO: use the cargo env variable
     let mut cargo = ProcessBuilder::new("cargo");
     cargo.arg("build");
 
-    if matches!(specialisation.1, Specialisation::Link(_)) {
+    if specialisation_value != CHECK_SPECIALISATION {
         cargo.arg("--release");
     }
 
@@ -896,56 +870,31 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
 
     let target_dir = scratch_dir.join("target");
     if let Err(err) = fs::create_dir_all(&target_dir) {
-        abort_call_site!("failed to create the target dir {:?}: {}", target_dir, err);
+        abort_call_site!("Failed to create the target dir {:?}: {}", target_dir, err);
     }
 
     cargo
         .cwd(crate_path)
         .env("CARGO_TARGET_DIR", target_dir.as_path())
-        .env(
-            specialisation.0,
-            match specialisation.1 {
-                Specialisation::Check => "chECK",
-                Specialisation::Link(specialisation) => specialisation,
-            },
-        );
+        .env(specialisation_var, specialisation_value);
+
+    let mut stdout = String::new();
+    let mut stderr = String::new();
 
     if let Err(mut err) = cargo.exec_with_streaming(
         &mut |s| {
-            on_stdout_line(s);
+            on_stdout_line(s, &mut stdout);
             Ok(())
         },
         &mut |s| {
-            if output_is_not_verbose(s) {
-                on_stderr_line(s);
-            }
+            on_stderr_line(s, &mut stderr);
             Ok(())
         },
-        true,
+        false,
     ) {
         if let Some(err) = err.downcast_mut::<ProcessError>() {
-            if let Some(stdout) = &mut err.stdout {
-                let mut parsed_stdout = String::new();
-                #[expect(clippy::lines_filter_map_ok)]
-                for stdout_line in stdout.lines().flatten() {
-                    if let Ok(cargo_metadata::Message::CompilerMessage(message)) =
-                        serde_json::from_str(&stdout_line)
-                    {
-                        if let Some(rendered) = message.message.rendered {
-                            if let Ok(rendered) =
-                                String::from_utf8(strip_ansi_escapes::strip(&rendered))
-                            {
-                                parsed_stdout.push_str(&rendered);
-                            }
-                        }
-                    }
-                }
-                *stdout = parsed_stdout.into_bytes();
-            }
-
-            if let Some(stderr) = &mut err.stderr {
-                *stderr = strip_ansi_escapes::strip(stderr.as_slice());
-            }
+            let stdout = (!stdout.is_empty()).then(|| strip_ansi_escapes::strip(stdout));
+            let stderr = (!stderr.is_empty()).then(|| strip_ansi_escapes::strip(stderr));
 
             *err = ProcessError::new_raw(
                 &format!("process didn't exit successfully: {cargo}"),
@@ -954,22 +903,48 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
                     || String::from("never executed"),
                     |code| format!("code={code}"),
                 ),
-                err.stdout.as_deref(),
-                err.stderr.as_deref(),
+                stdout.as_deref(),
+                stderr.as_deref(),
             );
         }
 
-        abort_call_site!("failed to build the CUDA kernel: {}", err);
+        abort_call_site!("Failed to build the CUDA kernel: {}", err);
     }
 
     let crate_artifact_name = crate_name.replace('-', "_");
     let assembly_path = artifact_dir.join(format!("{crate_artifact_name}.ptx"));
 
-    if assembly_path.exists() {
-        return assembly_path;
+    if !assembly_path.exists() {
+        abort_call_site!("Failed to open PTX file {:?}", assembly_path);
     }
 
-    abort_call_site!("failed to open PTX file {:?}", assembly_path);
+    assembly_path
+}
+
+fn check_crate_is_library(crate_path: &Path, crate_name: &str) {
+    if !matches!(fs::metadata(crate_path.join("Cargo.toml")), Ok(metadata) if metadata.is_file()) {
+        abort_call_site!(
+            "{:?} is not a valid crate manifest path",
+            crate_path.join("Cargo.toml")
+        );
+    }
+
+    let is_library = crate_path.join("src").join("lib.rs").exists();
+    let is_binary = crate_path.join("src").join("main.rs").exists();
+
+    if !is_library {
+        if is_binary {
+            abort_call_site!(
+                "{} is a binary-only crate, which is not supported",
+                crate_name
+            );
+        } else {
+            abort_call_site!(
+                "unable to find either `lib.rs` nor `main.rs` for {}",
+                crate_name
+            );
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

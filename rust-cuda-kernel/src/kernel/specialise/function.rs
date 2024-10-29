@@ -3,6 +3,8 @@ use std::env::VarError;
 use proc_macro::TokenStream;
 use quote::quote;
 
+use crate::kernel::CHECK_SPECIALISATION;
+
 #[expect(clippy::module_name_repetitions)]
 pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mut func: syn::ItemFn = syn::parse(func).unwrap_or_else(|err| {
@@ -31,8 +33,8 @@ pub fn specialise_kernel_function(attr: TokenStream, func: TokenStream) -> Token
 
     func.sig.ident = match proc_macro::tracked_env::var(&specialisation_var).as_deref() {
         Ok("") => quote::format_ident!("{}_kernel", func.sig.ident),
-        Ok("chECK") => {
-            let func_ident = quote::format_ident!("{}_chECK", func.sig.ident);
+        Ok(CHECK_SPECIALISATION) => {
+            let func_ident = quote::format_ident!("{}_{CHECK_SPECIALISATION}", func.sig.ident);
 
             return (quote! {
                 #[cfg(target_os = "cuda")]
