@@ -8,7 +8,6 @@ use std::{
     os::raw::c_int,
     path::{Path, PathBuf},
     ptr::addr_of_mut,
-    sync::LazyLock,
 };
 
 use cargo_util::ProcessBuilder;
@@ -16,7 +15,6 @@ use colored::Colorize;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use regex::Regex;
 
 use crate::kernel::{
     lints::{LintLevel, PtxLint},
@@ -447,7 +445,9 @@ fn check_kernel_ptx(
                 seahash::hash(specialisation.as_bytes())
             ),
         };
-        let kernel_name = CString::new(kernel_name).unwrap();
+        let Ok(kernel_name) = CString::new(kernel_name.clone()) else {
+            abort_call_site!("failed to make a cstr from {:?}", kernel_name);
+        };
 
         let mut options = vec![c"--entry", kernel_name.as_c_str()];
 
@@ -494,9 +494,10 @@ fn check_kernel_ptx(
             #[expect(unsafe_code)]
             // Safety: FFI
             NvptxError::try_err_from(unsafe {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 ptx_compiler_sys::nvPTXCompilerCompile(
                     compiler,
-                    c_int::try_from(options_ptrs.len()).unwrap(),
+                    options_ptrs.len() as c_int,
                     options_ptrs.as_ptr().cast(),
                 )
             })?;
@@ -538,9 +539,10 @@ fn check_kernel_ptx(
         #[expect(unsafe_code)]
         // Safety: FFI
         NvptxError::try_err_from(unsafe {
+            #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
-                c_int::try_from(options_ptrs.len()).unwrap(),
+                options_ptrs.len() as c_int,
                 options_ptrs.as_ptr().cast(),
             )
         })
@@ -745,7 +747,14 @@ fn build_kernel_with_specialisation(
                     std::mem::swap(rendered, &mut prefixed);
                 }
 
-                eprintln!("{}", serde_json::to_string(&message.message).unwrap());
+                match serde_json::to_string(&message.message) {
+                    Ok(message) => eprintln!("{message}"),
+                    Err(err) => emit_call_site_warning!(
+                        "failed to emit diagnostic {:?}: {}",
+                        message.message,
+                        err
+                    ),
+                }
             }
         },
         |stderr_line| {
@@ -821,12 +830,6 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
             && !line.starts_with("  process didn\'t exit successfully: ")
     }
 
-    const LAST_BUILD_CMD: &str = ".last-build-command";
-
-    static SUFFIX_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"-C extra-filename=([\S]+)").expect("Unable to parse regex...")
-    });
-
     if !matches!(fs::metadata(crate_path.join("Cargo.toml")), Ok(metadata) if metadata.is_file()) {
         abort_call_site!(
             "{:?} is not a valid crate manifest path",
@@ -851,46 +854,54 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
         }
     }
 
-    let output_file_prefix = crate_name.replace('-', "_");
-
     // TODO: use the cargo env variable
     let mut cargo = ProcessBuilder::new("cargo");
-    let mut args = vec!["rustc"];
+    cargo.arg("build");
 
     if matches!(specialisation.1, Specialisation::Link(_)) {
-        args.push("--release");
+        cargo.arg("--release");
     }
 
-    args.push("--color=always");
-    args.push("--message-format=json,json-diagnostic-rendered-ansi");
+    cargo.arg("--color=always");
+    cargo.arg("--message-format=json,json-diagnostic-rendered-ansi");
 
-    args.push("--target");
-    args.push(TARGET_NAME);
+    cargo.arg("--target");
+    cargo.arg(TARGET_NAME);
 
-    args.push("--lib");
+    cargo.arg("--lib");
 
-    args.push("-v");
+    cargo.arg("-v");
 
-    args.push("--");
+    let scratch_dir = scratch::path(concat!(
+        env!("CARGO_PKG_NAME"),
+        "-",
+        env!("CARGO_PKG_VERSION"),
+    ));
 
-    let crate_type = "cdylib,rlib";
-    args.push("--crate-type");
-    args.push(crate_type);
-
-    let mut output_path = PathBuf::from(env!("OUT_DIR"));
-    output_path.push(&output_file_prefix);
-    if let Err(err) = fs::create_dir_all(&output_path) {
+    let artifact_dir = scratch_dir
+        .join("artifacts")
+        .join(crate_name)
+        .join(crate_suffix);
+    if let Err(err) = fs::create_dir_all(&artifact_dir) {
         abort_call_site!(
-            "failed to create the output path {:?}: {}",
-            output_path,
+            "failed to create the artifact dir {:?}: {}",
+            artifact_dir,
             err
         );
     }
 
+    cargo.arg("-Zunstable-options");
+    cargo.arg("--artifact-dir");
+    cargo.arg(&artifact_dir);
+
+    let target_dir = scratch_dir.join("target");
+    if let Err(err) = fs::create_dir_all(&target_dir) {
+        abort_call_site!("failed to create the target dir {:?}: {}", target_dir, err);
+    }
+
     cargo
-        .args(&args)
         .cwd(crate_path)
-        .env("CARGO_TARGET_DIR", output_path.as_path())
+        .env("CARGO_TARGET_DIR", target_dir.as_path())
         .env(
             specialisation.0,
             match specialisation.1 {
@@ -915,13 +926,14 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
         )
         .unwrap_or_else(|err| abort_call_site!("failed to execute command '{:?}': {}", cargo, err));
 
-    let stderr = String::from_utf8(raw_output.stderr)
-        .unwrap_or_else(|err| abort_call_site!("failed to parse stderr as UTF8: {}", err));
-    let mut stderr_lines = stderr.trim_matches('\n').split('\n');
-
     if !raw_output.status.success() {
+        let stderr = String::from_utf8(raw_output.stderr)
+            .unwrap_or_else(|err| abort_call_site!("failed to parse stderr as UTF8: {}", err));
+
         #[allow(clippy::manual_filter_map)]
-        let lines = stderr_lines
+        let lines = stderr
+            .trim_matches('\n')
+            .split('\n')
             .filter(|s| output_is_not_verbose(s))
             .map(String::from)
             .collect::<Vec<_>>()
@@ -938,51 +950,14 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
         );
     }
 
-    let last_build_cmd = output_path.join(format!("{LAST_BUILD_CMD}.{crate_suffix}"));
-
-    // We need the build command to get real output filename.
-    #[allow(clippy::manual_find_map)]
-    let build_command = stderr_lines
-        .find(|line| {
-            line.contains(&format!("--crate-name {output_file_prefix}"))
-                && line.contains(&format!("--crate-type {crate_type}"))
-        })
-        .map(String::from)
-        .or_else(|| fs::read_to_string(&last_build_cmd).ok())
-        .unwrap_or_else(|| {
-            abort_call_site!("unable to find build command of the device crate");
-        });
-
-    if let Err(err) = fs::write(&last_build_cmd, build_command.as_bytes()) {
-        abort_call_site!(
-            "failed to cache the last build command to {:?}",
-            last_build_cmd
-        );
-    };
-
-    let (file_suffix, found_suffix) = match SUFFIX_REGEX.captures(&build_command) {
-        Some(caps) => (caps[1].to_string(), true),
-        None => (String::new(), false),
-    };
-
-    let assembly_path = output_path
-        .join(TARGET_NAME)
-        .join(match specialisation.1 {
-            Specialisation::Check => "debug",
-            Specialisation::Link(_) => "release",
-        })
-        .join("deps")
-        .join(format!("{output_file_prefix}{file_suffix}.ptx"));
+    let crate_artifact_name = crate_name.replace('-', "_");
+    let assembly_path = artifact_dir.join(format!("{crate_artifact_name}.ptx"));
 
     if assembly_path.exists() {
         return assembly_path;
     }
 
-    if found_suffix {
-        abort_call_site!("unable to find PTX assembly as specified by `extra-filename` rustc flag");
-    } else {
-        abort_call_site!("Unable to find `extra-filename` rustc flag")
-    }
+    abort_call_site!("failed to open PTX file {:?}", assembly_path);
 }
 
 #[derive(Copy, Clone, Debug)]
