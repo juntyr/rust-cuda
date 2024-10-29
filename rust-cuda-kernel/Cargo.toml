@@ -23,6 +23,7 @@ quote = { workspace = true }
 scratch = { workspace = true }
 seahash = { workspace = true }
 serde_json = { workspace = true }
+strip-ansi-escapes = { workspace = true }
 syn = { workspace = true, features = ["full", "fold"] }
 thiserror = { workspace = true }
 

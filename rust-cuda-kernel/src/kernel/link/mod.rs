@@ -4,13 +4,13 @@ use std::{
     ffi::CString,
     fmt::Write as FmtWrite,
     fs,
-    io::{Read, Write},
+    io::{BufRead, Read, Write},
     os::raw::c_int,
     path::{Path, PathBuf},
     ptr::addr_of_mut,
 };
 
-use cargo_util::ProcessBuilder;
+use cargo_util::{ProcessBuilder, ProcessError};
 use colored::Colorize;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -910,44 +910,56 @@ fn cargo_build_with_specialisation<O: FnMut(&str), E: FnMut(&str)>(
             },
         );
 
-    let raw_output = cargo
-        .exec_with_streaming(
-            &mut |s| {
-                on_stdout_line(s);
-                Ok(())
-            },
-            &mut |s| {
-                if output_is_not_verbose(s) {
-                    on_stderr_line(s);
+    if let Err(mut err) = cargo.exec_with_streaming(
+        &mut |s| {
+            on_stdout_line(s);
+            Ok(())
+        },
+        &mut |s| {
+            if output_is_not_verbose(s) {
+                on_stderr_line(s);
+            }
+            Ok(())
+        },
+        true,
+    ) {
+        if let Some(err) = err.downcast_mut::<ProcessError>() {
+            if let Some(stdout) = &mut err.stdout {
+                let mut parsed_stdout = String::new();
+                #[expect(clippy::lines_filter_map_ok)]
+                for stdout_line in stdout.lines().flatten() {
+                    if let Ok(cargo_metadata::Message::CompilerMessage(message)) =
+                        serde_json::from_str(&stdout_line)
+                    {
+                        if let Some(rendered) = message.message.rendered {
+                            if let Ok(rendered) =
+                                String::from_utf8(strip_ansi_escapes::strip(&rendered))
+                            {
+                                parsed_stdout.push_str(&rendered);
+                            }
+                        }
+                    }
                 }
-                Ok(())
-            },
-            true,
-        )
-        .unwrap_or_else(|err| abort_call_site!("failed to execute command '{:?}': {}", cargo, err));
+                *stdout = parsed_stdout.into_bytes();
+            }
 
-    if !raw_output.status.success() {
-        let stderr = String::from_utf8(raw_output.stderr)
-            .unwrap_or_else(|err| abort_call_site!("failed to parse stderr as UTF8: {}", err));
+            if let Some(stderr) = &mut err.stderr {
+                *stderr = strip_ansi_escapes::strip(stderr.as_slice());
+            }
 
-        #[allow(clippy::manual_filter_map)]
-        let lines = stderr
-            .trim_matches('\n')
-            .split('\n')
-            .filter(|s| output_is_not_verbose(s))
-            .map(String::from)
-            .collect::<Vec<_>>()
-            .join("\n");
+            *err = ProcessError::new_raw(
+                &format!("process didn't exit successfully: {cargo}"),
+                err.code,
+                &err.code.map_or_else(
+                    || String::from("never executed"),
+                    |code| format!("code={code}"),
+                ),
+                err.stdout.as_deref(),
+                err.stderr.as_deref(),
+            );
+        }
 
-        abort_call_site!(
-            "Failed to build PTX for {} ({})\n\n{}",
-            crate_name,
-            match specialisation.1 {
-                Specialisation::Check => "chECK",
-                Specialisation::Link(specialisation) => specialisation,
-            },
-            lines
-        );
+        abort_call_site!("failed to build the CUDA kernel: {}", err);
     }
 
     let crate_artifact_name = crate_name.replace('-', "_");

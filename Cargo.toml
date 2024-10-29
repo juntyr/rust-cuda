@@ -43,6 +43,7 @@ safer_owning_ref = { version = "0.5", default-features = false }
 scratch = { version = "1.0", default-features = false }
 seahash = { version = "4.1", default-features = false }
 serde_json = { version = "1.0", default-features = false }
+strip-ansi-escapes = { version = "0.2", default-features = false }
 syn = { version = "2.0", default-features = false }
 thiserror = { version = "1.0", default-features = false }
 
