@@ -56,6 +56,10 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::OnceLock;
 
 <span class="kw">use </span>regex::bytes::Regex;
@@ -63,7 +67,8 @@
 <span class="attr">#[expect(clippy::module_name_repetitions)]
 </span><span class="kw">pub fn </span>const_marker_regex() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Regex {
     <span class="kw">static </span>CONST_MARKER_REGEX: OnceLock&lt;Regex&gt; = OnceLock::new();
-    CONST_MARKER_REGEX.get_or_init(|| {
+    <span class="attr">#[allow(clippy::unwrap_used)]
+    </span>CONST_MARKER_REGEX.get_or_init(|| {
         Regex::new(<span class="string">r"(?-u)// &lt;rust-cuda-ptx-jit-const-load-(?P&lt;tmpreg&gt;%r\d+)-(?P&lt;param&gt;\d+)&gt; //"</span>)
             .unwrap()
     })
@@ -72,7 +77,8 @@
 <span class="attr">#[expect(clippy::module_name_repetitions)]
 </span><span class="kw">pub fn </span>const_base_register_regex() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Regex {
     <span class="kw">static </span>CONST_BASE_REGISTER_REGEX: OnceLock&lt;Regex&gt; = OnceLock::new();
-    CONST_BASE_REGISTER_REGEX.get_or_init(|| {
+    <span class="attr">#[allow(clippy::unwrap_used)]
+    </span>CONST_BASE_REGISTER_REGEX.get_or_init(|| {
         Regex::new(<span class="string">r"(?-u)ld\.global\.u32\s*(?P&lt;tmpreg&gt;%r\d+)\s*,\s*\[(?P&lt;basereg&gt;%r[ds]?\d+)]\s*;"</span>)
             .unwrap()
     })
@@ -81,7 +87,8 @@
 <span class="attr">#[expect(clippy::module_name_repetitions)]
 </span><span class="kw">pub fn </span>const_load_instruction_regex() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Regex {
     <span class="kw">static </span>CONST_LOAD_INSTRUCTION_REGEX: OnceLock&lt;Regex&gt; = OnceLock::new();
-    CONST_LOAD_INSTRUCTION_REGEX.get_or_init(|| {
+    <span class="attr">#[allow(clippy::unwrap_used)]
+    </span>CONST_LOAD_INSTRUCTION_REGEX.get_or_init(|| {
         Regex::new(
             <span class="string">r"(?x-u)(?P&lt;instruction&gt;
                 ld\.global
@@ -112,6 +119,7 @@
 <span class="attr">#[expect(clippy::module_name_repetitions)]
 </span><span class="kw">pub fn </span>register_regex() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Regex {
     <span class="kw">static </span>REGISTER_REGEX: OnceLock&lt;Regex&gt; = OnceLock::new();
-    REGISTER_REGEX.get_or_init(|| Regex::new(<span class="string">r"(?-u)(?P&lt;register&gt;%[rf][sd]?\d+)"</span>).unwrap())
+    <span class="attr">#[allow(clippy::unwrap_used)]
+    </span>REGISTER_REGEX.get_or_init(|| Regex::new(<span class="string">r"(?-u)(?P&lt;register&gt;%[rf][sd]?\d+)"</span>).unwrap())
 }
 </code></pre></div></section></main></body></html>

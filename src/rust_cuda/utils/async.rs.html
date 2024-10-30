@@ -730,8 +730,6 @@
 <a href="#730" id="730">730</a>
 <a href="#731" id="731">731</a>
 <a href="#732" id="732">732</a>
-<a href="#733" id="733">733</a>
-<a href="#734" id="734">734</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"host"</span>)]
 </span><span class="kw">use </span>std::{borrow::BorrowMut, future::Future, future::IntoFuture, marker::PhantomData, task::Poll};
 
@@ -1054,15 +1052,13 @@
     </span><span class="kw">fn </span>destructure_into_parts(<span class="self">self</span>) -&gt; (Stream&lt;<span class="lifetime">'stream</span>&gt;, T, AsyncStatus&lt;<span class="lifetime">'a</span>, T, C&gt;) {
         <span class="kw">let </span>this = std::mem::ManuallyDrop::new(<span class="self">self</span>);
 
-        <span class="comment">// Safety: we destructure self into its droppable components,
-        //         value and status, without dropping self itself
-        </span><span class="kw">unsafe </span>{
-            (
-                this.stream,
-                std::ptr::read(<span class="kw-2">&amp;</span>this.value),
-                (std::ptr::read(<span class="kw-2">&amp;</span>this.status)),
-            )
-        }
+        <span class="kw">let </span>stream = this.stream;
+        <span class="comment">// Safety: this is never dropped and this.value only read once
+        </span><span class="kw">let </span>value = <span class="kw">unsafe </span>{ std::ptr::read(<span class="kw-2">&amp;</span>this.value) };
+        <span class="comment">// Safety: this is never dropped and this.status only read once
+        </span><span class="kw">let </span>status = <span class="kw">unsafe </span>{ std::ptr::read(<span class="kw-2">&amp;</span>this.status) };
+
+        (stream, value, status)
     }
 }
 

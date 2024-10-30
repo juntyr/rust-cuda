@@ -346,10 +346,6 @@
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::HashMap,
     hash::{Hash, Hasher},
@@ -490,11 +486,9 @@
             .sig
             .inputs
             .into_iter()
-            .map(|arg| <span class="kw">match </span>arg {
-                syn::FnArg::Typed(arg) =&gt; arg,
-                syn::FnArg::Receiver(<span class="kw">_</span>) =&gt; {
-                    <span class="macro">unreachable!</span>(<span class="string">"already checked that no receiver arg exists"</span>)
-                },
+            .filter_map(|arg| <span class="kw">match </span>arg {
+                syn::FnArg::Typed(arg) =&gt; <span class="prelude-val">Some</span>(arg),
+                syn::FnArg::Receiver(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
             })
             .collect(),
     };
@@ -671,7 +665,7 @@
                 str_acc.push(<span class="string">'_'</span>);
                 str_acc.push_str(ident.to_string().trim_matches(<span class="string">'_'</span>));
 
-                <span class="prelude-val">Some</span>((str_acc, span_acc.join(ident.span()).unwrap()))
+                <span class="prelude-val">Some</span>((str_acc, span_acc.join(ident.span()).unwrap_or(span_acc)))
             } <span class="kw">else </span>{
                 <span class="prelude-val">Some</span>((ident.to_string(), ident.span()))
             }
@@ -687,10 +681,8 @@
         ..
     }: <span class="kw-2">&amp;</span>FuncIdent,
 ) -&gt; proc_macro2::TokenStream {
-    <span class="kw">let </span>crate_name = <span class="kw">match </span>proc_macro::tracked_env::var(<span class="string">"CARGO_CRATE_NAME"</span>) {
-        <span class="prelude-val">Ok</span>(crate_name) =&gt; crate_name.to_uppercase(),
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">abort_call_site!</span>(<span class="string">"Failed to read crate name: {:?}."</span>, err),
-    };
+    <span class="kw">let </span>crate_name = proc_macro::tracked_env::var(<span class="string">"CARGO_CRATE_NAME"</span>)
+        .unwrap_or_else(|err| <span class="macro">abort_call_site!</span>(<span class="string">"Failed to read crate name: {:?}."</span>, err));
 
     <span class="kw">let </span>crate_manifest_dir = proc_macro::tracked_env::var(<span class="string">"CARGO_MANIFEST_DIR"</span>)
         .unwrap_or_else(|err| <span class="macro">abort_call_site!</span>(<span class="string">"Failed to read crate path: {:?}."</span>, err));

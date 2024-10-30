@@ -65,6 +65,8 @@
 <span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>quote::quote;
 
+<span class="kw">use </span><span class="kw">crate</span>::kernel::CHECK_SPECIALISATION;
+
 <span class="attr">#[expect(clippy::module_name_repetitions)]
 </span><span class="kw">pub fn </span>specialise_kernel_function(attr: TokenStream, func: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span><span class="kw-2">mut </span>func: syn::ItemFn = syn::parse(func).unwrap_or_else(|err| {
@@ -82,21 +84,19 @@
         ),
     };
 
-    <span class="kw">let </span>crate_name = <span class="kw">match </span>proc_macro::tracked_env::var(<span class="string">"CARGO_CRATE_NAME"</span>) {
-        <span class="prelude-val">Ok</span>(crate_name) =&gt; crate_name.to_uppercase(),
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">abort_call_site!</span>(<span class="string">"Failed to read crate name: {:?}"</span>, err),
-    };
+    <span class="kw">let </span>crate_name = proc_macro::tracked_env::var(<span class="string">"CARGO_CRATE_NAME"</span>)
+        .unwrap_or_else(|err| <span class="macro">abort_call_site!</span>(<span class="string">"Failed to read crate name: {:?}"</span>, err));
 
     <span class="kw">let </span>specialisation_var = <span class="macro">format!</span>(
         <span class="string">"RUST_CUDA_DERIVE_SPECIALISE_{}_{}"</span>,
-        crate_name,
+        crate_name.to_uppercase(),
         kernel.to_string().to_uppercase()
     );
 
     func.sig.ident = <span class="kw">match </span>proc_macro::tracked_env::var(<span class="kw-2">&amp;</span>specialisation_var).as_deref() {
         <span class="prelude-val">Ok</span>(<span class="string">""</span>) =&gt; <span class="macro">quote::format_ident!</span>(<span class="string">"{}_kernel"</span>, func.sig.ident),
-        <span class="prelude-val">Ok</span>(<span class="string">"chECK"</span>) =&gt; {
-            <span class="kw">let </span>func_ident = <span class="macro">quote::format_ident!</span>(<span class="string">"{}_chECK"</span>, func.sig.ident);
+        <span class="prelude-val">Ok</span>(CHECK_SPECIALISATION) =&gt; {
+            <span class="kw">let </span>func_ident = <span class="macro">quote::format_ident!</span>(<span class="string">"{}_{CHECK_SPECIALISATION}"</span>, func.sig.ident);
 
             <span class="kw">return </span>(<span class="macro">quote!</span> {
                 <span class="attr">#[cfg(target_os = <span class="string">"cuda"</span>)]

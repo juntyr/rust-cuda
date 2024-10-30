@@ -66,7 +66,6 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
 </pre></div><pre class="rust"><code><span class="attr">#[derive(PartialEq, Eq, core::marker::ConstParamTy)]
 </span><span class="kw">pub enum </span>HostAndDeviceKernelEntryPoint {
     Match,
@@ -131,9 +130,8 @@
         haystack_len
     };
 
-    <span class="kw">unsafe </span>{
-        core::intrinsics::compare_bytes(haystack.as_ptr().add(from), needle.as_ptr(), check_len)
-            == <span class="number">0
-    </span>}
+    <span class="kw">let </span>haystack = <span class="kw">unsafe </span>{ haystack.as_ptr().add(from) };
+
+    <span class="kw">unsafe </span>{ core::intrinsics::compare_bytes(haystack, needle.as_ptr(), check_len) == <span class="number">0 </span>}
 }
 </code></pre></div></section></main></body></html>

@@ -277,6 +277,10 @@
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
 <a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(any(feature = <span class="string">"host"</span>, feature = <span class="string">"device"</span>))]
 </span><span class="kw">use </span>core::{
     borrow::{Borrow, BorrowMut},
@@ -310,7 +314,9 @@
     <span class="kw">let </span>offset: usize = <span class="kw">crate</span>::device::thread::Thread::this().index() * stride;
     <span class="kw">let </span>len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    <span class="kw">unsafe </span>{ core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
+    <span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice.as_ptr().add(offset) };
+
+    <span class="kw">unsafe </span>{ core::slice::from_raw_parts(data, len) }
 }
 
 <span class="attr">#[cfg(feature = <span class="string">"device"</span>)]
@@ -318,7 +324,9 @@
     <span class="kw">let </span>offset: usize = <span class="kw">crate</span>::device::thread::Thread::this().index() * stride;
     <span class="kw">let </span>len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    <span class="kw">unsafe </span>{ core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
+    <span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice.as_mut_ptr().add(offset) };
+
+    <span class="kw">unsafe </span>{ core::slice::from_raw_parts_mut(data, len) }
 }
 
 <span class="attr">#[cfg(feature = <span class="string">"device"</span>)]

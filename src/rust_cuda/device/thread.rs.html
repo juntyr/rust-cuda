@@ -144,14 +144,6 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(all(feature = <span class="string">"device"</span>, not(doc)))]
 </span><span class="kw">use </span>core::arch::nvptx;
 
@@ -195,12 +187,10 @@
     #[inline(always)]
     </span><span class="kw">pub fn </span>idx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Idx3 {
         <span class="attr">#[expect(clippy::cast_sign_loss)]
-        </span><span class="kw">unsafe </span>{
-            Idx3 {
-                x: nvptx::_thread_idx_x() <span class="kw">as </span>u32,
-                y: nvptx::_thread_idx_y() <span class="kw">as </span>u32,
-                z: nvptx::_thread_idx_z() <span class="kw">as </span>u32,
-            }
+        </span>Idx3 {
+            x: <span class="kw">unsafe </span>{ nvptx::_thread_idx_x() } <span class="kw">as </span>u32,
+            y: <span class="kw">unsafe </span>{ nvptx::_thread_idx_y() } <span class="kw">as </span>u32,
+            z: <span class="kw">unsafe </span>{ nvptx::_thread_idx_z() } <span class="kw">as </span>u32,
         }
     }
 
@@ -218,12 +208,10 @@
     #[inline(always)]
     </span><span class="kw">pub fn </span>dim(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Dim3 {
         <span class="attr">#[expect(clippy::cast_sign_loss)]
-        </span><span class="kw">unsafe </span>{
-            Dim3 {
-                x: nvptx::_block_dim_x() <span class="kw">as </span>u32,
-                y: nvptx::_block_dim_y() <span class="kw">as </span>u32,
-                z: nvptx::_block_dim_z() <span class="kw">as </span>u32,
-            }
+        </span>Dim3 {
+            x: <span class="kw">unsafe </span>{ nvptx::_block_dim_x() } <span class="kw">as </span>u32,
+            y: <span class="kw">unsafe </span>{ nvptx::_block_dim_y() } <span class="kw">as </span>u32,
+            z: <span class="kw">unsafe </span>{ nvptx::_block_dim_z() } <span class="kw">as </span>u32,
         }
     }
 
@@ -232,12 +220,10 @@
     #[inline(always)]
     </span><span class="kw">pub fn </span>idx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Idx3 {
         <span class="attr">#[expect(clippy::cast_sign_loss)]
-        </span><span class="kw">unsafe </span>{
-            Idx3 {
-                x: nvptx::_block_idx_x() <span class="kw">as </span>u32,
-                y: nvptx::_block_idx_y() <span class="kw">as </span>u32,
-                z: nvptx::_block_idx_z() <span class="kw">as </span>u32,
-            }
+        </span>Idx3 {
+            x: <span class="kw">unsafe </span>{ nvptx::_block_idx_x() } <span class="kw">as </span>u32,
+            y: <span class="kw">unsafe </span>{ nvptx::_block_idx_y() } <span class="kw">as </span>u32,
+            z: <span class="kw">unsafe </span>{ nvptx::_block_idx_z() } <span class="kw">as </span>u32,
         }
     }
 
@@ -261,12 +247,10 @@
     #[inline(always)]
     </span><span class="kw">pub fn </span>dim(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Dim3 {
         <span class="attr">#[expect(clippy::cast_sign_loss)]
-        </span><span class="kw">unsafe </span>{
-            Dim3 {
-                x: nvptx::_grid_dim_x() <span class="kw">as </span>u32,
-                y: nvptx::_grid_dim_y() <span class="kw">as </span>u32,
-                z: nvptx::_grid_dim_z() <span class="kw">as </span>u32,
-            }
+        </span>Dim3 {
+            x: <span class="kw">unsafe </span>{ nvptx::_grid_dim_x() } <span class="kw">as </span>u32,
+            y: <span class="kw">unsafe </span>{ nvptx::_grid_dim_y() } <span class="kw">as </span>u32,
+            z: <span class="kw">unsafe </span>{ nvptx::_grid_dim_z() } <span class="kw">as </span>u32,
         }
     }
 }

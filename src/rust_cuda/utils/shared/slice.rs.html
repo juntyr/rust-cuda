@@ -167,6 +167,7 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::alloc::Layout;
 
 <span class="kw">use </span>const_type_layout::TypeGraphLayout;
@@ -291,7 +292,8 @@
 /// The thread-block shared dynamic memory must be initialised once and
 /// only once per kernel.
 </span><span class="kw">pub unsafe fn </span>init() {
-    <span class="kw">unsafe </span>{
+    <span class="attr">#[expect(clippy::multiple_unsafe_ops_per_block)]
+    </span><span class="kw">unsafe </span>{
         <span class="macro">core::arch::asm!</span>(<span class="string">".reg .u64    %rust_cuda_dynamic_shared;"</span>);
         <span class="macro">core::arch::asm!</span>(
             <span class="string">"cvta.shared.u64    %rust_cuda_dynamic_shared, rust_cuda_dynamic_shared_base;"</span>,
