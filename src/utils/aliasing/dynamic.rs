@@ -31,7 +31,9 @@ fn split_slice_dynamic_stride<E>(slice: &[E], stride: usize) -> &[E] {
     let offset: usize = crate::device::thread::Thread::this().index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    unsafe { core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
+    let data = unsafe { slice.as_ptr().add(offset) };
+
+    unsafe { core::slice::from_raw_parts(data, len) }
 }
 
 #[cfg(feature = "device")]
@@ -39,7 +41,9 @@ fn split_slice_dynamic_stride_mut<E>(slice: &mut [E], stride: usize) -> &mut [E]
     let offset: usize = crate::device::thread::Thread::this().index() * stride;
     let len = slice.len().min(offset + stride).saturating_sub(offset);
 
-    unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
+    let data = unsafe { slice.as_mut_ptr().add(offset) };
+
+    unsafe { core::slice::from_raw_parts_mut(data, len) }
 }
 
 #[cfg(feature = "device")]
