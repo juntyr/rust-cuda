@@ -677,7 +677,7 @@ fn compile_kernel_ptx(
         },
     };
 
-    let kernel_path = build_kernel_with_specialisation(
+    let kernel_path = cargo_build_kernel_ptx_with_prefixed_output(
         crate_name,
         crate_path,
         &specialisation_suffix,
@@ -718,7 +718,7 @@ fn compile_kernel_ptx(
     kernel_ptx
 }
 
-fn build_kernel_with_specialisation(
+fn cargo_build_kernel_ptx_with_prefixed_output(
     crate_name: &str,
     crate_path: &Path,
     crate_suffix: &str,
@@ -727,97 +727,127 @@ fn build_kernel_with_specialisation(
 ) -> PathBuf {
     let any_output = Cell::new(false);
 
-    let ptx_path = cargo_build_with_specialisation(
+    cargo_build_kernel_ptx(
         crate_path,
         crate_name,
         crate_suffix,
         specialisation_var,
         specialisation_value,
         |stdout_line, stdout| {
-            if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
-                serde_json::from_str(stdout_line)
-            {
-                if !any_output.replace(true) {
-                    colored::control::set_override(true);
-                    eprintln!(
-                        "{} of {} ({})",
-                        "[PTX]".bright_black().bold(),
-                        crate_name.bold(),
-                        crate_suffix.to_ascii_lowercase(),
-                    );
-                    colored::control::unset_override();
-                }
-
-                if let Some(rendered) = &mut message.message.rendered {
-                    stdout.push_str(rendered);
-
-                    colored::control::set_override(true);
-                    let prefix = "  | ".bright_black().bold().to_string();
-                    colored::control::unset_override();
-
-                    let glue = String::from('\n') + &prefix;
-
-                    let mut lines = rendered
-                        .split('\n')
-                        .rev()
-                        .skip_while(|l| l.trim().is_empty())
-                        .collect::<Vec<_>>();
-                    lines.reverse();
-
-                    let mut prefixed = prefix + &lines.join(&glue);
-
-                    std::mem::swap(rendered, &mut prefixed);
-                }
-
-                match serde_json::to_string(&message.message) {
-                    Ok(message) => eprintln!("{message}"),
-                    Err(err) => emit_call_site_warning!(
-                        "failed to emit diagnostic {:?}: {}",
-                        message.message,
-                        err
-                    ),
-                }
-            }
+            prefix_cargo_build_stdout_message(
+                crate_name,
+                crate_suffix,
+                stdout_line,
+                stdout,
+                &any_output,
+            );
         },
         |stderr_line, stderr| {
-            if stderr_line.trim().is_empty()
-                || stderr_line.starts_with("+ ")
-                || stderr_line.contains("Running")
-                || stderr_line.contains("Fresh")
-                || stderr_line.starts_with("Caused by:")
-                || stderr_line.starts_with("  process didn\'t exit successfully: ")
-            {
-                return;
-            }
-
-            stderr.push_str(stderr_line);
-            stderr.push('\n');
-
-            if !any_output.replace(true) {
-                colored::control::set_override(true);
-                eprintln!(
-                    "{} of {} ({})",
-                    "[PTX]".bright_black().bold(),
-                    crate_name.bold(),
-                    crate_suffix.to_ascii_lowercase(),
-                );
-                colored::control::unset_override();
-            }
-
-            colored::control::set_override(true);
-            eprintln!(
-                "  {} {}",
-                "|".bright_black().bold(),
-                stderr_line.replace("   ", "")
+            prefix_cargo_build_stderr_line(
+                crate_name,
+                crate_suffix,
+                stderr_line,
+                stderr,
+                &any_output,
             );
-            colored::control::unset_override();
         },
-    );
-
-    ptx_path
+    )
 }
 
-fn cargo_build_with_specialisation<O: FnMut(&str, &mut String), E: FnMut(&str, &mut String)>(
+fn prefix_cargo_build_stdout_message(
+    crate_name: &str,
+    crate_suffix: &str,
+    stdout_line: &str,
+    stdout: &mut String,
+    any_output: &Cell<bool>,
+) {
+    let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
+        serde_json::from_str(stdout_line)
+    else {
+        return;
+    };
+
+    if !any_output.replace(true) {
+        colored::control::set_override(true);
+        eprintln!(
+            "{} of {} ({})",
+            "[PTX]".bright_black().bold(),
+            crate_name.bold(),
+            crate_suffix.to_ascii_lowercase(),
+        );
+        colored::control::unset_override();
+    }
+
+    if let Some(rendered) = &mut message.message.rendered {
+        stdout.push_str(rendered);
+
+        colored::control::set_override(true);
+        let prefix = "  | ".bright_black().bold().to_string();
+        colored::control::unset_override();
+
+        let glue = String::from('\n') + &prefix;
+
+        let mut lines = rendered
+            .split('\n')
+            .rev()
+            .skip_while(|l| l.trim().is_empty())
+            .collect::<Vec<_>>();
+        lines.reverse();
+
+        let mut prefixed = prefix + &lines.join(&glue);
+
+        std::mem::swap(rendered, &mut prefixed);
+    }
+
+    match serde_json::to_string(&message.message) {
+        Ok(message) => eprintln!("{message}"),
+        Err(err) => {
+            emit_call_site_warning!("failed to emit diagnostic {:?}: {}", message.message, err);
+        },
+    }
+}
+
+fn prefix_cargo_build_stderr_line(
+    crate_name: &str,
+    crate_suffix: &str,
+    stderr_line: &str,
+    stderr: &mut String,
+    any_output: &Cell<bool>,
+) {
+    if stderr_line.trim().is_empty()
+        || stderr_line.starts_with("+ ")
+        || stderr_line.contains("Running")
+        || stderr_line.contains("Fresh")
+        || stderr_line.starts_with("Caused by:")
+        || stderr_line.starts_with("  process didn\'t exit successfully: ")
+    {
+        return;
+    }
+
+    stderr.push_str(stderr_line);
+    stderr.push('\n');
+
+    if !any_output.replace(true) {
+        colored::control::set_override(true);
+        eprintln!(
+            "{} of {} ({})",
+            "[PTX]".bright_black().bold(),
+            crate_name.bold(),
+            crate_suffix.to_ascii_lowercase(),
+        );
+        colored::control::unset_override();
+    }
+
+    colored::control::set_override(true);
+    eprintln!(
+        "  {} {}",
+        "|".bright_black().bold(),
+        stderr_line.replace("   ", "")
+    );
+    colored::control::unset_override();
+}
+
+fn cargo_build_kernel_ptx<O: FnMut(&str, &mut String), E: FnMut(&str, &mut String)>(
     crate_path: &Path,
     crate_name: &str,
     crate_suffix: &str,
@@ -828,8 +858,7 @@ fn cargo_build_with_specialisation<O: FnMut(&str, &mut String), E: FnMut(&str, &
 ) -> PathBuf {
     check_crate_is_library(crate_path, crate_name);
 
-    // TODO: use the cargo env variable
-    let mut cargo = ProcessBuilder::new("cargo");
+    let mut cargo = ProcessBuilder::new(env!("CARGO"));
     cargo.arg("build");
 
     if specialisation_value != CHECK_SPECIALISATION {
@@ -940,7 +969,7 @@ fn check_crate_is_library(crate_path: &Path, crate_name: &str) {
             );
         } else {
             abort_call_site!(
-                "unable to find either `lib.rs` nor `main.rs` for {}",
+                "unable to find neither `lib.rs` nor `main.rs` for {}",
                 crate_name
             );
         }
