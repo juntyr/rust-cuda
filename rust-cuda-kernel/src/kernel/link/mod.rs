@@ -802,7 +802,7 @@ fn prefix_cargo_build_stdout_message(
     match serde_json::to_string(&message.message) {
         Ok(message) => eprintln!("{message}"),
         Err(err) => {
-            emit_call_site_warning!("failed to emit diagnostic {:?}: {}", message.message, err);
+            emit_call_site_warning!("Failed to emit diagnostic {:?}: {}", message.message, err);
         },
     }
 }
@@ -927,6 +927,8 @@ fn cargo_build_kernel_ptx<O: FnMut(&str, &mut String), E: FnMut(&str, &mut Strin
             let stdout = (!stdout.is_empty()).then(|| strip_ansi_escapes::strip(stdout));
             let stderr = (!stderr.is_empty()).then(|| strip_ansi_escapes::strip(stderr));
 
+            // The error precomputes its string repr, so we need to recreate
+            //  it to replace the stdout and stderr
             *err = ProcessError::new_raw(
                 &format!("process didn't exit successfully: {cargo}"),
                 err.code,
