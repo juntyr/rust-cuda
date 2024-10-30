@@ -847,6 +847,8 @@ fn prefix_cargo_build_stderr_line(
     colored::control::unset_override();
 }
 
+// Adapted from Denys Zariaiev's MIT-licensed `ptx-builder` crate
+// https://github.com/denzp/rust-ptx-builder
 fn cargo_build_kernel_ptx<O: FnMut(&str, &mut String), E: FnMut(&str, &mut String)>(
     crate_path: &Path,
     crate_name: &str,
