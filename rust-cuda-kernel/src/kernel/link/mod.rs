@@ -1,4 +1,5 @@
 use std::{
+    cell::Cell,
     collections::HashMap,
     ffi::CString,
     fmt::Write as FmtWrite,
@@ -7,32 +8,28 @@ use std::{
     os::raw::c_int,
     path::{Path, PathBuf},
     ptr::addr_of_mut,
-    sync::atomic::{AtomicBool, Ordering},
 };
 
+use cargo_util::{ProcessBuilder, ProcessError};
 use colored::Colorize;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use ptx_builder::{
-    builder::{BuildStatus, Builder, CrateType, MessageFormat, Profile},
-    error::{BuildErrorKind, Error, Result},
-};
 use quote::quote;
 
 use crate::kernel::{
     lints::{LintLevel, PtxLint},
     utils::skip_kernel_compilation,
-    KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT, KERNEL_TYPE_USE_END_CANARY,
-    KERNEL_TYPE_USE_START_CANARY, PTX_CSTR_IDENT,
+    CHECK_SPECIALISATION, KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT, KERNEL_TYPE_LAYOUT_IDENT,
+    KERNEL_TYPE_USE_END_CANARY, KERNEL_TYPE_USE_START_CANARY, PTX_CSTR_IDENT,
 };
 
 mod config;
-mod error;
 mod ptx_compiler_sys;
 
 use config::{CheckKernelConfig, LinkKernelConfig};
-use error::emit_ptx_build_error;
 use ptx_compiler_sys::NvptxError;
+
+const TARGET_NAME: &str = "nvptx64-nvidia-cuda";
 
 pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     proc_macro_error2::set_dummy(
@@ -56,10 +53,6 @@ pub fn check_kernel(tokens: TokenStream) -> TokenStream {
     };
 
     let kernel_ptx = compile_kernel_ptx(&kernel, &crate_name, &crate_path, Specialisation::Check);
-
-    let Some(kernel_ptx) = kernel_ptx else {
-        return quote!(::core::compile_error!("rust-cuda PTX kernel check failed");).into();
-    };
 
     check_kernel_ptx_and_report(
         &kernel_ptx,
@@ -117,27 +110,12 @@ pub fn compile_kernel(tokens: TokenStream) -> TokenStream {
         .into();
     }
 
-    let Some(mut kernel_ptx) = compile_kernel_ptx(
+    let mut kernel_ptx = compile_kernel_ptx(
         &kernel,
         &crate_name,
         &crate_path,
         Specialisation::Link(&specialisation),
-    ) else {
-        return (quote! {
-            const #ptx_cstr_ident: &'static ::core::ffi::CStr = c"ERROR in this PTX compilation";
-
-            const fn #ffi_signature_ident(_hashes: &[u64]) -> HostAndDeviceKernelSignatureTypeLayout {
-                HostAndDeviceKernelSignatureTypeLayout::Match
-            }
-
-            const fn #ffi_signature_hash_seed_ident() -> u64 {
-                42
-            }
-
-            ::core::compile_error!("rust-cuda PTX kernel compilation failed");
-        })
-        .into();
-    };
+    );
 
     let type_layout = extract_ptx_kernel_layout(&mut kernel_ptx);
     remove_kernel_type_use_from_ptx(&mut kernel_ptx);
@@ -216,7 +194,8 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStrea
             .is_some()
         {
             abort_call_site!(
-                "Kernel compilation generated invalid PTX: duplicate type information for {param}"
+                "Kernel compilation generated invalid PTX: duplicate type information for {}",
+                param
             );
         }
 
@@ -349,6 +328,7 @@ fn check_kernel_ptx_and_report(
                 ];
 
                 let mut binary_hex = String::with_capacity(binary.len() * 2);
+                #[expect(clippy::indexing_slicing)] // index always in 0..16
                 for byte in binary {
                     binary_hex.push(HEX[usize::from(byte >> 4)]);
                     binary_hex.push(HEX[usize::from(byte & 0x0F)]);
@@ -442,7 +422,8 @@ fn check_kernel_ptx(
 ) {
     let compiler = {
         let mut compiler = std::ptr::null_mut();
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         if let Err(err) = NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerCreate(
                 addr_of_mut!(compiler),
@@ -457,14 +438,16 @@ fn check_kernel_ptx(
 
     let result = (|| {
         let kernel_name = match specialisation {
-            Specialisation::Check => format!("{kernel_hash}_chECK"),
+            Specialisation::Check => format!("{kernel_hash}_{CHECK_SPECIALISATION}"),
             Specialisation::Link("") => format!("{kernel_hash}_kernel"),
             Specialisation::Link(specialisation) => format!(
                 "{kernel_hash}_kernel_{:016x}",
                 seahash::hash(specialisation.as_bytes())
             ),
         };
-        let kernel_name = CString::new(kernel_name).unwrap();
+        let Ok(kernel_name) = CString::new(kernel_name.clone()) else {
+            abort_call_site!("Failed to make a cstr from {:?}", kernel_name);
+        };
 
         let mut options = vec![c"--entry", kernel_name.as_c_str()];
 
@@ -508,11 +491,13 @@ fn check_kernel_ptx(
 
             let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-            #[expect(unsafe_code)] // FFI
+            #[expect(unsafe_code)]
+            // Safety: FFI
             NvptxError::try_err_from(unsafe {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 ptx_compiler_sys::nvPTXCompilerCompile(
                     compiler,
-                    c_int::try_from(options_ptrs.len()).unwrap(),
+                    options_ptrs.len() as c_int,
                     options_ptrs.as_ptr().cast(),
                 )
             })?;
@@ -551,11 +536,13 @@ fn check_kernel_ptx(
 
         let options_ptrs = options.iter().map(|o| o.as_ptr()).collect::<Vec<_>>();
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
+            #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             ptx_compiler_sys::nvPTXCompilerCompile(
                 compiler,
-                c_int::try_from(options_ptrs.len()).unwrap(),
+                options_ptrs.len() as c_int,
                 options_ptrs.as_ptr().cast(),
             )
         })
@@ -564,7 +551,8 @@ fn check_kernel_ptx(
     let error_log = (|| {
         let mut error_log_size = 0;
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLogSize(compiler, addr_of_mut!(error_log_size))
         })?;
@@ -576,7 +564,8 @@ fn check_kernel_ptx(
         #[expect(clippy::cast_possible_truncation)]
         let mut error_log: Vec<u8> = vec![0; error_log_size as usize];
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetErrorLog(compiler, error_log.as_mut_ptr().cast())
         })?;
@@ -587,7 +576,8 @@ fn check_kernel_ptx(
     let info_log = (|| {
         let mut info_log_size = 0;
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLogSize(compiler, addr_of_mut!(info_log_size))
         })?;
@@ -599,7 +589,8 @@ fn check_kernel_ptx(
         #[expect(clippy::cast_possible_truncation)]
         let mut info_log: Vec<u8> = vec![0; info_log_size as usize];
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetInfoLog(compiler, info_log.as_mut_ptr().cast())
         })?;
@@ -614,7 +605,8 @@ fn check_kernel_ptx(
 
         let mut binary_size = 0;
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgramSize(
                 compiler,
@@ -629,7 +621,8 @@ fn check_kernel_ptx(
         #[expect(clippy::cast_possible_truncation)]
         let mut binary: Vec<u8> = vec![0; binary_size as usize];
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetCompiledProgram(compiler, binary.as_mut_ptr().cast())
         })?;
@@ -641,7 +634,8 @@ fn check_kernel_ptx(
         let mut major = 0;
         let mut minor = 0;
 
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerGetVersion(addr_of_mut!(major), addr_of_mut!(minor))
         })?;
@@ -651,7 +645,8 @@ fn check_kernel_ptx(
 
     let drop = {
         let mut compiler = compiler;
-        #[expect(unsafe_code)] // FFI
+        #[expect(unsafe_code)]
+        // Safety: FFI
         NvptxError::try_err_from(unsafe {
             ptx_compiler_sys::nvPTXCompilerDestroy(addr_of_mut!(compiler))
         })
@@ -665,183 +660,323 @@ fn compile_kernel_ptx(
     crate_name: &str,
     crate_path: &Path,
     specialisation: Specialisation,
-) -> Option<String> {
+) -> String {
     let specialisation_var = format!(
         "RUST_CUDA_DERIVE_SPECIALISE_{}_{}",
-        crate_name,
+        crate_name.to_uppercase(),
         kernel.to_string().to_uppercase()
     );
-
-    match build_kernel_with_specialisation(crate_path, &specialisation_var, specialisation) {
-        Ok(kernel_path) => {
-            let mut file = fs::File::open(&kernel_path)
-                .unwrap_or_else(|_| panic!("Failed to open kernel file at {:?}.", &kernel_path));
-
-            let mut kernel_ptx = String::new();
-
-            file.read_to_string(&mut kernel_ptx)
-                .unwrap_or_else(|_| panic!("Failed to read kernel file at {:?}.", &kernel_path));
-
-            colored::control::set_override(true);
-            eprintln!(
-                "{} {} compiling a PTX crate.",
-                "[PTX]".bright_black().bold(),
-                "Finished".green().bold()
-            );
-            colored::control::unset_override();
-
-            Some(kernel_ptx)
-        },
-        Err(err) => {
-            eprintln!("{err}");
-            emit_ptx_build_error();
-            None
-        },
-    }
-}
-
-#[expect(clippy::too_many_lines)]
-fn build_kernel_with_specialisation(
-    kernel_path: &Path,
-    env_var: &str,
-    specialisation: Specialisation,
-) -> Result<PathBuf> {
-    let mut builder = Builder::new(kernel_path)?;
-
-    builder = match specialisation {
-        Specialisation::Check => builder.set_profile(Profile::Debug),
-        Specialisation::Link(_) => builder.set_profile(Profile::Release),
+    let specialisation_value = match specialisation {
+        Specialisation::Check => CHECK_SPECIALISATION,
+        Specialisation::Link(specialisation) => specialisation,
     };
-
-    builder = builder.set_crate_type(CrateType::Library);
-
-    builder = builder.set_message_format(MessageFormat::Json {
-        render_diagnostics: false,
-        short: false,
-        ansi: true,
-    });
-
-    let specialisation_prefix = match specialisation {
-        Specialisation::Check => String::from("chECK"),
+    let specialisation_suffix = match specialisation {
+        Specialisation::Check => String::from(CHECK_SPECIALISATION),
         Specialisation::Link(specialisation) => {
             format!("{:016x}", seahash::hash(specialisation.as_bytes()))
         },
     };
-    builder = builder.set_prefix(specialisation_prefix.clone());
 
-    builder = builder.with_env(
-        env_var,
-        match specialisation {
-            Specialisation::Check => "chECK",
-            Specialisation::Link(specialisation) => specialisation,
-        },
+    let kernel_path = cargo_build_kernel_ptx_with_prefixed_output(
+        crate_name,
+        crate_path,
+        &specialisation_suffix,
+        &specialisation_var,
+        specialisation_value,
     );
 
-    let any_output = AtomicBool::new(false);
-    let crate_name = String::from(builder.get_crate_name());
-
-    let build = builder.build_live(
-        |stdout_line| {
-            if let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
-                serde_json::from_str(stdout_line)
-            {
-                if any_output
-                    .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
-                    .is_ok()
-                {
-                    colored::control::set_override(true);
-                    eprintln!(
-                        "{} of {} ({})",
-                        "[PTX]".bright_black().bold(),
-                        crate_name.bold(),
-                        specialisation_prefix.to_ascii_lowercase(),
-                    );
-                    colored::control::unset_override();
-                }
-
-                if let Some(rendered) = &mut message.message.rendered {
-                    colored::control::set_override(true);
-                    let prefix = "  | ".bright_black().bold().to_string();
-                    colored::control::unset_override();
-
-                    let glue = String::from('\n') + &prefix;
-
-                    let mut lines = rendered
-                        .split('\n')
-                        .rev()
-                        .skip_while(|l| l.trim().is_empty())
-                        .collect::<Vec<_>>();
-                    lines.reverse();
-
-                    let mut prefixed = prefix + &lines.join(&glue);
-
-                    std::mem::swap(rendered, &mut prefixed);
-                }
-
-                eprintln!("{}", serde_json::to_string(&message.message).unwrap());
-            }
-        },
-        |stderr_line| {
-            if stderr_line.trim().is_empty() {
-                return;
-            }
-
-            if any_output
-                .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
-                .is_ok()
-            {
-                colored::control::set_override(true);
-                eprintln!(
-                    "{} of {} ({})",
-                    "[PTX]".bright_black().bold(),
-                    crate_name.bold(),
-                    specialisation_prefix.to_ascii_lowercase(),
-                );
-                colored::control::unset_override();
-            }
-
-            colored::control::set_override(true);
-            eprintln!(
-                "  {} {}",
-                "|".bright_black().bold(),
-                stderr_line.replace("   ", "")
+    if let Specialisation::Link(specialisation) = specialisation {
+        if let Err(err) = fs::OpenOptions::new()
+            .append(true)
+            .open(&kernel_path)
+            .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
+        {
+            abort_call_site!(
+                "Failed to write specialisation to {:?}: {}",
+                kernel_path,
+                err
             );
-            colored::control::unset_override();
+        }
+    }
+
+    let mut file = fs::File::open(&kernel_path)
+        .unwrap_or_else(|_| abort_call_site!("Failed to open kernel file at {:?}.", &kernel_path));
+
+    let mut kernel_ptx = String::new();
+
+    file.read_to_string(&mut kernel_ptx)
+        .unwrap_or_else(|_| abort_call_site!("Failed to read kernel file at {:?}.", &kernel_path));
+
+    colored::control::set_override(true);
+    eprintln!(
+        "{} {} compiling a PTX crate.",
+        "[PTX]".bright_black().bold(),
+        "Finished".green().bold()
+    );
+    colored::control::unset_override();
+
+    kernel_ptx
+}
+
+fn cargo_build_kernel_ptx_with_prefixed_output(
+    crate_name: &str,
+    crate_path: &Path,
+    crate_suffix: &str,
+    specialisation_var: &str,
+    specialisation_value: &str,
+) -> PathBuf {
+    let any_output = Cell::new(false);
+
+    cargo_build_kernel_ptx(
+        crate_path,
+        crate_name,
+        crate_suffix,
+        specialisation_var,
+        specialisation_value,
+        |stdout_line, stdout| {
+            prefix_cargo_build_stdout_message(
+                crate_name,
+                crate_suffix,
+                stdout_line,
+                stdout,
+                &any_output,
+            );
         },
-    )?;
-
-    match build {
-        BuildStatus::Success(output) => {
-            let ptx_path = output.get_assembly_path();
-
-            let mut specialised_ptx_path = ptx_path.clone();
-
-            specialised_ptx_path.set_extension(format!("{specialisation_prefix}.ptx"));
-
-            fs::copy(&ptx_path, &specialised_ptx_path).map_err(|err| {
-                Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                    "Failed to copy kernel from {ptx_path:?} to {specialised_ptx_path:?}: {err}"
-                )]))
-            })?;
-
-            if let Specialisation::Link(specialisation) = specialisation {
-                fs::OpenOptions::new()
-                    .append(true)
-                    .open(&specialised_ptx_path)
-                    .and_then(|mut file| writeln!(file, "\n// {specialisation}"))
-                    .map_err(|err| {
-                        Error::from(BuildErrorKind::BuildFailed(vec![format!(
-                            "Failed to write specialisation to {specialised_ptx_path:?}: {err}"
-                        )]))
-                    })?;
-            }
-
-            Ok(specialised_ptx_path)
+        |stderr_line, stderr| {
+            prefix_cargo_build_stderr_line(
+                crate_name,
+                crate_suffix,
+                stderr_line,
+                stderr,
+                &any_output,
+            );
         },
-        BuildStatus::NotNeeded => Err(Error::from(BuildErrorKind::BuildFailed(vec![format!(
-            "Kernel build for specialisation {:?} was not needed.",
-            &specialisation
-        )]))),
+    )
+}
+
+fn prefix_cargo_build_stdout_message(
+    crate_name: &str,
+    crate_suffix: &str,
+    stdout_line: &str,
+    stdout: &mut String,
+    any_output: &Cell<bool>,
+) {
+    let Ok(cargo_metadata::Message::CompilerMessage(mut message)) =
+        serde_json::from_str(stdout_line)
+    else {
+        return;
+    };
+
+    if !any_output.replace(true) {
+        colored::control::set_override(true);
+        eprintln!(
+            "{} of {} ({})",
+            "[PTX]".bright_black().bold(),
+            crate_name.bold(),
+            crate_suffix.to_ascii_lowercase(),
+        );
+        colored::control::unset_override();
+    }
+
+    if let Some(rendered) = &mut message.message.rendered {
+        stdout.push_str(rendered);
+
+        colored::control::set_override(true);
+        let prefix = "  | ".bright_black().bold().to_string();
+        colored::control::unset_override();
+
+        let glue = String::from('\n') + &prefix;
+
+        let mut lines = rendered
+            .split('\n')
+            .rev()
+            .skip_while(|l| l.trim().is_empty())
+            .collect::<Vec<_>>();
+        lines.reverse();
+
+        let mut prefixed = prefix + &lines.join(&glue);
+
+        std::mem::swap(rendered, &mut prefixed);
+    }
+
+    match serde_json::to_string(&message.message) {
+        Ok(message) => eprintln!("{message}"),
+        Err(err) => {
+            emit_call_site_warning!("Failed to emit diagnostic {:?}: {}", message.message, err);
+        },
+    }
+}
+
+fn prefix_cargo_build_stderr_line(
+    crate_name: &str,
+    crate_suffix: &str,
+    stderr_line: &str,
+    stderr: &mut String,
+    any_output: &Cell<bool>,
+) {
+    if stderr_line.trim().is_empty()
+        || stderr_line.starts_with("+ ")
+        || stderr_line.contains("Running")
+        || stderr_line.contains("Fresh")
+        || stderr_line.starts_with("Caused by:")
+        || stderr_line.starts_with("  process didn\'t exit successfully: ")
+    {
+        return;
+    }
+
+    stderr.push_str(stderr_line);
+    stderr.push('\n');
+
+    if !any_output.replace(true) {
+        colored::control::set_override(true);
+        eprintln!(
+            "{} of {} ({})",
+            "[PTX]".bright_black().bold(),
+            crate_name.bold(),
+            crate_suffix.to_ascii_lowercase(),
+        );
+        colored::control::unset_override();
+    }
+
+    colored::control::set_override(true);
+    eprintln!(
+        "  {} {}",
+        "|".bright_black().bold(),
+        stderr_line.replace("   ", "")
+    );
+    colored::control::unset_override();
+}
+
+// Adapted from Denys Zariaiev's MIT-licensed `ptx-builder` crate
+// https://github.com/denzp/rust-ptx-builder
+fn cargo_build_kernel_ptx<O: FnMut(&str, &mut String), E: FnMut(&str, &mut String)>(
+    crate_path: &Path,
+    crate_name: &str,
+    crate_suffix: &str,
+    specialisation_var: &str,
+    specialisation_value: &str,
+    mut on_stdout_line: O,
+    mut on_stderr_line: E,
+) -> PathBuf {
+    check_crate_is_library(crate_path, crate_name);
+
+    let mut cargo = ProcessBuilder::new(env!("CARGO"));
+    cargo.arg("build");
+
+    if specialisation_value != CHECK_SPECIALISATION {
+        cargo.arg("--release");
+    }
+
+    cargo.arg("--color=always");
+    cargo.arg("--message-format=json,json-diagnostic-rendered-ansi");
+
+    cargo.arg("--target");
+    cargo.arg(TARGET_NAME);
+
+    cargo.arg("--lib");
+
+    cargo.arg("-v");
+
+    let scratch_dir = scratch::path(concat!(
+        env!("CARGO_PKG_NAME"),
+        "-",
+        env!("CARGO_PKG_VERSION"),
+    ));
+
+    let artifact_dir = scratch_dir
+        .join("artifacts")
+        .join(crate_name)
+        .join(crate_suffix);
+    if let Err(err) = fs::create_dir_all(&artifact_dir) {
+        abort_call_site!(
+            "failed to create the artifact dir {:?}: {}",
+            artifact_dir,
+            err
+        );
+    }
+
+    cargo.arg("-Zunstable-options");
+    cargo.arg("--artifact-dir");
+    cargo.arg(&artifact_dir);
+
+    let target_dir = scratch_dir.join("target");
+    if let Err(err) = fs::create_dir_all(&target_dir) {
+        abort_call_site!("Failed to create the target dir {:?}: {}", target_dir, err);
+    }
+
+    cargo
+        .cwd(crate_path)
+        .env("CARGO_TARGET_DIR", target_dir.as_path())
+        .env(specialisation_var, specialisation_value);
+
+    let mut stdout = String::new();
+    let mut stderr = String::new();
+
+    if let Err(mut err) = cargo.exec_with_streaming(
+        &mut |s| {
+            on_stdout_line(s, &mut stdout);
+            Ok(())
+        },
+        &mut |s| {
+            on_stderr_line(s, &mut stderr);
+            Ok(())
+        },
+        false,
+    ) {
+        if let Some(err) = err.downcast_mut::<ProcessError>() {
+            let stdout = (!stdout.is_empty()).then(|| strip_ansi_escapes::strip(stdout));
+            let stderr = (!stderr.is_empty()).then(|| strip_ansi_escapes::strip(stderr));
+
+            // The error precomputes its string repr, so we need to recreate
+            //  it to replace the stdout and stderr
+            *err = ProcessError::new_raw(
+                &format!("process didn't exit successfully: {cargo}"),
+                err.code,
+                &err.code.map_or_else(
+                    || String::from("never executed"),
+                    |code| format!("code={code}"),
+                ),
+                stdout.as_deref(),
+                stderr.as_deref(),
+            );
+        }
+
+        abort_call_site!("Failed to build the CUDA kernel: {}", err);
+    }
+
+    let crate_artifact_name = crate_name.replace('-', "_");
+    let assembly_path = artifact_dir.join(format!("{crate_artifact_name}.ptx"));
+
+    if !assembly_path.exists() {
+        abort_call_site!("Failed to open PTX file {:?}", assembly_path);
+    }
+
+    assembly_path
+}
+
+fn check_crate_is_library(crate_path: &Path, crate_name: &str) {
+    if !matches!(fs::metadata(crate_path.join("Cargo.toml")), Ok(metadata) if metadata.is_file()) {
+        abort_call_site!(
+            "{:?} is not a valid crate manifest path",
+            crate_path.join("Cargo.toml")
+        );
+    }
+
+    let is_library = crate_path.join("src").join("lib.rs").exists();
+    let is_binary = crate_path.join("src").join("main.rs").exists();
+
+    if !is_library {
+        if is_binary {
+            abort_call_site!(
+                "{} is a binary-only crate, which is not supported",
+                crate_name
+            );
+        } else {
+            abort_call_site!(
+                "unable to find neither `lib.rs` nor `main.rs` for {}",
+                crate_name
+            );
+        }
     }
 }
 

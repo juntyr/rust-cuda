@@ -62,8 +62,7 @@ const fn starts_with(haystack: &[u8], needle: &[u8], from: usize) -> bool {
         haystack_len
     };
 
-    unsafe {
-        core::intrinsics::compare_bytes(haystack.as_ptr().add(from), needle.as_ptr(), check_len)
-            == 0
-    }
+    let haystack = unsafe { haystack.as_ptr().add(from) };
+
+    unsafe { core::intrinsics::compare_bytes(haystack, needle.as_ptr(), check_len) == 0 }
 }

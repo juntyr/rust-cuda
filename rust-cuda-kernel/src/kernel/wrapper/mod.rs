@@ -138,11 +138,9 @@ pub fn kernel(attr: TokenStream, func: TokenStream) -> TokenStream {
             .sig
             .inputs
             .into_iter()
-            .map(|arg| match arg {
-                syn::FnArg::Typed(arg) => arg,
-                syn::FnArg::Receiver(_) => {
-                    unreachable!("already checked that no receiver arg exists")
-                },
+            .filter_map(|arg| match arg {
+                syn::FnArg::Typed(arg) => Some(arg),
+                syn::FnArg::Receiver(_) => None,
             })
             .collect(),
     };
@@ -319,7 +317,7 @@ fn ident_from_pat_iter<'p, I: Iterator<Item = &'p syn::Pat>>(iter: I) -> Option<
                 str_acc.push('_');
                 str_acc.push_str(ident.to_string().trim_matches('_'));
 
-                Some((str_acc, span_acc.join(ident.span()).unwrap()))
+                Some((str_acc, span_acc.join(ident.span()).unwrap_or(span_acc)))
             } else {
                 Some((ident.to_string(), ident.span()))
             }
@@ -335,10 +333,8 @@ fn quote_generic_check(
         ..
     }: &FuncIdent,
 ) -> proc_macro2::TokenStream {
-    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
-        Ok(crate_name) => crate_name.to_uppercase(),
-        Err(err) => abort_call_site!("Failed to read crate name: {:?}.", err),
-    };
+    let crate_name = proc_macro::tracked_env::var("CARGO_CRATE_NAME")
+        .unwrap_or_else(|err| abort_call_site!("Failed to read crate name: {:?}.", err));
 
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));

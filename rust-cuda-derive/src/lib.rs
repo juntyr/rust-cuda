@@ -32,15 +32,7 @@
 //! [`rust_cuda::lend::RustToCuda`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.RustToCuda.html
 //! [`rust_cuda::lend::LendToCuda`]: https://juntyr.github.io/rust-cuda/rust_cuda/lend/trait.LendToCuda.html
 
-#![deny(clippy::complexity)]
-#![deny(clippy::correctness)]
-#![warn(clippy::nursery)]
-#![warn(clippy::pedantic)]
-#![deny(clippy::perf)]
-#![deny(clippy::style)]
-#![deny(clippy::suspicious)]
 #![deny(unsafe_code)]
-#![deny(missing_docs)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]

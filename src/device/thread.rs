@@ -41,12 +41,10 @@ impl Thread {
     #[inline(always)]
     pub fn idx(&self) -> Idx3 {
         #[expect(clippy::cast_sign_loss)]
-        unsafe {
-            Idx3 {
-                x: nvptx::_thread_idx_x() as u32,
-                y: nvptx::_thread_idx_y() as u32,
-                z: nvptx::_thread_idx_z() as u32,
-            }
+        Idx3 {
+            x: unsafe { nvptx::_thread_idx_x() } as u32,
+            y: unsafe { nvptx::_thread_idx_y() } as u32,
+            z: unsafe { nvptx::_thread_idx_z() } as u32,
         }
     }
 
@@ -64,12 +62,10 @@ impl ThreadBlock {
     #[inline(always)]
     pub fn dim(&self) -> Dim3 {
         #[expect(clippy::cast_sign_loss)]
-        unsafe {
-            Dim3 {
-                x: nvptx::_block_dim_x() as u32,
-                y: nvptx::_block_dim_y() as u32,
-                z: nvptx::_block_dim_z() as u32,
-            }
+        Dim3 {
+            x: unsafe { nvptx::_block_dim_x() } as u32,
+            y: unsafe { nvptx::_block_dim_y() } as u32,
+            z: unsafe { nvptx::_block_dim_z() } as u32,
         }
     }
 
@@ -78,12 +74,10 @@ impl ThreadBlock {
     #[inline(always)]
     pub fn idx(&self) -> Idx3 {
         #[expect(clippy::cast_sign_loss)]
-        unsafe {
-            Idx3 {
-                x: nvptx::_block_idx_x() as u32,
-                y: nvptx::_block_idx_y() as u32,
-                z: nvptx::_block_idx_z() as u32,
-            }
+        Idx3 {
+            x: unsafe { nvptx::_block_idx_x() } as u32,
+            y: unsafe { nvptx::_block_idx_y() } as u32,
+            z: unsafe { nvptx::_block_idx_z() } as u32,
         }
     }
 
@@ -107,12 +101,10 @@ impl ThreadBlockGrid {
     #[inline(always)]
     pub fn dim(&self) -> Dim3 {
         #[expect(clippy::cast_sign_loss)]
-        unsafe {
-            Dim3 {
-                x: nvptx::_grid_dim_x() as u32,
-                y: nvptx::_grid_dim_y() as u32,
-                z: nvptx::_grid_dim_z() as u32,
-            }
+        Dim3 {
+            x: unsafe { nvptx::_grid_dim_x() } as u32,
+            y: unsafe { nvptx::_grid_dim_y() } as u32,
+            z: unsafe { nvptx::_grid_dim_z() } as u32,
         }
     }
 }

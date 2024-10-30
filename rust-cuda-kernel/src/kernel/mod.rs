@@ -10,3 +10,4 @@ const KERNEL_TYPE_USE_END_CANARY: &str = "// <rust-cuda-kernel-param-type-use-en
 const KERNEL_TYPE_LAYOUT_IDENT: &str = "KERNEL_SIGNATURE_LAYOUT";
 const KERNEL_TYPE_LAYOUT_HASH_SEED_IDENT: &str = "KERNEL_SIGNATURE_LAYOUT_HASH_SEED";
 const PTX_CSTR_IDENT: &str = "PTX_CSTR";
+const CHECK_SPECIALISATION: &str = "chECK";

@@ -1,4 +1,3 @@
-#![deny(clippy::pedantic)]
 #![allow(dead_code)] // FIXME: use expect
 #![feature(const_type_name)]
 

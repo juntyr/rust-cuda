@@ -27,10 +27,8 @@ pub(super) fn quote_get_ptx(
     macro_type_ids: &[syn::Ident],
     ptx_lint_levels: &TokenStream,
 ) -> TokenStream {
-    let crate_name = match proc_macro::tracked_env::var("CARGO_CRATE_NAME") {
-        Ok(crate_name) => crate_name.to_uppercase(),
-        Err(err) => abort_call_site!("Failed to read crate name: {:?}.", err),
-    };
+    let crate_name = proc_macro::tracked_env::var("CARGO_CRATE_NAME")
+        .unwrap_or_else(|err| abort_call_site!("Failed to read crate name: {:?}.", err));
 
     let crate_manifest_dir = proc_macro::tracked_env::var("CARGO_MANIFEST_DIR")
         .unwrap_or_else(|err| abort_call_site!("Failed to read crate path: {:?}.", err));

@@ -320,15 +320,13 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     fn destructure_into_parts(self) -> (Stream<'stream>, T, AsyncStatus<'a, T, C>) {
         let this = std::mem::ManuallyDrop::new(self);
 
-        // Safety: we destructure self into its droppable components,
-        //         value and status, without dropping self itself
-        unsafe {
-            (
-                this.stream,
-                std::ptr::read(&this.value),
-                (std::ptr::read(&this.status)),
-            )
-        }
+        let stream = this.stream;
+        // Safety: this is never dropped and this.value only read once
+        let value = unsafe { std::ptr::read(&this.value) };
+        // Safety: this is never dropped and this.status only read once
+        let status = unsafe { std::ptr::read(&this.status) };
+
+        (stream, value, status)
     }
 }
 

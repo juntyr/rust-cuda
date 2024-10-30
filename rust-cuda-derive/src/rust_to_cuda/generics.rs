@@ -154,14 +154,14 @@ pub fn expand_cuda_struct_generics_where_requested_in_attrs(
 
                     if meta.path.leading_colon.is_none()
                         && meta.path.segments.len() == 2
-                        && let syn::PathSegment {
+                        && let Some(syn::PathSegment {
                             ident: layout_ident,
                             arguments: syn::PathArguments::None,
-                        } = &meta.path.segments[0]
-                        && let syn::PathSegment {
+                        }) = meta.path.segments.get(0)
+                        && let Some(syn::PathSegment {
                             ident: attr_ident,
                             arguments: syn::PathArguments::None,
-                        } = &meta.path.segments[1]
+                        }) = meta.path.segments.get(1)
                         && layout_ident == "layout"
                         && !meta.path.segments.trailing_punct()
                     {

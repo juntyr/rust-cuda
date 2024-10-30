@@ -1,4 +1,4 @@
-#![deny(clippy::pedantic)]
+#![allow(missing_docs)] // FIXME: use expect
 #![allow(dead_code)] // FIXME: use expect
 #![cfg_attr(target_os = "cuda", no_std)]
 #![cfg_attr(target_os = "cuda", feature(abi_ptx))]
@@ -24,6 +24,7 @@ pub struct Wrapper<T> {
     inner: T,
 }
 
+#[repr(C)]
 #[derive(Clone, rc::lend::LendRustToCuda)]
 #[cuda(crate = "rc")]
 pub struct Empty([u8; 0]);
@@ -67,20 +68,34 @@ pub fn kernel<
     let shared = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
     let shared2 = rc::utils::shared::ThreadBlockShared::<[Tuple; 3]>::new_uninit();
 
-    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::multiple_unsafe_ops_per_block
+    )]
+    // Safety: [a]
+    // 1. index is in bounds
+    // 2. all threads withe the same result, so no write race is observable
     unsafe {
         (*shared.index_mut_unchecked(1)).0 = (f64::from(s) * 2.0) as u32;
     }
+    #[expect(clippy::multiple_unsafe_ops_per_block)]
+    // Safety: same as in [a]
     unsafe {
         (*shared2.index_mut_unchecked(2)).1 = q.0 + q.1 + q.2;
     }
 
+    // Safety: all threads withe the same result, so no write race is observable
     unsafe {
         *shared3.as_mut_ptr() = 12;
     }
 
     let index = rc::device::thread::Thread::this().index();
     if index < dynamic.len() {
+        #[expect(clippy::multiple_unsafe_ops_per_block)]
+        // Safety:
+        // 1. index has been checked to be in bounds
+        // 2. each location is written to by only one thread
         unsafe {
             *dynamic.index_mut_unchecked(index) = Dummy(42);
         }

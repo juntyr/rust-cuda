@@ -122,6 +122,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
 /// The thread-block shared dynamic memory must be initialised once and
 /// only once per kernel.
 pub unsafe fn init() {
+    #[expect(clippy::multiple_unsafe_ops_per_block)]
     unsafe {
         core::arch::asm!(".reg .u64    %rust_cuda_dynamic_shared;");
         core::arch::asm!(

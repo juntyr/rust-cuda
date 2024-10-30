@@ -28,7 +28,9 @@ fn split_slice_const_stride<E, const STRIDE: usize>(slice: &[E]) -> &[E] {
     let offset: usize = crate::device::thread::Thread::this().index() * STRIDE;
     let len = slice.len().min(offset + STRIDE).saturating_sub(offset);
 
-    unsafe { core::slice::from_raw_parts(slice.as_ptr().add(offset), len) }
+    let data = unsafe { slice.as_ptr().add(offset) };
+
+    unsafe { core::slice::from_raw_parts(data, len) }
 }
 
 #[cfg(feature = "device")]
@@ -36,7 +38,9 @@ fn split_slice_const_stride_mut<E, const STRIDE: usize>(slice: &mut [E]) -> &mut
     let offset: usize = crate::device::thread::Thread::this().index() * STRIDE;
     let len = slice.len().min(offset + STRIDE).saturating_sub(offset);
 
-    unsafe { core::slice::from_raw_parts_mut(slice.as_mut_ptr().add(offset), len) }
+    let data = unsafe { slice.as_mut_ptr().add(offset) };
+
+    unsafe { core::slice::from_raw_parts_mut(data, len) }
 }
 
 #[cfg(feature = "device")]
