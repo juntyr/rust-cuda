@@ -41,6 +41,14 @@ pub fn specialise_kernel_param_type(tokens: TokenStream) -> TokenStream {
         Err(err) => abort_call_site!("Failed to parse specialisation: {:?}", err),
     };
 
+    // replace all lifetimes with 'static
+    ty = syn::fold::Fold::fold_type(
+        &mut FoldLifetimeAllStatic {
+            r#static: syn::parse_quote!('static),
+        },
+        ty,
+    );
+
     if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
         args, ..
     }) = specialisation
@@ -52,14 +60,6 @@ pub fn specialise_kernel_param_type(tokens: TokenStream) -> TokenStream {
                 args.to_token_stream()
             );
         }
-
-        // replace all lifetimes with 'static
-        ty = syn::fold::Fold::fold_type(
-            &mut FoldLifetimeAllStatic {
-                r#static: syn::parse_quote!('static),
-            },
-            ty,
-        );
 
         for (generic, arg) in generics.params.into_iter().zip(args.into_iter()) {
             match (generic, arg) {
