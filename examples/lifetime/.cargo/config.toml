@@ -1,0 +1,2 @@
+[target.nvptx64-nvidia-cuda]
+rustflags = ["-Zunstable-options", "-Clinker-flavor=llbc", "-Ctarget-cpu=sm_35", "-Ccodegen-units=1", "-Clink-arg=-O3"]

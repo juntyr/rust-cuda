@@ -3,7 +3,8 @@ resolver = "2"
 
 members = [
     ".", "rust-cuda-derive", "rust-cuda-kernel",
-    "examples/derive", "examples/print", "examples/single-source",
+    "examples/derive", "examples/lifetime", "examples/print",
+    "examples/single-source",
 ]
 default-members = [
     ".", "rust-cuda-derive", "rust-cuda-kernel",

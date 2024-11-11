@@ -1,0 +1,22 @@
+[package]
+name = "lifetime"
+version = "0.1.0"
+authors = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[target.'cfg(target_os = "cuda")'.dependencies]
+rust-cuda = { workspace = true, features = ["kernel", "device"] }
+
+[target.'cfg(not(target_os = "cuda"))'.dependencies]
+rust-cuda = { workspace = true, features = ["kernel", "host"] }
+
+[lints]
+workspace = true
