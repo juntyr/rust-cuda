@@ -331,6 +331,14 @@
         <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">abort_call_site!</span>(<span class="string">"Failed to parse specialisation: {:?}"</span>, err),
     };
 
+    <span class="comment">// replace all lifetimes with 'static
+    </span>ty = syn::fold::Fold::fold_type(
+        <span class="kw-2">&amp;mut </span>FoldLifetimeAllStatic {
+            r#static: <span class="macro">syn::parse_quote!</span>(<span class="lifetime">'static</span>),
+        },
+        ty,
+    );
+
     <span class="kw">if let </span>syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
         args, ..
     }) = specialisation
@@ -342,14 +350,6 @@
                 args.to_token_stream()
             );
         }
-
-        <span class="comment">// replace all lifetimes with 'static
-        </span>ty = syn::fold::Fold::fold_type(
-            <span class="kw-2">&amp;mut </span>FoldLifetimeAllStatic {
-                r#static: <span class="macro">syn::parse_quote!</span>(<span class="lifetime">'static</span>),
-            },
-            ty,
-        );
 
         <span class="kw">for </span>(generic, arg) <span class="kw">in </span>generics.params.into_iter().zip(args.into_iter()) {
             <span class="kw">match </span>(generic, arg) {
