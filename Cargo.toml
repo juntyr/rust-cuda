@@ -28,7 +28,7 @@ rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", defa
 rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
 
 # crates.io third-party dependencies
-cargo_metadata = { version = "0.18", default-features = false }
+cargo_metadata = { version = "0.19", default-features = false }
 cargo-util = { version = "0.2", default-features = false }
 colored = { version = "2.0", default-features = false }
 const-type-layout = { version = "0.3.2", default-features = false }
