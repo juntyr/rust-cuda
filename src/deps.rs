@@ -7,6 +7,4 @@ pub extern crate const_type_layout;
 pub extern crate owning_ref;
 
 #[cfg(feature = "host")]
-pub extern crate rustacuda;
-
-pub extern crate rustacuda_core;
+pub extern crate cudarc;
