@@ -48,7 +48,7 @@
 #![feature(generic_const_exprs)]
 #![expect(internal_features)]
 #![feature(core_intrinsics)]
-#![feature(const_intrinsic_compare_bytes)]
+// #![feature(const_intrinsic_compare_bytes)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 #[cfg(all(feature = "host", feature = "device", not(doc)))]

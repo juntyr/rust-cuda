@@ -35,7 +35,7 @@ pub struct Stream<'stream> {
     _brand: InvariantLifetime<'stream>,
 }
 
-impl<'stream> Deref for Stream<'stream> {
+impl Deref for Stream<'_> {
     type Target = cust::stream::Stream;
 
     fn deref(&self) -> &Self::Target {
@@ -43,7 +43,7 @@ impl<'stream> Deref for Stream<'stream> {
     }
 }
 
-impl<'stream> Stream<'stream> {
+impl Stream<'_> {
     /// Create a new uniquely branded [`Stream`], which can bind async
     /// operations to the [`Stream`] that they are computed on.
     ///
@@ -152,6 +152,7 @@ macro_rules! impl_sealed_drop_value {
 impl_sealed_drop_value!(Module);
 impl_sealed_drop_value!(cust::stream::Stream);
 impl_sealed_drop_value!(Context);
+impl_sealed_drop_value!(cust::context::legacy::Context);
 impl_sealed_drop_value!(Event);
 
 #[expect(clippy::module_name_repetitions)]
@@ -271,13 +272,13 @@ pub struct HostAndDeviceConstRef<'a, T: PortableBitSemantics + TypeGraphLayout> 
     host_ref: &'a T,
 }
 
-impl<'a, T: PortableBitSemantics + TypeGraphLayout> Clone for HostAndDeviceConstRef<'a, T> {
+impl<T: PortableBitSemantics + TypeGraphLayout> Clone for HostAndDeviceConstRef<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, T: PortableBitSemantics + TypeGraphLayout> Copy for HostAndDeviceConstRef<'a, T> {}
+impl<T: PortableBitSemantics + TypeGraphLayout> Copy for HostAndDeviceConstRef<'_, T> {}
 
 impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T> {
     /// # Errors

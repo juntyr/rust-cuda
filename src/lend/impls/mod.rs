@@ -1,5 +1,5 @@
 mod arc;
-mod arced_slice;
+// mod arced_slice;
 mod r#box;
 mod boxed_slice;
 #[cfg(feature = "final")]

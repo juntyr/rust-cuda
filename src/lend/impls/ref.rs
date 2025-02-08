@@ -71,7 +71,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a T 
     }
 }
 
-unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &'a T {
+unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &T {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocationAsync = CombinedCudaAlloc<
         CudaDropWrapper<LockedBox<DeviceCopyWithPortableBitSemantics<ManuallyDrop<T>>>>,

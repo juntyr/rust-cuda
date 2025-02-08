@@ -98,9 +98,9 @@ kernel = ["dep:rust-cuda-kernel"]
 [dependencies]
 const-type-layout = { version = "0.3.2", default-features = false, features = ["derive"] }
 # FIXME: cust fails to compile without the `bytemuck` feature
-cust = { version = "0.3.2", default-features = false, features = ["bytemuck"], optional = true }
-cust_core = { version = "0.1", default-features = false }
-cust_derive = { version = "0.2", default-features = false, optional = true }
+cust = { git = "https://github.com/juntyr/Rust-GPU-CUDA.git", rev = "5365c14", version = "0.3.2", default-features = false, features = ["bytemuck"], optional = true }
+cust_core = { git = "https://github.com/juntyr/Rust-GPU-CUDA.git", rev = "5365c14", version = "0.1", default-features = false }
+cust_derive = { git = "https://github.com/juntyr/Rust-GPU-CUDA.git", rev = "5365c14", version = "0.2", default-features = false, optional = true }
 final = { version = "0.1.1", default-features = false, optional = true }
 oneshot = { version = "0.1", default-features = false, features = ["std", "async"], optional = true }
 regex = { version = "1.10", default-features = false, optional = true }

@@ -15,9 +15,9 @@ fn main() -> rust_cuda::deps::cust::error::CudaResult<()> {
 
     // Create a CUDA context associated to this device
     let _context = rust_cuda::host::CudaDropWrapper::from(
-        rust_cuda::deps::cust::context::Context::create_and_push(
-            rust_cuda::deps::cust::context::ContextFlags::MAP_HOST
-                | rust_cuda::deps::cust::context::ContextFlags::SCHED_AUTO,
+        rust_cuda::deps::cust::context::legacy::Context::create_and_push(
+            rust_cuda::deps::cust::context::legacy::ContextFlags::MAP_HOST
+                | rust_cuda::deps::cust::context::legacy::ContextFlags::SCHED_AUTO,
             device,
         )?,
     );

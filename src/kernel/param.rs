@@ -157,6 +157,7 @@ impl<
 {
 }
 
+#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
 impl<
         'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
@@ -244,9 +245,8 @@ impl<
     }
 }
 impl<
-        'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
-    > sealed::Sealed for &'a PerThreadShallowCopy<T>
+    > sealed::Sealed for &PerThreadShallowCopy<T>
 {
 }
 
@@ -342,9 +342,8 @@ impl<
     }
 }
 impl<
-        'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
-    > sealed::Sealed for &'a PtxJit<PerThreadShallowCopy<T>>
+    > sealed::Sealed for &PtxJit<PerThreadShallowCopy<T>>
 {
 }
 
@@ -374,6 +373,7 @@ impl<
     }
 }
 
+#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
 impl<
         'a,
         T: Sync
@@ -467,13 +467,12 @@ impl<
     }
 }
 impl<
-        'a,
         T: crate::safety::StackOnly
             + Sync
             + crate::safety::PortableBitSemantics
             + TypeGraphLayout
             + InteriorMutableSync,
-    > sealed::Sealed for &'a ShallowInteriorMutable<T>
+    > sealed::Sealed for &ShallowInteriorMutable<T>
 {
 }
 
@@ -618,6 +617,7 @@ impl<
 {
 }
 
+#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
 impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
@@ -707,8 +707,9 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
         }
     }
 }
-impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a DeepPerThreadBorrow<T> {}
+impl<T: Sync + RustToCuda> sealed::Sealed for &DeepPerThreadBorrow<T> {}
 
+#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
 impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut DeepPerThreadBorrow<T>
 {
@@ -806,8 +807,8 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
         }
     }
 }
-impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &'a mut DeepPerThreadBorrow<T>
+impl<T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+    for &mut DeepPerThreadBorrow<T>
 {
 }
 
@@ -994,7 +995,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
         }
     }
 }
-impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a PtxJit<DeepPerThreadBorrow<T>> {}
+impl<T: Sync + RustToCuda> sealed::Sealed for &PtxJit<DeepPerThreadBorrow<T>> {}
 
 impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut PtxJit<DeepPerThreadBorrow<T>>
@@ -1090,8 +1091,8 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
         }
     }
 }
-impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &'a mut PtxJit<DeepPerThreadBorrow<T>>
+impl<T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+    for &mut PtxJit<DeepPerThreadBorrow<T>>
 {
 }
 
@@ -1135,7 +1136,7 @@ mod private_shared {
     }
 }
 
-impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::ThreadBlockShared<T> {
+impl<T: 'static> CudaKernelParameter for &mut crate::utils::shared::ThreadBlockShared<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
         = &'b mut crate::utils::shared::ThreadBlockShared<T>
@@ -1218,10 +1219,10 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
         inner.with(&mut param)
     }
 }
-impl<'a, T: 'static> sealed::Sealed for &'a mut crate::utils::shared::ThreadBlockShared<T> {}
+impl<T: 'static> sealed::Sealed for &mut crate::utils::shared::ThreadBlockShared<T> {}
 
-impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
-    for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
+impl<T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
+    for &mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
@@ -1307,7 +1308,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
         }
     }
 }
-impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
-    for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
+impl<T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
+    for &mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
 }

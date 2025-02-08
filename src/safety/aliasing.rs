@@ -38,23 +38,21 @@
 pub unsafe trait SafeMutableAliasing {}
 
 unsafe impl<
-        'a,
         T: crate::safety::StackOnly
             + crate::safety::PortableBitSemantics
             + const_type_layout::TypeGraphLayout,
         const STRIDE: usize,
     > SafeMutableAliasing
-    for crate::utils::aliasing::SplitSliceOverCudaThreadsConstStride<&'a mut [T], STRIDE>
+    for crate::utils::aliasing::SplitSliceOverCudaThreadsConstStride<&mut [T], STRIDE>
 {
 }
 
 unsafe impl<
-        'a,
         T: crate::safety::StackOnly
             + crate::safety::PortableBitSemantics
             + const_type_layout::TypeGraphLayout,
     > SafeMutableAliasing
-    for crate::utils::aliasing::SplitSliceOverCudaThreadsDynamicStride<&'a mut [T]>
+    for crate::utils::aliasing::SplitSliceOverCudaThreadsDynamicStride<&mut [T]>
 {
 }
 

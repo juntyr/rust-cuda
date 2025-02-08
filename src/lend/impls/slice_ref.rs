@@ -74,6 +74,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a [T
     }
 }
 
+#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
 unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &'a [T] {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocationAsync = CombinedCudaAlloc<

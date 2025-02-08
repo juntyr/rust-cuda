@@ -55,7 +55,7 @@ impl<T: ?Sized> Completion<T> for NoCompletion {
 impl sealed::Sealed for NoCompletion {}
 
 #[cfg(feature = "host")]
-impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<'a, B> {
+impl<T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<'_, B> {
     type Completed = B;
 
     #[inline]
@@ -74,7 +74,7 @@ impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<
     }
 }
 #[cfg(feature = "host")]
-impl<'a, T: ?Sized> sealed::Sealed for CompletionFnMut<'a, T> {}
+impl<T: ?Sized> sealed::Sealed for CompletionFnMut<'_, T> {}
 
 #[cfg(feature = "host")]
 impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Option<C> {
@@ -87,7 +87,7 @@ impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Op
 
     #[inline]
     fn synchronize_on_drop(&self) -> bool {
-        self.as_ref().map_or(false, Completion::synchronize_on_drop)
+        self.as_ref().is_some_and(Completion::synchronize_on_drop)
     }
 
     #[inline]
@@ -407,7 +407,7 @@ where
 }
 
 #[cfg(feature = "host")]
-impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'a, 'stream, T, C> {
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'_, '_, T, C> {
     fn drop(&mut self) {
         let AsyncStatus::Processing {
             receiver,
@@ -434,8 +434,8 @@ struct AsyncFuture<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> {
 }
 
 #[cfg(feature = "host")]
-impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Future
-    for AsyncFuture<'a, 'stream, T, C>
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Future
+    for AsyncFuture<'_, '_, T, C>
 {
     type Output = CudaResult<T>;
 
@@ -517,8 +517,8 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
 }
 
 #[cfg(feature = "host")]
-impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop
-    for AsyncFuture<'a, 'stream, T, C>
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Drop
+    for AsyncFuture<'_, '_, T, C>
 {
     fn drop(&mut self) {
         let Some(mut value) = self.value.take() else {

@@ -251,10 +251,9 @@ impl<T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: Emp
 }
 
 impl<
-        'a,
         'stream,
         T: RustToCudaAsync<CudaAllocationAsync: EmptyCudaAlloc, CudaAllocation: EmptyCudaAlloc>,
-    > Async<'a, 'stream, ExchangeWrapperOnDevice<T>, NoCompletion>
+    > Async<'_, 'stream, ExchangeWrapperOnDevice<T>, NoCompletion>
 {
     /// Moves the data asynchronously back to the host CPU device.
     ///

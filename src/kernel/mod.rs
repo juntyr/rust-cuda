@@ -7,12 +7,11 @@ use std::{
     ptr::NonNull,
 };
 
-use cust::module::{ModuleJitOption, OptLevel};
 #[cfg(feature = "host")]
 use cust::{
     error::{CudaError, CudaResult},
     function::Function,
-    module::Module,
+    module::{Module, ModuleJitOption, OptLevel},
 };
 
 #[cfg(feature = "kernel")]
@@ -226,7 +225,7 @@ macro_rules! impl_launcher_launch {
 }
 
 #[cfg(feature = "host")]
-impl<'stream, 'kernel, Kernel> Launcher<'stream, 'kernel, Kernel> {
+impl<'stream, Kernel> Launcher<'stream, '_, Kernel> {
     impl_launcher_launch! { launch0() => with0_async => launch0_async }
 
     impl_launcher_launch! { launch1(

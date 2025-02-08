@@ -66,16 +66,16 @@ pub struct DeviceConstRef<'r, T: PortableBitSemantics + 'r> {
     pub(crate) reference: PhantomData<&'r T>,
 }
 
-impl<'r, T: PortableBitSemantics> Copy for DeviceConstRef<'r, T> {}
+impl<T: PortableBitSemantics> Copy for DeviceConstRef<'_, T> {}
 
-impl<'r, T: PortableBitSemantics> Clone for DeviceConstRef<'r, T> {
+impl<T: PortableBitSemantics> Clone for DeviceConstRef<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: PortableBitSemantics> AsRef<T> for DeviceConstRef<'r, T> {
+impl<T: PortableBitSemantics> AsRef<T> for DeviceConstRef<'_, T> {
     fn as_ref(&self) -> &T {
         unsafe { &*self.pointer.0 }
     }
@@ -90,14 +90,14 @@ pub struct DeviceMutRef<'r, T: PortableBitSemantics + 'r> {
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: PortableBitSemantics> AsRef<T> for DeviceMutRef<'r, T> {
+impl<T: PortableBitSemantics> AsRef<T> for DeviceMutRef<'_, T> {
     fn as_ref(&self) -> &T {
         unsafe { &*self.pointer.0 }
     }
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: PortableBitSemantics> AsMut<T> for DeviceMutRef<'r, T> {
+impl<T: PortableBitSemantics> AsMut<T> for DeviceMutRef<'_, T> {
     fn as_mut(&mut self) -> &mut T {
         unsafe { &mut *self.pointer.0 }
     }
@@ -113,14 +113,14 @@ pub struct DeviceOwnedRef<'r, T: PortableBitSemantics> {
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: PortableBitSemantics> AsRef<T> for DeviceOwnedRef<'r, T> {
+impl<T: PortableBitSemantics> AsRef<T> for DeviceOwnedRef<'_, T> {
     fn as_ref(&self) -> &T {
         unsafe { &*self.pointer.0 }
     }
 }
 
 #[cfg(feature = "device")]
-impl<'r, T: PortableBitSemantics> AsMut<T> for DeviceOwnedRef<'r, T> {
+impl<T: PortableBitSemantics> AsMut<T> for DeviceOwnedRef<'_, T> {
     fn as_mut(&mut self) -> &mut T {
         unsafe { &mut *self.pointer.0 }
     }
