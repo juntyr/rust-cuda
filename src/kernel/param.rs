@@ -157,7 +157,7 @@ impl<
 {
 }
 
-#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<
         'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
@@ -373,7 +373,7 @@ impl<
     }
 }
 
-#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<
         'a,
         T: Sync
@@ -617,7 +617,7 @@ impl<
 {
 }
 
-#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
@@ -709,7 +709,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
 }
 impl<T: Sync + RustToCuda> sealed::Sealed for &DeepPerThreadBorrow<T> {}
 
-#[cfg_attr(feature = "device", expect(clippy::needless_lifetimes))]
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut DeepPerThreadBorrow<T>
 {
