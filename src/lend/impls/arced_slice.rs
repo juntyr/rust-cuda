@@ -33,7 +33,6 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct ArcedSliceCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout> {
@@ -81,31 +80,32 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<[T]> {
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        use cust::memory::{CopyDestination, DevicePointer, DeviceSlice};
+        use cust::memory::{CopyDestination, DeviceSlice};
 
         let data_ptr: *const T = std::ptr::from_ref(&**self).as_ptr();
         let offset = std::mem::offset_of!(_ArcInner<[T; 42]>, data);
         let arc_ptr: *const _ArcInner<[T; 42]> = data_ptr.byte_sub(offset).cast();
 
-        let header_len = (offset + (std::mem::align_of::<T>() - 1)) / std::mem::align_of::<T>();
+        let header_len = offset.div_ceil(std::mem::align_of::<T>());
 
-        let mut device_buffer = CudaDropWrapper::from(DeviceBuffer::<
+        let device_buffer = CudaDropWrapper::from(DeviceBuffer::<
             DeviceCopyWithPortableBitSemantics<T>,
         >::uninitialized(
             header_len + self.len()
         )?);
-        let (header, buffer): (&mut DeviceSlice<_>, &mut DeviceSlice<_>) =
-            device_buffer.split_at_mut(header_len);
+
+        let mut buffer: DeviceSlice<_> = device_buffer.index(header_len..);
         buffer.copy_from(std::slice::from_raw_parts(self.as_ptr().cast(), self.len()))?;
+
+        let header: DeviceSlice<_> = device_buffer.index(..header_len);
         let header = DeviceSlice::from_raw_parts_mut(
-            DevicePointer::wrap(header.as_mut_ptr().cast::<u8>()),
+            header.as_device_ptr().cast::<u8>(),
             header.len() * std::mem::size_of::<T>(),
         );
-        let (_, header) = header.split_at_mut(header.len() - offset);
-        let (header, _) = header.split_at_mut(std::mem::size_of::<_ArcInnerHeader>());
-        #[expect(clippy::cast_ptr_alignment)]
+        let header = header.index((header.len() - offset)..);
+        let header = header.index(..std::mem::size_of::<_ArcInnerHeader>());
         let mut header: ManuallyDrop<DeviceBox<_ArcInnerHeader>> = ManuallyDrop::new(
-            DeviceBox::from_raw(header.as_mut_ptr().cast::<_ArcInnerHeader>()),
+            DeviceBox::from_device(header.as_device_ptr().cast::<_ArcInnerHeader>()),
         );
         header.copy_from(&*arc_ptr.cast::<_ArcInnerHeader>())?;
 
@@ -152,7 +152,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<[
         let offset = std::mem::offset_of!(_ArcInner<[T; 42]>, data);
         let arc_ptr: *const _ArcInner<[T; 42]> = data_ptr.byte_sub(offset).cast();
 
-        let header_len = (offset + (std::mem::align_of::<T>() - 1)) / std::mem::align_of::<T>();
+        let header_len = offset.div_ceil(std::mem::align_of::<T>());
 
         let locked_buffer = unsafe {
             let mut locked_buffer =
