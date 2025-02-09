@@ -807,10 +807,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
         }
     }
 }
-impl<T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &mut DeepPerThreadBorrow<T>
-{
-}
+impl<T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed for &mut DeepPerThreadBorrow<T> {}
 
 impl<
         T: Send

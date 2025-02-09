@@ -36,7 +36,6 @@ macro_rules! portable_bit_semantics_docs {
 
 #[cfg(not(doc))]
 portable_bit_semantics_docs! {
-    #[expect(clippy::module_name_repetitions)]
     pub trait PortableBitSemantics: sealed::PortableBitSemantics {}
 }
 #[cfg(doc)]

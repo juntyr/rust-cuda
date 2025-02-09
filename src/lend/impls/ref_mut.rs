@@ -24,7 +24,6 @@ use crate::{
 #[doc(hidden)]
 #[repr(transparent)]
 #[derive(TypeLayout)]
-#[expect(clippy::module_name_repetitions)]
 pub struct RefMutCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {
     data: DeviceMutPointer<T>,
     _marker: PhantomData<&'a mut T>,

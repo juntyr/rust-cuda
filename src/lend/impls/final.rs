@@ -6,7 +6,6 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[expect(clippy::module_name_repetitions)]
 #[derive(const_type_layout::TypeLayout)]
 #[repr(transparent)]
 pub struct FinalCudaRepresentation<T: CudaAsRust>(DeviceAccessible<T>);

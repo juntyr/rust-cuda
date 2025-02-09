@@ -1,6 +1,5 @@
 use syn::{parse_quote, spanned::Spanned};
 
-#[expect(clippy::module_name_repetitions)]
 pub enum CudaReprFieldTy {
     SafeDeviceCopy,
     RustToCuda {

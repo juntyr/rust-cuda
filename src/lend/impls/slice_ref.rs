@@ -25,7 +25,6 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct SliceRefCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {

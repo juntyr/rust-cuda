@@ -22,7 +22,6 @@ use crate::{
 
 use super::{common::CudaExchangeBufferCudaRepresentation, CudaExchangeItem};
 
-#[expect(clippy::module_name_repetitions)]
 pub struct CudaExchangeBufferHost<
     T: StackOnly + PortableBitSemantics + TypeGraphLayout,
     const M2D: bool,

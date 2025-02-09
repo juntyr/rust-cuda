@@ -1,4 +1,3 @@
-use core::str;
 #[cfg(feature = "host")]
 use std::{
     ffi::{CStr, CString},
@@ -309,7 +308,7 @@ impl RawPtxKernel {
         // FIXME: cust's Module::get_function takes a str and turns it back into
         //        a CString immediately
         let function = unsafe { &*std::ptr::from_ref(module.as_ref()) }
-            .get_function(unsafe { str::from_utf8_unchecked(entry_point.to_bytes()) });
+            .get_function(unsafe { core::str::from_utf8_unchecked(entry_point.to_bytes()) });
 
         let function = match function {
             Ok(function) => function,

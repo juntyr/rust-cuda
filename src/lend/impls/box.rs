@@ -29,7 +29,6 @@ use crate::{
 #[doc(hidden)]
 #[repr(transparent)]
 #[derive(TypeLayout)]
-#[expect(clippy::module_name_repetitions)]
 pub struct BoxCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout>(DeviceOwnedPointer<T>);
 
 unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<T> {

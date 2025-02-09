@@ -30,7 +30,6 @@ use crate::{
 #[doc(hidden)]
 #[repr(transparent)]
 #[derive(TypeLayout)]
-#[expect(clippy::module_name_repetitions)]
 pub struct ArcCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout>(
     DeviceOwnedPointer<_ArcInner<T>>,
 );

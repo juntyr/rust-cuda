@@ -434,9 +434,7 @@ struct AsyncFuture<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> {
 }
 
 #[cfg(feature = "host")]
-impl<T: BorrowMut<C::Completed>, C: Completion<T>> Future
-    for AsyncFuture<'_, '_, T, C>
-{
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Future for AsyncFuture<'_, '_, T, C> {
     type Output = CudaResult<T>;
 
     fn poll(
@@ -517,9 +515,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
 }
 
 #[cfg(feature = "host")]
-impl<T: BorrowMut<C::Completed>, C: Completion<T>> Drop
-    for AsyncFuture<'_, '_, T, C>
-{
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Drop for AsyncFuture<'_, '_, T, C> {
     fn drop(&mut self) {
         let Some(mut value) = self.value.take() else {
             return;
