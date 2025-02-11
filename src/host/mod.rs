@@ -9,10 +9,9 @@ use cust::{
     context::Context,
     error::CudaError,
     event::Event,
-    memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBox, LockedBuffer},
+    memory::{CopyDestination, DeviceBox, DeviceBuffer, DeviceCopy, LockedBox, LockedBuffer},
     module::Module,
 };
-use cust_core::DeviceCopy;
 
 use crate::{
     safety::PortableBitSemantics,
@@ -119,7 +118,7 @@ impl<T: DeviceCopy> CudaDroppable for DeviceBox<T> {
     }
 }
 
-impl<T: cust_core::DeviceCopy> CudaDroppable for DeviceBuffer<T> {
+impl<T: DeviceCopy> CudaDroppable for DeviceBuffer<T> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
         Self::drop(val)
     }
@@ -133,7 +132,7 @@ impl<T: DeviceCopy> CudaDroppable for LockedBox<T> {
     }
 }
 
-impl<T: cust_core::DeviceCopy> CudaDroppable for LockedBuffer<T> {
+impl<T: DeviceCopy> CudaDroppable for LockedBuffer<T> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
         Self::drop(val)
     }

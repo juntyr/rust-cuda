@@ -8,9 +8,8 @@ use const_type_layout::{TypeGraphLayout, TypeLayout};
 use cust::{
     error::CudaResult,
     memory::LockedBuffer,
-    memory::{DeviceBox, DeviceBuffer},
+    memory::{DeviceBox, DeviceBuffer, DeviceCopy},
 };
-use cust_core::DeviceCopy;
 
 use crate::{
     deps::alloc::sync::Arc,
@@ -50,20 +49,20 @@ pub struct _ArcInner<T: ?Sized> {
     data: T,
 }
 
-#[derive(Copy, Clone)]
+#[cfg(feature = "host")]
+#[derive(Copy, Clone, DeviceCopy)]
 #[repr(C)]
 struct _ArcInnerHeader {
     strong: _AtomicUsize,
     weak: _AtomicUsize,
 }
 
-#[derive(Copy, Clone)]
+#[cfg(feature = "host")]
+#[derive(Copy, Clone, DeviceCopy)]
 #[repr(C, align(8))]
 struct _AtomicUsize {
     v: usize,
 }
-
-unsafe impl DeviceCopy for _ArcInnerHeader {}
 
 unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Arc<[T]> {
     #[cfg(all(feature = "host", not(doc)))]
