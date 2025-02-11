@@ -107,6 +107,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Arc<T
         use cust::memory::AsyncCopyDestination;
 
         let locked_box = unsafe {
+            #[allow(clippy::used_underscore_items)]
             let inner = ManuallyDrop::new(_ArcInner {
                 strong: AtomicUsize::new(1),
                 weak: AtomicUsize::new(1),

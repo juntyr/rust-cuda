@@ -205,6 +205,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         }
     }
 
+    #[allow(clippy::needless_pass_by_ref_mut)]
     #[must_use]
     pub(crate) fn for_device<'b>(&'b mut self) -> DeviceMutRef<'a, T>
     where
@@ -244,18 +245,15 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn into_mut<'b>(self) -> HostAndDeviceMutRef<'b, T>
+    pub const fn into_mut<'b>(self) -> HostAndDeviceMutRef<'b, T>
     where
         'a: 'b,
     {
-        HostAndDeviceMutRef {
-            device_box: self.device_box,
-            host_ref: self.host_ref,
-        }
+        self
     }
 
     #[must_use]
-    pub fn into_async<'b, 'stream>(
+    pub const fn into_async<'b, 'stream>(
         self,
         stream: Stream<'stream>,
     ) -> Async<'b, 'stream, HostAndDeviceMutRef<'b, T>, NoCompletion>

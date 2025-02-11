@@ -39,7 +39,6 @@ jobs:
             --extern-html-root-url final=https://docs.rs/final/0.1.1/ \
             --extern-html-root-url cust=https://docs.rs/cust/0.3.2/ \
             --extern-html-root-url cust_core=https://docs.rs/cust_core/0.1/ \
-            --extern-html-root-url cust_derive=https://docs.rs/cust_derive/0.2/ \
             -Zunstable-options \
           " cargo doc \
             --all-features \
