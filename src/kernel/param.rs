@@ -88,7 +88,7 @@ impl<
     type SyncHostType = T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -124,7 +124,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -157,6 +157,7 @@ impl<
 {
 }
 
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<
         'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
@@ -180,7 +181,7 @@ impl<
     type SyncHostType = &'a T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -219,7 +220,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -244,9 +245,8 @@ impl<
     }
 }
 impl<
-        'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
-    > sealed::Sealed for &'a PerThreadShallowCopy<T>
+    > sealed::Sealed for &PerThreadShallowCopy<T>
 {
 }
 
@@ -273,7 +273,7 @@ impl<
     type SyncHostType = <&'a PerThreadShallowCopy<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -315,7 +315,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -342,9 +342,8 @@ impl<
     }
 }
 impl<
-        'a,
         T: Sync + crate::safety::StackOnly + crate::safety::PortableBitSemantics + TypeGraphLayout,
-    > sealed::Sealed for &'a PtxJit<PerThreadShallowCopy<T>>
+    > sealed::Sealed for &PtxJit<PerThreadShallowCopy<T>>
 {
 }
 
@@ -374,6 +373,7 @@ impl<
     }
 }
 
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<
         'a,
         T: Sync
@@ -403,7 +403,7 @@ impl<
     type SyncHostType = &'a mut T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -442,7 +442,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -467,13 +467,12 @@ impl<
     }
 }
 impl<
-        'a,
         T: crate::safety::StackOnly
             + Sync
             + crate::safety::PortableBitSemantics
             + TypeGraphLayout
             + InteriorMutableSync,
-    > sealed::Sealed for &'a ShallowInteriorMutable<T>
+    > sealed::Sealed for &ShallowInteriorMutable<T>
 {
 }
 
@@ -549,7 +548,7 @@ impl<
     type SyncHostType = T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -585,7 +584,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -618,6 +617,7 @@ impl<
 {
 }
 
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
@@ -644,7 +644,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     type SyncHostType = &'a T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -683,7 +683,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -707,8 +707,9 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a DeepPerThreadBorrow<T
         }
     }
 }
-impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a DeepPerThreadBorrow<T> {}
+impl<T: Sync + RustToCuda> sealed::Sealed for &DeepPerThreadBorrow<T> {}
 
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut DeepPerThreadBorrow<T>
 {
@@ -737,7 +738,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     type SyncHostType = &'a mut T;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -781,7 +782,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         mut param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -806,10 +807,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
         }
     }
 }
-impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &'a mut DeepPerThreadBorrow<T>
-{
-}
+impl<T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed for &mut DeepPerThreadBorrow<T> {}
 
 impl<
         T: Send
@@ -835,7 +833,7 @@ impl<
     type SyncHostType = <DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -862,7 +860,7 @@ impl<
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -926,7 +924,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     type SyncHostType = <&'a DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -968,7 +966,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -994,7 +992,7 @@ impl<'a, T: Sync + RustToCuda> CudaKernelParameter for &'a PtxJit<DeepPerThreadB
         }
     }
 }
-impl<'a, T: Sync + RustToCuda> sealed::Sealed for &'a PtxJit<DeepPerThreadBorrow<T>> {}
+impl<T: Sync + RustToCuda> sealed::Sealed for &PtxJit<DeepPerThreadBorrow<T>> {}
 
 impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     for &'a mut PtxJit<DeepPerThreadBorrow<T>>
@@ -1017,7 +1015,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     type SyncHostType = <&'a mut DeepPerThreadBorrow<T> as CudaKernelParameter>::SyncHostType;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -1064,7 +1062,7 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -1090,8 +1088,8 @@ impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> CudaKernelParameter
         }
     }
 }
-impl<'a, T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
-    for &'a mut PtxJit<DeepPerThreadBorrow<T>>
+impl<T: Sync + RustToCuda + SafeMutableAliasing> sealed::Sealed
+    for &mut PtxJit<DeepPerThreadBorrow<T>>
 {
 }
 
@@ -1135,7 +1133,7 @@ mod private_shared {
     }
 }
 
-impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::ThreadBlockShared<T> {
+impl<T: 'static> CudaKernelParameter for &mut crate::utils::shared::ThreadBlockShared<T> {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
         = &'b mut crate::utils::shared::ThreadBlockShared<T>
@@ -1154,7 +1152,7 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     type SyncHostType = Self;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -1190,7 +1188,7 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         _param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -1218,10 +1216,10 @@ impl<'a, T: 'static> CudaKernelParameter for &'a mut crate::utils::shared::Threa
         inner.with(&mut param)
     }
 }
-impl<'a, T: 'static> sealed::Sealed for &'a mut crate::utils::shared::ThreadBlockShared<T> {}
+impl<T: 'static> sealed::Sealed for &mut crate::utils::shared::ThreadBlockShared<T> {}
 
-impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
-    for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
+impl<T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParameter
+    for &mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
     #[cfg(feature = "host")]
     type AsyncHostType<'stream, 'b>
@@ -1241,7 +1239,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     type SyncHostType = Self;
 
     #[cfg(feature = "host")]
-    fn with_new_async<'stream, 'b, O, E: From<rustacuda::error::CudaError>>(
+    fn with_new_async<'stream, 'b, O, E: From<cust::error::CudaError>>(
         param: Self::SyncHostType,
         _stream: crate::host::Stream<'stream>,
         #[cfg(not(doc))] inner: impl super::WithNewAsync<'stream, Self, O, E>,
@@ -1277,7 +1275,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
     }
 
     #[cfg(feature = "host")]
-    fn async_to_ffi<'stream, 'b, E: From<rustacuda::error::CudaError>>(
+    fn async_to_ffi<'stream, 'b, E: From<cust::error::CudaError>>(
         param: Self::AsyncHostType<'stream, 'b>,
         _token: sealed::Token,
     ) -> Result<Self::FfiType<'stream, 'b>, E>
@@ -1307,7 +1305,7 @@ impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> CudaKernelParamete
         }
     }
 }
-impl<'a, T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
-    for &'a mut crate::utils::shared::ThreadBlockSharedSlice<T>
+impl<T: 'static + PortableBitSemantics + TypeGraphLayout> sealed::Sealed
+    for &mut crate::utils::shared::ThreadBlockSharedSlice<T>
 {
 }

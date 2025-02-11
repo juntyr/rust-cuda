@@ -321,7 +321,7 @@ fn check_kernel_ptx_and_report(
         Ok(Some(binary)) => {
             if ptx_lint_levels
                 .get(&PtxLint::DumpAssembly)
-                .map_or(false, |level| *level > LintLevel::Allow)
+                .is_some_and(|level| *level > LintLevel::Allow)
             {
                 const HEX: [char; 16] = [
                     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
@@ -336,7 +336,7 @@ fn check_kernel_ptx_and_report(
 
                 if ptx_lint_levels
                     .get(&PtxLint::DumpAssembly)
-                    .map_or(false, |level| *level > LintLevel::Warn)
+                    .is_some_and(|level| *level > LintLevel::Warn)
                 {
                     emit_call_site_error!(
                         "{} compiled binary:\n{}\n\n{}",
@@ -459,31 +459,31 @@ fn check_kernel_ptx(
 
             if ptx_lint_levels
                 .get(&PtxLint::Verbose)
-                .map_or(false, |level| *level > LintLevel::Warn)
+                .is_some_and(|level| *level > LintLevel::Warn)
             {
                 options.push(c"--verbose");
             }
             if ptx_lint_levels
                 .get(&PtxLint::DoublePrecisionUse)
-                .map_or(false, |level| *level > LintLevel::Warn)
+                .is_some_and(|level| *level > LintLevel::Warn)
             {
                 options.push(c"--warn-on-double-precision-use");
             }
             if ptx_lint_levels
                 .get(&PtxLint::LocalMemoryUse)
-                .map_or(false, |level| *level > LintLevel::Warn)
+                .is_some_and(|level| *level > LintLevel::Warn)
             {
                 options.push(c"--warn-on-local-memory-usage");
             }
             if ptx_lint_levels
                 .get(&PtxLint::RegisterSpills)
-                .map_or(false, |level| *level > LintLevel::Warn)
+                .is_some_and(|level| *level > LintLevel::Warn)
             {
                 options.push(c"--warn-on-spills");
             }
             if ptx_lint_levels
                 .get(&PtxLint::DynamicStackSize)
-                .map_or(true, |level| *level <= LintLevel::Warn)
+                .is_none_or(|level| *level <= LintLevel::Warn)
             {
                 options.push(c"--suppress-stack-size-warning");
             }
@@ -505,31 +505,31 @@ fn check_kernel_ptx(
 
         if ptx_lint_levels
             .get(&PtxLint::Verbose)
-            .map_or(false, |level| *level > LintLevel::Allow)
+            .is_some_and(|level| *level > LintLevel::Allow)
         {
             options.push(c"--verbose");
         }
         if ptx_lint_levels
             .get(&PtxLint::DoublePrecisionUse)
-            .map_or(false, |level| *level > LintLevel::Allow)
+            .is_some_and(|level| *level > LintLevel::Allow)
         {
             options.push(c"--warn-on-double-precision-use");
         }
         if ptx_lint_levels
             .get(&PtxLint::LocalMemoryUse)
-            .map_or(false, |level| *level > LintLevel::Allow)
+            .is_some_and(|level| *level > LintLevel::Allow)
         {
             options.push(c"--warn-on-local-memory-usage");
         }
         if ptx_lint_levels
             .get(&PtxLint::RegisterSpills)
-            .map_or(false, |level| *level > LintLevel::Allow)
+            .is_some_and(|level| *level > LintLevel::Allow)
         {
             options.push(c"--warn-on-spills");
         }
         if ptx_lint_levels
             .get(&PtxLint::DynamicStackSize)
-            .map_or(true, |level| *level < LintLevel::Warn)
+            .is_none_or(|level| *level < LintLevel::Warn)
         {
             options.push(c"--suppress-stack-size-warning");
         }

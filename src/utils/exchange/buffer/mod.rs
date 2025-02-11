@@ -63,9 +63,9 @@ impl<
     > CudaExchangeBuffer<T, M2D, M2H>
 {
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
-    pub fn new(elem: &T, capacity: usize) -> rustacuda::error::CudaResult<Self> {
+    pub fn new(elem: &T, capacity: usize) -> cust::error::CudaResult<Self> {
         Ok(Self {
             inner: host::CudaExchangeBufferHost::new(elem, capacity)?,
         })
@@ -77,9 +77,9 @@ impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bool, con
     CudaExchangeBuffer<T, M2D, M2H>
 {
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA
-    pub fn from_vec(vec: Vec<T>) -> rustacuda::error::CudaResult<Self> {
+    pub fn from_vec(vec: Vec<T>) -> cust::error::CudaResult<Self> {
         Ok(Self {
             inner: host::CudaExchangeBufferHost::from_vec(vec)?,
         })
@@ -117,7 +117,7 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
     unsafe fn borrow<A: CudaAlloc>(
         &self,
         alloc: A,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
@@ -128,7 +128,7 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
     unsafe fn restore<A: CudaAlloc>(
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
-    ) -> rustacuda::error::CudaResult<A> {
+    ) -> cust::error::CudaResult<A> {
         self.inner.restore(alloc)
     }
 }
@@ -144,7 +144,7 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
@@ -156,7 +156,7 @@ unsafe impl<T: StackOnly + PortableBitSemantics + TypeGraphLayout, const M2D: bo
         this: owning_ref::BoxRefMut<'a, O, Self>,
         alloc: CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )> {

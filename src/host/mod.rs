@@ -5,11 +5,11 @@ use std::{
 };
 
 use const_type_layout::TypeGraphLayout;
-use rustacuda::{
+use cust::{
     context::Context,
     error::CudaError,
     event::Event,
-    memory::{CopyDestination, DeviceBox, DeviceBuffer, LockedBox, LockedBuffer},
+    memory::{CopyDestination, DeviceBox, DeviceBuffer, DeviceCopy, LockedBox, LockedBuffer},
     module::Module,
 };
 
@@ -30,19 +30,19 @@ type InvariantLifetime<'brand> = PhantomData<fn(&'brand ()) -> &'brand ()>;
 #[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct Stream<'stream> {
-    stream: &'stream rustacuda::stream::Stream,
+    stream: &'stream cust::stream::Stream,
     _brand: InvariantLifetime<'stream>,
 }
 
-impl<'stream> Deref for Stream<'stream> {
-    type Target = rustacuda::stream::Stream;
+impl Deref for Stream<'_> {
+    type Target = cust::stream::Stream;
 
     fn deref(&self) -> &Self::Target {
         self.stream
     }
 }
 
-impl<'stream> Stream<'stream> {
+impl Stream<'_> {
     /// Create a new uniquely branded [`Stream`], which can bind async
     /// operations to the [`Stream`] that they are computed on.
     ///
@@ -65,7 +65,7 @@ impl<'stream> Stream<'stream> {
     /// }
     /// ```
     pub fn with<O>(
-        stream: &mut rustacuda::stream::Stream,
+        stream: &mut cust::stream::Stream,
         inner: impl for<'new_stream> FnOnce(Stream<'new_stream>) -> O,
     ) -> O {
         inner(Stream {
@@ -77,7 +77,7 @@ impl<'stream> Stream<'stream> {
 
 pub trait CudaDroppable: Sized {
     #[expect(clippy::missing_errors_doc)]
-    fn drop(val: Self) -> Result<(), (rustacuda::error::CudaError, Self)>;
+    fn drop(val: Self) -> Result<(), (cust::error::CudaError, Self)>;
 }
 
 #[repr(transparent)]
@@ -112,25 +112,27 @@ impl<C: CudaDroppable> DerefMut for CudaDropWrapper<C> {
     }
 }
 
-impl<T> CudaDroppable for DeviceBox<T> {
+impl<T: DeviceCopy> CudaDroppable for DeviceBox<T> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
         Self::drop(val)
     }
 }
 
-impl<T: rustacuda_core::DeviceCopy> CudaDroppable for DeviceBuffer<T> {
+impl<T: DeviceCopy> CudaDroppable for DeviceBuffer<T> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
         Self::drop(val)
     }
 }
 
-impl<T> CudaDroppable for LockedBox<T> {
+impl<T: DeviceCopy> CudaDroppable for LockedBox<T> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
-        Self::drop(val)
+        // FIXME: cust's LockedBox no longer has a fallible drop
+        std::mem::drop(val);
+        Ok(())
     }
 }
 
-impl<T: rustacuda_core::DeviceCopy> CudaDroppable for LockedBuffer<T> {
+impl<T: DeviceCopy> CudaDroppable for LockedBuffer<T> {
     fn drop(val: Self) -> Result<(), (CudaError, Self)> {
         Self::drop(val)
     }
@@ -147,8 +149,9 @@ macro_rules! impl_sealed_drop_value {
 }
 
 impl_sealed_drop_value!(Module);
-impl_sealed_drop_value!(rustacuda::stream::Stream);
+impl_sealed_drop_value!(cust::stream::Stream);
 impl_sealed_drop_value!(Context);
+impl_sealed_drop_value!(cust::context::legacy::Context);
 impl_sealed_drop_value!(Event);
 
 #[expect(clippy::module_name_repetitions)]
@@ -201,13 +204,14 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
         }
     }
 
+    #[allow(clippy::needless_pass_by_ref_mut)]
     #[must_use]
     pub(crate) fn for_device<'b>(&'b mut self) -> DeviceMutRef<'a, T>
     where
         'a: 'b,
     {
         DeviceMutRef {
-            pointer: DeviceMutPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
+            pointer: DeviceMutPointer(self.device_box.as_device_ptr().as_mut_ptr().cast()),
             reference: PhantomData,
         }
     }
@@ -240,18 +244,15 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceMutRef<'a, T> {
     }
 
     #[must_use]
-    pub fn into_mut<'b>(self) -> HostAndDeviceMutRef<'b, T>
+    pub const fn into_mut<'b>(self) -> HostAndDeviceMutRef<'b, T>
     where
         'a: 'b,
     {
-        HostAndDeviceMutRef {
-            device_box: self.device_box,
-            host_ref: self.host_ref,
-        }
+        self
     }
 
     #[must_use]
-    pub fn into_async<'b, 'stream>(
+    pub const fn into_async<'b, 'stream>(
         self,
         stream: Stream<'stream>,
     ) -> Async<'b, 'stream, HostAndDeviceMutRef<'b, T>, NoCompletion>
@@ -268,13 +269,13 @@ pub struct HostAndDeviceConstRef<'a, T: PortableBitSemantics + TypeGraphLayout> 
     host_ref: &'a T,
 }
 
-impl<'a, T: PortableBitSemantics + TypeGraphLayout> Clone for HostAndDeviceConstRef<'a, T> {
+impl<T: PortableBitSemantics + TypeGraphLayout> Clone for HostAndDeviceConstRef<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, T: PortableBitSemantics + TypeGraphLayout> Copy for HostAndDeviceConstRef<'a, T> {}
+impl<T: PortableBitSemantics + TypeGraphLayout> Copy for HostAndDeviceConstRef<'_, T> {}
 
 impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T> {
     /// # Errors
@@ -322,10 +323,10 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceConstRef<'a, T>
     where
         'a: 'b,
     {
-        let mut hack = ManuallyDrop::new(unsafe { std::ptr::read(self.device_box) });
+        let hack = ManuallyDrop::new(unsafe { std::ptr::read(self.device_box) });
 
         DeviceConstRef {
-            pointer: DeviceConstPointer(hack.as_device_ptr().as_raw().cast()),
+            pointer: DeviceConstPointer(hack.as_device_ptr().as_ptr().cast()),
             reference: PhantomData,
         }
     }
@@ -390,7 +391,7 @@ impl<'a, T: PortableBitSemantics + TypeGraphLayout> HostAndDeviceOwned<'a, T> {
     #[must_use]
     pub(crate) fn for_device(self) -> DeviceOwnedRef<'a, T> {
         DeviceOwnedRef {
-            pointer: DeviceOwnedPointer(self.device_box.as_device_ptr().as_raw_mut().cast()),
+            pointer: DeviceOwnedPointer(self.device_box.as_device_ptr().as_mut_ptr().cast()),
             marker: PhantomData::<T>,
             reference: PhantomData::<&'a mut ()>,
         }

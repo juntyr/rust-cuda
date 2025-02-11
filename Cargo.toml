@@ -15,7 +15,7 @@ edition = "2021"
 authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
 repository = "https://github.com/juntyr/rust-cuda"
 license = "MIT OR Apache-2.0"
-rust-version = "1.81" # nightly
+rust-version = "1.84" # nightly
 
 [workspace.dependencies]
 # workspace-internal crates
@@ -24,12 +24,12 @@ rust-cuda-derive = { version = "0.1", path = "rust-cuda-derive", default-feature
 rust-cuda-kernel = { version = "0.1", path = "rust-cuda-kernel", default-features = false }
 
 # third-party dependencies with unpublished patches
-rustacuda = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
-rustacuda_core = { git = "https://github.com/juntyr/RustaCUDA", rev = "c6ea7cc", default-features = false }
+cust = { git = "https://github.com/juntyr/Rust-GPU-CUDA.git", rev = "5365c14", version = "0.3.2", default-features = false }
+cust_core = { git = "https://github.com/juntyr/Rust-GPU-CUDA.git", rev = "5365c14", version = "0.1", default-features = false }
 
 # crates.io third-party dependencies
 cargo_metadata = { version = "0.19", default-features = false }
-cargo-util = { version = "=0.2.16", default-features = false }  # TODO: keep in sync with toolchain
+cargo-util = { version = "=0.2.17", default-features = false }  # TODO: keep in sync with toolchain
 colored = { version = "3.0", default-features = false }
 const-type-layout = { version = "0.3.2", default-features = false }
 final = { version = "0.1.1", default-features = false }
@@ -92,16 +92,16 @@ default = []
 derive = ["dep:rust-cuda-derive"]
 device = []
 final = ["dep:final"]
-host = ["dep:rustacuda", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
+host = ["dep:cust", "dep:regex", "dep:oneshot", "dep:safer_owning_ref"]
 kernel = ["dep:rust-cuda-kernel"]
 
 [dependencies]
 const-type-layout = { workspace = true, features = ["derive"] }
+cust = { workspace = true, optional = true }
+cust_core = { workspace = true }
 final = { workspace = true, optional = true }
 oneshot = { workspace = true, features = ["std", "async"], optional = true }
 regex = { workspace = true, optional = true }
-rustacuda = { workspace = true, optional = true }
-rustacuda_core = { workspace = true }
 rust-cuda-derive = { workspace = true, optional = true }
 rust-cuda-kernel = { workspace = true, optional = true }
 safer_owning_ref = { workspace = true, optional = true }

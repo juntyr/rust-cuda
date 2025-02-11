@@ -180,7 +180,7 @@ pub trait NestedMetaParser {
     ) -> syn::Result<()>;
 }
 
-impl<'a> NestedMetaParser for syn::meta::ParseNestedMeta<'a> {
+impl NestedMetaParser for syn::meta::ParseNestedMeta<'_> {
     fn path(&self) -> &syn::Path {
         &self.path
     }

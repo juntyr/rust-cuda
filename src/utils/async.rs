@@ -2,7 +2,7 @@
 use std::{borrow::BorrowMut, future::Future, future::IntoFuture, marker::PhantomData, task::Poll};
 
 #[cfg(feature = "host")]
-use rustacuda::{
+use cust::{
     error::CudaError, error::CudaResult, event::Event, event::EventFlags,
     stream::StreamWaitEventFlags,
 };
@@ -55,7 +55,7 @@ impl<T: ?Sized> Completion<T> for NoCompletion {
 impl sealed::Sealed for NoCompletion {}
 
 #[cfg(feature = "host")]
-impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<'a, B> {
+impl<T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<'_, B> {
     type Completed = B;
 
     #[inline]
@@ -74,7 +74,7 @@ impl<'a, T: ?Sized + BorrowMut<B>, B: ?Sized> Completion<T> for CompletionFnMut<
     }
 }
 #[cfg(feature = "host")]
-impl<'a, T: ?Sized> sealed::Sealed for CompletionFnMut<'a, T> {}
+impl<T: ?Sized> sealed::Sealed for CompletionFnMut<'_, T> {}
 
 #[cfg(feature = "host")]
 impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Option<C> {
@@ -87,7 +87,7 @@ impl<T: ?Sized + BorrowMut<C::Completed>, C: Completion<T>> Completion<T> for Op
 
     #[inline]
     fn synchronize_on_drop(&self) -> bool {
-        self.as_ref().map_or(false, Completion::synchronize_on_drop)
+        self.as_ref().is_some_and(Completion::synchronize_on_drop)
     }
 
     #[inline]
@@ -136,7 +136,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// such that its computation can be synchronised on.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn pending(value: T, stream: Stream<'stream>, completion: C) -> CudaResult<Self> {
         let (sender, receiver) = oneshot::channel();
@@ -160,11 +160,11 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// operations.
     ///
     /// Calling `synchronize` after the computation has completed, e.g. after
-    /// calling [`rustacuda::stream::Stream::synchronize`], should be very
+    /// calling [`cust::stream::Stream::synchronize`], should be very
     /// cheap.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn synchronize(self) -> CudaResult<T> {
         let (_stream, mut value, status) = self.destructure_into_parts();
@@ -198,7 +198,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Async<'a, 'strea
     /// used on the new one.
     ///
     /// # Errors
-    /// Returns a [`rustacuda::error::CudaError`] iff an error occurs inside
+    /// Returns a [`cust::error::CudaError`] iff an error occurs inside
     /// CUDA.
     pub fn move_to_stream<'stream_new>(
         self,
@@ -407,7 +407,7 @@ where
 }
 
 #[cfg(feature = "host")]
-impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'a, 'stream, T, C> {
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Drop for Async<'_, '_, T, C> {
     fn drop(&mut self) {
         let AsyncStatus::Processing {
             receiver,
@@ -434,9 +434,7 @@ struct AsyncFuture<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> {
 }
 
 #[cfg(feature = "host")]
-impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Future
-    for AsyncFuture<'a, 'stream, T, C>
-{
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Future for AsyncFuture<'_, '_, T, C> {
     type Output = CudaResult<T>;
 
     fn poll(
@@ -517,9 +515,7 @@ impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> IntoFuture
 }
 
 #[cfg(feature = "host")]
-impl<'a, 'stream, T: BorrowMut<C::Completed>, C: Completion<T>> Drop
-    for AsyncFuture<'a, 'stream, T, C>
-{
+impl<T: BorrowMut<C::Completed>, C: Completion<T>> Drop for AsyncFuture<'_, '_, T, C> {
     fn drop(&mut self) {
         let Some(mut value) = self.value.take() else {
             return;

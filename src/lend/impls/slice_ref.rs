@@ -5,7 +5,7 @@ use std::mem::ManuallyDrop;
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBuffer, memory::LockedBuffer};
+use cust::{error::CudaResult, memory::DeviceBuffer, memory::LockedBuffer};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda, RustToCudaAsync},
@@ -25,7 +25,6 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct SliceRefCudaRepresentation<'a, T: 'a + PortableBitSemantics + TypeGraphLayout> {
@@ -56,7 +55,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a [T
 
         Ok((
             DeviceAccessible::from(SliceRefCudaRepresentation {
-                data: DeviceConstPointer(device_buffer.as_ptr().cast()),
+                data: DeviceConstPointer(device_buffer.as_device_ptr().as_ptr().cast()),
                 len: device_buffer.len(),
                 _marker: PhantomData::<&'a [T]>,
             }),
@@ -74,6 +73,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCuda for &'a [T
     }
 }
 
+#[cfg_attr(not(feature = "host"), expect(clippy::needless_lifetimes))]
 unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &'a [T] {
     #[cfg(all(feature = "host", not(doc)))]
     type CudaAllocationAsync = CombinedCudaAlloc<
@@ -88,11 +88,11 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let locked_buffer = unsafe {
             let mut uninit = CudaDropWrapper::from(LockedBuffer::<
@@ -116,7 +116,7 @@ unsafe impl<'a, T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for &
         Ok((
             Async::pending(
                 DeviceAccessible::from(SliceRefCudaRepresentation {
-                    data: DeviceConstPointer(device_buffer.as_ptr().cast()),
+                    data: DeviceConstPointer(device_buffer.as_device_ptr().as_ptr().cast()),
                     len: device_buffer.len(),
                     _marker: PhantomData::<&'a [T]>,
                 }),

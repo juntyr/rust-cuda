@@ -1,8 +1,11 @@
 macro_rules! portable_bit_semantics_docs {
     ($item:item) => {
-        /// Types whose in-memory bit representation on the CPU host is safe to copy
-        /// to and read back on the GPU device while maintaining the same semantics,
-        /// iff the type layout on the CPU matches the type layout on the GPU.
+        /// Types with a CPU-GPU-compatible memory representation.
+        ///
+        /// More specifically, types in-memory bit representation on the CPU host
+        /// is safe to copy to and read back on the GPU device while maintaining
+        /// the same semantics, iff the type layout on the CPU matches the type
+        /// layout on the GPU.
         ///
         /// For a type to implement [`PortableBitSemantics`], it
         ///
@@ -36,7 +39,6 @@ macro_rules! portable_bit_semantics_docs {
 
 #[cfg(not(doc))]
 portable_bit_semantics_docs! {
-    #[expect(clippy::module_name_repetitions)]
     pub trait PortableBitSemantics: sealed::PortableBitSemantics {}
 }
 #[cfg(doc)]

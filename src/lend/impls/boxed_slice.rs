@@ -7,7 +7,7 @@ use crate::{deps::alloc::boxed::Box, lend::RustToCudaAsync, utils::ffi::DeviceOw
 use const_type_layout::{TypeGraphLayout, TypeLayout};
 
 #[cfg(feature = "host")]
-use rustacuda::{error::CudaResult, memory::DeviceBuffer, memory::LockedBuffer};
+use cust::{error::CudaResult, memory::DeviceBuffer, memory::LockedBuffer};
 
 use crate::{
     lend::{CudaAsRust, RustToCuda},
@@ -26,7 +26,6 @@ use crate::{
 };
 
 #[doc(hidden)]
-#[expect(clippy::module_name_repetitions)]
 #[derive(TypeLayout)]
 #[repr(C)]
 pub struct BoxedSliceCudaRepresentation<T: PortableBitSemantics + TypeGraphLayout> {
@@ -51,13 +50,13 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<[T]> {
         DeviceAccessible<Self::CudaRepresentation>,
         CombinedCudaAlloc<Self::CudaAllocation, A>,
     )> {
-        let mut device_buffer = CudaDropWrapper::from(DeviceBuffer::from_slice(
+        let device_buffer = CudaDropWrapper::from(DeviceBuffer::from_slice(
             DeviceCopyWithPortableBitSemantics::from_slice(self),
         )?);
 
         Ok((
             DeviceAccessible::from(BoxedSliceCudaRepresentation {
-                data: DeviceOwnedPointer(device_buffer.as_mut_ptr().cast()),
+                data: DeviceOwnedPointer(device_buffer.as_device_ptr().as_mut_ptr().cast()),
                 len: device_buffer.len(),
                 _marker: PhantomData::<T>,
             }),
@@ -70,7 +69,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCuda for Box<[T]> {
         &mut self,
         alloc: CombinedCudaAlloc<Self::CudaAllocation, A>,
     ) -> CudaResult<A> {
-        use rustacuda::memory::CopyDestination;
+        use cust::memory::CopyDestination;
 
         let (alloc_front, alloc_tail) = alloc.split();
 
@@ -96,11 +95,11 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<[
         &self,
         alloc: A,
         stream: crate::host::Stream<'stream>,
-    ) -> rustacuda::error::CudaResult<(
+    ) -> cust::error::CudaResult<(
         Async<'_, 'stream, DeviceAccessible<Self::CudaRepresentation>>,
         CombinedCudaAlloc<Self::CudaAllocationAsync, A>,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let locked_buffer = unsafe {
             let mut uninit = CudaDropWrapper::from(LockedBuffer::<
@@ -124,7 +123,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<[
         Ok((
             Async::pending(
                 DeviceAccessible::from(BoxedSliceCudaRepresentation {
-                    data: DeviceOwnedPointer(device_buffer.as_mut_ptr().cast()),
+                    data: DeviceOwnedPointer(device_buffer.as_device_ptr().as_mut_ptr().cast()),
                     len: device_buffer.len(),
                     _marker: PhantomData::<T>,
                 }),
@@ -144,7 +143,7 @@ unsafe impl<T: PortableBitSemantics + TypeGraphLayout> RustToCudaAsync for Box<[
         Async<'a, 'stream, owning_ref::BoxRefMut<'a, O, Self>, CompletionFnMut<'a, Self>>,
         A,
     )> {
-        use rustacuda::memory::AsyncCopyDestination;
+        use cust::memory::AsyncCopyDestination;
 
         let (alloc_front, alloc_tail) = alloc.split();
         let (mut locked_buffer, device_buffer) = alloc_front.split();

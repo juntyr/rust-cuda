@@ -5,7 +5,7 @@
 //! [CI Status]: https://img.shields.io/github/actions/workflow/status/juntyr/rust-cuda/ci.yml?branch=main
 //! [workflow]: https://github.com/juntyr/rust-cuda/actions/workflows/ci.yml?query=branch%3Amain
 //!
-//! [MSRV]: https://img.shields.io/badge/MSRV-1.81.0--nightly-orange
+//! [MSRV]: https://img.shields.io/badge/MSRV-1.84.0--nightly-orange
 //! [repo]: https://github.com/juntyr/rust-cuda
 //!
 //! [Rust Doc]: https://img.shields.io/badge/docs-main-blue
@@ -29,7 +29,6 @@
 #![feature(negative_impls)]
 #![cfg_attr(all(feature = "device", not(doc)), feature(stdarch_nvptx))]
 #![cfg_attr(feature = "device", feature(asm_experimental_arch))]
-#![cfg_attr(feature = "device", feature(asm_const))]
 #![feature(doc_auto_cfg)]
 #![feature(doc_cfg)]
 #![feature(marker_trait_attr)]
@@ -48,7 +47,6 @@
 #![feature(generic_const_exprs)]
 #![expect(internal_features)]
 #![feature(core_intrinsics)]
-#![feature(const_intrinsic_compare_bytes)]
 #![doc(html_root_url = "https://juntyr.github.io/rust-cuda/")]
 
 #[cfg(all(feature = "host", feature = "device", not(doc)))]

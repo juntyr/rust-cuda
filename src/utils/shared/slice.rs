@@ -2,7 +2,6 @@ use core::alloc::Layout;
 
 use const_type_layout::TypeGraphLayout;
 
-#[expect(clippy::module_name_repetitions)]
 #[repr(transparent)]
 pub struct ThreadBlockSharedSlice<T: 'static + TypeGraphLayout> {
     shared: *mut [T],
@@ -11,7 +10,7 @@ pub struct ThreadBlockSharedSlice<T: 'static + TypeGraphLayout> {
 impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     #[cfg(feature = "host")]
     #[must_use]
-    pub fn new_uninit_with_len(len: usize) -> Self {
+    pub const fn new_uninit_with_len(len: usize) -> Self {
         Self {
             shared: Self::dangling_slice_with_len(len),
         }
@@ -19,7 +18,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
 
     #[cfg(feature = "host")]
     #[must_use]
-    pub fn with_len(mut self, len: usize) -> Self {
+    pub const fn with_len(mut self, len: usize) -> Self {
         self.shared = Self::dangling_slice_with_len(len);
         self
     }
@@ -32,7 +31,7 @@ impl<T: 'static + TypeGraphLayout> ThreadBlockSharedSlice<T> {
     }
 
     #[cfg(feature = "host")]
-    fn dangling_slice_with_len(len: usize) -> *mut [T] {
+    const fn dangling_slice_with_len(len: usize) -> *mut [T] {
         core::ptr::slice_from_raw_parts_mut(core::ptr::NonNull::dangling().as_ptr(), len)
     }
 
