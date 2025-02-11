@@ -15,7 +15,7 @@ edition = "2021"
 authors = ["Juniper Tyree <juniper.tyree@helsinki.fi>"]
 repository = "https://github.com/juntyr/rust-cuda"
 license = "MIT OR Apache-2.0"
-rust-version = "1.81" # nightly
+rust-version = "1.84" # nightly
 
 [workspace.dependencies]
 # workspace-internal crates

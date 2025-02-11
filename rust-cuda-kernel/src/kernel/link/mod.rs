@@ -189,7 +189,6 @@ fn extract_ptx_kernel_layout(kernel_ptx: &mut String) -> proc_macro2::TokenStrea
             );
         }
 
-        #[allow(clippy::literal_string_with_formatting_args)] // false positive
         if type_layout_metas
             .insert(String::from(param), bytes)
             .is_some()
@@ -484,7 +483,7 @@ fn check_kernel_ptx(
             }
             if ptx_lint_levels
                 .get(&PtxLint::DynamicStackSize)
-                .map_or(true, |level| *level <= LintLevel::Warn)
+                .is_none_or(|level| *level <= LintLevel::Warn)
             {
                 options.push(c"--suppress-stack-size-warning");
             }
@@ -530,7 +529,7 @@ fn check_kernel_ptx(
         }
         if ptx_lint_levels
             .get(&PtxLint::DynamicStackSize)
-            .map_or(true, |level| *level < LintLevel::Warn)
+            .is_none_or(|level| *level < LintLevel::Warn)
         {
             options.push(c"--suppress-stack-size-warning");
         }
